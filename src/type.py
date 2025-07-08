@@ -5,52 +5,45 @@ from typing import List, Dict, Optional
 from datetime import date
 
 class SubmissionType(str, Enum):
-    """Two flavours of work we actually submit to a venue."""
-    ABSTRACT = "abstract"   # zero-month point milestone
-    PAPER    = "paper"      # spans draft_window_months
+    ABSTRACT = "abstract"    # zero-day milestone
+    PAPER    = "paper"       # spans min_draft_window_days
 
 class ConferenceType(str, Enum):
-    ENGINEERING = "Engineering"
-    MEDICAL     = "Medical"
+    ENGINEERING = "ENGINEERING"
+    MEDICAL     = "MEDICAL"
 
 @dataclass
 class Conference:
-    """External venue; may expose one or two deadlines."""
     id: str
     conf_type: ConferenceType                 # Eng / Med
     recurrence: str                           # "annual" | "biennial"
-    deadlines: Dict[SubmissionType, date]     # {"abstract": ..., "paper": ...}
+    deadlines: Dict[SubmissionType, date]     # e.g. {"abstract": ..., "paper": ...}
 
 @dataclass
 class Submission:
-    """
-    **Single-table row** – covers:
-    • PCCP engineering milestones (internal_ready_date)
-    • conference abstracts
-    • conference papers
-    """
     id: str
     kind: SubmissionType
     title: str
 
-    internal_ready_date: date                 # PCCP / FDA target
+    internal_ready_date: date                 # PCCP / FDA target date
     external_due_date: Optional[date]         # CFP deadline (or None)
-    conference_id: Optional[str]              # None → internal only
-    draft_window_months: int                  # 0 for abstracts
+    conference_id: Optional[str]              # None → internal-only
+
+    min_draft_window_days: Optional[int] = None  # minimum drafting time in days
 
     engineering: bool                         # venue compatibility
     depends_on: List[str]                     # other Submission IDs
 
-    free_slack_months: int = 0                # allowed slip vs ready date
-    penalty_cost_per_month: int = 0           # cost once past slack
+    free_slack_days: int = 0                  # allowed slip vs ready date (in days)
+    penalty_cost_per_day: float = 0.0         # cost per day once past slack
 
 @dataclass
 class Config:
-    default_lead_time_months: int
-    max_concurrent_submissions: int
-    slack_window_days: int
+    default_lead_time_days: int               # how far into the future to extend the calendar
+    max_concurrent_submissions: int           # maximum simultaneous active submissions
+    slack_window_days: int                    # default mod slack (in days)
 
     conferences: List[Conference]
     submissions: List[Submission]
 
-    data_files: Dict[str, str]
+    data_files: Dict[str, str]                # JSON file paths

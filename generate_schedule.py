@@ -32,11 +32,11 @@ def generate_schedule_cli() -> None:
     )
     parser.add_argument(
         "--start-date", type=str,
-        help="Crop Gantt chart start date (YYYY-MM)"
+        help="Crop Gantt chart start date (YYYY-MM-DD)"
     )
     parser.add_argument(
         "--end-date", type=str,
-        help="Crop Gantt chart end date (YYYY-MM)"
+        help="Crop Gantt chart end date (YYYY-MM-DD)"
     )
     args = parser.parse_args()
 
@@ -75,10 +75,7 @@ def generate_schedule_cli() -> None:
 # --------------------- Internals -------------------------
 
 def _run_scheduler(cfg: Config, use_greedy: bool) -> dict[str, int]:
-    """
-    Run either greedy or LP scheduling and return:
-        {submission_id: start_month_index}
-    """
+    # Run either greedy or LP scheduling and return {submission_id: start_month_index}
     if use_greedy:
         return greedy_schedule(cfg)
     else:
@@ -86,24 +83,21 @@ def _run_scheduler(cfg: Config, use_greedy: bool) -> dict[str, int]:
 
 
 def _parse_date(d: str | None) -> None | datetime.date:
-    """
-    Parse YYYY-MM string to date. None → None.
-    """
+    # Parse a date string or return None
     if d is None:
         return None
+
+    clean = d.split("T")[0]
     try:
-        return datetime.strptime(d, "%Y-%m").date()
-    except ValueError:
-        raise ValueError(f"Invalid date format: {d}. Expected YYYY-MM.")
+        return datetime.fromisoformat(clean).date()
+    except ValueError as exc:
+        raise ValueError(
+            f"Invalid date format: {d}. Expected YYYY-MM-DD."
+        ) from exc
 
 
 def _prompt_keypress() -> str:
-    """
-    Prompt for a single keypress. Supports:
-      - SPACE → regenerate
-      - ENTER → save
-      - q or ESC → quit
-    """
+    # Prompt for a single keypress in a cross-platform way
     print("")
     print("Press SPACE to regenerate, ENTER to save schedule, or Q / ESC to quit.")
     print(">", end=" ", flush=True)

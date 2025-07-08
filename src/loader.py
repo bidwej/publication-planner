@@ -1,5 +1,3 @@
-# src/loader.py
-
 from __future__ import annotations
 import json
 from datetime import datetime, date
@@ -14,12 +12,7 @@ from type import (
 )
 
 def load_config(config_path: str) -> Config:
-    """
-    Loads the entire config, including separate JSON files.
-    Returns
-    -------
-    Config
-    """
+    # Loads the entire config, including separate JSON files.
     with open(config_path, "r", encoding="utf-8") as f:
         raw_config = json.load(f)
 
@@ -31,9 +24,9 @@ def load_config(config_path: str) -> Config:
     )
 
     return Config(
-        default_lead_time_months=raw_config["default_paper_lead_time_months"],
-        max_concurrent_submissions=raw_config["max_concurrent_papers"],
-        slack_window_days=raw_config["default_mod_lead_time_months"] * 30,
+        default_lead_time_days=raw_config["default_paper_lead_time_days"],
+        max_concurrent_submissions=raw_config["max_concurrent_submissions"],
+        slack_window_days=raw_config["default_mod_lead_time_days"],
         conferences=confs,
         submissions=subs,
         data_files=raw_config["data_files"],
@@ -57,7 +50,7 @@ def _load_conferences(path: str) -> List[Conference]:
         out.append(
             Conference(
                 id=c["name"],
-                conf_type=ConferenceType(c["venue_type"]),
+                conf_type=ConferenceType(c["conference_type"]),
                 recurrence=c["recurrence"],
                 deadlines=deadlines,
             )
@@ -69,9 +62,6 @@ def _load_submissions(
     papers_path: str,
     conferences: List[Conference],
 ) -> List[Submission]:
-    """
-    Combines mods + papers into a single list of Submission objects.
-    """
     conf_map = {c.id: c for c in conferences}
     subs: List[Submission] = []
 
@@ -88,13 +78,14 @@ def _load_submissions(
                 internal_ready_date=_parse_date(m["est_data_ready"]),
                 external_due_date=None,
                 conference_id=None,
-                draft_window_months=0,
+                min_draft_window_days=None,  # mods have no draft window
                 engineering=True,
                 depends_on=[
                     f"mod{int(m['id'])-1:02d}-wrk"
                 ] if int(m["id"]) > 1 else [],
-                free_slack_months=m["free_slack_months"],
-                penalty_cost_per_month=m["penalty_cost_per_month"],
+                free_slack_days=m["free_slack_months"] * 30,
+                penalty_cost_per_day=m["penalty_cost_per_month"] / 30
+                if m["penalty_cost_per_month"] else 0,
             )
         )
 
@@ -119,8 +110,9 @@ def _load_submissions(
         mod_deps = [f"mod{mid:02d}-wrk" for mid in p["mod_dependencies"]]
         parent_deps = [f"{pid}-pap" for pid in p["parent_papers"]]
 
+        engineering = p.get("engineering", True)
+
         abs_id = None
-        # If venue has an abstract deadline, create abstract Submission
         if abs_deadline:
             abs_id = f"{p['id']}-abs"
             subs.append(
@@ -131,21 +123,24 @@ def _load_submissions(
                     internal_ready_date=abs_deadline,
                     external_due_date=abs_deadline,
                     conference_id=conf_obj.id if conf_obj else None,
-                    draft_window_months=0,
-                    engineering=p["engineering"],
+                    min_draft_window_days=0,
+                    engineering=engineering,
                     depends_on=mod_deps + parent_deps,
                 )
             )
 
-        # Create paper submission row
         paper_id = f"{p['id']}-pap"
         depends = mod_deps + parent_deps
         if abs_id:
             depends.append(abs_id)
 
         if pap_deadline or abs_deadline:
-            # choose paper deadline if it exists, else fall back to abstract deadline
             deadline = pap_deadline or abs_deadline
+
+            draft_window_days = None
+            if "draft_window_months" in p and p["draft_window_months"] is not None:
+                draft_window_days = int(p["draft_window_months"] * 30)
+
             subs.append(
                 Submission(
                     id=paper_id,
@@ -154,18 +149,20 @@ def _load_submissions(
                     internal_ready_date=deadline,
                     external_due_date=deadline,
                     conference_id=conf_obj.id if conf_obj else None,
-                    draft_window_months=p["draft_window_months"],
-                    engineering=p["engineering"],
+                    min_draft_window_days=draft_window_days,
+                    engineering=engineering,
                     depends_on=depends,
                 )
             )
-        # else no conference yet assigned → no paper row emitted
-
     return subs
 
-def _parse_date(datestr: str) -> date:
-    """
-    Converts ISO string → datetime.date.
-    """
-    clean = datestr.split("T")[0]
-    return datetime.fromisoformat(clean).date()
+
+def _parse_date(d: str) -> date:
+    # Converts ISO string to datetime.date, raises clear error if invalid
+    clean = d.split("T")[0]
+    try:
+        return datetime.fromisoformat(clean).date()
+    except ValueError as exc:
+        raise ValueError(
+            f"Invalid date format: {d}. Expected YYYY-MM-DD."
+        ) from exc

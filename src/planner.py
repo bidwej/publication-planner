@@ -1,4 +1,3 @@
-# src/planner.py
 from __future__ import annotations
 from typing import Dict, Union
 
@@ -15,24 +14,18 @@ class Planner:
     def __init__(self, cfg: Config) -> None:
         self.cfg = cfg
         self._greedy_cache: Dict[str, int] | None = None
-        self._lp_cache: Dict[str, float] | None = None
-
-    # ------------------------------------------------------------------ #
-    # Public helpers
-    # ------------------------------------------------------------------ #
+        self._lp_cache: Dict[str, int] | None = None
 
     def greedy(self) -> Dict[str, int]:
-        """Run or return the cached greedy schedule."""
         if self._greedy_cache is None:
             self._greedy_cache = greedy_schedule(self.cfg)
         return self._greedy_cache
 
-    def lp_relaxation(self) -> Dict[str, float]:
-        """Run or return the cached LP-relaxed schedule."""
+    def lp_relaxation(self) -> Dict[str, int]:
         if self._lp_cache is None:
             self._lp_cache = integer_schedule(self.cfg)
         return self._lp_cache
 
-    # Convenience aliases for older code ------------------------------- #
+    # Convenience aliases for older code
     greedy_schedule  = greedy
     solve_lp_relaxed = lp_relaxation

@@ -1,42 +1,29 @@
-# src/tables.py
-
 from __future__ import annotations
 from datetime import datetime
 from typing import Dict, List
 
-from type import SubmissionType
+from src.type import SubmissionType
+from src.scheduler import _days_to_months
 from planner import Planner
 
 def generate_monthly_table(
     planner: Planner,
     schedule: Dict[str, int]
 ) -> List[Dict[str, str]]:
-    """
-    Generates a monthly table showing active submissions
-    and deadlines for all conferences.
-
-    Parameters
-    ----------
-    planner : Planner
-        A Planner instance with timeline info.
-    schedule : Dict[str, int]
-        A dict of submission_id → start month index.
-
-    Returns
-    -------
-    List[Dict[str, str]]
-        Each dict contains "Month", "Active Submissions", "Deadlines"
-    """
+    # Generates a monthly table showing active submissions and deadlines
     rows: List[Dict[str, str]] = []
 
     for i, month in enumerate(planner.months):
         active = []
         for sid, start_idx in schedule.items():
             s = planner.sub_map[sid]
-            if start_idx <= i < start_idx + s.draft_window_months:
+
+            # Compute how many months the submission occupies
+            duration_months = _days_to_months(s.min_draft_window_days)
+
+            if start_idx <= i < start_idx + duration_months:
                 active.append(sid)
 
-        # Find deadlines in this month
         deadlines = []
         for conf in planner.conf_map.values():
             for kind, d in conf.deadlines.items():

@@ -60,7 +60,7 @@ def plot_schedule(
         if s.kind == SubmissionType.PAPER:
             ax.barh(
                 y=idx,
-                width=s.draft_window_months,
+                width=s.min_draft_window_days,
                 left=start_idx,
                 height=0.5,
                 color="steelblue",
@@ -123,7 +123,7 @@ def _rebuild_months(
 
     # Find furthest month in the schedule
     latest_idx = max(
-        schedule[sid] + subs[sid].draft_window_months
+        schedule[sid] + subs[sid].min_draft_window_days
         for sid in schedule
     )
     total_months = latest_idx

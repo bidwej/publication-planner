@@ -1,7 +1,7 @@
 {
-  "default_paper_lead_time_months": 3,
-  "default_mod_lead_time_months": 1,
-  "max_concurrent_papers": 3,
+  "default_paper_lead_time_days": 90,
+  "default_mod_lead_time_days": 30,
+  "max_concurrent_submissions": 3,
   "data_files": {
     "mods": "data/mods.json",
     "papers": "data/papers.json",
