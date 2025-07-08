@@ -26,7 +26,6 @@ DEFAULT_IGNORE_FOLDERS: Set[str] = {
     "scripts",
     # "tests",
     "cache",
-    "data",
 }
 
 # Files to ignore (by exact match or extensions)
