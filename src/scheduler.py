@@ -194,12 +194,12 @@ def load_schedule(path: str) -> Dict[str, int]:
 
 
 def save_schedule(
-    schedule: Dict[str, int],
+    schedule: Dict[str, date],
     submissions: List[Submission],
     path: str,
 ) -> None:
     rows = []
-    for sid, start_idx in schedule.items():
+    for sid, start_date in schedule.items():
         s = next(sub for sub in submissions if sub.id == sid)
         rows.append({
             "id": s.id,
@@ -209,7 +209,7 @@ def save_schedule(
             "conference_id": s.conference_id,
             "engineering": s.engineering,
             "depends_on": s.depends_on,
-            "start_month_index": start_idx,
+            "start_date": start_date.isoformat(),
         })
 
     with open(path, "w", encoding="utf-8") as f:
