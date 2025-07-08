@@ -2,6 +2,7 @@
   "min_abstract_lead_time_days": 5,
   "min_paper_lead_time_days": 15,
   "max_concurrent_submissions": 3,
+  "mod_to_paper_gap_days": 30,
   "data_files": {
     "mods": "data/mods.json",
     "papers": "data/papers.json",

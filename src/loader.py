@@ -35,6 +35,7 @@ def load_config(config_path: str) -> Config:
         min_abstract_lead_time_days=raw_cfg["min_abstract_lead_time_days"],
         min_paper_lead_time_days=raw_cfg["min_paper_lead_time_days"],
         max_concurrent_submissions=raw_cfg["max_concurrent_submissions"],
+        mod_to_paper_gap_days=raw_cfg["mod_to_paper_gap_days"],
         conferences=conferences,
         submissions=submissions,
         data_files=raw_cfg["data_files"],

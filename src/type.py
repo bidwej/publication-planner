@@ -45,6 +45,7 @@ class Config:
     min_abstract_lead_time_days: int         # default lead time for abstracts
     min_paper_lead_time_days: int            # default lead time for papers
     max_concurrent_submissions: int
+    mod_to_paper_gap_days: int
     conferences: List[Conference]
     submissions: List[Submission]
     data_files: Dict[str, str]

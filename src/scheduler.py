@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, date, timedelta
+from datetime import date, timedelta
 from typing import Dict, List, Optional, Set, Tuple
 
 from dateutil.relativedelta import relativedelta
@@ -14,73 +14,67 @@ from src.type import (
     Conference,
 )
 
-# ───────────────────────────────
-# Greedy scheduler
-# ───────────────────────────────
+# --------------------------------------------------------------------------- #
+# Public entry-point
+# --------------------------------------------------------------------------- #
+
 def greedy_schedule(cfg: Config) -> Dict[str, date]:
     """
-    Daily-based greedy scheduler.
-    Returns:
-      {submission_id → start_date}
-    """
-    sub_map = {s.id: s for s in cfg.submissions}
-    conf_map = {c.id: c for c in cfg.conferences}
+    Greedy daily scheduler for abstracts & papers.
 
+    Returns
+    -------
+    dict
+        {submission_id: start_date}
+    """
+    _auto_link_abstract_paper(cfg.submissions)
+
+    sub_map: Dict[str, Submission] = {s.id: s for s in cfg.submissions}
+    conf_map: Dict[str, Conference] = {c.id: c for c in cfg.conferences}
     _validate_venue_compatibility(sub_map, conf_map)
 
-    # Find time window
+    topo = _topological_order(sub_map)
+
+    # global time window
     dates = [s.earliest_start_date for s in sub_map.values()]
     for c in conf_map.values():
         dates.extend(c.deadlines.values())
-    start_date = min(dates)
-    end_date = max(dates) + timedelta(days=cfg.min_paper_lead_time_days)
-
-    # Build topological order
-    topo_order = _topological_order(sub_map)
+    current = min(dates)
+    end     = max(dates) + timedelta(days=cfg.min_paper_lead_time_days)
 
     schedule: Dict[str, date] = {}
-    active: Set[str] = set()
+    active:   Set[str]        = set()
 
-    current_date = start_date
-    while current_date <= end_date:
-        # Retire finished rows
+    while current <= end and len(schedule) < len(sub_map):
+        # retire finished drafts
         active = {
             sid
             for sid in active
-            if current_date < schedule[sid] + timedelta(days=_draft_days(sub_map[sid], cfg))
+            if current < schedule[sid] + _draft_delta(sub_map[sid], cfg)
         }
 
-        # Find ready submissions
-        ready = [
-            sid for sid in topo_order
-            if sid not in schedule
-            and all(
-                current_date >= schedule[dep] + timedelta(days=_draft_days(sub_map[dep], cfg))
-                for dep in sub_map[sid].depends_on
-            )
-            and current_date >= sub_map[sid].earliest_start_date
-        ]
+        # gather ready submissions
+        ready: List[str] = []
+        for sid in topo:
+            if sid in schedule:
+                continue
+            s = sub_map[sid]
+            if not _deps_satisfied(s, schedule, sub_map, cfg, current):
+                continue
+            if current < s.earliest_start_date:
+                continue
+            ready.append(sid)
 
+        # schedule up to concurrency limit
         for sid in ready:
             if len(active) >= cfg.max_concurrent_submissions:
                 break
-
-            s = sub_map[sid]
-
-            # Check conference deadline
-            if s.conference_id and s.kind in conf_map[s.conference_id].deadlines:
-                deadline = conf_map[s.conference_id].deadlines[s.kind]
-                finish_date = current_date + timedelta(days=_draft_days(s, cfg)) - timedelta(days=1)
-                if finish_date > deadline:
-                    continue
-
-            schedule[sid] = current_date
+            if not _meets_deadline(sub_map[sid], conf_map, current, cfg):
+                continue
+            schedule[sid] = current
             active.add(sid)
 
-        if len(schedule) == len(sub_map):
-            break
-
-        current_date += timedelta(days=1)
+        current += timedelta(days=1)
 
     if len(schedule) != len(sub_map):
         missing = [sid for sid in sub_map if sid not in schedule]
@@ -88,49 +82,95 @@ def greedy_schedule(cfg: Config) -> Dict[str, date]:
 
     return schedule
 
+# --------------------------------------------------------------------------- #
+# Internal helpers
+# --------------------------------------------------------------------------- #
 
-# ───────────────────────────────
-# Helpers
-# ───────────────────────────────
-def _draft_days(sub: Submission, cfg: Config) -> int:
-    return (
+def _auto_link_abstract_paper(subs: List[Submission]) -> None:
+    """Link abstract→paper pairs (same conf + title, case-insensitive)."""
+    groups: Dict[Tuple[Optional[str], str], List[Submission]] = {}
+    for s in subs:
+        groups.setdefault((s.conference_id, s.title.lower()), []).append(s)
+
+    for g in groups.values():
+        abs_  = [s for s in g if s.kind == SubmissionType.ABSTRACT]
+        paper = [s for s in g if s.kind == SubmissionType.PAPER]
+        if len(abs_) == 1 and len(paper) == 1 and abs_[0].id not in paper[0].depends_on:
+            paper[0].depends_on.append(abs_[0].id)
+
+# --------------------------------------------------------------------------- #
+
+def _deps_satisfied(
+    sub: Submission,
+    sched: Dict[str, date],
+    sub_map: Dict[str, Submission],
+    cfg: Config,
+    now: date,
+) -> bool:
+    """All dependencies scheduled & gap satisfied?"""
+
+    gap_mod    = relativedelta(days=cfg.mod_to_paper_gap_days)
+    gap_paper  = relativedelta(
+        days=getattr(cfg, "paper_parent_gap_days", 90)  # default 3 months
+    )
+
+    for dep_id in sub.depends_on:
+        if dep_id not in sched:
+            return False
+        dep        = sub_map[dep_id]
+        finish     = sched[dep_id] + _draft_delta(dep, cfg)
+        gap_needed = gap_mod if dep.conference_id is None else gap_paper
+        if now < finish + gap_needed:
+            return False
+    return True
+
+# --------------------------------------------------------------------------- #
+
+def _draft_delta(sub: Submission, cfg: Config) -> timedelta:
+    """Draft duration for a submission."""
+    days = (
         cfg.min_abstract_lead_time_days
         if sub.kind == SubmissionType.ABSTRACT
         else cfg.min_paper_lead_time_days
     )
+    return timedelta(days=days)
 
+def _meets_deadline(sub: Submission,
+                    conf_map: Dict[str, Conference],
+                    start: date,
+                    cfg: Config) -> bool:
+    if not sub.conference_id:
+        return True
+    conf = conf_map[sub.conference_id]
+    dl   = conf.deadlines.get(sub.kind)
+    if not dl:
+        return True
+    finish = start + _draft_delta(sub, cfg) - timedelta(days=1)
+    return finish <= dl
+
+# --------------------------------------------------------------------------- #
 
 def _topological_order(sub_map: Dict[str, Submission]) -> List[str]:
-    """
-    Return submission IDs in topological order.
-    Raises RuntimeError if cyclic dependencies exist.
-    """
     indeg = {sid: 0 for sid in sub_map}
     for s in sub_map.values():
-        for _ in s.depends_on:
+        for d in s.depends_on:
             indeg[s.id] += 1
-
-    queue = [sid for sid, deg in indeg.items() if deg == 0]
-    order = []
-
-    while queue:
-        sid = queue.pop(0)
+    q: List[str] = [sid for sid, n in indeg.items() if n == 0]
+    order: List[str] = []
+    while q:
+        sid = q.pop(0)
         order.append(sid)
         for s in sub_map.values():
             if sid in s.depends_on:
                 indeg[s.id] -= 1
                 if indeg[s.id] == 0:
-                    queue.append(s.id)
-
+                    q.append(s.id)
     if len(order) != len(sub_map):
         raise RuntimeError("Dependency cycle detected")
     return order
 
-
-def _validate_venue_compatibility(
-    sub_map: Dict[str, Submission],
-    conf_map: Dict[str, Conference],
-) -> None:
+def _validate_venue_compatibility(sub_map: Dict[str, Submission],
+                                  conf_map: Dict[str, Conference]) -> None:
     for s in sub_map.values():
         if not s.conference_id:
             continue
@@ -140,36 +180,23 @@ def _validate_venue_compatibility(
                 f"Medical submission {s.id} cannot target engineering venue {conf.id}"
             )
 
+# --------------------------------------------------------------------------- #
+# Persistence helpers (unchanged)
+# --------------------------------------------------------------------------- #
 
-# ───────────────────────────────
-# Persistence helpers
-# ───────────────────────────────
 def load_schedule(path: str) -> Dict[str, int]:
     with open(path, "r", encoding="utf-8") as f:
         rows = json.load(f)
-    return {row["id"]: row["start_month_index"] for row in rows}
+    return {r["id"]: r["start_month_index"] for r in rows}
 
-
-def save_schedule(
-    schedule: Dict[str, date],
-    submissions: List[Submission],
-    path: str,
-) -> None:
-    rows = []
-    for sid, start_date in schedule.items():
-        s = next(sub for sub in submissions if sub.id == sid)
-        rows.append({
-            "id": s.id,
-            "title": s.title,
-            "kind": s.kind.value,
-            "earliest_start_date": s.earliest_start_date.isoformat(),
-            "conference_id": s.conference_id,
-            "engineering": s.engineering,
-            "depends_on": s.depends_on,
-            "start_date": start_date.isoformat(),
-        })
+def save_schedule(schedule: Dict[str, date],
+                  submissions: List[Submission],
+                  path: str) -> None:
+    rows = [{
+        "id": sid,
+        "title": next(sub for sub in submissions if sub.id == sid).title,
+        "start_date": dt.isoformat(),
+    } for sid, dt in schedule.items()]
 
     with open(path, "w", encoding="utf-8") as f:
         json.dump(rows, f, indent=2)
-
-    print(f"Schedule saved to {path}")
