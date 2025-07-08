@@ -1,5 +1,3 @@
 pytest
 pandas
-
-# copy deps
-# setuptools
+ortools
