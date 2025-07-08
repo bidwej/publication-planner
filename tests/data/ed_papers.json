@@ -1,0 +1,242 @@
+[
+  {
+    "paper_id": 1,
+    "title": "Computer Vision (CV) endoscopy review",
+    "draft_window_months": 2,
+    "dependencies": [],
+    "mod_dependencies": [
+      1
+    ],
+    "planned_conference": null,
+    "abstract_submission_date": "2025-07-01",
+    "full_paper_submission_date": "2025-08-31"
+  },
+  {
+    "paper_id": 2,
+    "title": "Middle Turbinate/Inferior Turbinate (MT/IT)",
+    "draft_window_months": 3,
+    "dependencies": [],
+    "mod_dependencies": [
+      2
+    ],
+    "planned_conference": null,
+    "abstract_submission_date": "2025-08-01",
+    "full_paper_submission_date": "2025-10-31"
+  },
+  {
+    "paper_id": 3,
+    "title": "Nasal Septal Deviation (NSD)",
+    "draft_window_months": 3,
+    "dependencies": [],
+    "mod_dependencies": [
+      3
+    ],
+    "planned_conference": null,
+    "abstract_submission_date": "2025-09-01",
+    "full_paper_submission_date": "2025-11-30"
+  },
+  {
+    "paper_id": 4,
+    "title": "Eustachian Tube (ET)",
+    "draft_window_months": 3,
+    "dependencies": [],
+    "mod_dependencies": [
+      4
+    ],
+    "planned_conference": null,
+    "abstract_submission_date": "2025-10-01",
+    "full_paper_submission_date": "2025-12-31"
+  },
+  {
+    "paper_id": 5,
+    "title": "Middle Turbinate (MT ???/???)",
+    "draft_window_months": 2,
+    "dependencies": [],
+    "mod_dependencies": [
+      5
+    ],
+    "planned_conference": null,
+    "abstract_submission_date": "2025-11-01",
+    "full_paper_submission_date": "2025-12-31"
+  },
+  {
+    "paper_id": 6,
+    "title": "Eustachian Tube (ET inflamed vs ETDQ)",
+    "draft_window_months": 2,
+    "dependencies": [],
+    "mod_dependencies": [
+      6
+    ],
+    "planned_conference": null,
+    "abstract_submission_date": "2025-12-01",
+    "full_paper_submission_date": "2026-01-31"
+  },
+  {
+    "paper_id": 7,
+    "title": "Mucus",
+    "draft_window_months": 2,
+    "dependencies": [],
+    "mod_dependencies": [
+      7
+    ],
+    "planned_conference": null,
+    "abstract_submission_date": "2026-01-01",
+    "full_paper_submission_date": "2026-02-28"
+  },
+  {
+    "paper_id": 8,
+    "title": "Mucus Biology",
+    "draft_window_months": 2,
+    "dependencies": [],
+    "mod_dependencies": [
+      8
+    ],
+    "planned_conference": null,
+    "abstract_submission_date": "2026-02-01",
+    "full_paper_submission_date": "2026-03-31"
+  },
+  {
+    "paper_id": 9,
+    "title": "Color",
+    "draft_window_months": 1,
+    "dependencies": [],
+    "mod_dependencies": [
+      9
+    ],
+    "planned_conference": null,
+    "abstract_submission_date": "2026-03-01",
+    "full_paper_submission_date": "2026-03-31"
+  },
+  {
+    "paper_id": 10,
+    "title": "Localization (NC Mapping)",
+    "draft_window_months": 3,
+    "dependencies": [],
+    "mod_dependencies": [
+      10
+    ],
+    "planned_conference": null,
+    "abstract_submission_date": "2026-04-01",
+    "full_paper_submission_date": "2026-06-30"
+  },
+  {
+    "paper_id": 11,
+    "title": "Polyps",
+    "draft_window_months": 3,
+    "dependencies": [],
+    "mod_dependencies": [
+      11
+    ],
+    "planned_conference": null,
+    "abstract_submission_date": "2026-05-01",
+    "full_paper_submission_date": "2026-07-31"
+  },
+  {
+    "paper_id": 12,
+    "title": "Nasal Polyps (NP) vs PCMT",
+    "draft_window_months": 2,
+    "dependencies": [],
+    "mod_dependencies": [
+      12
+    ],
+    "planned_conference": null,
+    "abstract_submission_date": "2026-06-01",
+    "full_paper_submission_date": "2026-07-31"
+  },
+  {
+    "paper_id": 13,
+    "title": "Polyp color",
+    "draft_window_months": 1,
+    "dependencies": [],
+    "mod_dependencies": [
+      13
+    ],
+    "planned_conference": null,
+    "abstract_submission_date": "2026-07-01",
+    "full_paper_submission_date": "2026-07-31"
+  },
+  {
+    "paper_id": 14,
+    "title": "???? detection (vs MD)",
+    "draft_window_months": 3,
+    "dependencies": [],
+    "mod_dependencies": [
+      14
+    ],
+    "planned_conference": null,
+    "abstract_submission_date": "2026-08-01",
+    "full_paper_submission_date": "2026-10-31"
+  },
+  {
+    "paper_id": 15,
+    "title": "NE AI CDS vs ENT panel",
+    "draft_window_months": 3,
+    "dependencies": [],
+    "mod_dependencies": [
+      15
+    ],
+    "planned_conference": null,
+    "abstract_submission_date": "2026-09-01",
+    "full_paper_submission_date": "2026-11-30"
+  },
+  {
+    "paper_id": 16,
+    "title": "NE AI CDS vs PCP panel",
+    "draft_window_months": 3,
+    "dependencies": [],
+    "mod_dependencies": [
+      16
+    ],
+    "planned_conference": null,
+    "abstract_submission_date": "2026-10-01",
+    "full_paper_submission_date": "2026-12-31"
+  },
+  {
+    "paper_id": 17,
+    "title": "Gaze tracking vs AI",
+    "draft_window_months": 2,
+    "dependencies": [],
+    "mod_dependencies": [
+      17
+    ],
+    "planned_conference": null,
+    "abstract_submission_date": "2026-11-01",
+    "full_paper_submission_date": "2026-12-31"
+  },
+  {
+    "paper_id": 18,
+    "title": "Mucus AI vs culture",
+    "draft_window_months": 2,
+    "dependencies": [],
+    "mod_dependencies": [
+      1
+    ],
+    "planned_conference": null,
+    "abstract_submission_date": "2026-12-01",
+    "full_paper_submission_date": "2027-01-31"
+  },
+  {
+    "paper_id": 19,
+    "title": "CT max vs NE Maxillary Mucosa (MM)",
+    "draft_window_months": 3,
+    "dependencies": [],
+    "mod_dependencies": [
+      2
+    ],
+    "planned_conference": null,
+    "abstract_submission_date": "2027-01-01",
+    "full_paper_submission_date": "2027-03-31"
+  },
+  {
+    "paper_id": 20,
+    "title": "CT eth vs NE Middle Turbinate (MT)",
+    "draft_window_months": 3,
+    "dependencies": [],
+    "mod_dependencies": [
+      3
+    ],
+    "planned_conference": null,
+    "abstract_submission_date": "2027-02-01",
+    "full_paper_submission_date": "2027-04-30"
+  }
+]

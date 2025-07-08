@@ -1,0 +1,28 @@
+{
+  "conferences": [
+    "ICML (Machine Learning)",
+    "MIDL (Medical Imaging with Deep Learning)",
+    "MICCAI (Medical Imaging\u00a0&\u00a0AI)",
+    "EMBC (Biomedical Engineering)",
+    "ICCV (Computer Vision, biennial)",
+    "AMIA Annual Symposium",
+    "ARS (American Rhinologic Society)",
+    "NeurIPS (AI / ML)",
+    "RSNA (Radiology)",
+    "SPIE Medical Imaging",
+    "IFAR (Intl. Forum of Allergy\u00a0&\u00a0Rhinology)",
+    "ICRA (Robotics &\u00a0Automation)",
+    "AMIA Informatics Summit",
+    "CVPR (Computer Vision)"
+  ],
+  "total_papers": 20,
+  "min_queue": 1,
+  "max_queue": 2,
+  "slack_cost_heading": "SlackCost",
+  "concurrency_phrase": "at least one and at most two",
+  "coefficients": [
+    "P_j",
+    "Y_j",
+    "A_j"
+  ]
+}

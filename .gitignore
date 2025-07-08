@@ -1,0 +1,65 @@
+# ─── Python bytecode / compiled ──────────────────────
+__pycache__/
+*.py[cod]
+
+# ─── Pytest cache ────────────────────────────────────
+.pytest_cache/
+
+# ─── Virtual environments ────────────────────────────
+.venv/
+env/
+venv/
+
+# ─── OS / Editor metadata ────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+
+# ─── Logs ────────────────────────────────────────────
+*.log
+
+# ─── Build / dist / temp ─────────────────────────────
+build/
+output/
+temp*/
+*.bak
+
+# ─── Diff / patch files ──────────────────────────────
+*.diff
+*.patch
+
+# ─── Misc large binaries or compressed archives ──────
+*.tar.gz
+*.zip
+*.7z
+*.xz
+*.zipp
+*.exe
+*.obj
+*.bin
+*.pt
+*.pth
+*.sqlite*
+*.mp4
+*.mov
+*.wav
+*.mp3
+
+# ─── Sensitive / secrets ─────────────────────────────
+**/.env
+
+# ─── Backup folders ──────────────────────────────────
+Backup*/
+deprecated/
+deprecated slide templates/
+HealthSummary_*/
+instrument_*/
+
+# ─── Node & JS-related (just in case) ────────────────
+node_modules/
+
+# ─── Ignore caches in subfolders ─────────────────────
+**/__pycache__/
+**/.pytest_cache/

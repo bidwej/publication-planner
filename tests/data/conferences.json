@@ -1,0 +1,86 @@
+[
+  {
+    "name": "ICRA (Robotics & Automation)",
+    "abstract_deadline": "2030-12-31",
+    "full_deadline": "2030-12-31",
+    "conference_date": "2031-01-01"
+  },
+  {
+    "name": "NeurIPS (AI / ML)",
+    "abstract_deadline": "2030-12-31",
+    "full_deadline": "2030-12-31",
+    "conference_date": "2031-01-01"
+  },
+  {
+    "name": "CVPR (Computer Vision)",
+    "abstract_deadline": "2030-12-31",
+    "full_deadline": "2030-12-31",
+    "conference_date": "2031-01-01"
+  },
+  {
+    "name": "ICCV (Computer Vision, biennial)",
+    "abstract_deadline": "2030-12-31",
+    "full_deadline": "2030-12-31",
+    "conference_date": "2031-01-01"
+  },
+  {
+    "name": "ICML (Machine Learning)",
+    "abstract_deadline": "2030-12-31",
+    "full_deadline": "2030-12-31",
+    "conference_date": "2031-01-01"
+  },
+  {
+    "name": "MIDL (Medical Imaging with Deep Learning)",
+    "abstract_deadline": "2030-12-31",
+    "full_deadline": "2030-12-31",
+    "conference_date": "2031-01-01"
+  },
+  {
+    "name": "MICCAI (Medical Imaging & AI)",
+    "abstract_deadline": "2030-12-31",
+    "full_deadline": "2030-12-31",
+    "conference_date": "2031-01-01"
+  },
+  {
+    "name": "EMBC (Biomedical Engineering)",
+    "abstract_deadline": "2030-12-31",
+    "full_deadline": "2030-12-31",
+    "conference_date": "2031-01-01"
+  },
+  {
+    "name": "AMIA Annual Symposium",
+    "abstract_deadline": "2030-12-31",
+    "full_deadline": "2030-12-31",
+    "conference_date": "2031-01-01"
+  },
+  {
+    "name": "ARS (American Rhinologic Society)",
+    "abstract_deadline": "2030-12-31",
+    "full_deadline": "2030-12-31",
+    "conference_date": "2031-01-01"
+  },
+  {
+    "name": "RSNA (Radiology)",
+    "abstract_deadline": "2030-12-31",
+    "full_deadline": "2030-12-31",
+    "conference_date": "2031-01-01"
+  },
+  {
+    "name": "SPIE Medical Imaging",
+    "abstract_deadline": "2030-12-31",
+    "full_deadline": "2030-12-31",
+    "conference_date": "2031-01-01"
+  },
+  {
+    "name": "IFAR (Intl. Forum of Allergy & Rhinology)",
+    "abstract_deadline": "2030-12-31",
+    "full_deadline": "2030-12-31",
+    "conference_date": "2031-01-01"
+  },
+  {
+    "name": "AMIA Informatics Summit",
+    "abstract_deadline": "2030-12-31",
+    "full_deadline": "2030-12-31",
+    "conference_date": "2031-01-01"
+  }
+]
