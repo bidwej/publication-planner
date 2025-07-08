@@ -1,43 +1,63 @@
 # src/plot.py
 
 from __future__ import annotations
-from typing import Dict
+from typing import Dict, List, Optional
+from datetime import date, datetime
+from dateutil.relativedelta import relativedelta
 import matplotlib.pyplot as plt
 
-from src.planner import Planner
-from src.type import SubmissionType
+from src.type import Submission, SubmissionType
 
 def plot_schedule(
-    planner: Planner,
     schedule: Dict[str, int],
-    save_path: str = None
+    submissions: List[Submission],
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    save_path: Optional[str] = None
 ) -> None:
     """
     Plot a Gantt chart of the given schedule.
 
     Parameters
     ----------
-    planner : Planner
-        Planner instance containing submissions and timeline info.
     schedule : Dict[str, int]
-        Dict of submission_id → start month index.
+        Maps submission_id → start month index
+    submissions : List[Submission]
+        List of all Submission objects
+    start_date : date, optional
+        If provided, crops timeline before this date.
+    end_date : date, optional
+        If provided, crops timeline after this date.
     save_path : str, optional
-        If provided, saves the figure to a PNG instead of showing it interactively.
+        If given, saves PNG instead of showing interactively.
     """
+
+    subs = {s.id: s for s in submissions}
+
+    months = _rebuild_months(
+        schedule=schedule,
+        subs=subs,
+        start_date=start_date,
+        end_date=end_date,
+    )
 
     fig, ax = plt.subplots(figsize=(12, max(4, len(schedule) * 0.4)))
 
-    y_labels = []
-    y_positions = []
+    y_labels: List[str] = []
+    y_positions: List[int] = []
 
     for idx, sid in enumerate(sorted(schedule.keys())):
-        s = planner.sub_map[sid]
+        s = subs[sid]
         start_idx = schedule[sid]
+
+        # Skip items outside cropped view
+        if start_idx >= len(months):
+            continue
+
         y_labels.append(sid)
         y_positions.append(idx)
 
         if s.kind == SubmissionType.PAPER:
-            # Plot a horizontal bar
             ax.barh(
                 y=idx,
                 width=s.draft_window_months,
@@ -47,8 +67,7 @@ def plot_schedule(
                 edgecolor="black",
                 label="Paper" if idx == 0 else None
             )
-        elif s.kind == SubmissionType.ABSTRACT:
-            # Plot a diamond marker
+        else:
             ax.scatter(
                 [start_idx],
                 [idx],
@@ -58,30 +77,18 @@ def plot_schedule(
                 s=100,
                 label="Abstract" if idx == 0 else None
             )
-        else:
-            # Plot mod milestone if desired (treated as paper now)
-            ax.scatter(
-                [start_idx],
-                [idx],
-                marker="o",
-                color="green",
-                edgecolors="black",
-                s=80,
-                label="Mod" if idx == 0 else None
-            )
 
     ax.set_yticks(y_positions)
     ax.set_yticklabels(y_labels)
 
-    xticks = list(range(len(planner.months)))
-    xticklabels = [m.strftime("%Y-%m") for m in planner.months]
+    xticks = list(range(len(months)))
+    xticklabels = [m.strftime("%Y-%m") for m in months]
     ax.set_xticks(xticks)
     ax.set_xticklabels(xticklabels, rotation=45, ha="right", fontsize=8)
 
     ax.set_xlabel("Month")
     ax.set_title("Plausible Schedule Gantt Chart")
 
-    # Add a legend without duplicates
     handles, labels = ax.get_legend_handles_labels()
     unique = dict(zip(labels, handles))
     ax.legend(unique.values(), unique.keys())
@@ -93,3 +100,44 @@ def plot_schedule(
         print(f"Saved Gantt chart to: {save_path}")
     else:
         plt.show()
+
+
+def _rebuild_months(
+    schedule: Dict[str, int],
+    subs: Dict[str, Submission],
+    start_date: Optional[date],
+    end_date: Optional[date],
+) -> List[datetime]:
+    """
+    Compute the month grid needed for the Gantt chart.
+    """
+
+    if not schedule:
+        return []
+
+    # Find earliest internal_ready_date among all submissions
+    earliest_date = min(
+        s.internal_ready_date for s in subs.values()
+    )
+    start_dt = datetime(earliest_date.year, earliest_date.month, 1)
+
+    # Find furthest month in the schedule
+    latest_idx = max(
+        schedule[sid] + subs[sid].draft_window_months
+        for sid in schedule
+    )
+    total_months = latest_idx
+
+    months: List[datetime] = []
+    cur = start_dt
+    for _ in range(total_months + 1):
+        months.append(cur)
+        cur += relativedelta(months=1)
+
+    # Crop if user requests
+    if start_date:
+        months = [m for m in months if m.date() >= start_date]
+    if end_date:
+        months = [m for m in months if m.date() <= end_date]
+
+    return months
