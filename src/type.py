@@ -5,8 +5,8 @@ from typing import List, Dict, Optional
 from datetime import date
 
 class SubmissionType(str, Enum):
-    ABSTRACT = "abstract"    # zero-day milestone
-    PAPER    = "paper"       # spans min_draft_window_days
+    ABSTRACT = "ABSTRACT"    # zero-day milestone
+    PAPER    = "PAPER"       # spans min_draft_window_days
 
 class ConferenceType(str, Enum):
     ENGINEERING = "ENGINEERING"
