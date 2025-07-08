@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import Dict, List, Optional, Set, Tuple
+
 from dateutil.relativedelta import relativedelta
 
 from src.type import (
@@ -16,12 +17,11 @@ from src.type import (
 # ───────────────────────────────
 # Greedy scheduler
 # ───────────────────────────────
-def greedy_schedule(cfg: Config) -> Dict[str, int]:
+def greedy_schedule_daily(cfg: Config) -> Dict[str, date]:
     """
-    Returns {submission_id → start_month_index} using a greedy heuristic.
-    Draft length per task:
-        ABSTRACT → cfg.min_abstract_lead_time_days
-        PAPER    → cfg.min_paper_lead_time_days
+    Daily-based greedy scheduler.
+    Returns:
+      {submission_id → start_date}
     """
     sub_map = {s.id: s for s in cfg.submissions}
     conf_map = {c.id: c for c in cfg.conferences}
@@ -29,25 +29,37 @@ def greedy_schedule(cfg: Config) -> Dict[str, int]:
     _validate_structures(sub_map)
     _validate_venue_compatibility(sub_map, conf_map)
 
-    months, month_idx = _build_calendar(cfg, sub_map, conf_map)
-    topo = _topological_order(sub_map)
+    # Find time window
+    dates = [s.earliest_start_date for s in sub_map.values()]
+    for c in conf_map.values():
+        dates.extend(c.deadlines.values())
+    start_date = min(dates)
+    end_date = max(dates) + timedelta(days=cfg.min_paper_lead_time_days)
 
-    schedule: Dict[str, int] = {}
+    # Build topological order
+    topo_order = _topological_order(sub_map)
+
+    schedule: Dict[str, date] = {}
     active: Set[str] = set()
 
-    for t in range(len(months)):
+    current_date = start_date
+    while current_date <= end_date:
         # Retire finished rows
         active = {
             sid
             for sid in active
-            if t < schedule[sid] + _days_to_months(_draft_days(sub_map[sid], cfg))
+            if current_date < schedule[sid] + timedelta(days=_draft_days(sub_map[sid], cfg))
         }
 
-        # Ready submissions whose deps are done
+        # Find ready submissions
         ready = [
-            sid for sid in topo
+            sid for sid in topo_order
             if sid not in schedule
-            and all(dep in schedule for dep in sub_map[sid].depends_on)
+            and all(
+                current_date >= schedule[dep] + timedelta(days=_draft_days(sub_map[dep], cfg))
+                for dep in sub_map[sid].depends_on
+            )
+            and current_date >= sub_map[sid].earliest_start_date
         ]
 
         for sid in ready:
@@ -56,34 +68,27 @@ def greedy_schedule(cfg: Config) -> Dict[str, int]:
 
             s = sub_map[sid]
 
-            earliest = max(
-                month_idx[(s.earliest_start_date.year, s.earliest_start_date.month)],
-                max(
-                    schedule[d] + _days_to_months(_draft_days(sub_map[d], cfg))
-                    for d in s.depends_on
-                ) if s.depends_on else 0,
-            )
-            if t < earliest:
-                continue
-
-            # Conference deadline check
+            # Check conference deadline
             if s.conference_id and s.kind in conf_map[s.conference_id].deadlines:
-                due = conf_map[s.conference_id].deadlines[s.kind]
-                finish = t + _days_to_months(_draft_days(s, cfg))
-                if finish > month_idx[(due.year, due.month)]:
+                deadline = conf_map[s.conference_id].deadlines[s.kind]
+                finish_date = current_date + timedelta(days=_draft_days(s, cfg)) - timedelta(days=1)
+                if finish_date > deadline:
                     continue
 
-            schedule[sid] = t
+            schedule[sid] = current_date
             active.add(sid)
 
         if len(schedule) == len(sub_map):
             break
+
+        current_date += timedelta(days=1)
 
     if len(schedule) != len(sub_map):
         missing = [sid for sid in sub_map if sid not in schedule]
         raise RuntimeError(f"Could not schedule submissions: {missing}")
 
     return schedule
+
 
 # ───────────────────────────────
 # Helpers
@@ -101,42 +106,52 @@ def _build_calendar(
     sub_map: Dict[str, Submission],
     conf_map: Dict[str, Conference],
 ) -> Tuple[List[datetime], Dict[Tuple[int, int], int]]:
-    dates: List[date] = []
-
-    for s in sub_map.values():
-        dates.append(s.earliest_start_date)
-        if s.conference_id and s.kind in conf_map[s.conference_id].deadlines:
-            dates.append(conf_map[s.conference_id].deadlines[s.kind])
+    """
+    Build a calendar spanning all known submission dates and deadlines.
+    """
+    dates = [
+        s.earliest_start_date
+        for s in sub_map.values()
+    ] + [
+        conf.deadlines[k]
+        for conf in conf_map.values()
+        for k in conf.deadlines
+    ]
 
     start = min(dates)
     end = max(dates) + relativedelta(days=cfg.min_paper_lead_time_days)
 
-    months: List[datetime] = []
+    months = []
     cur = datetime(start.year, start.month, 1)
     while cur.date() <= end:
         months.append(cur)
         cur += relativedelta(months=1)
 
-    idx = {(m.year, m.month): i for i, m in enumerate(months)}
-    return months, idx
+    month_idx = {(m.year, m.month): i for i, m in enumerate(months)}
+    return months, month_idx
 
 
 def _topological_order(sub_map: Dict[str, Submission]) -> List[str]:
+    """
+    Return submission IDs in topological order.
+    Raises RuntimeError if cyclic dependencies exist.
+    """
     indeg = {sid: 0 for sid in sub_map}
     for s in sub_map.values():
         for _ in s.depends_on:
             indeg[s.id] += 1
 
-    q = [sid for sid, v in indeg.items() if v == 0]
-    order: List[str] = []
-    while q:
-        sid = q.pop(0)
+    queue = [sid for sid, deg in indeg.items() if deg == 0]
+    order = []
+
+    while queue:
+        sid = queue.pop(0)
         order.append(sid)
         for s in sub_map.values():
             if sid in s.depends_on:
                 indeg[s.id] -= 1
                 if indeg[s.id] == 0:
-                    q.append(s.id)
+                    queue.append(s.id)
 
     if len(order) != len(sub_map):
         raise RuntimeError("Dependency cycle detected")
@@ -158,13 +173,11 @@ def _validate_venue_compatibility(
 
 
 def _validate_structures(sub_map: Dict[str, Submission]) -> None:
-    for s in sub_map.values():
-        if s.kind == SubmissionType.ABSTRACT and _draft_days(s, cfg=None) != 0:
-            # always zero by definition, check left for completeness
-            continue
-        if s.kind == SubmissionType.PAPER and not s.id.startswith("mod"):
-            # nothing else to validate now that draft length is global
-            continue
+    """
+    Validate data structure integrity.
+    """
+    # no per-submission draft windows left to validate
+    pass
 
 
 def _days_to_months(days: int) -> float:
@@ -177,7 +190,7 @@ def _days_to_months(days: int) -> float:
 def load_schedule(path: str) -> Dict[str, int]:
     with open(path, "r", encoding="utf-8") as f:
         rows = json.load(f)
-    return {r["id"]: r["start_month_index"] for r in rows}
+    return {row["id"]: row["start_month_index"] for row in rows}
 
 
 def save_schedule(
@@ -188,19 +201,18 @@ def save_schedule(
     rows = []
     for sid, start_idx in schedule.items():
         s = next(sub for sub in submissions if sub.id == sid)
-        rows.append(
-            {
-                "id": s.id,
-                "title": s.title,
-                "kind": s.kind.value,
-                "earliest_start_date": s.earliest_start_date.isoformat(),
-                "conference_id": s.conference_id,
-                "engineering": s.engineering,
-                "depends_on": s.depends_on,
-                "start_month_index": start_idx,
-            }
-        )
+        rows.append({
+            "id": s.id,
+            "title": s.title,
+            "kind": s.kind.value,
+            "earliest_start_date": s.earliest_start_date.isoformat(),
+            "conference_id": s.conference_id,
+            "engineering": s.engineering,
+            "depends_on": s.depends_on,
+            "start_month_index": start_idx,
+        })
 
     with open(path, "w", encoding="utf-8") as f:
         json.dump(rows, f, indent=2)
+
     print(f"Schedule saved to {path}")
