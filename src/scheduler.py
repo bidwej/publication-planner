@@ -13,17 +13,19 @@ from src.type import (
     Submission,
     SubmissionType,
     ConferenceType,
-    Conference
+    Conference,
 )
 
+
+# ──────────────────  Greedy scheduler  ──────────────────
 def greedy_schedule(cfg: Config) -> Dict[str, int]:
-    sub_map: Dict[str, Submission] = {s.id: s for s in cfg.submissions}
+    sub_map = {s.id: s for s in cfg.submissions}
     conf_map = {c.id: c for c in cfg.conferences}
 
     _validate_structures(sub_map)
     _validate_venue_compatibility(sub_map, conf_map)
 
-    months, month_idx = _build_calendar(cfg, sub_map)
+    months, month_idx = _build_calendar(cfg, sub_map, conf_map)
     topo = _topological_order(sub_map)
 
     schedule: Dict[str, int] = {}
@@ -36,7 +38,7 @@ def greedy_schedule(cfg: Config) -> Dict[str, int]:
             if t < schedule[sid] + _days_to_months(sub_map[sid].min_draft_window_days)
         }
 
-        # rows whose deps are satisfied
+        # ready rows (deps satisfied)
         ready = [
             sid for sid in topo
             if sid not in schedule
@@ -49,19 +51,20 @@ def greedy_schedule(cfg: Config) -> Dict[str, int]:
 
             s = sub_map[sid]
             earliest = max(
-                month_idx[(s.internal_ready_date.year, s.internal_ready_date.month)],
+                month_idx[(s.earliest_start_date.year, s.earliest_start_date.month)],
                 max(
                     schedule[d] + _days_to_months(sub_map[d].min_draft_window_days)
                     for d in s.depends_on
                 ) if s.depends_on else 0,
             )
-
             if t < earliest:
                 continue
 
-            if s.external_due_date:
+            # must finish before conference deadline (if any)
+            if s.conference_id and s.kind in conf_map[s.conference_id].deadlines:
+                due_date = conf_map[s.conference_id].deadlines[s.kind]
                 finish = t + _days_to_months(s.min_draft_window_days)
-                due_m = month_idx[(s.external_due_date.year, s.external_due_date.month)]
+                due_m = month_idx[(due_date.year, due_date.month)]
                 if finish > due_m:
                     continue
 
@@ -72,24 +75,29 @@ def greedy_schedule(cfg: Config) -> Dict[str, int]:
             break
 
     if len(schedule) != len(sub_map):
+        unplaced = [sid for sid in sub_map if sid not in schedule]
+        print("DEBUG unplaced submissions:", unplaced)
         raise RuntimeError("Greedy scheduler could not place every row.")
 
     return schedule
 
+
+# ──────────────────  Linear-program scheduler  ──────────────────
 def integer_schedule(cfg: Config) -> Dict[str, int]:
-    sub_map: Dict[str, Submission] = {s.id: s for s in cfg.submissions}
+    sub_map = {s.id: s for s in cfg.submissions}
     conf_map = {c.id: c for c in cfg.conferences}
 
     _validate_structures(sub_map)
     _validate_venue_compatibility(sub_map, conf_map)
 
-    _, month_idx = _build_calendar(cfg, sub_map)
+    months, month_idx = _build_calendar(cfg, sub_map, conf_map)
     ids = list(sub_map)
     n = len(ids)
 
-    c = np.ones(n)
+    c = np.ones(n)  # minimise total start time
     A, b = [], []
 
+    # dependency constraints
     for i, sid in enumerate(ids):
         for dep in sub_map[sid].depends_on:
             j = ids.index(dep)
@@ -99,23 +107,23 @@ def integer_schedule(cfg: Config) -> Dict[str, int]:
             A.append(row)
             b.append(-_days_to_months(sub_map[dep].min_draft_window_days))
 
+    # cannot start before earliest_start_date
     for i, sid in enumerate(ids):
         ready_m = month_idx[(
-            sub_map[sid].internal_ready_date.year,
-            sub_map[sid].internal_ready_date.month
+            sub_map[sid].earliest_start_date.year,
+            sub_map[sid].earliest_start_date.month
         )]
         row = np.zeros(n)
         row[i] = -1
         A.append(row)
         b.append(-ready_m)
 
+    # must finish before conference deadline (if any)
     for i, sid in enumerate(ids):
         s = sub_map[sid]
-        if s.external_due_date:
-            due_m = month_idx[(
-                s.external_due_date.year,
-                s.external_due_date.month
-            )]
+        if s.conference_id and s.kind in conf_map[s.conference_id].deadlines:
+            due = conf_map[s.conference_id].deadlines[s.kind]
+            due_m = month_idx[(due.year, due.month)]
             row = np.zeros(n)
             row[i] = 1
             A.append(row)
@@ -123,28 +131,29 @@ def integer_schedule(cfg: Config) -> Dict[str, int]:
 
     res = scipy.optimize.linprog(
         c, A_ub=np.array(A), b_ub=np.array(b),
-        bounds=[(0, None)] * n,
-        method="highs"
+        bounds=[(0, None)] * n, method="highs"
     )
     if not res.success:
         raise RuntimeError("LP optimisation failed: " + res.message)
 
-    fractional = {sid: float(res.x[i]) for i, sid in enumerate(ids)}
-    integer_schedule = {k: int(round(v)) for k, v in fractional.items()}
-    return integer_schedule
+    return {ids[i]: int(round(v)) for i, v in enumerate(res.x)}
 
+
+# ──────────────────  Helpers  ──────────────────
 def _build_calendar(
     cfg: Config,
-    sub_map: Dict[str, Submission]
+    sub_map: Dict[str, Submission],
+    conf_map: Dict[str, Conference]
 ) -> Tuple[List[datetime], Dict[Tuple[int, int], int]]:
+    """Return month list + lookup; calendar extends past latest deadline."""
     dates: List[date] = []
+
     for s in sub_map.values():
-        dates.append(s.internal_ready_date)
-        if s.external_due_date:
-            dates.append(s.external_due_date)
+        dates.append(s.earliest_start_date)
+        if s.conference_id and s.kind in conf_map[s.conference_id].deadlines:
+            dates.append(conf_map[s.conference_id].deadlines[s.kind])
 
     start = min(dates)
-    # ** HERE IS THE CHANGE **
     end = max(dates) + relativedelta(days=cfg.default_lead_time_days)
 
     months: List[datetime] = []
@@ -155,6 +164,7 @@ def _build_calendar(
 
     idx = {(m.year, m.month): i for i, m in enumerate(months)}
     return months, idx
+
 
 def _topological_order(sub_map: Dict[str, Submission]) -> List[str]:
     indeg = {sid: 0 for sid in sub_map}
@@ -178,6 +188,7 @@ def _topological_order(sub_map: Dict[str, Submission]) -> List[str]:
         raise RuntimeError("Dependency cycle detected")
     return order
 
+
 def _validate_venue_compatibility(
     sub_map: Dict[str, Submission],
     conf_map: Dict[str, Conference]
@@ -195,51 +206,49 @@ def _validate_venue_compatibility(
 def _validate_structures(sub_map: Dict[str, Submission]) -> None:
     for s in sub_map.values():
         if s.kind == SubmissionType.ABSTRACT and s.min_draft_window_days != 0:
-            raise ValueError(
-                f"Abstract {s.id} must have min_draft_window_days == 0"
-            )
+            raise ValueError(f"{s.id}: abstracts must have draft_window == 0")
         if (
             s.kind == SubmissionType.PAPER
             and not s.id.startswith("mod")
             and (s.min_draft_window_days is None or s.min_draft_window_days <= 0)
         ):
-            raise ValueError(
-                f"Paper {s.id} must have min_draft_window_days > 0 (got {s.min_draft_window_days})"
-            )
+            raise ValueError(f"{s.id}: papers need positive draft_window")
+
 
 def _days_to_months(days: Optional[int]) -> float:
-    if days is None:
-        return 0.0
-    return days / 30.0
+    return 0.0 if days is None else days / 30.0
 
-def load_schedule(path: str) -> dict[str, int]:
+
+# ── persistence helpers (unchanged except for renamed field) ─────────
+def load_schedule(path: str) -> Dict[str, int]:
     with open(path, "r", encoding="utf-8") as f:
         rows = json.load(f)
-    return {row["id"]: row["start_month_index"] for row in rows}
+    return {r["id"]: r["start_month_index"] for r in rows}
+
 
 def save_schedule(
-    schedule: dict[str, int],
-    submissions: list[Submission],
+    schedule: Dict[str, int],
+    submissions: List[Submission],
     path: str
 ) -> None:
-    output = []
+    rows = []
     for sid, start_idx in schedule.items():
         s = next(sub for sub in submissions if sub.id == sid)
-        output_row = {
-            "id": s.id,
-            "title": s.title,
-            "kind": s.kind.value,
-            "internal_ready_date": s.internal_ready_date.isoformat(),
-            "external_due_date": s.external_due_date.isoformat() if s.external_due_date else None,
-            "conference_id": s.conference_id,
-            "min_draft_window_days": s.min_draft_window_days,
-            "engineering": s.engineering,
-            "depends_on": s.depends_on,
-            "start_month_index": start_idx,
-        }
-        output.append(output_row)
+        rows.append(
+            {
+                "id": s.id,
+                "title": s.title,
+                "kind": s.kind.value,
+                "earliest_start_date": s.earliest_start_date.isoformat(),
+                "conference_id": s.conference_id,
+                "min_draft_window_days": s.min_draft_window_days,
+                "engineering": s.engineering,
+                "depends_on": s.depends_on,
+                "start_month_index": start_idx,
+            }
+        )
 
     with open(path, "w", encoding="utf-8") as f:
-        json.dump(output, f, indent=2)
+        json.dump(rows, f, indent=2)
 
     print(f"Schedule saved to {path}")

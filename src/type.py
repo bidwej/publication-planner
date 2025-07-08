@@ -5,8 +5,8 @@ from typing import List, Dict, Optional
 from datetime import date
 
 class SubmissionType(str, Enum):
-    ABSTRACT = "ABSTRACT"    # zero-day milestone
-    PAPER    = "PAPER"       # spans min_draft_window_days
+    ABSTRACT = "ABSTRACT"          # zero-day milestone
+    PAPER    = "PAPER"             # spans draft window
 
 class ConferenceType(str, Enum):
     ENGINEERING = "ENGINEERING"
@@ -15,9 +15,9 @@ class ConferenceType(str, Enum):
 @dataclass
 class Conference:
     id: str
-    conf_type: ConferenceType                 # Eng / Med
-    recurrence: str                           # "annual" | "biennial"
-    deadlines: Dict[SubmissionType, date]     # e.g. {"abstract": ..., "paper": ...}
+    conf_type: ConferenceType
+    recurrence: str                         # "annual" | "biennial"
+    deadlines: Dict[SubmissionType, date]   # CFP dates per kind
 
 @dataclass
 class Submission:
@@ -25,24 +25,23 @@ class Submission:
     kind: SubmissionType
     title: str
 
-    internal_ready_date: date                 # PCCP / FDA target date
-    external_due_date: Optional[date]         # CFP deadline (or None)
-    conference_id: Optional[str]              # None → internal-only
+    # new, unambiguous
+    earliest_start_date: date               # mods: PCCP/FDA ready; papers: data-ready
 
-    engineering: bool                         # venue compatibility
-    depends_on: List[str]                     # other Submission IDs
+    conference_id: Optional[str]            # None → internal-only
+    min_draft_window_days: Optional[int] = None  # drafting span
 
-    min_draft_window_days: Optional[int] = None  # minimum drafting time in days
-    free_slack_days: int = 0                  # allowed slip vs ready date (in days)
-    penalty_cost_per_day: float = 0.0         # cost per day once past slack
+    engineering: bool
+    depends_on: List[str]
+
+    free_slack_days: int = 0
+    penalty_cost_per_day: float = 0.0
 
 @dataclass
 class Config:
-    default_lead_time_days: int               # how far into the future to extend the calendar
-    max_concurrent_submissions: int           # maximum simultaneous active submissions
-    slack_window_days: int                    # default mod slack (in days)
-
+    default_lead_time_days: int
+    max_concurrent_submissions: int
+    slack_window_days: int
     conferences: List[Conference]
     submissions: List[Submission]
-
-    data_files: Dict[str, str]                # JSON file paths
+    data_files: Dict[str, str]
