@@ -186,10 +186,11 @@ def _validate_venue_compatibility(
         if not s.conference_id:
             continue
         conf = conf_map[s.conference_id]
-        if conf.conf_type == ConferenceType.MEDICAL and s.engineering:
+        if conf.conf_type == ConferenceType.ENGINEERING and not s.engineering:
             raise ValueError(
-                f"Engineering submission {s.id} cannot target medical venue {conf.id}"
+                f"Medical submission {s.id} cannot target engineering venue {conf.id}"
             )
+
 
 def _validate_structures(sub_map: Dict[str, Submission]) -> None:
     for s in sub_map.values():
