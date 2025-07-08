@@ -30,3 +30,42 @@ The following tasks remain to be completed:
 - Perform end-to-end testing with real data to confirm schedule feasibility under varying `min_papers_per_month` and `max_papers_per_month`.
 - Update the master planning document (`docs/EndoscopeAI_Publication_Master.md`) with finalized constraints and tables.
 
+TODO: replace greedy with scipy.optimize linear programming. We cannot solve because we would like to cross-compile linux binaries for ChatGPT.
+TODO: plot each plausible thing and be able to interacivly hit a key to see next one or save which would save everyting to json so need funcs for this.
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Data for the chart based on previous LP solution
+tasks = ["Mod1", "Mod2", "Paper1", "Paper2"]
+start = [1, 2, 2, 3]
+duration = [1, 1, 3, 3]
+
+# Prepare plot
+fig, ax = plt.subplots(figsize=(8, 3))
+
+for i, (task, s, d) in enumerate(zip(tasks, start, duration)):
+    ax.barh(y=i, width=d, left=s, height=0.5, align='center', edgecolor='black')
+
+ax.set_yticks(range(len(tasks)))
+ax.set_yticklabels(tasks)
+ax.set_xlabel("Month")
+ax.set_title("Plausible Schedule Gantt Chart (Matplotlib)")
+
+plt.tight_layout()
+
+# Display inline PNG
+import io
+import PIL.Image
+
+buf = io.BytesIO()
+plt.savefig(buf, format='png')
+buf.seek(0)
+im = PIL.Image.open(buf)
+im.show()
+
+# To display directly in the notebook (chat) output:
+import IPython.display as display
+display.display(im)
+
+plt.close()
