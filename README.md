@@ -37,7 +37,7 @@ The **Endoscope AI Plan** schedules
 
 | Chain | Nodes (diagram) | Paper IDs |
 |-------|-----------------|-----------|
-| Background → UEX → CV | User Exp → CV review | **J1** |
+| Background → UEX → CV | User Exp → CV review | **J1** |a
 | Anatomy | MT/IT → NSD → ET | **J2 → J3 → J4** |
 | Surface Features | Mid Turb (???) → ET inflamed | **J5 → J6** |
 | Path‑Mucus | Mucus → Mucus Bio → Color → Localization | **J7 → J8 → J9 → J10** |

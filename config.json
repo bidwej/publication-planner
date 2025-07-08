@@ -1,6 +1,6 @@
 {
-  "default_paper_lead_time_days": 90,
-  "default_mod_lead_time_days": 30,
+  "min_abstract_lead_time_days": 5,
+  "min_paper_lead_time_days": 15,
   "max_concurrent_submissions": 3,
   "data_files": {
     "mods": "data/mods.json",
