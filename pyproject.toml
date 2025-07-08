@@ -1,0 +1,31 @@
+[tool.pylint]
+# Prevent false positives on compiled C extensions like cv2 and numpy
+extension-pkg-allow-list = ["cv2", "numpy"]
+ignore = ["__pycache__"]
+
+[tool.pylint.messages_control]
+# Disable known false positives or non-critical rules for scientific code
+disable = [
+  "invalid-name",                 # Short names like K, D, R, T are standard in CV/calibration
+  "missing-module-docstring",    # Acceptable in small scripts/tests
+  "missing-function-docstring",  # Function names often self-document
+  "missing-class-docstring",     # Acceptable for simple dataclasses and NamedTuples
+  "no-member",                   # Dynamic attrs in cv2/aruco aren't introspectable
+  "unpacking-non-sequence",      # Avoids false positives on OpenCV return unpacking
+  "multiple-statements",         # Occasionally useful in test scripts
+  "redefined-outer-name",        # Fixture injection by name is standard in pytest
+  "broad-exception-caught",
+  "unused-import"
+]
+
+[tool.pylint.typecheck]
+# Silence false positives from dynamic module generation
+generated-members = [
+  "cv2.*",
+  "cv2.aruco.*"
+]
+
+[tool.pylint.format]
+max-line-length = 250  # Allow long lines for CLI args, matrices, etc.
+
+[tool.pytest.ini_options]

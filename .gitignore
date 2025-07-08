@@ -63,3 +63,5 @@ node_modules/
 # ─── Ignore caches in subfolders ─────────────────────
 **/__pycache__/
 **/.pytest_cache/
+**/local_libs/*
+**/third_party/*
