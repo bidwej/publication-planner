@@ -17,7 +17,7 @@ from src.type import (
 # ───────────────────────────────
 # Greedy scheduler
 # ───────────────────────────────
-def greedy_schedule_daily(cfg: Config) -> Dict[str, date]:
+def greedy_schedule(cfg: Config) -> Dict[str, date]:
     """
     Daily-based greedy scheduler.
     Returns:
@@ -26,7 +26,6 @@ def greedy_schedule_daily(cfg: Config) -> Dict[str, date]:
     sub_map = {s.id: s for s in cfg.submissions}
     conf_map = {c.id: c for c in cfg.conferences}
 
-    _validate_structures(sub_map)
     _validate_venue_compatibility(sub_map, conf_map)
 
     # Find time window
@@ -101,36 +100,6 @@ def _draft_days(sub: Submission, cfg: Config) -> int:
     )
 
 
-def _build_calendar(
-    cfg: Config,
-    sub_map: Dict[str, Submission],
-    conf_map: Dict[str, Conference],
-) -> Tuple[List[datetime], Dict[Tuple[int, int], int]]:
-    """
-    Build a calendar spanning all known submission dates and deadlines.
-    """
-    dates = [
-        s.earliest_start_date
-        for s in sub_map.values()
-    ] + [
-        conf.deadlines[k]
-        for conf in conf_map.values()
-        for k in conf.deadlines
-    ]
-
-    start = min(dates)
-    end = max(dates) + relativedelta(days=cfg.min_paper_lead_time_days)
-
-    months = []
-    cur = datetime(start.year, start.month, 1)
-    while cur.date() <= end:
-        months.append(cur)
-        cur += relativedelta(months=1)
-
-    month_idx = {(m.year, m.month): i for i, m in enumerate(months)}
-    return months, month_idx
-
-
 def _topological_order(sub_map: Dict[str, Submission]) -> List[str]:
     """
     Return submission IDs in topological order.
@@ -170,18 +139,6 @@ def _validate_venue_compatibility(
             raise ValueError(
                 f"Medical submission {s.id} cannot target engineering venue {conf.id}"
             )
-
-
-def _validate_structures(sub_map: Dict[str, Submission]) -> None:
-    """
-    Validate data structure integrity.
-    """
-    # no per-submission draft windows left to validate
-    pass
-
-
-def _days_to_months(days: int) -> float:
-    return days / 30.0
 
 
 # ───────────────────────────────
