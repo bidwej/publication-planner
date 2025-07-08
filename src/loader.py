@@ -3,7 +3,7 @@ import json
 from datetime import datetime, date
 from typing import Any, Dict, List, Optional
 
-from type import (
+from src.type import (
     Config,
     Conference,
     ConferenceType,
@@ -65,6 +65,11 @@ def _load_submissions(
     conf_map = {c.id: c for c in conferences}
     subs: List[Submission] = []
 
+    # Dynamically build set of engineering conferences
+    ENGINEERING_CONFERENCES = {
+        c.id for c in conferences if c.conf_type == ConferenceType.ENGINEERING
+    }
+
     # Load all mods first
     with open(mods_path, "r", encoding="utf-8") as f:
         raw_mods = json.load(f)
@@ -110,7 +115,11 @@ def _load_submissions(
         mod_deps = [f"mod{mid:02d}-wrk" for mid in p["mod_dependencies"]]
         parent_deps = [f"{pid}-pap" for pid in p["parent_papers"]]
 
-        engineering = p.get("engineering", True)
+        # Determine engineering from conference type
+        engineering = True
+        if conf_name and conf_name in conf_map:
+            conf_type = conf_map[conf_name].conf_type
+            engineering = conf_type == ConferenceType.ENGINEERING
 
         abs_id = None
         if abs_deadline:
@@ -156,9 +165,7 @@ def _load_submissions(
             )
     return subs
 
-
 def _parse_date(d: str) -> date:
-    # Converts ISO string to datetime.date, raises clear error if invalid
     clean = d.split("T")[0]
     try:
         return datetime.fromisoformat(clean).date()
