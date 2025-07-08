@@ -2,19 +2,20 @@
 # generate_schedule.py
 
 from __future__ import annotations
+import sys
 from datetime import datetime
 import argparse
 import json
 import os
-import sys
+from src.loader import load_config
+from src.scheduler import greedy_schedule, integer_schedule, save_schedule
+from src.plots import plot_schedule
+from src.type import Config, Submission
 
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from src.loader import load_config
-from src.scheduler import greedy_schedule, solve_lp
-from src.plots import plot_schedule
-
-from src.type import Config, Submission
 
 def generate_schedule_cli() -> None:
     parser = argparse.ArgumentParser(
@@ -23,6 +24,11 @@ def generate_schedule_cli() -> None:
     parser.add_argument(
         "--config", type=str, default="config.json",
         help="Path to config.json"
+    )
+    parser.add_argument(
+        "--greedy",
+        action="store_true",
+        help="Use greedy heuristic instead of LP solver (default = LP)."
     )
     parser.add_argument(
         "--start-date", type=str,
@@ -38,7 +44,7 @@ def generate_schedule_cli() -> None:
 
     while True:
         # Generate schedule
-        schedule = _run_scheduler(cfg, use_lp=args.lp)
+        schedule = _run_scheduler(cfg, use_greedy=args.greedy)
 
         # Plot it
         plot_schedule(
@@ -52,14 +58,13 @@ def generate_schedule_cli() -> None:
         key = _prompt_keypress()
 
         if key == " ":
-            # Space → regenerate
             print("Regenerating a new schedule...")
             continue
-        elif key == "\r" or key == "\n":
-            # Enter → save
-            _save_schedule(schedule, cfg.submissions)
+        elif key in ("\r", "\n"):
+            out_path = f"schedule_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            save_schedule(schedule, cfg.submissions, out_path)
             break
-        elif key.lower() == "q":
+        elif key.lower() == "q" or key == "\x1b":
             print("Exiting without saving.")
             break
         else:
@@ -69,17 +74,15 @@ def generate_schedule_cli() -> None:
 
 # --------------------- Internals -------------------------
 
-def _run_scheduler(cfg: Config, use_lp: bool) -> dict[str, int]:
+def _run_scheduler(cfg: Config, use_greedy: bool) -> dict[str, int]:
     """
     Run either greedy or LP scheduling and return:
         {submission_id: start_month_index}
     """
-    if use_lp:
-        fractional = solve_lp(cfg)
-        # round to int month indices
-        return {k: int(round(v)) for k, v in fractional.items()}
-    else:
+    if use_greedy:
         return greedy_schedule(cfg)
+    else:
+        return integer_schedule(cfg)
 
 
 def _parse_date(d: str | None) -> None | datetime.date:
@@ -99,13 +102,12 @@ def _prompt_keypress() -> str:
     Prompt for a single keypress. Supports:
       - SPACE → regenerate
       - ENTER → save
-      - q → quit
+      - q or ESC → quit
     """
     print("")
-    print("Press SPACE to regenerate, ENTER to save schedule, or Q to quit.")
+    print("Press SPACE to regenerate, ENTER to save schedule, or Q / ESC to quit.")
     print(">", end=" ", flush=True)
 
-    # platform-agnostic read
     try:
         import termios
         import tty
@@ -123,38 +125,6 @@ def _prompt_keypress() -> str:
         # Windows fallback
         import msvcrt
         return msvcrt.getwch()
-
-
-def _save_schedule(
-    schedule: dict[str, int],
-    submissions: list[Submission]
-) -> None:
-    """
-    Save the schedule + submission metadata to JSON in the working dir.
-    """
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_path = f"schedule_{timestamp}.json"
-
-    output = []
-    for sid, start_idx in schedule.items():
-        s = next(sub for sub in submissions if sub.id == sid)
-        output.append({
-            "id": s.id,
-            "title": s.title,
-            "kind": s.kind.value,
-            "internal_ready_date": s.internal_ready_date.isoformat(),
-            "external_due_date": s.external_due_date.isoformat() if s.external_due_date else None,
-            "conference_id": s.conference_id,
-            "draft_window_months": s.draft_window_months,
-            "engineering": s.engineering,
-            "depends_on": s.depends_on,
-            "start_month_index": start_idx,
-        })
-
-    with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(output, f, indent=2)
-
-    print(f"Schedule saved to {out_path}")
 
 
 if __name__ == "__main__":

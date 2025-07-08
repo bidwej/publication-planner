@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import Dict, List, Set, Tuple
+import json
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
 
@@ -90,10 +91,10 @@ def greedy_schedule(cfg: Config) -> Dict[str, int]:
 # -------------------------------------------------------------------- #
 # LP RELAXATION  (fractional, best-effort)                             #
 # -------------------------------------------------------------------- #
-def solve_lp(cfg: Config) -> Dict[str, float]:
+def integer_schedule(cfg: Config) -> Dict[str, int]:
     """
     LP relaxation using scipy.optimize.linprog.
-    Produces fractional start months; useful for lower-bound analysis.
+    Returns integer start-month indices for each submission.
     """
     sub_map: Dict[str, Submission] = {s.id: s for s in cfg.submissions}
     conf_map = {c.id: c for c in cfg.conferences}
@@ -148,7 +149,11 @@ def solve_lp(cfg: Config) -> Dict[str, float]:
     if not res.success:
         raise RuntimeError("LP optimisation failed: " + res.message)
 
-    return {sid: float(res.x[i]) for i, sid in enumerate(ids)}
+    fractional = {sid: float(res.x[i]) for i, sid in enumerate(ids)}
+    # round to int month indices
+    integer_schedule = {k: int(round(v)) for k, v in fractional.items()}
+    return integer_schedule
+
 
 # -------------------------------------------------------------------- #
 # Shared helpers                                                       #
@@ -227,3 +232,41 @@ def _validate_structures(sub_map: Dict[str, Submission]) -> None:
             raise ValueError(
                 f"Paper {s.id} must have draft_window_months > 0"
             )
+
+def load_schedule(path: str) -> dict[str, int]:
+    """
+    Load a previously saved schedule JSON into dict.
+    """
+    with open(path, "r", encoding="utf-8") as f:
+        rows = json.load(f)
+
+    return {row["id"]: row["start_month_index"] for row in rows}
+
+def save_schedule(
+    schedule: dict[str, int],
+    submissions: list[Submission],
+    path: str
+) -> None:
+    """
+    Save the schedule + submission metadata to JSON.
+    """
+    output = []
+    for sid, start_idx in schedule.items():
+        s = next(sub for sub in submissions if sub.id == sid)
+        output.append({
+            "id": s.id,
+            "title": s.title,
+            "kind": s.kind.value,
+            "internal_ready_date": s.internal_ready_date.isoformat(),
+            "external_due_date": s.external_due_date.isoformat() if s.external_due_date else None,
+            "conference_id": s.conference_id,
+            "draft_window_months": s.draft_window_months,
+            "engineering": s.engineering,
+            "depends_on": s.depends_on,
+            "start_month_index": start_idx,
+        })
+
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(output, f, indent=2)
+
+    print(f"Schedule saved to {path}")

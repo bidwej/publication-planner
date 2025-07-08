@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Dict, Union
 
 from src.type import Config
-from src.scheduler import greedy_schedule, solve_lp
+from src.scheduler import greedy_schedule, integer_schedule
 
 
 class Planner:
@@ -30,7 +30,7 @@ class Planner:
     def lp_relaxation(self) -> Dict[str, float]:
         """Run or return the cached LP-relaxed schedule."""
         if self._lp_cache is None:
-            self._lp_cache = solve_lp(self.cfg)
+            self._lp_cache = integer_schedule(self.cfg)
         return self._lp_cache
 
     # Convenience aliases for older code ------------------------------- #
