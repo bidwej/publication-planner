@@ -29,11 +29,10 @@ class Submission:
     external_due_date: Optional[date]         # CFP deadline (or None)
     conference_id: Optional[str]              # None → internal-only
 
-    min_draft_window_days: Optional[int] = None  # minimum drafting time in days
-
     engineering: bool                         # venue compatibility
     depends_on: List[str]                     # other Submission IDs
 
+    min_draft_window_days: Optional[int] = None  # minimum drafting time in days
     free_slack_days: int = 0                  # allowed slip vs ready date (in days)
     penalty_cost_per_day: float = 0.0         # cost per day once past slack
 
