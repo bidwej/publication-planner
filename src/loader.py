@@ -14,6 +14,7 @@ from src.type import (
     SubmissionType,
 )
 
+
 # ────────────────────────────────────────────────────────────────
 # Public API
 # ────────────────────────────────────────────────────────────────
@@ -29,21 +30,75 @@ def load_config(config_path: str) -> Config:
         conferences=conferences,
         abs_lead=raw_cfg["min_abstract_lead_time_days"],
         pap_lead=raw_cfg["min_paper_lead_time_days"],
+        penalty_costs=raw_cfg.get("penalty_costs", {}),
     )
+
+    # Load blackout dates if enabled
+    blackout_dates = []
+    if raw_cfg.get("scheduling_options", {}).get("enable_blackout_periods", False):
+        blackout_path = raw_cfg["data_files"].get("blackouts")
+        if blackout_path:
+            blackout_dates = _load_blackout_dates(blackout_path)
 
     return Config(
         min_abstract_lead_time_days=raw_cfg["min_abstract_lead_time_days"],
         min_paper_lead_time_days=raw_cfg["min_paper_lead_time_days"],
         max_concurrent_submissions=raw_cfg["max_concurrent_submissions"],
         mod_to_paper_gap_days=raw_cfg["mod_to_paper_gap_days"],
+        paper_parent_gap_days=raw_cfg.get("paper_parent_gap_days", 90),
         conferences=conferences,
         submissions=submissions,
         data_files=raw_cfg["data_files"],
+        priority_weights=raw_cfg.get(
+            "priority_weights",
+            {
+                "engineering_paper": 2.0,
+                "medical_paper": 1.0,
+                "mod": 1.5,
+                "abstract": 0.5,
+            },
+        ),
+        penalty_costs=raw_cfg.get(
+            "penalty_costs", {"default_mod_penalty_per_day": 1000}
+        ),
+        scheduling_options=raw_cfg.get("scheduling_options", {}),
+        blackout_dates=blackout_dates,
     )
+
 
 # ────────────────────────────────────────────────────────────────
 # Internal helpers
 # ────────────────────────────────────────────────────────────────
+def _load_blackout_dates(path: str) -> List[date]:
+    """Load blackout dates from JSON file."""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+
+        blackout_dates = []
+
+        # Add federal holidays
+        for year_key in ["federal_holidays_2025", "federal_holidays_2026"]:
+            if year_key in raw:
+                for date_str in raw[year_key]:
+                    blackout_dates.append(_parse_date(date_str))
+
+        # Add custom blackout periods
+        if "custom_blackout_periods" in raw:
+            for period in raw["custom_blackout_periods"]:
+                start = _parse_date(period["start"])
+                end = _parse_date(period["end"])
+                current = start
+                while current <= end:
+                    blackout_dates.append(current)
+                    current += relativedelta(days=1)
+
+        return blackout_dates
+    except Exception as e:
+        print(f"Warning: Could not load blackout dates: {e}")
+        return []
+
+
 def _load_conferences(path: str) -> List[Conference]:
     with open(path, "r", encoding="utf-8") as f:
         raw = json.load(f)
@@ -73,6 +128,7 @@ def _load_submissions(
     conferences: List[Conference],
     abs_lead: int,
     pap_lead: int,
+    penalty_costs: Dict[str, float],
 ) -> List[Submission]:
     """
     Build all Submission objects for mods and papers.
@@ -86,8 +142,13 @@ def _load_submissions(
     with open(mods_path, "r", encoding="utf-8") as f:
         raw_mods = json.load(f)
 
+    default_mod_penalty = penalty_costs.get("default_mod_penalty_per_day", 1000)
+
     for m in raw_mods:
         m_id = int(m["id"])
+        # Use specific penalty if provided, otherwise use default
+        penalty_per_month = m.get("penalty_cost_per_month", default_mod_penalty * 30)
+
         subs.append(
             Submission(
                 id=f"mod{m_id:02d}-wrk",
@@ -97,7 +158,7 @@ def _load_submissions(
                 conference_id=None,
                 engineering=True,
                 depends_on=[f"mod{m_id-1:02d}-wrk"] if m_id > 1 else [],
-                penalty_cost_per_day=((m["penalty_cost_per_month"] or 0) / 30),
+                penalty_cost_per_day=(penalty_per_month / 30),
             )
         )
 
@@ -107,21 +168,24 @@ def _load_submissions(
 
     for p in raw_papers:
         # Choose conference (optional)
-        conf_name = (
-            p.get("planned_conference")
-            or (p["conference_families"][0] if p["conference_families"] else None)
+        conf_name = p.get("planned_conference") or (
+            p["conference_families"][0] if p["conference_families"] else None
         )
         conf_obj: Optional[Conference] = conf_map.get(conf_name) if conf_name else None
 
-        abs_deadline = conf_obj.deadlines.get(SubmissionType.ABSTRACT) if conf_obj else None
-        pap_deadline = conf_obj.deadlines.get(SubmissionType.PAPER) if conf_obj else None
+        abs_deadline = (
+            conf_obj.deadlines.get(SubmissionType.ABSTRACT) if conf_obj else None
+        )
+        pap_deadline = (
+            conf_obj.deadlines.get(SubmissionType.PAPER) if conf_obj else None
+        )
 
         mod_deps = [f"mod{mid:02d}-wrk" for mid in p["mod_dependencies"]]
         parent_deps = [f"{pid}-pap" for pid in p["parent_papers"]]
 
-        engineering = (
-            conf_obj.conf_type == ConferenceType.ENGINEERING if conf_obj else True
-        )
+        # Determine if engineering based on paper type
+        paper_type = p.get("paper_type", "engineering").lower()
+        engineering = paper_type == "engineering"
 
         # ---------- Optional abstract ----------
         abs_id = None
@@ -132,7 +196,7 @@ def _load_submissions(
                     id=abs_id,
                     kind=SubmissionType.ABSTRACT,
                     title=f"{p['title']} (abstract)",
-                    earliest_start_date=abs_deadline,   # zero-day task
+                    earliest_start_date=abs_deadline,  # zero-day task
                     conference_id=conf_obj.id,
                     engineering=engineering,
                     depends_on=mod_deps + parent_deps,
@@ -158,6 +222,7 @@ def _load_submissions(
             )
 
     return subs
+
 
 # ────────────────────────────────────────────────────────────────
 # Utility

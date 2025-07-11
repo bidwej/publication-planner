@@ -1,5 +1,51 @@
 # TODO: Implementation Tasks
 
+## Completed Tasks ✓
+
+### 1. Blackout Period Support ✓
+- [x] Add `blackout.json` to config loader
+- [x] Create `is_working_day(date)` function
+- [x] Update scheduler to skip weekends/holidays
+- [x] Adjust duration calculations for blackout days
+
+### 2. Priority Weighting System ✓
+- [x] Load `priority_weights` from config.json
+- [x] Apply weights in scheduling decisions
+- [x] Sort ready items by weighted priority
+
+### 3. Penalty Cost Implementation ✓
+- [x] Use `penalty_cost_per_day` from mods.json
+- [x] Add default penalties from config.json
+- [x] Calculate cumulative delay costs
+
+### 4. Early Abstract Scheduling ✓
+- [x] Implement `abstract_advance_days` (30 days)
+- [x] Schedule abstracts during slack periods
+- [x] Add `enable_early_abstract_scheduling` flag
+
+### 5. Core Config Updates ✓
+- [x] Add `paper_parent_gap_days` to Config dataclass
+- [x] Update scheduler to use config gap values
+- [x] Load all new config sections
+
+## Future Enhancements (Not Implemented)
+
+### Conference Flexibility
+- Dynamic reassignment near deadlines
+- Track alternate conferences per paper
+- Generate contingency recommendations
+
+### Advanced Algorithm Features
+- Stochastic exploration with priority perturbation
+- 30-day lookahead heuristic
+- Backtracking capability
+- Critical path analysis
+
+### Metrics and Reporting
+- Solution quality metrics
+- Local minima detection
+- Historical pattern learning
+
 ## High Priority - Core Functionality
 
 ### 1. Blackout Period Support
@@ -12,10 +58,10 @@
 ### 2. Priority Weighting System
 - [ ] Load `priority_weights` from config.json
 - [ ] Apply weights in scheduling decisions:
-  - Engineering papers: 2.0
-  - Medical papers: 1.0
-  - Mods: 1.5
-  - Abstracts: 0.5
+    - Engineering papers: 2.0
+    - Medical papers: 1.0
+    - Mods: 1.5
+    - Abstracts: 0.5
 - [ ] Sort ready items by weighted priority
 
 ### 3. Penalty Cost Implementation
@@ -28,7 +74,7 @@
 ### 4. Early Abstract Scheduling
 - [ ] Implement `abstract_advance_days` (30 days)
 - [ ] Schedule abstracts during slack periods
-- [ ] Ensure abstract→paper dependency respected
+- [ ] Ensure abstract → paper dependency respected
 - [ ] Add `enable_early_abstract_scheduling` flag
 
 ## Medium Priority - Algorithm Enhancements
@@ -36,18 +82,18 @@
 ### 5. Lookahead Heuristic
 - [ ] Create `evaluate_future_impact(item, date, days=30)`
 - [ ] Score based on:
-  - Future resource availability
-  - Dependent item readiness
-  - Deadline proximity
+    - Future resource availability
+    - Dependent item readiness
+    - Deadline proximity
 - [ ] Weight immediate vs future scores (0.5 factor)
 
 ### 6. Stochastic Exploration
-- [ ] Add iteration counter to greedy_schedule
+- [ ] Add iteration counter to `greedy_schedule`
 - [ ] Implement priority randomization:
-  ```python
-  noise = random.uniform(0.8, 1.2)
-  priority = base_priority * noise
-  ```
+    ```python
+    noise = random.uniform(0.8, 1.2)
+    priority = base_priority * noise
+    ```
 - [ ] Track best N solutions
 - [ ] Bias toward successful patterns
 
@@ -129,7 +175,7 @@ def calculate_metrics(schedule, config):
 ```python
 def stochastic_greedy(config, n_iterations=100):
     # Multi-start randomized implementation
-    
+
 def lookahead_greedy(config, horizon_days=30):
     # Greedy with future impact evaluation
 ```

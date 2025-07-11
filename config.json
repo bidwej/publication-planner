@@ -13,17 +13,13 @@
   },
   
   "penalty_costs": {
-    "default_mod_penalty_per_day": 1000,
-    "urgent_mod_penalty_per_day": 2000,
-    "paper_delay_penalty_per_day": 500
+    "default_mod_penalty_per_day": 1000
   },
   
   "scheduling_options": {
     "enable_early_abstract_scheduling": true,
     "abstract_advance_days": 30,
-    "enable_blackout_periods": true,
-    "enable_conference_flexibility": true,
-    "conference_response_time_days": 90
+    "enable_blackout_periods": true
   },
   
   "data_files": {
