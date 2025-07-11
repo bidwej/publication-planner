@@ -1,0 +1,50 @@
+flowchart TD
+    A["Endoscopic AI Studies<br/>6/7/25"] --> MB["Model Building"]
+    A --> CC["Clinical Correlation"]
+    
+    MB --> B["<u>Background</u>"]
+    MB --> D["<u>Anatomy</u>"] 
+    MB --> SF["<u>Surface Features</u>"]
+    MB --> P["<u>Pathology</u>"]
+    
+    B --> UEX["User Experience (UEX)<br/>paper survey"]
+    UEX --> CV["Computer Vision (CV)<br/>endoscopy review"]
+    
+    D --> MT1["Middle Turbinate/<br/>Inferior Turbinate<br/>(MT/IT)"]
+    MT1 --> NSD["Nasal Septal<br/>Deviation<br/>(NSD)"]
+    NSD --> ET1["Eustachian Tube<br/>(ET)"]
+    
+    SF --> MT2["Middle Turbinate<br/>(MT inflammation)"]
+    MT2 --> ET2["Eustachian Tube (ET)<br/>inflamed vs ETDQ"]
+    
+    P --> M["Mucus"]
+    P --> PO["Polyps"]
+    M --> MB1["Mucus Biology"]
+    PO --> NP["Nasal Polyps (NP) vs<br/>PCMT"]
+    MB1 --> C["Color"]
+    NP --> PC["Polyp color"]
+    C --> L["Localization<br/>(NC Mapping)"]
+    
+    CC --> H["<u>Human</u>"]
+    CC --> LAB["<u>Lab</u>"]
+    CC --> CT["<u>Computed Tomography (CT)</u>"]
+    
+    H --> DD["sinusitis detector<br/>(vs Medical Doctor (MD))"]
+    DD --> NE1["Nasal Endoscopy (NE)<br/>AI Clinical Decision<br/>Support (CDS) vs panel<br/>| ENT"]
+    NE1 --> NE2["Nasal Endoscopy (NE)<br/>AI Clinical Decision<br/>Support (CDS) vs panel<br/>| PCP"]
+    NE2 --> ST["Gaze tracking<br/>vs AI"]
+    
+    LAB --> MA["Mucus AI<br/>vs culture"]
+    
+    CT --> CT1["CT max vs NE<br/>Middle Meatus<br/>(MM) | Maxillary"]
+    CT1 --> CT2["CT eth vs NE<br/>Middle Turbinate<br/>(MT) | Ethmoid"]
+
+    classDef rootNode fill:#e1f5fe,stroke:#01579b,stroke-width:3px
+    classDef mainCategory fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef subCategory fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef process fill:#fff3e0,stroke:#e65100,stroke-width:2px
+
+    class A rootNode
+    class MB,CC mainCategory
+    class B,D,SF,P,H,LAB,CT subCategory
+    class UEX,MT1,MT2,M,PO,DD,MA,CT1,CV,NSD,ET1,ET2,MB1,NP,C,PC,L,NE1,NE2,ST,CT2 process
