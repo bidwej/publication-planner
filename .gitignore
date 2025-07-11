@@ -65,3 +65,4 @@ node_modules/
 **/.pytest_cache/
 **/local_libs/*
 **/third_party/*
+**/source_2025-*.txt

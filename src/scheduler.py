@@ -17,6 +17,21 @@ from src.type import (
 # --------------------------------------------------------------------------- #
 # Public entry-point
 # --------------------------------------------------------------------------- #
+# TODO: See README.md
+# def enhanced_greedy(cfg, iteration):
+#     # Randomize priorities
+#     noise = random.uniform(0.8, 1.2, size=n_items)
+#     priority = base_priority * noise
+    
+#     # Add lookahead
+#     def score_choice(item, date):
+#         immediate = -penalty_cost[item] * delay
+#         future = simulate_next_30_days(item, date)
+#         return immediate + 0.5 * future
+    
+#     # Detect local minimum
+#     if concurrency_utilization < 0.7 * max_concurrent:
+#         increase_randomization()
 
 def greedy_schedule(cfg: Config) -> Dict[str, date]:
     """
