@@ -1,50 +1,79 @@
 flowchart TD
-    A["Endoscopic AI Studies<br/>6/7/25"] --> MB["Model Building"]
+    %% ---------- ROOT ----------
+    A["Endoscopic AI Studies<br/>(Ed J1–J23)"] --> MB["Model Building"]
     A --> CC["Clinical Correlation"]
-    
+    A --> PCCP["PCCP Mods 1–17"]
+
+    %% ---------- MODEL BUILDING ----------
     MB --> B["<u>Background</u>"]
-    MB --> D["<u>Anatomy</u>"] 
+    MB --> D["<u>Anatomy</u>"]
     MB --> SF["<u>Surface Features</u>"]
     MB --> P["<u>Pathology</u>"]
-    
-    B --> UEX["User Experience (UEX)<br/>paper survey"]
-    UEX --> CV["Computer Vision (CV)<br/>endoscopy review"]
-    
-    D --> MT1["Middle Turbinate/<br/>Inferior Turbinate<br/>(MT/IT)"]
-    MT1 --> NSD["Nasal Septal<br/>Deviation<br/>(NSD)"]
-    NSD --> ET1["Eustachian Tube<br/>(ET)"]
-    
-    SF --> MT2["Middle Turbinate<br/>(MT inflammation)"]
-    MT2 --> ET2["Eustachian Tube (ET)<br/>inflamed vs ETDQ"]
-    
+
+    B --> UEX["UEX paper survey (intro)"]
+    UEX --> CV["CV endoscopy review"]
+
+    D --> MT1["MT/IT"]
+    MT1 --> LAT["**Laterality Classifier**"]
+    LAT --> NSD["Septal Deviation"]
+    NSD --> ET1["Eustachian Tube"]
+
+    SF --> MT2["MT inflammation"]
+    MT2 --> ET2["ET inflamed vs ETDQ"]
+
     P --> M["Mucus"]
     P --> PO["Polyps"]
-    M --> MB1["Mucus Biology"]
-    PO --> NP["Nasal Polyps (NP) vs<br/>PCMT"]
-    MB1 --> C["Color"]
-    NP --> PC["Polyp color"]
-    C --> L["Localization<br/>(NC Mapping)"]
-    
+    M --> MBIO["Mucus Biology"]
+    PO --> NP1["NP vs PCMT v1"]
+    MBIO --> C["Color"]
+    NP1 --> PCOL["Polyp color"]
+    C --> L["Localization / NC Mapping"]
+    NP1 --> NP2["**NP vs PCMT v2**"]
+
+    %% ---------- CLINICAL CORRELATION ----------
     CC --> H["<u>Human</u>"]
     CC --> LAB["<u>Lab</u>"]
-    CC --> CT["<u>Computed Tomography (CT)</u>"]
-    
-    H --> DD["sinusitis detector<br/>(vs Medical Doctor (MD))"]
-    DD --> NE1["Nasal Endoscopy (NE)<br/>AI Clinical Decision<br/>Support (CDS) vs panel<br/>| ENT"]
-    NE1 --> NE2["Nasal Endoscopy (NE)<br/>AI Clinical Decision<br/>Support (CDS) vs panel<br/>| PCP"]
-    NE2 --> ST["Gaze tracking<br/>vs AI"]
-    
-    LAB --> MA["Mucus AI<br/>vs culture"]
-    
-    CT --> CT1["CT max vs NE<br/>Middle Meatus<br/>(MM) | Maxillary"]
-    CT1 --> CT2["CT eth vs NE<br/>Middle Turbinate<br/>(MT) | Ethmoid"]
+    CC --> CT["<u>CT-Correlation</u>"]
 
-    classDef rootNode fill:#e1f5fe,stroke:#01579b,stroke-width:3px
-    classDef mainCategory fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef subCategory fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
-    classDef process fill:#fff3e0,stroke:#e65100,stroke-width:2px
 
-    class A rootNode
-    class MB,CC mainCategory
-    class B,D,SF,P,H,LAB,CT subCategory
-    class UEX,MT1,MT2,M,PO,DD,MA,CT1,CV,NSD,ET1,ET2,MB1,NP,C,PC,L,NE1,NE2,ST,CT2 process
+    LAB --> MUCULT["Mucus AI vs culture"]
+
+    CT --> CTmax["CT max vs NE MM"]
+    CTmax --> CTeth["CT eth vs NE MT"]
+
+
+    H --> DETMD["Sinusitis detector vs MD"]
+    DETMD --> NE_ENT["NE CDS vs ENT panel"]
+    NE_ENT --> NE_PCP["NE CDS vs PCP panel"]
+    NE_PCP --> GAZE["Gaze tracking vs AI"]
+    H --> ACTIVE["**Active-learning & QA**"]
+    MOD1 --> ACTIVE
+
+    %% ---------- PCCP MOD SEQUENCE ----------
+    PCCP --> MOD1["Samurai Automated 2D (mod 1)"]
+    MOD1 --> MOD2["Samurai Manual-Verified 2D (mod 2)"]
+    MOD2 --> MOD3["SLAM Infrastructure (mod 3)"]
+    MOD3 --> MOD4["Bayesian Evidence (mod 4)"]
+    MOD4 --> MOD5["Coverage Visualization (mod 5)"]
+    MOD5 --> MOD6["SLAM 3-D Label Tracking (mod 6)"]
+    MOD6 --> MOD7["Polyp Instance Counting (mod 7)"]
+    MOD7 --> MOD8["Polyp Size Measurement (mod 8)"]
+    MOD8 --> MOD9["Swelling Detection (mod 9)"]
+    MOD9 --> MOD10["Septal Deviation (mod 10)"]
+    MOD10 --> MOD11["Septal Perforation (mod 11)"]
+    MOD11 --> MOD12["Evidence Sufficiency (mod 12)"]
+    MOD12 --> MOD13["CT Registration (mod 13)"]
+    MOD13 --> MOD14["CT Auto-Label Back-proj (mod 14)"]
+    MOD14 --> MOD15["SLAM Manual-3D Verify (mod 15)"]
+    MOD15 --> MOD16["CT Manual-3D Verify (mod 16)"]
+    MOD16 --> MOD17["IMU-Enhanced Tracking (mod 17)"]
+
+    %% ---------- STYLING ----------
+    classDef header fill:#e1f5fe,stroke:#01579b,stroke-width:3px
+    classDef category fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef group fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef paper fill:#fff3e0,stroke:#e65100,stroke-width:1.5px,font-size:12px
+    class A header
+    class MB,CC,PCCP category
+    class B,D,SF,P,H,LAB,CT group
+    class UEX,CV,MT1,LAT,NSD,ET1,MT2,ET2,M,PO,MBIO,C,NP1,NP2,PCOL,L,DETMD,NE_ENT,NE_PCP,ACTIVE,GAZE,MUCULT,CTmax,CTeth,MOD1,MOD2,MOD3,MOD4,MOD5,MOD6,MOD7,MOD8,MOD9,MOD10,MOD11,MOD12,MOD13,MOD14,MOD15,MOD16,MOD17 paper
