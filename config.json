@@ -16,7 +16,12 @@
   "scheduling_options": {
     "enable_early_abstract_scheduling": true,
     "abstract_advance_days": 30,
-    "enable_blackout_periods": true
+    "enable_blackout_periods": true,
+    "conference_response_time_days": 90,
+    "enable_priority_weighting": true,
+    "enable_dependency_tracking": true,
+    "enable_concurrency_control": true,
+    "enable_working_days_only": true
   },
   "data_files": {
     "conferences": "data/conferences.json",

@@ -107,7 +107,7 @@ def compare_all_schedulers(config, args):
         print(f"  Quality Score: {quality:.3f}")
 
 def analyze_schedule(config, args):
-    """Detailed analysis of a single scheduler."""
+    """Detailed analysis of a single scheduler with all output features."""
     scheduler_map = {
         "greedy": GreedyScheduler,
         "stochastic": StochasticGreedyScheduler,
@@ -125,33 +125,71 @@ def analyze_schedule(config, args):
     try:
         schedule = scheduler.schedule()
         
-        # Generate tables
+        # Generate all output features
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        # 1. Console output
+        print_schedule_summary(schedule, config)
+        print_deadline_status(schedule, config)
+        print_utilization_summary(schedule, config)
+        print_metrics_summary(schedule, config)
+        
+        # 2. Generate tables and save to files
         summary_table = generate_schedule_summary_table(schedule, config)
         deadline_table = generate_deadline_table(schedule, config)
         
-        print("\nSchedule Summary:")
-        for row in summary_table[:10]:  # Show first 10 rows
-            print(f"  {row['ID']}: {row['Title']} ({row['Start Date']} - {row['End Date']})")
+        # Save tables to CSV files
+        import csv
+        if summary_table:
+            with open(f"schedule_summary_{timestamp}.csv", 'w', newline='') as f:
+                writer = csv.DictWriter(f, fieldnames=summary_table[0].keys())
+                writer.writeheader()
+                writer.writerows(summary_table)
         
-        print("\nDeadline Status:")
-        for row in deadline_table[:10]:  # Show first 10 rows
-            status_color = "🟢" if row['Status'] == "On Time" else "🔴"
-            print(f"  {status_color} {row['Submission']}: {row['Margin (days)']} days")
+        if deadline_table:
+            with open(f"deadline_status_{timestamp}.csv", 'w', newline='') as f:
+                writer = csv.DictWriter(f, fieldnames=deadline_table[0].keys())
+                writer.writeheader()
+                writer.writerows(deadline_table)
         
-        # Plot schedule
+        print(f"\nTables saved: schedule_summary_{timestamp}.csv, deadline_status_{timestamp}.csv")
+        
+        # 3. Generate all plots
         plot_schedule(
             schedule=schedule,
             submissions=config.submissions,
             start_date=parse_date_safe(args.start_date),
             end_date=parse_date_safe(args.end_date),
-            save_path=None
+            save_path=f"schedule_gantt_{timestamp}.png"
         )
+        
+        plot_utilization_chart(
+            schedule=schedule,
+            config=config,
+            save_path=f"utilization_chart_{timestamp}.png"
+        )
+        
+        plot_deadline_compliance(
+            schedule=schedule,
+            config=config,
+            save_path=f"deadline_compliance_{timestamp}.png"
+        )
+        
+        print(f"Plots saved: schedule_gantt_{timestamp}.png, utilization_chart_{timestamp}.png, deadline_compliance_{timestamp}.png")
+        
+        # 4. Save schedule as JSON
+        with open(f"schedule_{timestamp}.json", 'w') as f:
+            json.dump(schedule, f, default=str, indent=2)
+        
+        print(f"Schedule saved: schedule_{timestamp}.json")
         
     except Exception as e:
         print(f"Error generating schedule: {e}")
+        import traceback
+        traceback.print_exc()
 
 def interactive_mode(config, args):
-    """Interactive mode for schedule generation."""
+    """Interactive mode for schedule generation with full output features."""
     scheduler_map = {
         "greedy": GreedyScheduler,
         "stochastic": StochasticGreedyScheduler,
@@ -165,6 +203,10 @@ def interactive_mode(config, args):
     while True:
         # Generate schedule
         schedule = scheduler.schedule()
+        
+        # Show console output
+        print_schedule_summary(schedule, config)
+        print_metrics_summary(schedule, config)
         
         # Plot it
         plot_schedule(
@@ -180,10 +222,64 @@ def interactive_mode(config, args):
             print("Regenerating a new schedule...")
             continue
         elif key in ("\r", "\n"):
-            out_path = f"schedule_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            # Save everything with timestamp
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            
+            # Save schedule JSON
+            out_path = f"schedule_{timestamp}.json"
             with open(out_path, 'w') as f:
                 json.dump(schedule, f, default=str, indent=2)
-            print(f"Schedule saved to: {out_path}")
+            
+            # Generate and save all outputs
+            try:
+                # Tables
+                summary_table = generate_schedule_summary_table(schedule, config)
+                deadline_table = generate_deadline_table(schedule, config)
+                
+                import csv
+                with open(f"schedule_summary_{timestamp}.csv", 'w', newline='') as f:
+                    writer = csv.DictWriter(f, fieldnames=summary_table[0].keys())
+                    writer.writeheader()
+                    writer.writerows(summary_table)
+                
+                with open(f"deadline_status_{timestamp}.csv", 'w', newline='') as f:
+                    writer = csv.DictWriter(f, fieldnames=deadline_table[0].keys())
+                    writer.writeheader()
+                    writer.writerows(deadline_table)
+                
+                # Plots
+                plot_schedule(
+                    schedule=schedule,
+                    submissions=config.submissions,
+                    start_date=parse_date_safe(args.start_date),
+                    end_date=parse_date_safe(args.end_date),
+                    save_path=f"schedule_gantt_{timestamp}.png"
+                )
+                
+                plot_utilization_chart(
+                    schedule=schedule,
+                    config=config,
+                    save_path=f"utilization_chart_{timestamp}.png"
+                )
+                
+                plot_deadline_compliance(
+                    schedule=schedule,
+                    config=config,
+                    save_path=f"deadline_compliance_{timestamp}.png"
+                )
+                
+                print(f"All outputs saved with timestamp {timestamp}:")
+                print(f"  - schedule_{timestamp}.json")
+                print(f"  - schedule_summary_{timestamp}.csv")
+                print(f"  - deadline_status_{timestamp}.csv")
+                print(f"  - schedule_gantt_{timestamp}.png")
+                print(f"  - utilization_chart_{timestamp}.png")
+                print(f"  - deadline_compliance_{timestamp}.png")
+                
+            except Exception as e:
+                print(f"Warning: Some outputs failed to save: {e}")
+                print(f"Schedule JSON saved to: {out_path}")
+            
             break
         elif key.lower() == "q" or key == "\x1b":
             print("Exiting without saving.")

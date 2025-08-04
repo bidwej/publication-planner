@@ -22,9 +22,30 @@ desktop.ini
 
 # ─── Build / dist / temp ─────────────────────────────
 build/
-output/
 temp*/
 *.bak
+
+# ─── Generated schedule outputs ───────────────────────
+schedule_*.json
+schedule_*.csv
+schedule_*.png
+utilization_*.png
+deadline_*.png
+*_2025*.json
+*_2025*.csv
+*_2025*.png
+
+# ─── Generated schedule outputs ───────────────────────
+schedule_*.json
+schedule_*.csv
+schedule_*.png
+schedule_*.txt
+*_summary.csv
+*_deadlines.csv
+*_gantt.png
+*_utilization.png
+*_compliance.png
+*_report.txt
 
 # ─── Diff / patch files ──────────────────────────────
 *.diff
