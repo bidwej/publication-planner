@@ -1,0 +1,27 @@
+{
+  "min_abstract_lead_time_days": 0,
+  "min_paper_lead_time_days": 60,
+  "max_concurrent_submissions": 2,
+  "default_paper_lead_time_months": 3,
+  "priority_weights": {
+    "engineering_paper": 2.0,
+    "medical_paper": 1.0,
+    "mod": 1.5,
+    "abstract": 0.5
+  },
+  "penalty_costs": {
+    "default_mod_penalty_per_day": 1000,
+    "default_paper_penalty_per_day": 500
+  },
+  "scheduling_options": {
+    "enable_early_abstract_scheduling": true,
+    "abstract_advance_days": 30,
+    "enable_blackout_periods": true
+  },
+  "data_files": {
+    "conferences": "conferences.json",
+    "mods": "mods.json",
+    "papers": "papers.json",
+    "blackouts": "blackout.json"
+  }
+}

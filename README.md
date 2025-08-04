@@ -341,21 +341,43 @@ python -m pytest tests/ -v
 ```
 
 ### Test Coverage
-- **Unit Tests**: 9 comprehensive tests
+- **Unit Tests**: 92 comprehensive tests across all modules
+- **Core Module Tests**: Date utilities, configuration loading, data parsing
+- **Scheduler Tests**: All scheduling algorithms (Greedy, Stochastic, Lookahead, Backtracking)
+- **Metrics Tests**: Makespan, utilization, penalties, deadlines, quality calculations
 - **Edge Cases**: Biennial conferences, concurrency limits, parent-child relationships
 - **Integration Tests**: Full workflow validation
 - **Backward Compatibility**: Legacy interface testing
 
+### Test Structure
+```
+tests/
+├── conftest.py              # Shared fixtures and test configuration
+├── data/                    # Isolated test data files
+│   ├── config.json         # Test configuration
+│   ├── conferences.json    # Test conference data
+│   ├── mods.json          # Test modification data
+│   ├── papers.json        # Test paper data
+│   └── blackout.json      # Test blackout dates
+├── core/                   # Core module tests
+│   ├── test_dates.py      # Date utility tests (26 tests)
+│   └── test_config.py     # Configuration loading tests (15 tests)
+├── schedulers/             # Scheduler algorithm tests
+│   └── test_greedy.py     # Greedy scheduler tests (25 tests)
+├── metrics/                # Metrics calculation tests
+│   └── test_makespan.py   # Makespan calculation tests (26 tests)
+├── output/                 # Output module tests (planned)
+├── test_edge_cases.py      # Edge case validation (6 tests)
+└── test_planner.py         # Legacy planner tests (3 tests)
+```
+
 ### Test Categories
-- `test_validate_config_runs`: Configuration validation
-- `test_abstract_before_full_each_year`: Abstract/paper sequencing
-- `test_biennial_iccv`: Biennial conference handling
-- `test_concurrency_limit`: Resource constraint validation
-- `test_mod_paper_alignment`: Modification/paper dependencies
-- `test_parent_child_lead`: Parent-child relationship timing
-- `test_multi_parent`: Complex dependency graphs
-- `test_free_slack`: Slack time analysis
-- `test_biennial_conference`: Conference recurrence patterns
+- **Date Utilities**: 26 tests covering all date parsing and calculation functions
+- **Configuration Loading**: 15 tests for config file parsing and validation
+- **Scheduler Algorithms**: 25 tests for greedy scheduler functionality
+- **Metrics Calculations**: 26 tests for makespan and performance metrics
+- **Edge Cases**: 6 tests for boundary conditions and error handling
+- **Legacy Integration**: 3 tests for backward compatibility
 
 ### Advanced Test Scenarios
 - **Blackout Period Boundary Conditions**: Weekend and holiday handling
@@ -364,6 +386,7 @@ python -m pytest tests/ -v
 - **Conference Reassignment Scenarios**: Dynamic conference switching
 - **Full 37-Submission Problem**: Complete system validation
 - **Performance Benchmarks**: Runtime, memory usage, and quality metrics
+- **Isolated Test Data**: Separate test data prevents interference with production data
 
 ## 🔍 Metrics Explained
 

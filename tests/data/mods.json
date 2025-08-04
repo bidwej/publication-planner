@@ -1,0 +1,155 @@
+[
+  {
+    "id": 1,
+    "title": "Samurai Automated 2D",
+    "phase": 1,
+    "est_data_ready": "2025-06-01",
+    "free_slack_months": 1,
+    "penalty_cost_per_month": 1000,
+    "next_mod": 2
+  },
+  {
+    "id": 2,
+    "title": "Samurai Manual-Verified 2D",
+    "phase": 1,
+    "est_data_ready": "2025-07-01",
+    "free_slack_months": 1,
+    "penalty_cost_per_month": 1000,
+    "next_mod": 3
+  },
+  {
+    "id": 3,
+    "title": "SLAM Infrastructure",
+    "phase": 2,
+    "est_data_ready": "2026-06-01",
+    "free_slack_months": 1,
+    "penalty_cost_per_month": 1000,
+    "next_mod": 4
+  },
+  {
+    "id": 4,
+    "title": "Bayesian Evidence",
+    "phase": 2,
+    "est_data_ready": "2026-07-01",
+    "free_slack_months": 1,
+    "penalty_cost_per_month": 1000,
+    "next_mod": 5
+  },
+  {
+    "id": 5,
+    "title": "Coverage Visualization",
+    "phase": 2,
+    "est_data_ready": "2026-08-01",
+    "free_slack_months": 1,
+    "penalty_cost_per_month": 1000,
+    "next_mod": 6
+  },
+  {
+    "id": 6,
+    "title": "SLAM 3-D Label Tracking",
+    "phase": 2,
+    "est_data_ready": "2026-09-01",
+    "free_slack_months": 1,
+    "penalty_cost_per_month": 1000,
+    "next_mod": 7
+  },
+  {
+    "id": 7,
+    "title": "Polyp Instance Counting",
+    "phase": 3,
+    "est_data_ready": "2027-06-01",
+    "free_slack_months": 1,
+    "penalty_cost_per_month": 1000,
+    "next_mod": 8
+  },
+  {
+    "id": 8,
+    "title": "Polyp Size Measurement",
+    "phase": 3,
+    "est_data_ready": "2027-07-01",
+    "free_slack_months": 1,
+    "penalty_cost_per_month": 1000,
+    "next_mod": 9
+  },
+  {
+    "id": 9,
+    "title": "Swelling Detection",
+    "phase": 3,
+    "est_data_ready": "2027-08-01",
+    "free_slack_months": 1,
+    "penalty_cost_per_month": 1000,
+    "next_mod": 10
+  },
+  {
+    "id": 10,
+    "title": "Septal Deviation",
+    "phase": 3,
+    "est_data_ready": "2027-09-01",
+    "free_slack_months": 1,
+    "penalty_cost_per_month": 1000,
+    "next_mod": 11
+  },
+  {
+    "id": 11,
+    "title": "Septal Perforation",
+    "phase": 3,
+    "est_data_ready": "2027-10-01",
+    "free_slack_months": 1,
+    "penalty_cost_per_month": 1000,
+    "next_mod": 12
+  },
+  {
+    "id": 12,
+    "title": "Evidence Sufficiency",
+    "phase": 3,
+    "est_data_ready": "2027-11-01",
+    "free_slack_months": 1,
+    "penalty_cost_per_month": 1000,
+    "next_mod": 13
+  },
+  {
+    "id": 13,
+    "title": "CT Registration",
+    "phase": 4,
+    "est_data_ready": "2028-06-01",
+    "free_slack_months": 1,
+    "penalty_cost_per_month": 1000,
+    "next_mod": 14
+  },
+  {
+    "id": 14,
+    "title": "CT Auto-Label Back-proj",
+    "phase": 4,
+    "est_data_ready": "2028-07-01",
+    "free_slack_months": 1,
+    "penalty_cost_per_month": 1000,
+    "next_mod": 15
+  },
+  {
+    "id": 15,
+    "title": "SLAM Manual-3D Verify",
+    "phase": 4,
+    "est_data_ready": "2028-08-01",
+    "free_slack_months": 1,
+    "penalty_cost_per_month": 1000,
+    "next_mod": 16
+  },
+  {
+    "id": 16,
+    "title": "CT Manual-3D Verify",
+    "phase": 4,
+    "est_data_ready": "2028-09-01",
+    "free_slack_months": 1,
+    "penalty_cost_per_month": 1000,
+    "next_mod": 17
+  },
+  {
+    "id": 17,
+    "title": "IMU-Enhanced Tracking",
+    "phase": 5,
+    "est_data_ready": "2028-12-01",
+    "free_slack_months": 1,
+    "penalty_cost_per_month": 1000,
+    "next_mod": null
+  }
+]
