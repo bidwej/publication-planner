@@ -1,12 +1,12 @@
-import pytest
 import json
 import os
 import sys
+import pytest
 
 # Ensure src directory is on path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
-
 from planner import Planner
+
 
 @pytest.fixture(scope="session")  # type: ignore
 def planner_config():

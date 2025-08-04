@@ -1,5 +1,4 @@
 [tool.pylint]
-# allow compiled/extension packages
 extension-pkg-allow-list = ["cv2", "numpy", "dateutil"]
 ignore = ["__pycache__"]
 
@@ -14,7 +13,7 @@ disable = [
   "multiple-statements",
   "redefined-outer-name",
   "broad-exception-caught",
-  "unused-import",            # <– keep this
+  "unused-import",
   "import-outside-toplevel",
   "multiple-imports"
 ]
@@ -28,8 +27,19 @@ generated-members = [
 [tool.pylint.format]
 max-line-length = 250
 
-[tool.pyright]            # <— new section
+[tool.pyright]
+# stop errors about stub‐only or C‐extension modules
 reportMissingModuleSource = false
+reportMissingImports = false
+
+# your existing venv and Python version settings
 venvPath = "."
 venv = ".venv"
 pythonVersion = "3.10"
+
+# if you need extra source roots:
+# (Pyright will look here for modules before complaining)
+analysis.extraPaths = ["src"]
+
+# have Pyright/Pylance use library code for types
+analysis.useLibraryCodeForTypes = true

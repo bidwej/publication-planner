@@ -1,6 +1,6 @@
-import pytest
-from planner import Planner
 from datetime import datetime
+from planner import Planner
+import pytest
 
 @pytest.fixture
 def planner():
@@ -58,3 +58,4 @@ def test_parent_child_lead(planner):
             par_end = paper_sched[par] + planner.papers_dict[par]["draft_window_months"]
             lead = p.get("lead_time_from_parents", planner.config["default_paper_lead_time_months"])
             assert paper_sched[pid] >= par_end + lead
+
