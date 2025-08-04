@@ -15,8 +15,12 @@ disable = [
   "broad-exception-caught",
   "unused-import",
   "import-outside-toplevel",
-  "multiple-imports"
+  "multiple-imports",
+  "no-name-in-module",
+  "import-error",
+  "missing-final-newline"   # ignore C0304
 ]
+
 
 [tool.pylint.typecheck]
 generated-members = [

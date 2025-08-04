@@ -37,7 +37,7 @@ def greedy_schedule(cfg: Config) -> Dict[str, date]:
     schedule: Dict[str, date] = {}
     active: Set[str] = set()
     # Early abstract scheduling if enabled
-    if cfg.scheduling_options.get("enable_early_abstract_scheduling", False):
+    if cfg.scheduling_options and cfg.scheduling_options.get("enable_early_abstract_scheduling", False):
         abstract_advance = cfg.scheduling_options.get("abstract_advance_days", 30)
         _schedule_early_abstracts(sub_map, conf_map, schedule, abstract_advance, cfg)
     while current <= end and len(schedule) < len(sub_map):
@@ -84,17 +84,17 @@ def greedy_schedule(cfg: Config) -> Dict[str, date]:
 def _is_working_day(date_val: date, cfg: Config) -> bool:
     """Check if a date is a working day (not weekend or blackout)."""
     # Weekend check
-    if cfg.scheduling_options.get("enable_blackout_periods", False):
+    if cfg.scheduling_options and cfg.scheduling_options.get("enable_blackout_periods", False):
         if date_val.weekday() in [5, 6]:  # Saturday, Sunday
             return False
         # Blackout dates check
-        if date_val in cfg.blackout_dates:
+        if cfg.blackout_dates and date_val in cfg.blackout_dates:
             return False
     return True
 
 def _add_working_days(start_date: date, duration_days: int, cfg: Config) -> date:
     """Add working days to a date, skipping blackouts."""
-    if not cfg.scheduling_options.get("enable_blackout_periods", False):
+    if not cfg.scheduling_options or not cfg.scheduling_options.get("enable_blackout_periods", False):
         return start_date + timedelta(days=duration_days)
     current = start_date
     days_added = 0
@@ -147,6 +147,8 @@ def _schedule_early_abstracts(
         if not abstract.conference_id:
             continue
         conf = conf_map.get(abstract.conference_id)
+        if not conf:
+            continue
         abs_deadline = conf.deadlines.get(SubmissionType.ABSTRACT)
         if not abs_deadline:
             continue
