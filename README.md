@@ -2,10 +2,20 @@
 
 A sophisticated constraint-based optimization framework for scheduling academic submissions (papers, abstracts, and modifications) with complex dependencies, deadline constraints, and resource limitations.
 
+## 🎯 Purpose
+
+This system was specifically designed for **EndoscopeAI**, a medical device development project requiring coordination between:
+- **17 PCCP (Predetermined Change Control Plans) modifications** for FDA regulatory submissions
+- **20+ scientific papers** for academic publication
+- **14 major conferences** with strict deadlines
+- **Complex dependencies** between modifications, papers, and conferences
+
+The system ensures regulatory compliance while optimizing for early completion, resource utilization, and conference deadline compliance.
+
 ## 🚀 Features
 
 ### **Modular Architecture**
-- **Core**: Data structures and configuration management
+- **Core**: Data structures, configuration management, and centralized date utilities
 - **Schedulers**: Multiple scheduling algorithms (Greedy, Stochastic, Lookahead, Backtracking)
 - **Metrics**: Comprehensive schedule analysis (Makespan, Utilization, Penalties, Deadlines, Quality)
 - **Output**: Rich visualization and reporting (Tables, Plots, Console)
@@ -28,6 +38,12 @@ A sophisticated constraint-based optimization framework for scheduling academic 
 - **Plots**: Gantt charts, utilization charts, deadline compliance
 - **Console**: Formatted text output for quick analysis
 
+### **Advanced Constraint Handling**
+- **Soft Block Model**: PCCP modifications can slip ±2 months with penalties
+- **Concurrency Control**: Maintains 1-2 papers in drafting pipeline
+- **Conference Compatibility**: Ensures papers match appropriate venues
+- **Dependency Satisfaction**: Respects complex paper-to-paper and mod-to-paper relationships
+
 ## 📁 Project Structure
 
 ```
@@ -35,7 +51,8 @@ src/
 ├── core/
 │   ├── __init__.py
 │   ├── types.py          # Data structures (Config, Submission, Conference)
-│   └── config.py         # Configuration loading and date/time utilities
+│   ├── config.py         # Configuration loading
+│   └── dates.py          # Centralized date parsing and utilities
 ├── schedulers/
 │   ├── __init__.py
 │   ├── base.py           # Abstract base scheduler
@@ -329,25 +346,54 @@ python -m pytest tests/ -v
 
 ## 🎯 Use Cases
 
+### Medical Device Development (Primary Use Case)
+- **FDA Regulatory Compliance**: Coordinate 17 PCCP modifications with strict timelines
+- **Academic Publishing**: Schedule 20+ papers across 14 major conferences
+- **Dependency Management**: Handle complex mod-to-paper and paper-to-paper relationships
+- **Resource Optimization**: Maintain 1-2 papers in drafting pipeline
+
 ### Academic Research Planning
 - Schedule multiple paper submissions across conferences
 - Manage complex dependency relationships
 - Optimize for early completion and quality
 
-### Medical Device Development
-- Coordinate FDA regulatory submissions
-- Align with clinical trial timelines
-- Balance engineering and medical publications
-
 ### Conference Strategy
-- Plan submissions across multiple venues
-- Handle biennial vs annual conferences
-- Optimize for acceptance probability
+- Plan submissions across multiple venues (MICCAI, CVPR, ICML, ARS, etc.)
+- Handle biennial vs annual conferences (ICCV runs every 2 years)
+- Optimize for acceptance probability and venue compatibility
 
 ### Resource Management
-- Balance concurrent project capacity
+- Balance concurrent project capacity (max 2 simultaneous submissions)
 - Respect work-life boundaries (weekends, holidays)
-- Optimize team utilization
+- Optimize team utilization and avoid bottlenecks
+
+## 🔬 Advanced Features
+
+### Soft Block Model for PCCP Modifications
+Each modification has a flexible completion window with penalties for deviation:
+```
+BlockStart_m ≤ Finish_m ≤ BlockEnd_m + ε + p_m
+```
+where ε = 1 month free slack and p_m ≥ 0 incurs penalty cost c_m.
+
+### Concurrency Control
+Maintains exactly 1-2 papers in drafting pipeline at all times:
+```
+1 ≤ Σ_j 1[W_j ≤ t < S_j] ≤ 2  ∀t
+```
+
+### Conference Compatibility Matrix
+| Paper Type | Venue Type | Penalty $ | Rationale |
+|------------|------------|-----------|-----------|
+| Engineering-heavy | Clinical/ENT abstract-only | 3000 | Loss of technical audience |
+| Clinical | Engineering (ICML/CVPR) | 1500 | Audience mis-match |
+| Full-paper capable | Abstract-only venue | 2000 | Reduces publication depth |
+| Good match | Good match | 0 | — |
+
+### Paper-to-Paper Dependencies
+- **Default lead time**: 3 months between parent and child papers
+- **Special cases**: J11→J12 (1 month), J12→J13 (1 month), J19→J20 (2 months)
+- **Lead time calculation**: Child paper waits specified months after parent completion
 
 ## 🚀 Future Enhancements
 
@@ -374,7 +420,71 @@ python -m pytest tests/ -v
 - Trigger replanning on delays >7 days
 - Maintain solution pool for quick pivots
 
+## 📊 Problem Specification
+
+### Paper Portfolio (20 Papers)
+The system manages 20 specific papers (J1-J20) with complex dependencies:
+
+| Paper | Title | Draft Window | Conference Families | Dependencies |
+|-------|-------|--------------|-------------------|--------------|
+| J1 | Computer Vision (CV) endoscopy review | 2 months | ICML, MIDL, CVPR, NeurIPS | Mod 1 |
+| J2 | Middle Turbinate/Inferior Turbinate (MT/IT) | 3 months | MICCAI, ARS, IFAR | Mod 2 |
+| J3 | Nasal Septal Deviation (NSD) | 3 months | MICCAI, ARS, IFAR | Mod 3, J2 |
+| J4 | Eustachian Tube (ET) | 3 months | MICCAI, ARS, IFAR | Mod 4, J3 |
+| J5 | Middle Turbinate (MT ???/???) | 2 months | MICCAI, ARS, IFAR | Mod 5 |
+| J6 | Eustachian Tube (ET inflamed vs ETDQ) | 2 months | MICCAI, ARS, IFAR | Mod 6, J5 |
+| J7 | Mucus | 2 months | ARS, IFAR, AMIA | Mod 7 |
+| J8 | Mucus Biology | 2 months | ARS, IFAR, AMIA | Mod 8, J7 |
+| J9 | Color | 1 month | CVPR, MIDL, NeurIPS | J8 |
+| J10 | Localization (NC Mapping) | 3 months | MICCAI, CVPR | J9 |
+| J11 | Polyps | 3 months | MICCAI, ARS, IFAR | Mod 11 |
+| J12 | Nasal Polyps (NP) vs PCMT | 2 months | MICCAI, ARS, IFAR | J11 |
+| J13 | Polyp color | 1 month | MICCAI, ARS, IFAR | J12 |
+| J14 | ???? detection (vs MD) | 3 months | AMIA, MICCAI | Mod 14 |
+| J15 | NE AI CDS vs ENT panel | 3 months | AMIA, ARS, IFAR | J14 |
+| J16 | NE AI CDS vs PCP panel | 3 months | AMIA, ARS, IFAR | J15 |
+| J17 | Gaze tracking vs AI | 2 months | CVPR, AMIA | J16 |
+| J18 | Mucus AI vs culture | 2 months | IFAR, ARS | Mod 18 |
+| J19 | CT max vs NE Maxillary Mucosa (MM) | 3 months | RSNA, SPIE | Mod 19 |
+| J20 | CT eth vs NE Middle Turbinate (MT) | 3 months | RSNA, SPIE | Mod 20, J19 |
+
+### Conference Portfolio (14 Venues)
+Major conferences with strict deadlines:
+
+| Conference | Type | Full Papers | Abstract Required | Timing |
+|------------|------|-------------|-------------------|--------|
+| ICML | Machine Learning | Yes | Yes | July |
+| MIDL | Medical Imaging with DL | Yes | Yes | July |
+| MICCAI | Medical Imaging & AI | Yes | Yes | October |
+| CVPR | Computer Vision | Yes | Yes | June |
+| ICCV | Computer Vision (biennial) | Yes | Yes | October (odd years) |
+| ARS | American Rhinologic Society | No (abstract-only) | Yes | Fall/Spring |
+| RSNA | Radiology | No (abstract-only) | Yes | November/December |
+| AMIA | Medical Informatics | Yes | No | November |
+| IFAR | International Forum of Allergy | Optional | Yes | March |
+| SPIE Medical Imaging | Medical Imaging | Yes | Yes | February |
+| EMBC | Biomedical Engineering | Yes | No | July |
+| NeurIPS | AI/ML | Yes | Yes | December |
+
 ## 📚 API Reference
+
+### Date Utilities (`core.dates`)
+
+The system provides centralized date parsing and utility functions:
+
+```python
+from core.dates import parse_date, parse_date_safe, is_working_day, add_working_days
+
+# Parse dates safely
+date_obj = parse_date("2025-01-15")  # Returns date object
+date_obj = parse_date_safe("invalid", default=date(2025, 1, 1))  # Returns default on error
+
+# Check working days
+is_workday = is_working_day(date(2025, 1, 15), blackout_dates)
+
+# Add working days (skipping weekends/holidays)
+end_date = add_working_days(start_date, 60, blackout_dates)
+```
 
 ### Core Classes
 

@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Set
 from datetime import date, timedelta
 from .greedy import GreedyScheduler
 from core.types import Config, Submission, SubmissionType
+from core.dates import is_working_day
 
 class BacktrackingGreedyScheduler(GreedyScheduler):
     """Backtracking greedy scheduler that can undo decisions when stuck."""
@@ -36,7 +37,7 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
         
         while current <= end and len(schedule) < len(self.submissions):
             # Skip blackout dates
-            if not self._is_working_day(current):
+            if not is_working_day(current, self.config.blackout_dates):
                 current += timedelta(days=1)
                 continue
             
@@ -122,7 +123,7 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
         # Try to find an earlier start date
         for test_date in range((current_start - current).days - 1, -1, -1):
             test_start = current + timedelta(days=test_date)
-            if (self._is_working_day(test_start) and 
+            if (is_working_day(test_start, self.config.blackout_dates) and 
                 test_start >= sub.earliest_start_date and
                 self._meets_deadline(sub, test_start)):
                 return True

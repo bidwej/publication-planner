@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Set
 from dateutil.relativedelta import relativedelta
 from .base import BaseScheduler
 from core.types import Config, Submission, SubmissionType
+from core.dates import is_working_day
 
 class GreedyScheduler(BaseScheduler):
     """Greedy daily scheduler for abstracts & papers with priority weighting and blackout date handling."""
@@ -40,7 +41,7 @@ class GreedyScheduler(BaseScheduler):
         
         while current <= end + timedelta(days=365) and len(schedule) < len(self.submissions):
             # Skip blackout dates
-            if not self._is_working_day(current):
+            if not is_working_day(current, self.config.blackout_dates):
                 current += timedelta(days=1)
                 continue
             
@@ -82,17 +83,7 @@ class GreedyScheduler(BaseScheduler):
         
         return schedule
     
-    def _is_working_day(self, date_val: date) -> bool:
-        """Check if a date is a working day (not weekend or blackout)."""
-        # Weekend check
-        if (self.config.scheduling_options and 
-            self.config.scheduling_options.get("enable_blackout_periods", False)):
-            if date_val.weekday() in [5, 6]:  # Saturday, Sunday
-                return False
-            # Blackout dates check
-            if self.config.blackout_dates and date_val in self.config.blackout_dates:
-                return False
-        return True
+
     
     def _get_end_date(self, start_date: date, sub: Submission) -> date:
         """Get the end date for a submission."""

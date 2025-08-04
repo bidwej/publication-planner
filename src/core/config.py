@@ -67,8 +67,8 @@ def _load_blackout_dates(path: str) -> List[date]:
         # Add federal holidays
         for year_key in ["federal_holidays_2025", "federal_holidays_2026"]:
             if year_key in raw:
-                        for date_str in raw[year_key]:
-            blackout_dates.append(parse_date(date_str))
+                for date_str in raw[year_key]:
+                    blackout_dates.append(parse_date(date_str))
         # Add custom blackout periods
         if "custom_blackout_periods" in raw:
             for period in raw["custom_blackout_periods"]:
