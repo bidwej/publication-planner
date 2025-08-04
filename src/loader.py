@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, date
 from typing import Dict, List, Optional
 
 from dateutil.relativedelta import relativedelta
 
-from src.type import (
+from type import (
     Config,
     Conference,
     ConferenceType,
@@ -22,11 +23,12 @@ def load_config(config_path: str) -> Config:
     """Load the master config and all child JSON files."""
     with open(config_path, "r", encoding="utf-8") as f:
         raw_cfg = json.load(f)
+    config_dir = os.path.dirname(os.path.abspath(config_path))
 
-    conferences = _load_conferences(raw_cfg["data_files"]["conferences"])
+    conferences = _load_conferences(os.path.join(config_dir, raw_cfg["data_files"]["conferences"]))
     submissions = _load_submissions(
-        mods_path=raw_cfg["data_files"]["mods"],
-        papers_path=raw_cfg["data_files"]["papers"],
+        mods_path=os.path.join(config_dir, raw_cfg["data_files"]["mods"]),
+        papers_path=os.path.join(config_dir, raw_cfg["data_files"]["papers"]),
         conferences=conferences,
         abs_lead=raw_cfg["min_abstract_lead_time_days"],
         pap_lead=raw_cfg["min_paper_lead_time_days"],
@@ -36,8 +38,9 @@ def load_config(config_path: str) -> Config:
     # Load blackout dates if enabled
     blackout_dates = []
     if raw_cfg.get("scheduling_options", {}).get("enable_blackout_periods", False):
-        blackout_path = raw_cfg["data_files"].get("blackouts")
-        if blackout_path:
+        blackouts_rel = raw_cfg["data_files"].get("blackouts")
+        if blackouts_rel:
+            blackout_path = os.path.join(config_dir, blackouts_rel)
             blackout_dates = _load_blackout_dates(blackout_path)
 
     return Config(

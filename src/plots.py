@@ -7,7 +7,7 @@ from dateutil.relativedelta import relativedelta
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
-from src.type import Submission, SubmissionType, Config
+from type import Submission, SubmissionType, Config
 
 
 def plot_schedule(

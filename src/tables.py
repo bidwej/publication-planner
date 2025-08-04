@@ -3,7 +3,7 @@ from datetime import datetime, date
 from typing import Dict, List
 from dateutil.relativedelta import relativedelta
 
-from src.type import SubmissionType, Config, Submission
+from types import SubmissionType, Config, Submission
 
 
 def generate_monthly_table(

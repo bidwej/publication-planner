@@ -4,28 +4,24 @@
   "max_concurrent_submissions": 2,
   "mod_to_paper_gap_days": 30,
   "paper_parent_gap_days": 90,
-  
   "priority_weights": {
     "engineering_paper": 2.0,
     "medical_paper": 1.0,
     "mod": 1.5,
     "abstract": 0.5
   },
-  
   "penalty_costs": {
     "default_mod_penalty_per_day": 1000
   },
-  
   "scheduling_options": {
     "enable_early_abstract_scheduling": true,
     "abstract_advance_days": 30,
     "enable_blackout_periods": true
   },
-  
   "data_files": {
-    "conferences": "conferences.json",
-    "mods": "mods.json", 
-    "papers": "papers.json",
-    "blackouts": "blackout.json"
+    "conferences": "data/conferences.json",
+    "mods": "data/mods.json",
+    "papers": "data/papers.json",
+    "blackouts": "data/blackout.json"
   }
 }

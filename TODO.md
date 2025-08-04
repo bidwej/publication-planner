@@ -208,3 +208,10 @@ def lookahead_greedy(config, horizon_days=30):
 - [ ] Provide tuning guidelines
 - [ ] Document best practices
 - [ ] Add performance tips
+
+
+Extra use this when appropriate
+<!-- # 3. Third-party libraries
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt -->

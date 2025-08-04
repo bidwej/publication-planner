@@ -6,7 +6,7 @@ from typing import Dict, List, Optional, Set, Tuple
 
 from dateutil.relativedelta import relativedelta
 
-from src.type import (
+from type import (
     Config,
     Submission,
     SubmissionType,
@@ -180,22 +180,34 @@ def _schedule_early_abstracts(
     cfg: Config,
 ) -> None:
     """Schedule abstracts early during slack periods."""
-    abstracts = [
-        s
-        for s in sub_map.values()
-        if s.kind == SubmissionType.ABSTRACT and s.id not in schedule
-    ]
+    # Schedule abstracts as early as possible within advance window
+    for abstract in [s for s in sub_map.values() if s.kind == SubmissionType.ABSTRACT and s.id not in schedule]:
+        # Skip if no conference
+        if not abstract.conference_id:
+            continue
+        conf = conf_map.get(abstract.conference_id)
+        abs_deadline = conf.deadlines.get(SubmissionType.ABSTRACT)
+        if not abs_deadline:
+            continue
+        # Determine when dependencies are done
+        deps_ready = abstract.earliest_start_date
+        for dep_id in abstract.depends_on:
+            if dep_id in schedule:
+                dep_end = _get_end_date(schedule[dep_id], sub_map[dep_id], cfg)
+                if dep_end > deps_ready:
+                    deps_ready = dep_end
+        # Compute ideal advance start date
+        ideal_start = abs_deadline - timedelta(days=advance_days)
+        # Choose the later of deps_ready and ideal_start
+        start_date = deps_ready if deps_ready > ideal_start else ideal_start
+        # Adjust to next working day
+        while not _is_working_day(start_date, cfg):
+            start_date += timedelta(days=1)
+        # Ensure finish before the abstract deadline
+        finish = _get_end_date(start_date, abstract, cfg)
+        if finish <= abs_deadline:
+            schedule[abstract.id] = start_date
 
-    for abstract in abstracts:
-        if abstract.conference_id:
-            conf = conf_map[abstract.conference_id]
-            deadline = conf.deadlines.get(SubmissionType.ABSTRACT)
-            if deadline:
-                # Try to schedule advance_days before deadline
-                early_date = deadline - timedelta(days=advance_days)
-                # But not before dependencies are ready
-                if _deps_satisfied(abstract, schedule, sub_map, cfg, early_date):
-                    schedule[abstract.id] = early_date
 
 
 # --------------------------------------------------------------------------- #
