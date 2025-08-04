@@ -39,7 +39,7 @@ reportMissingImports = false
 # your existing venv and Python version settings
 venvPath = "."
 venv = ".venv"
-pythonVersion = "3.10"
+pythonVersion = "3.12"
 
 # if you need extra source roots:
 # (Pyright will look here for modules before complaining)

@@ -37,12 +37,11 @@ class Config:
     min_abstract_lead_time_days: int  # default lead time for abstracts
     min_paper_lead_time_days: int  # default lead time for papers
     max_concurrent_submissions: int
-    mod_to_paper_gap_days: int
+    default_paper_lead_time_months: int  # default lead time for papers in months
     conferences: List[Conference]
     submissions: List[Submission]
     data_files: Dict[str, str]
     # New fields for enhanced scheduling
-    paper_parent_gap_days: int = 90  # gap between parent and child papers
     priority_weights: Optional[Dict[str, float]] = None
     penalty_costs: Optional[Dict[str, float]] = None
     scheduling_options: Optional[Dict[str, Any]] = None

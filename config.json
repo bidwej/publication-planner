@@ -2,8 +2,7 @@
   "min_abstract_lead_time_days": 0,
   "min_paper_lead_time_days": 60,
   "max_concurrent_submissions": 2,
-  "mod_to_paper_gap_days": 30,
-  "paper_parent_gap_days": 90,
+  "default_paper_lead_time_months": 3,
   "priority_weights": {
     "engineering_paper": 2.0,
     "medical_paper": 1.0,
@@ -11,7 +10,8 @@
     "abstract": 0.5
   },
   "penalty_costs": {
-    "default_mod_penalty_per_day": 1000
+    "default_mod_penalty_per_day": 1000,
+    "default_paper_penalty_per_day": 500
   },
   "scheduling_options": {
     "enable_early_abstract_scheduling": true,
