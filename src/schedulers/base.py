@@ -37,7 +37,17 @@ class BaseScheduler(ABC):
                 if dep_id not in schedule:
                     return False
                 dep_start = schedule[dep_id]
-                if start_date <= dep_start:
+                dep_sub = self.submissions[dep_id]
+                
+                # Calculate dependency end date
+                if dep_sub.kind.value == "PAPER":
+                    dep_duration = self.config.min_paper_lead_time_days
+                else:
+                    dep_duration = 0
+                dep_end = dep_start + timedelta(days=dep_duration)
+                
+                # Submission should start after dependency ends
+                if start_date <= dep_end:
                     return False
         
         return True

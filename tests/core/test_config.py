@@ -301,6 +301,16 @@ class TestConfigIntegration:
             temp_path = f.name
         
         try:
+            # Copy the test data files to the same directory as the temp config
+            import shutil
+            temp_dir = os.path.dirname(temp_path)
+            
+            # Copy test data files to temp directory
+            for filename in ['conferences.json', 'mods.json', 'papers.json']:
+                src = os.path.join(test_data_dir, filename)
+                dst = os.path.join(temp_dir, filename)
+                shutil.copy2(src, dst)
+            
             config = load_config(temp_path)
             assert config.blackout_dates == []
         finally:

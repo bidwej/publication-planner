@@ -147,16 +147,36 @@ class TestGreedyScheduler:
         """Test validation of schedule with dependency violation."""
         schedule = greedy_scheduler.schedule()
         
-        # Create a dependency violation by swapping dates
-        submission_ids = list(schedule.keys())
-        if len(submission_ids) >= 2:
-            # Swap two dates to create a violation
-            id1, id2 = submission_ids[0], submission_ids[1]
-            schedule[id1], schedule[id2] = schedule[id2], schedule[id1]
-            
-            is_valid = greedy_scheduler.validate_schedule(schedule)
-            # Should be invalid due to dependency violation
-            assert is_valid is False
+        # Find a submission with dependencies
+        submission_with_deps = None
+        for submission_id, submission in greedy_scheduler.submissions.items():
+            if submission.depends_on:
+                submission_with_deps = submission_id
+                break
+        
+        if submission_with_deps and submission_with_deps in schedule:
+            # Find one of its dependencies
+            deps = greedy_scheduler.submissions[submission_with_deps].depends_on
+            if deps and deps[0] in schedule:
+                dep_id = deps[0]
+                
+                # Create a violation by making the dependent submission start before the dependency
+                original_start = schedule[submission_with_deps]
+                original_dep_start = schedule[dep_id]
+                
+                # Swap the dates to create a violation
+                schedule[submission_with_deps] = original_dep_start
+                schedule[dep_id] = original_start
+                
+                is_valid = greedy_scheduler.validate_schedule(schedule)
+                # Should be invalid due to dependency violation
+                assert is_valid is False
+            else:
+                # Skip test if no valid dependencies found
+                pytest.skip("No valid dependencies found for testing")
+        else:
+            # Skip test if no submissions with dependencies found
+            pytest.skip("No submissions with dependencies found for testing")
 
 
 class TestGreedySchedulerEdgeCases:
