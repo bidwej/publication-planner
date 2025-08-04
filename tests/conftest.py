@@ -19,7 +19,7 @@ from schedulers.backtracking import BacktrackingGreedyScheduler
 @pytest.fixture(scope="session")
 def test_data_dir():
     """Provide the test data directory path."""
-    return os.path.join(os.path.dirname(__file__), 'data')
+    return os.path.join(os.path.dirname(__file__), 'common', 'data')
 
 
 @pytest.fixture(scope="session")
