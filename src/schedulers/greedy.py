@@ -38,7 +38,7 @@ class GreedyScheduler(BaseScheduler):
             abstract_advance = self.config.scheduling_options.get("abstract_advance_days", 30)
             self._schedule_early_abstracts(schedule, abstract_advance)
         
-        while current <= end and len(schedule) < len(self.submissions):
+        while current <= end + timedelta(days=365) and len(schedule) < len(self.submissions):
             # Skip blackout dates
             if not self._is_working_day(current):
                 current += timedelta(days=1)
@@ -99,7 +99,13 @@ class GreedyScheduler(BaseScheduler):
         if sub.kind == SubmissionType.ABSTRACT:
             return start_date
         else:
-            return start_date + timedelta(days=self.config.min_paper_lead_time_days)
+            # Use draft_window_months if available, otherwise fall back to config
+            if sub.draft_window_months > 0:
+                # Approximate months as 30 days each
+                duration_days = sub.draft_window_months * 30
+            else:
+                duration_days = self.config.min_paper_lead_time_days
+            return start_date + timedelta(days=duration_days)
     
     def _sort_by_priority(self, ready: List[str]) -> List[str]:
         """Sort ready submissions by priority weight."""
@@ -144,7 +150,15 @@ class GreedyScheduler(BaseScheduler):
         for dep_id in sub.depends_on:
             if dep_id not in schedule:
                 return False
-            dep_end = self._get_end_date(schedule[dep_id], self.submissions[dep_id])
+            dep_sub = self.submissions[dep_id]
+            dep_end = self._get_end_date(schedule[dep_id], dep_sub)
+            
+            # For paper dependencies, add lead time
+            if dep_sub.kind == SubmissionType.PAPER and sub.lead_time_from_parents > 0:
+                # Add lead time in months (approximate as 30 days per month)
+                lead_days = sub.lead_time_from_parents * 30
+                dep_end += timedelta(days=lead_days)
+            
             if dep_end > now:
                 return False
         return True

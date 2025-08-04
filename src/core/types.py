@@ -29,6 +29,8 @@ class Submission:
     engineering: bool
     depends_on: List[str]
     penalty_cost_per_day: float = 0.0  # optional cost model
+    lead_time_from_parents: int = 0  # months to wait after parent papers finish
+    draft_window_months: int = 0  # duration of paper in months
 
 @dataclass
 class Config:

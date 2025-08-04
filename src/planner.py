@@ -75,14 +75,25 @@ class Planner:
         
         # Convert to backward-compatible format
         mod_sched, paper_sched = {}, {}
+        
+        # Find the earliest date to use as base for month offsets
+        all_dates = list(full_schedule.values())
+        if all_dates:
+            base_date = min(all_dates)
+        else:
+            base_date = date(2025, 1, 1)  # fallback
 
         for sid, dt in full_schedule.items():
+            # Convert date to month offset from base date
+            month_offset = (dt.year - base_date.year) * 12 + (dt.month - base_date.month)
+            
             if sid.endswith("-wrk"):
                 # mod##-wrk → integer key
-                mod_sched[int(sid[3 : sid.find("-")])] = dt
+                mod_id = sid.replace("-wrk", "")
+                mod_sched[int(mod_id)] = month_offset
             elif sid.endswith("-pap"):
                 # pid-pap → pid key
-                paper_sched[sid.split("-")[0]] = dt
+                paper_sched[sid.replace("-pap", "")] = month_offset
 
         return mod_sched, paper_sched
 

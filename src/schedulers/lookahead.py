@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Dict, List
 from datetime import date, timedelta
 from .greedy import GreedyScheduler
-from core.types import Config, SubmissionType
+from core.types import Config, SubmissionType, Submission
 
 class LookaheadGreedyScheduler(GreedyScheduler):
     """Lookahead greedy scheduler that considers future implications of decisions."""

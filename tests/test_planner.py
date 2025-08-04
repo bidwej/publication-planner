@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 from planner import Planner
 from datetime import datetime
 
-@pytest.fixture
+@pytest.fixture  # type: ignore
 def planner():
     return Planner(config_path=os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'config.json')))
 

@@ -95,8 +95,8 @@ def _load_conferences(path: str) -> List[Conference]:
             deadlines[SubmissionType.PAPER] = _parse_date(c["full_paper_deadline"])
         out.append(
             Conference(
-                id=c["id"],
-                conf_type=ConferenceType(c["conf_type"]),
+                id=c["name"],
+                conf_type=ConferenceType(c["conference_type"]),
                 recurrence=c["recurrence"],
                 deadlines=deadlines,
             )
@@ -143,6 +143,17 @@ def _load_submissions(
         paper_id = paper.get("id")
         if not paper_id:
             continue
+        
+        # Convert mod_dependencies to new submission IDs
+        mod_deps = []
+        for mod_id in paper.get("mod_dependencies", []):
+            mod_deps.append(f"{mod_id}-wrk")
+        
+        # Convert parent_papers to new submission IDs
+        parent_deps = []
+        for parent_id in paper.get("parent_papers", []):
+            parent_deps.append(f"{parent_id}-pap")
+        
         submissions.append(
             Submission(
                 id=f"{paper_id}-pap",
@@ -151,8 +162,10 @@ def _load_submissions(
                 earliest_start_date=_parse_date(paper.get("earliest_start_date", "2025-01-01")),
                 conference_id=paper.get("conference_id"),
                 engineering=paper.get("engineering", False),
-                depends_on=paper.get("parent_papers", []),
+                depends_on=mod_deps + parent_deps,
                 penalty_cost_per_day=penalty_costs.get("default_paper_penalty_per_day", 0.0),
+                lead_time_from_parents=paper.get("lead_time_from_parents", 0),
+                draft_window_months=paper.get("draft_window_months", 0),
             )
         )
 
