@@ -34,16 +34,13 @@ DEFAULT_IGNORE_FILES: Set[str] = {
     "Thumbs.db",  # Windows system file
 }
 
-
 def should_ignore_folder(folder_name: str, ignore_patterns: Set[str]) -> bool:
     """Check if a folder should be ignored based on patterns."""
     return any(fnmatch.fnmatch(folder_name, pattern) for pattern in ignore_patterns)
 
-
 def should_ignore_file(file_name: str, ignore_files: Set[str]) -> bool:
     """Check if a file should be ignored based on name or extension."""
     return file_name in ignore_files or any(file_name.endswith(ext) for ext in ignore_files)
-
 
 def create_archive(
     input_path: Optional[Path] = DEFAULT_INPUT,
@@ -56,6 +53,12 @@ def create_archive(
         ignore_folders = DEFAULT_IGNORE_FOLDERS
     if ignore_files is None:
         ignore_files = DEFAULT_IGNORE_FILES
+
+    # Ensure paths are not None
+    if input_path is None:
+        input_path = DEFAULT_INPUT
+    if output_path is None:
+        output_path = DEFAULT_OUTPUT
 
     # Resolve paths
     input_path = input_path.resolve()
@@ -88,7 +91,6 @@ def create_archive(
                 src_file = root_path / file
                 rel_path = src_file.relative_to(input_path)
                 dest_file = temp_path / rel_path
-
                 dest_file.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src_file, dest_file)
 
@@ -102,13 +104,11 @@ def create_archive(
 
         print(f"Archive created: {archive_path}")
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create source code archive")
     parser.add_argument("--input", type=Path, default=DEFAULT_INPUT, help=f"Input directory (default: {DEFAULT_INPUT})")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT, help=f"Output directory (default: {DEFAULT_OUTPUT})")
     parser.add_argument("--ignore-folders", nargs="+", default=DEFAULT_IGNORE_FOLDERS, help="Folders to ignore")
     parser.add_argument("--ignore-files", nargs="+", default=DEFAULT_IGNORE_FILES, help="Files to ignore")
-
     args = parser.parse_args()
     create_archive(args.input, args.output, set(args.ignore_folders), set(args.ignore_files))

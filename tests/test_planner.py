@@ -1,6 +1,7 @@
 import pytest
 import os
 import sys
+
 # ensure src folder on path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
@@ -16,7 +17,7 @@ def test_multi_parent(planner):
     j2 = paper_sched["J2"]
     j3 = paper_sched["J3"]
     lead = planner.papers_dict["J3"].get("lead_time_from_parents",
-                                     planner.config["default_paper_lead_time_months"])
+                                         planner.config["default_paper_lead_time_months"])
     assert j3 >= j2 + planner.papers_dict["J2"]["draft_window_months"] + lead
 
 def test_free_slack(planner):

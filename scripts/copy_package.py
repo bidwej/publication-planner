@@ -27,7 +27,6 @@ def _collect_all_deps(root: str) -> List[str]:
     seen: Set[str] = set()
     queue: List[str] = [root]
     order: List[str] = []
-
     while queue:
         pkg = queue.pop(0)
         if pkg in seen:

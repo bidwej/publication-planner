@@ -1,12 +1,10 @@
 # src/plots.py
-
 from __future__ import annotations
 from typing import Dict, List, Optional
 from datetime import date, datetime
-from dateutil.relativedelta import relativedelta
+from dateutil.relativedelta import relativedelta  # type: ignore
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-
+import matplotlib.patches as mpatches  # type: ignore
 from type import Submission, SubmissionType, Config
 
 
@@ -36,7 +34,6 @@ def plot_schedule(
     config : Config, optional
         Configuration for blackout dates and priority colors
     """
-
     subs = {s.id: s for s in submissions}
 
     # Convert schedule to daily grid
@@ -53,7 +50,7 @@ def plot_schedule(
     if end_date:
         max_date = min(max_date, end_date)
 
-    fig, ax = plt.subplots(figsize=(14, max(6, len(schedule) * 0.4)))
+    fig, ax = plt.subplots(figsize=(14, max(6, len(schedule) * 0.4)))  # type: ignore
 
     y_labels: List[str] = []
     y_positions: List[int] = []
@@ -97,7 +94,12 @@ def plot_schedule(
             )
 
     # Show blackout periods
-    if config and config.scheduling_options.get("enable_blackout_periods", False):
+    if (
+        config
+        and config.scheduling_options
+        and config.scheduling_options.get("enable_blackout_periods", False)
+        and config.blackout_dates
+    ):
         for blackout in config.blackout_dates:
             if min_date <= blackout <= max_date:
                 ax.axvline(
@@ -111,7 +113,6 @@ def plot_schedule(
     total_days = (max_date - min_date).days
     month_ticks = []
     month_labels = []
-
     current = min_date.replace(day=1)
     while current <= max_date:
         tick_pos = (current - min_date).days
@@ -123,7 +124,6 @@ def plot_schedule(
     ax.set_xticks(month_ticks)
     ax.set_xticklabels(month_labels, rotation=45, ha="right", fontsize=8)
     ax.set_xlim(0, total_days)
-
     ax.set_xlabel("Date")
     ax.set_title("Endoscope AI Schedule Gantt Chart")
     ax.grid(True, axis="x", alpha=0.3)
@@ -133,13 +133,13 @@ def plot_schedule(
     unique = dict(zip(labels, handles))
     ax.legend(unique.values(), unique.keys(), loc="upper right", fontsize=8)
 
-    plt.tight_layout()
+    plt.tight_layout()  # type: ignore
 
     if save_path:
-        plt.savefig(save_path, dpi=200, bbox_inches="tight")
+        plt.savefig(save_path, dpi=200, bbox_inches="tight")  # type: ignore
         print(f"Saved Gantt chart to: {save_path}")
     else:
-        plt.show()
+        plt.show()  # type: ignore
 
 
 def _get_priority_color(sub: Submission, config: Optional[Config]) -> str:

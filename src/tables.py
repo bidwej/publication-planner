@@ -1,10 +1,8 @@
 from __future__ import annotations
 from datetime import datetime, date
-from typing import Dict, List
+from typing import Dict, List, Any
 from dateutil.relativedelta import relativedelta
-
-from types import SubmissionType, Config, Submission
-
+from type import SubmissionType, Config, Submission
 
 def generate_monthly_table(
     schedule: Dict[str, date], submissions: List[Submission], config: Config
@@ -19,7 +17,6 @@ def generate_monthly_table(
     max_date = max(schedule.values())
 
     # Extend to show completion
-
     max_date = max_date + relativedelta(months=3)
 
     rows: List[Dict[str, str]] = []
@@ -65,4 +62,40 @@ def generate_monthly_table(
 
         current += relativedelta(months=1)
 
+    return rows
+
+
+def generate_simple_monthly_table(config: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Generate monthly table for testing - simplified version."""
+    rows = []
+    
+    # Get all conferences from config
+    conferences = config.get("conferences", [])
+    
+    # Generate rows for each conference deadline
+    for conf in conferences:
+        if "abstract_deadline" in conf and conf["abstract_deadline"]:
+            deadline_str = conf["abstract_deadline"]
+            if isinstance(deadline_str, str):
+                deadline = datetime.fromisoformat(deadline_str.split("T")[0])
+            else:
+                deadline = deadline_str
+            rows.append({
+                "Month": f"{deadline.year}-{deadline.month:02d}",
+                "Deadlines": f"{conf['name']} Abstract",
+                "Active Papers": ""
+            })
+        
+        if "full_paper_deadline" in conf and conf["full_paper_deadline"]:
+            deadline_str = conf["full_paper_deadline"]
+            if isinstance(deadline_str, str):
+                deadline = datetime.fromisoformat(deadline_str.split("T")[0])
+            else:
+                deadline = deadline_str
+            rows.append({
+                "Month": f"{deadline.year}-{deadline.month:02d}",
+                "Deadlines": f"{conf['name']} Full Paper",
+                "Active Papers": ""
+            })
+    
     return rows

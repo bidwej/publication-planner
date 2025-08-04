@@ -27,7 +27,8 @@ def test_abstract_before_full_each_year(planner):
         months = [r["Month"] for r in rows]
         assert a_month in months
         assert f_month in months
-        assert (base_a.month, base_a.day) <= (base_f.month, base_f.day)
+        # Compare full dates, not just month/day within same year
+        assert base_a <= base_f
 
 def test_biennial_iccv(planner):
     # ICCV appears only in odd years
@@ -43,17 +44,17 @@ def test_concurrency_limit(planner):
     assert max_active <= planner.config["max_concurrent_papers"]
 
 def test_mod_paper_alignment(planner):
-    mod_sched, paper_sched = planner.schedule("greedy")
-    for p in planner.config["ed_papers"]:
+    mod_sched, paper_sched = planner.greedy_schedule()
+    for p in planner.papers:
         pid = p["id"]
         for mid in p.get("mod_dependencies", []):
             assert paper_sched[pid] >= mod_sched[mid]
 
 def test_parent_child_lead(planner):
-    mod_sched, paper_sched = planner.schedule("greedy")
-    for p in planner.config["ed_papers"]:
+    mod_sched, paper_sched = planner.greedy_schedule()
+    for p in planner.papers:
         pid = p["id"]
         for par in p.get("parent_papers", []):
-            par_end = paper_sched[par] + planner.papers[par]["draft_window_months"]
+            par_end = paper_sched[par] + planner.papers_dict[par]["draft_window_months"]
             lead = p.get("lead_time_from_parents", planner.config["default_paper_lead_time_months"])
             assert paper_sched[pid] >= par_end + lead

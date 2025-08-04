@@ -1,20 +1,16 @@
 from __future__ import annotations
-
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from datetime import date
-
 
 class SubmissionType(str, Enum):
     ABSTRACT = "ABSTRACT"  # zero-day milestone
     PAPER = "PAPER"  # spans a draft window
 
-
 class ConferenceType(str, Enum):
     ENGINEERING = "ENGINEERING"
     MEDICAL = "MEDICAL"
-
 
 @dataclass
 class Conference:
@@ -23,22 +19,16 @@ class Conference:
     recurrence: str  # "annual" | "biennial"
     deadlines: Dict[SubmissionType, date]  # CFP dates per kind
 
-
 @dataclass
 class Submission:
     id: str
     kind: SubmissionType
     title: str
-
     earliest_start_date: date  # PCCP/FDA ready OR data-ready
-
     conference_id: Optional[str]  # None → internal-only
-
     engineering: bool
     depends_on: List[str]
-
     penalty_cost_per_day: float = 0.0  # optional cost model
-
 
 @dataclass
 class Config:
@@ -49,10 +39,9 @@ class Config:
     conferences: List[Conference]
     submissions: List[Submission]
     data_files: Dict[str, str]
-
     # New fields for enhanced scheduling
     paper_parent_gap_days: int = 90  # gap between parent and child papers
-    priority_weights: Dict[str, float] = None
-    penalty_costs: Dict[str, float] = None
-    scheduling_options: Dict[str, any] = None
-    blackout_dates: List[date] = None  # computed from blackout.json
+    priority_weights: Optional[Dict[str, float]] = None
+    penalty_costs: Optional[Dict[str, float]] = None
+    scheduling_options: Optional[Dict[str, Any]] = None
+    blackout_dates: Optional[List[date]] = None  # computed from blackout.json
