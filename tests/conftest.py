@@ -3,8 +3,6 @@
 import pytest
 import os
 import sys
-import tempfile
-import shutil
 from pathlib import Path
 
 # Add src to path for imports
@@ -79,49 +77,6 @@ def all_schedulers(greedy_scheduler, stochastic_scheduler, lookahead_scheduler, 
 
 
 @pytest.fixture
-def temp_config_file():
-    """Create a temporary config file for testing."""
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-        f.write('''{
-  "min_abstract_lead_time_days": 0,
-  "min_paper_lead_time_days": 60,
-  "max_concurrent_submissions": 2,
-  "default_paper_lead_time_months": 3,
-  "priority_weights": {
-    "engineering_paper": 2.0,
-    "medical_paper": 1.0,
-    "mod": 1.5,
-    "abstract": 0.5
-  },
-  "penalty_costs": {
-    "default_mod_penalty_per_day": 1000,
-    "default_paper_penalty_per_day": 500
-  },
-  "scheduling_options": {
-    "enable_early_abstract_scheduling": true,
-    "abstract_advance_days": 30,
-    "enable_blackout_periods": true,
-    "conference_response_time_days": 90
-  },
-  "data_files": {
-    "conferences": "data/conferences.json",
-    "mods": "data/mods.json",
-    "papers": "data/papers.json",
-    "blackouts": "data/blackout.json"
-  }
-}''')
-        temp_path = f.name
-    
-    yield temp_path
-    
-    # Cleanup
-    try:
-        os.unlink(temp_path)
-    except OSError:
-        pass
-
-
-@pytest.fixture
 def sample_submission():
     """Provide a sample submission for testing."""
     from core.types import Submission, SubmissionType
@@ -175,7 +130,14 @@ def minimal_config():
         min_paper_lead_time_days=60,
         max_concurrent_submissions=1,
         default_paper_lead_time_months=3,
-        conferences=[],
+        conferences=[
+            Conference(
+                id="ICML",
+                conf_type="ENGINEERING",
+                recurrence="annual",
+                deadlines={}
+            )
+        ],
         submissions=[],
         data_files={},
         priority_weights={},

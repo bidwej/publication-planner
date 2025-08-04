@@ -280,7 +280,7 @@ class TestConfigIntegration:
         for submission in config.submissions:
             assert submission.id in config.submissions_dict
     
-    def test_config_with_blackout_periods_disabled(self):
+    def test_config_with_blackout_periods_disabled(self, test_data_dir):
         """Test config loading with blackout periods disabled."""
         # Create a temporary config with blackout periods disabled
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
@@ -293,9 +293,9 @@ class TestConfigIntegration:
     "enable_blackout_periods": false
   },
   "data_files": {
-    "conferences": "data/conferences.json",
-    "mods": "data/mods.json",
-    "papers": "data/papers.json"
+    "conferences": "conferences.json",
+    "mods": "mods.json",
+    "papers": "papers.json"
   }
 }''')
             temp_path = f.name

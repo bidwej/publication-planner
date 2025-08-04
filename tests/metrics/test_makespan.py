@@ -20,9 +20,23 @@ class TestCalculateMakespan:
         makespan = calculate_makespan(schedule, config)
         assert makespan >= 0
     
-    def test_multiple_submissions(self, sample_schedule, config):
+    def test_multiple_submissions(self, config):
         """Test makespan calculation with multiple submissions."""
-        makespan = calculate_makespan(sample_schedule, config)
+        # Create a test schedule with multiple submissions
+        schedule = {
+            "test1": date(2025, 1, 1),
+            "test2": date(2025, 1, 15),
+            "test3": date(2025, 1, 30)
+        }
+        
+        # Mock submissions_dict for testing
+        config.submissions_dict = {
+            "test1": type('obj', (object,), {'kind': SubmissionType.PAPER})(),
+            "test2": type('obj', (object,), {'kind': SubmissionType.ABSTRACT})(),
+            "test3": type('obj', (object,), {'kind': SubmissionType.PAPER})()
+        }
+        
+        makespan = calculate_makespan(schedule, config)
         assert makespan > 0
         assert isinstance(makespan, int)
     
@@ -35,6 +49,13 @@ class TestCalculateMakespan:
             "abstract1": date(2025, 1, 1)
         }
         
+        # Mock submissions_dict for testing
+        config.submissions_dict = {
+            "paper1": type('obj', (object,), {'kind': SubmissionType.PAPER})(),
+            "paper2": type('obj', (object,), {'kind': SubmissionType.PAPER})(),
+            "abstract1": type('obj', (object,), {'kind': SubmissionType.ABSTRACT})()
+        }
+        
         makespan = calculate_makespan(schedule, config)
         assert makespan > 0
         
@@ -43,18 +64,29 @@ class TestCalculateMakespan:
         if config.min_paper_lead_time_days > 0:
             assert makespan >= config.min_paper_lead_time_days
     
-    def test_makespan_date_range(self, sample_schedule, config):
+    def test_makespan_date_range(self, config):
         """Test that makespan represents actual date range."""
-        if not sample_schedule:
-            pytest.skip("No sample schedule available")
+        # Create a test schedule
+        schedule = {
+            "test1": date(2025, 1, 1),
+            "test2": date(2025, 1, 15),
+            "test3": date(2025, 1, 30)
+        }
         
-        makespan = calculate_makespan(sample_schedule, config)
+        # Mock submissions_dict for testing
+        config.submissions_dict = {
+            "test1": type('obj', (object,), {'kind': SubmissionType.PAPER})(),
+            "test2": type('obj', (object,), {'kind': SubmissionType.ABSTRACT})(),
+            "test3": type('obj', (object,), {'kind': SubmissionType.PAPER})()
+        }
+        
+        makespan = calculate_makespan(schedule, config)
         
         # Get actual date range
-        start_date = min(sample_schedule.values())
+        start_date = min(schedule.values())
         end_dates = []
         
-        for submission_id, start in sample_schedule.items():
+        for submission_id, start in schedule.items():
             submission = config.submissions_dict.get(submission_id)
             if submission and submission.kind == SubmissionType.PAPER:
                 end_date = start + timedelta(days=config.min_paper_lead_time_days)
@@ -86,13 +118,24 @@ class TestCalculateParallelMakespan:
         assert parallel_makespan > 0
         assert isinstance(parallel_makespan, int)
     
-    def test_parallel_vs_sequential_makespan(self, sample_schedule, config):
+    def test_parallel_vs_sequential_makespan(self, config):
         """Test that parallel makespan is less than or equal to sequential."""
-        if not sample_schedule:
-            pytest.skip("No sample schedule available")
+        # Create a test schedule
+        schedule = {
+            "test1": date(2025, 1, 1),
+            "test2": date(2025, 1, 15),
+            "test3": date(2025, 1, 30)
+        }
         
-        sequential_makespan = calculate_makespan(sample_schedule, config)
-        parallel_makespan = calculate_parallel_makespan(sample_schedule, config)
+        # Mock submissions_dict for testing
+        config.submissions_dict = {
+            "test1": type('obj', (object,), {'kind': SubmissionType.PAPER})(),
+            "test2": type('obj', (object,), {'kind': SubmissionType.ABSTRACT})(),
+            "test3": type('obj', (object,), {'kind': SubmissionType.PAPER})()
+        }
+        
+        sequential_makespan = calculate_makespan(schedule, config)
+        parallel_makespan = calculate_parallel_makespan(schedule, config)
         
         # Parallel makespan should be less than or equal to sequential
         assert parallel_makespan <= sequential_makespan
@@ -104,6 +147,13 @@ class TestCalculateParallelMakespan:
             "paper1": date(2025, 1, 1),
             "paper2": date(2025, 1, 1),  # Same start date
             "paper3": date(2025, 1, 1)   # Same start date
+        }
+        
+        # Mock submissions_dict for testing
+        config.submissions_dict = {
+            "paper1": type('obj', (object,), {'kind': SubmissionType.PAPER})(),
+            "paper2": type('obj', (object,), {'kind': SubmissionType.PAPER})(),
+            "paper3": type('obj', (object,), {'kind': SubmissionType.PAPER})()
         }
         
         parallel_makespan = calculate_parallel_makespan(schedule, config)

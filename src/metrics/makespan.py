@@ -57,7 +57,7 @@ def calculate_parallel_makespan(schedule: Dict[str, date], config: Config) -> in
     max_load = max(daily_load.values())
     
     # Calculate parallel makespan based on resource constraints
-    total_work = len([s for s in config.submissions if s.kind == SubmissionType.PAPER])
+    total_work = len([s for s in config.submissions_dict.values() if s.kind == SubmissionType.PAPER])
     parallel_makespan = total_work / max_load if max_load > 0 else 0
     
     return int(parallel_makespan)

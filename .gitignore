@@ -23,17 +23,15 @@ desktop.ini
 # ─── Build / dist / temp ─────────────────────────────
 build/
 temp*/
-*.bak
+*.*
 
-# ─── Generated schedule outputs ───────────────────────
-schedule_*.json
-schedule_*.csv
-schedule_*.png
-utilization_*.png
-deadline_*.png
-*_2025*.json
-*_2025*.csv
-*_2025*.png
+# ─── Ignore only the top-level output directory ───────
+/output/
+/output*
+
+# ─── Allow src/output ────────────────────────────────
+!src/output/
+!src/output/**
 
 # ─── Generated schedule outputs ───────────────────────
 schedule_*.json

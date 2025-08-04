@@ -19,6 +19,10 @@ class GreedyScheduler(BaseScheduler):
         dict
             {submission_id: start_date}
         """
+        # Handle empty submissions
+        if not self.submissions:
+            return {}
+        
         self._auto_link_abstract_paper()
         self._validate_venue_compatibility()
         topo = self._topological_order()
