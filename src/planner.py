@@ -3,10 +3,10 @@ import os
 from typing import Dict, Any, List
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta  # type: ignore
-from loader import load_config
-from scheduler import greedy_schedule as scheduler_greedy
-from type import Config
-from tables import generate_simple_monthly_table
+from loader import load_config  # type: ignore
+from scheduler import greedy_schedule as scheduler_greedy  # type: ignore
+from type import Config  # type: ignore
+from tables import generate_simple_monthly_table  # type: ignore
 
 
 class Planner:

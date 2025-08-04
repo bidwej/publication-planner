@@ -10,7 +10,7 @@ from type import (
     ConferenceType,
     Submission,
     SubmissionType,
-)
+)  # type: ignore
 
 # ────────────────────────────────────────────────────────────────
 # Public API
