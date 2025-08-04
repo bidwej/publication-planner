@@ -1,6 +1,7 @@
 from datetime import datetime
 from planner import Planner
 import pytest
+from core.dates import parse_date
 
 @pytest.fixture
 def planner():

@@ -18,8 +18,10 @@ disable = [
   "multiple-imports",
   "no-name-in-module",
   "import-error",
-  "missing-final-newline"   # ignore C0304
+  "missing-final-newline",   # ignore C0304
+  "trailing-whitespace"      # ignore C0303
 ]
+
 
 
 [tool.pylint.typecheck]

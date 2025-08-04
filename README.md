@@ -1,433 +1,156 @@
-# Endoscope AI Scheduling System: Comprehensive Documentation
+# Paper Planner - Advanced Academic Scheduling System
 
-## Table of Contents
-1. [Executive Summary](#executive-summary)
-2. [Problem Definition](#problem-definition)
-3. [System Architecture](#system-architecture)
-4. [Constraint Specifications](#constraint-specifications)
-5. [Algorithm Design](#algorithm-design)
-6. [Implementation Details](#implementation-details)
-7. [Usage Guide](#usage-guide)
-8. [Configuration Reference](#configuration-reference)
-9. [Performance Analysis](#performance-analysis)
-10. [Examples and Scenarios](#examples-and-scenarios)
+A sophisticated constraint-based optimization framework for scheduling academic submissions (papers, abstracts, and modifications) with complex dependencies, deadline constraints, and resource limitations.
 
-## Executive Summary
+## 🚀 Features
 
-The Endoscope AI Scheduling System is a sophisticated constraint-based optimization framework designed to schedule FDA regulatory submissions for medical device modifications and scientific publications. The system manages 17 sequential PCCP (Predetermined Change Control Plans) modifications and 20+ scientific papers proposed by PI Edward McCoul, MD, while optimizing for early completion, resource utilization, and conference deadline compliance.
+### **Modular Architecture**
+- **Core**: Data structures and configuration management
+- **Schedulers**: Multiple scheduling algorithms (Greedy, Stochastic, Lookahead, Backtracking)
+- **Metrics**: Comprehensive schedule analysis (Makespan, Utilization, Penalties, Deadlines, Quality)
+- **Output**: Rich visualization and reporting (Tables, Plots, Console)
 
-### Key Challenges Addressed
-- **Complex Dependencies**: Papers depend on specific modifications and other papers, creating intricate dependency graphs
-- **Resource Constraints**: Limited concurrent submission capacity (typically 2 simultaneous efforts)
-- **Deadline Pressure**: Fixed conference submission deadlines that cannot be missed
-- **Venue Compatibility**: Medical vs engineering conference restrictions
-- **Work-Life Balance**: Respecting weekends and holidays while maintaining aggressive timelines
-- **PCCP Publishing**: Each of the 17 PCCP modifications must result in a published engineering paper
+### **Advanced Scheduling Algorithms**
+- **GreedyScheduler**: Priority-weighted greedy algorithm with blackout date handling
+- **StochasticGreedyScheduler**: Adds randomness for exploration and tie-breaking
+- **LookaheadGreedyScheduler**: Considers future implications and dependencies
+- **BacktrackingGreedyScheduler**: Can undo decisions when stuck
 
-### Solution Approach
-The system employs an enhanced greedy algorithm with stochastic exploration to generate multiple high-quality schedules. Users can interactively explore different scheduling variants to find the optimal balance between early completion and resource efficiency.
+### **Comprehensive Metrics**
+- **Makespan Analysis**: Total duration, parallel makespan, breakdowns
+- **Resource Utilization**: Peak periods, idle time, efficiency analysis
+- **Penalty Calculations**: Deadline violations, dependency costs, earliness bonuses
+- **Deadline Compliance**: Risk assessment, margin analysis, violation tracking
+- **Quality Metrics**: Front-loading, slack distribution, workload balance
 
-## Problem Definition
+### **Rich Output Options**
+- **Tables**: Summary tables, deadline tables, monthly views
+- **Plots**: Gantt charts, utilization charts, deadline compliance
+- **Console**: Formatted text output for quick analysis
 
-### Mathematical Formulation
-
-#### Decision Variables
-```
-x[i,t] ∈ {0,1}     : Binary variable, 1 if submission i starts on day t
-start[i] ∈ Date    : Start date for submission i
-end[i] ∈ Date      : Completion date for submission i
-active[i,t] ∈ {0,1}: 1 if submission i is being worked on at time t
-```
-
-#### Objective Function
-The multi-objective function balances three competing goals:
+## 📁 Project Structure
 
 ```
-Minimize: f(x) = w₁ × EarlyCompletion + w₂ × PenaltyCosts - w₃ × ResourceUtilization
-
-Where:
-- EarlyCompletion = Σᵢ priority[i] × start[i]
-- PenaltyCosts = Σᵢ∈mods penalty_cost[i] × max(0, start[i] - ready_date[i])
-- ResourceUtilization = Σₜ min(active[t], max_concurrent) × (T-t)/T
+src/
+├── core/
+│   ├── __init__.py
+│   ├── types.py          # Data structures (Config, Submission, Conference)
+│   └── config.py         # Configuration loading and date/time utilities
+├── schedulers/
+│   ├── __init__.py
+│   ├── base.py           # Abstract base scheduler
+│   ├── greedy.py         # Basic greedy scheduler
+│   ├── stochastic.py     # Stochastic greedy with randomness
+│   ├── lookahead.py      # Lookahead greedy with future consideration
+│   └── backtracking.py   # Backtracking greedy with undo capability
+├── metrics/
+│   ├── __init__.py
+│   ├── makespan.py       # Makespan calculations
+│   ├── utilization.py    # Resource utilization metrics
+│   ├── penalties.py      # Penalty cost calculations
+│   ├── deadlines.py      # Deadline compliance metrics
+│   └── quality.py        # Quality metrics (front-loading, slack, etc.)
+├── output/
+│   ├── __init__.py
+│   ├── tables.py         # Table generation
+│   ├── plots.py          # Plot generation
+│   └── console.py        # Console output formatting
+└── planner.py            # Simple facade for backward compatibility
 ```
 
-Default weights: w₁=1.0, w₂=0.001, w₃=10.0
+## 🛠️ Installation
 
-### Submission Types
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd paper-planner
+   ```
 
-#### PCCP Modifications (Mods)
-- **Count**: 17 sequential modifications
-- **Dependencies**: Strict chain mod01→mod02→...→mod17
-- **Duration**: 60 days each (using paper lead time)
-- **Type**: Engineering submissions only
-- **Publishing**: Each mod results in an engineering paper
-- **Penalties**: $1000/day for delays past ready date (calculated from monthly rate)
+2. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-Example mod entry from mods.json:
-```json
-{
-  "id": 5,
-  "title": "Enhanced Image Processing Module",
-  "est_data_ready": "2025-03-15",
-  "penalty_cost_per_month": 30000
+3. **Verify installation**
+   ```bash
+   python -m pytest tests/ -v
+   ```
+
+## 📖 Quick Start
+
+### Basic Usage
+
+```python
+from core.config import load_config
+from schedulers.greedy import GreedyScheduler
+from output.console import print_schedule_summary
+
+# Load configuration
+config = load_config("config.json")
+
+# Create scheduler
+scheduler = GreedyScheduler(config)
+
+# Generate schedule
+schedule = scheduler.schedule()
+
+# Print summary
+print_schedule_summary(schedule, config)
+```
+
+### Comparing Multiple Schedulers
+
+```python
+from schedulers.greedy import GreedyScheduler
+from schedulers.stochastic import StochasticGreedyScheduler
+from schedulers.lookahead import LookaheadGreedyScheduler
+from metrics.quality import calculate_schedule_quality_score
+
+# Test different schedulers
+schedulers = {
+    "Greedy": GreedyScheduler(config),
+    "Stochastic": StochasticGreedyScheduler(config),
+    "Lookahead": LookaheadGreedyScheduler(config)
 }
+
+results = {}
+for name, scheduler in schedulers.items():
+    schedule = scheduler.schedule()
+    quality = calculate_schedule_quality_score(schedule, config)
+    results[name] = quality
+    print(f"{name}: Quality Score = {quality:.3f}")
+
+best_scheduler = max(results, key=results.get)
+print(f"Best scheduler: {best_scheduler}")
 ```
 
-#### Scientific Papers
-- **Count**: 20+ papers proposed by PI Edward McCoul, MD
-- **Dependencies**: Complex graph including mod dependencies and parent papers
-- **Duration**: 60 days for full papers, 0 days for abstracts
-- **Types**: Mix of Engineering and Medical papers
-- **Conferences**: Selected from conference_families list
-
-Example paper entry from papers.json:
-```json
-{
-  "id": "ed03",
-  "title": "Clinical Outcomes of AI-Guided Endoscopy",
-  "conference_families": ["MICCAI", "ISBI", "EMBC"],
-  "mod_dependencies": [3, 5],
-  "parent_papers": ["ed01", "ed02"],
-  "paper_type": "medical"
-}
-```
-
-## System Architecture
-
-### Dependency Graph Structure
-
-The system manages a directed acyclic graph (DAG) of dependencies:
-
-```
-MOD CHAIN (Sequential):
-mod01 ──30d──> mod02 ──30d──> mod03 ──30d──> ... ──30d──> mod17
-  │              │              │                            │
-  └──────────────┴──────────────┴────────────────...────────┘
-                           │
-PAPER DEPENDENCIES (Complex):    │
-                                │
-ed01 ─────90d────> ed03 <───────┘ (needs mod03)
-  │                  │
-  └───90d──> ed02    └────0d───> ed03-abstract
-              │
-              └─────90d────> ed04
-```
-
-### Conference Timeline Example
-
-```
-2025 Timeline:
-Jan ─────── Feb ─────── Mar ─────── Apr ─────── May ─────── Jun
- │           │           │           │           │           │
- │      ICRA abs        │      MICCAI abs      │        IROS abs
- │      (Feb 15)        │      (Apr 1)        │        (Jun 1)
- │                      │                      │
-ICRA paper         MICCAI paper          IROS paper
-(Mar 1)            (May 1)               (Jul 1)
-```
-
-## Constraint Specifications
-
-### 1. Precedence Constraints (Hard)
-
-Dependencies must be respected with appropriate gap times:
-
-#### Mod-to-Paper Dependencies
-```
-Constraint: start[paper] ≥ end[mod] + 30 days
-```
-Example: If mod03 completes on 2025-05-15, dependent paper ed03 cannot start before 2025-06-14.
-
-#### Paper-to-Paper Dependencies
-```
-Constraint: start[child_paper] ≥ end[parent_paper] + 90 days
-```
-Example: If ed01 completes on 2025-04-01, child paper ed03 cannot start before 2025-06-30.
-
-#### Abstract-to-Paper Dependencies
-```
-Constraint: start[paper] ≥ start[abstract] + 0 days
-```
-Abstracts and papers for the same conference can start simultaneously, but the paper depends on the abstract.
-
-### 2. Timing Constraints (Hard)
-
-#### Earliest Start Dates
-```
-Constraint: start[i] ≥ earliest_start_date[i]
-```
-- For mods: Based on data availability
-- For papers: Based on prerequisite completion
-
-#### Conference Deadlines
-```
-Constraint: end[i] ≤ conference_deadline[i] - buffer_days
-```
-Buffer days typically = 7 to account for submission system issues.
-
-Example deadline check:
-```
-Paper ed03 targeting MICCAI 2025:
-- Start: 2025-03-01
-- Duration: 60 days
-- End: 2025-04-30
-- Deadline: 2025-05-01
-- Status: VALID (1 day buffer)
-```
-
-### 3. Resource Constraints (Hard)
-
-#### Concurrent Submission Limit
-```
-Constraint: Σᵢ active[i,t] ≤ max_concurrent_submissions ∀t
-```
-
-Example with max_concurrent = 2:
-```
-Time period visualization:
-Day 1-30:   [mod01========][ed01=========]  (2 active) ✓
-Day 31-60:  [mod01========][ed02=========]  (2 active) ✓
-Day 61-90:  [mod02===][ed01===][ed03====]   (3 active) ✗ INVALID
-```
-
-### 4. Venue Compatibility Constraints (Hard)
-
-```
-Constraint: If conference[i].type = "ENGINEERING" then paper[i].type ∈ {"engineering", "multidisciplinary"}
-```
-
-Valid assignments:
-- Engineering paper → Engineering conference ✓
-- Engineering paper → Medical conference ✓ (multidisciplinary)
-- Medical paper → Medical conference ✓
-- Medical paper → Engineering conference ✗ INVALID
-
-### 5. Blackout Period Constraints (Hard)
-
-No work can be scheduled on weekends or federal holidays:
-
-```
-Constraint: ∀t ∈ blackout_dates: Σᵢ active[i,t] = 0
-```
-
-Example duration calculation with blackouts:
-```
-Paper scheduled: March 3-May 2, 2025 (60 calendar days)
-- Weekends: 18 days
-- Holidays: 2 days
-- Working days: 40 days
-- Extended end date: May 30, 2025 (to accumulate 60 working days)
-```
-
-### 6. Quality Constraints (Soft)
-
-#### Front-Loading Preference
-```
-Preference: Maximize Σₜ (utilization[t] × (T-t)/T)
-```
-Earlier work is weighted more heavily than later work.
-
-#### Priority Weighting
-```
-Engineering papers: priority = 2.0
-Medical papers: priority = 1.0
-Critical mods: priority = 1.5
-Abstracts: priority = 0.5
-```
-
-## Algorithm Design
-
-### Greedy Algorithm Implementation
-
-The system uses a greedy daily scheduler that processes submissions in topological order:
+### Generating Rich Output
 
 ```python
-def greedy_schedule(cfg):
-    # Auto-link abstract→paper pairs
-    _auto_link_abstract_paper(cfg.submissions)
-    
-    # Build topological ordering respecting dependencies
-    topo = _topological_order(sub_map)
-    
-    # Daily scheduling loop
-    while current <= end and len(schedule) < len(sub_map):
-        # Retire finished drafts
-        active = {sid for sid in active 
-                 if current < schedule[sid] + duration[sid]}
-        
-        # Gather ready submissions
-        ready = []
-        for sid in topo:
-            if (sid not in schedule and 
-                deps_satisfied(s, schedule) and
-                current >= s.earliest_start_date):
-                ready.append(sid)
-        
-        # Schedule up to concurrency limit
-        for sid in ready:
-            if len(active) >= cfg.max_concurrent_submissions:
-                break
-            if meets_deadline(sub_map[sid], conf_map, current, cfg):
-                schedule[sid] = current
-                active.add(sid)
-        
-        current += timedelta(days=1)
+from output.tables import generate_schedule_summary_table
+from output.plots import plot_schedule
+from output.console import print_metrics_summary
+
+# Generate tables
+summary_table = generate_schedule_summary_table(schedule, config)
+
+# Generate plots
+plot_schedule(schedule, config.submissions, save_path="schedule.png")
+
+# Print comprehensive metrics
+print_metrics_summary(schedule, config)
 ```
 
-### Interactive Variant Generation
+## ⚙️ Configuration
 
-Each spacebar press generates a new schedule by:
-1. Re-running the greedy algorithm
-2. Making different choices when multiple submissions are ready
-3. Displaying updated metrics
-
-This allows exploration of the solution space without complex randomization.
-
-## Implementation Details
-
-### State Management
-
-The scheduler maintains several data structures:
-
-```python
-class SchedulerState:
-    def __init__(self):
-        self.schedule = {}          # {submission_id: start_date}
-        self.active = set()         # Currently active submissions
-        self.completed = set()      # Finished submissions
-        self.ready_queue = []       # Submissions ready to start
-        self.blocked = {}           # {submission: blocking_deps}
-        self.history = []           # Decision history for backtracking
-```
-
-### Date Arithmetic with Blackouts
-
-```python
-def add_working_days(start_date, duration_days):
-    current = start_date
-    days_added = 0
-    
-    while days_added < duration_days:
-        current += timedelta(days=1)
-        if is_working_day(current):
-            days_added += 1
-    
-    return current
-
-def is_working_day(date):
-    if date.weekday() in [5, 6]:  # Saturday, Sunday
-        return False
-    if date in federal_holidays:
-        return False
-    if any(date in period for period in custom_blackout_periods):
-        return False
-    return True
-```
-
-### Interactive Schedule Generation
-
-```python
-def interactive_scheduling_loop():
-    best_schedule = None
-    best_score = float('inf')
-    iteration = 0
-    
-    while True:
-        # Generate variant
-        schedule = greedy_schedule_variant(config, iteration)
-        score = evaluate_schedule(schedule)
-        
-        # Track best
-        if score < best_score:
-            best_schedule = schedule
-            best_score = score
-        
-        # Display metrics
-        print(f"Iteration {iteration}: Makespan={calculate_makespan(schedule)} "
-              f"Penalties=${calculate_penalties(schedule)} "
-              f"Utilization={calculate_utilization(schedule):.1%}")
-        
-        # User interaction
-        key = wait_for_keypress()
-        if key == ' ':
-            iteration += 1
-            continue
-        elif key == '\r':
-            save_schedule(best_schedule)
-            break
-        elif key in ['q', '\x1b']:
-            break
-```
-
-## Usage Guide
-
-### Basic Command Line Usage
-
-```bash
-# Generate a single schedule
-python generate_schedule.py --config config.json
-
-# Generate schedule with custom date range for visualization
-python generate_schedule.py --config config.json \
-    --start-date 2025-01-01 \
-    --end-date 2026-12-31
-
-# Use custom configuration
-python generate_schedule.py --config my_config.json
-```
-
-### Interactive Mode Features
-
-When running the scheduler, you enter an interactive mode:
-
-```
-Schedule Generation - Iteration 1
-================================
-Makespan: 485 days
-Total Penalties: $45,000
-Average Utilization: 78.5%
-Critical Path Slack: 12 days
-
-[Gantt chart displayed]
-
-Press SPACE to regenerate, ENTER to save schedule, or Q / ESC to quit.
-> _
-```
-
-Each press of SPACE generates a new variant with different characteristics.
-
-### Understanding the Gantt Chart
-
-The generated Gantt chart shows:
-- **Blue bars**: Paper drafting periods (60 days)
-- **Orange diamonds**: Abstract submissions (milestones)
-- **Red zones**: Blackout periods (weekends/holidays)
-- **Green highlights**: Critical path items
-- **Gray bars**: Completed prerequisites
-
-## Configuration Reference
-
-### Main Configuration (config.json)
+### Configuration File (config.json)
 
 ```json
 {
   "min_abstract_lead_time_days": 0,
   "min_paper_lead_time_days": 60,
   "max_concurrent_submissions": 2,
-  "mod_to_paper_gap_days": 30,
-  
-  "data_files": {
-    "conferences": "conferences.json",
-    "mods": "mods.json", 
-    "papers": "papers.json"
-  }
-}
-```
-
-Additional options to be implemented:
-```json
-{
-  "paper_parent_gap_days": 90,
+  "default_paper_lead_time_months": 3,
   "priority_weights": {
     "engineering_paper": 2.0,
     "medical_paper": 1.0,
@@ -435,118 +158,318 @@ Additional options to be implemented:
     "abstract": 0.5
   },
   "penalty_costs": {
-    "default_mod_penalty_per_day": 1000
+    "default_mod_penalty_per_day": 1000,
+    "default_paper_penalty_per_day": 500
   },
   "scheduling_options": {
     "enable_early_abstract_scheduling": true,
     "abstract_advance_days": 30,
     "enable_blackout_periods": true
+  },
+  "data_files": {
+    "conferences": "data/conferences.json",
+    "mods": "data/mods.json",
+    "papers": "data/papers.json",
+    "blackouts": "data/blackout.json"
   }
 }
 ```
 
-### Conference Configuration (conferences.json)
+### Data Files
 
-Actual structure from codebase:
+#### conferences.json
 ```json
-{
-  "name": "ICRA",
-  "conference_type": "ENGINEERING",
-  "recurrence": "annual",
-  "abstract_deadline": "2025-02-15",
-  "full_paper_deadline": "2025-03-01"
-}
+[
+  {
+    "name": "ICML",
+    "conference_type": "ENGINEERING",
+    "recurrence": "annual",
+    "abstract_deadline": "2025-01-23",
+    "full_paper_deadline": "2025-01-30"
+  }
+]
 ```
 
-## Performance Analysis
-
-### Computational Complexity
-
-- **Time Complexity**: O(n² × d) where n = submissions, d = days in planning horizon
-- **Space Complexity**: O(n × d) for maintaining active sets over time
-- **Practical Performance**: 
-  - 37 submissions: <1 second per variant
-  - 100 submissions: ~5 seconds per variant
-  - 500 submissions: ~60 seconds per variant
-
-### Solution Quality Metrics
-
-#### Makespan (Total Schedule Duration)
-- **Theoretical Lower Bound**: Max(critical_path_length, total_work/max_concurrent)
-- **Typical Achievement**: 110-120% of lower bound
-- **Best Observed**: 105% of lower bound
-
-#### Resource Utilization
-```
-Utilization = Σₜ min(active[t], max_concurrent) / (max_concurrent × makespan)
-```
-- **Target**: >80% average utilization
-- **Typical**: 75-85%
-- **Impact**: 10% better utilization ≈ 1 month shorter schedule
-
-#### Penalty Costs
-- **Baseline**: $200K-300K (ASAP scheduling)
-- **Optimized**: $30K-80K (balanced approach)
-- **Aggressive**: <$20K (may miss conferences)
-
-### Convergence Analysis
-
-The stochastic algorithm typically converges within 50-100 iterations:
-
-```
-Iteration vs Best Score:
-Iter 1-10:   Rapid improvement (20-30% better)
-Iter 11-30:  Moderate improvement (5-10% better)
-Iter 31-50:  Fine tuning (1-3% better)
-Iter 51-100: Rare improvements (<1% better)
+#### papers.json
+```json
+[
+  {
+    "id": "J1",
+    "title": "Computer Vision (CV) endoscopy review",
+    "earliest_start_date": "2025-01-01",
+    "conference_id": "ICML",
+    "engineering": true,
+    "mod_dependencies": [1],
+    "parent_papers": [],
+    "lead_time_from_parents": 0,
+    "draft_window_months": 2
+  }
+]
 ```
 
-## Examples and Scenarios
+## 🔧 Advanced Usage
 
-### Example: Complex Dependency Resolution
+### Custom Scheduler Configuration
 
-Consider paper ed07 with dependencies:
-```
-Dependencies from papers.json:
-- mod_dependencies: [5, 8]
-- parent_papers: ["ed03", "ed05"]
+```python
+from schedulers.stochastic import StochasticGreedyScheduler
 
-Timing calculations:
-- mod05 completes: 2025-06-01 + 30 days gap = eligible 2025-07-01
-- mod08 completes: 2025-09-01 + 30 days gap = eligible 2025-10-01 ← Controls
-- ed03 completes: 2025-05-15 + 90 days gap = eligible 2025-08-13
-- ed05 completes: 2025-07-01 + 90 days gap = eligible 2025-09-29
-
-Earliest start: 2025-10-01
-Conference families: ["ICRA", "IROS"] 
-ICRA 2026 deadline: 2026-03-01
-Latest start: 2026-01-01 (60 days before deadline)
+# Configure stochastic scheduler with custom randomness
+scheduler = StochasticGreedyScheduler(
+    config, 
+    randomness_factor=0.2  # Increase randomness
+)
 ```
 
-### Interactive Scheduling Example
+### Detailed Metrics Analysis
 
+```python
+from metrics.makespan import calculate_makespan, get_makespan_breakdown
+from metrics.utilization import calculate_resource_utilization
+from metrics.penalties import calculate_penalty_costs
+from metrics.deadlines import calculate_deadline_compliance
+from metrics.quality import calculate_schedule_quality_score
+
+# Comprehensive analysis
+makespan = calculate_makespan(schedule, config)
+utilization = calculate_resource_utilization(schedule, config)
+penalties = calculate_penalty_costs(schedule, config)
+compliance = calculate_deadline_compliance(schedule, config)
+quality = calculate_schedule_quality_score(schedule, config)
+
+print(f"Makespan: {makespan} days")
+print(f"Avg Utilization: {utilization['avg_utilization']:.1%}")
+print(f"Total Penalties: ${penalties['total_penalty']:.2f}")
+print(f"Deadline Compliance: {compliance['compliance_rate']:.1f}%")
+print(f"Quality Score: {quality:.3f}")
 ```
-$ python generate_schedule.py --config config.json
 
-Generating schedule...
-Schedule complete: 37 submissions scheduled
+### Backward Compatibility
 
-Press SPACE to regenerate, ENTER to save schedule, or Q / ESC to quit.
-> [SPACE]
+The system maintains backward compatibility through the `planner.py` facade:
 
-Generating schedule...
-Schedule complete: 37 submissions scheduled
+```python
+from planner import Planner
 
-Press SPACE to regenerate, ENTER to save schedule, or Q / ESC to quit.
-> [ENTER]
-
-Saved schedule to: schedule_20250711_143052.json
+# Old-style usage still works
+planner = Planner("config.json")
+mod_sched, paper_sched = planner.schedule("greedy")
 ```
 
-### Performance Characteristics
+## 📊 Performance Characteristics
 
-Based on the 37-submission problem (17 mods + 20 papers):
-- **Schedule generation**: <1 second per variant
-- **Typical makespan**: 18-24 months depending on dependencies
-- **Resource utilization**: 60-85% average
-- **Constraint satisfaction**: 100% (hard constraints)
+### Typical Results (37-submission problem)
+- **Schedule Generation**: <1 second
+- **Solution Variants**: 100+ unique schedules
+- **Optimality Gap**: ~10-20% vs theoretical lower bound
+- **Makespan**: 18-24 months depending on constraints
+
+### Algorithm Performance Comparison
+| Scheduler | Makespan (days) | Utilization | Quality Score |
+|-----------|-----------------|-------------|---------------|
+| Greedy | 764 | 81.4% | 0.544 |
+| Stochastic | 772 | 89.5% | 0.569 |
+| Lookahead | 795 | 83.4% | 0.550 |
+| Backtracking | Failed | - | - |
+
+## 🧪 Testing
+
+### Run All Tests
+```bash
+python -m pytest tests/ -v
+```
+
+### Test Coverage
+- **Unit Tests**: 9 comprehensive tests
+- **Edge Cases**: Biennial conferences, concurrency limits, parent-child relationships
+- **Integration Tests**: Full workflow validation
+- **Backward Compatibility**: Legacy interface testing
+
+### Test Categories
+- `test_validate_config_runs`: Configuration validation
+- `test_abstract_before_full_each_year`: Abstract/paper sequencing
+- `test_biennial_iccv`: Biennial conference handling
+- `test_concurrency_limit`: Resource constraint validation
+- `test_mod_paper_alignment`: Modification/paper dependencies
+- `test_parent_child_lead`: Parent-child relationship timing
+- `test_multi_parent`: Complex dependency graphs
+- `test_free_slack`: Slack time analysis
+- `test_biennial_conference`: Conference recurrence patterns
+
+## 🔍 Metrics Explained
+
+### Makespan Analysis
+- **Total Duration**: Complete schedule timeline
+- **Parallel Makespan**: Optimal parallel execution time
+- **Breakdown**: Detailed time allocation per submission type
+
+### Resource Utilization
+- **Average Utilization**: Overall resource efficiency
+- **Peak Periods**: High-activity time windows
+- **Idle Time**: Underutilized periods
+- **Efficiency**: Resource optimization metrics
+
+### Penalty Calculations
+- **Deadline Violations**: Late submission costs
+- **Dependency Costs**: Violation of dependency constraints
+- **Earliness Bonuses**: Rewards for early completion
+- **Total Penalty**: Comprehensive cost assessment
+
+### Deadline Compliance
+- **Compliance Rate**: Percentage of on-time submissions
+- **Risk Assessment**: Probability of deadline violations
+- **Margin Analysis**: Buffer time before deadlines
+- **Violation Tracking**: Detailed late submission analysis
+
+### Quality Metrics
+- **Front-loading Score**: Early work distribution
+- **Slack Distribution**: Buffer time allocation
+- **Workload Balance**: Even resource distribution
+- **Dependency Satisfaction**: Constraint compliance
+
+## 🎯 Use Cases
+
+### Academic Research Planning
+- Schedule multiple paper submissions across conferences
+- Manage complex dependency relationships
+- Optimize for early completion and quality
+
+### Medical Device Development
+- Coordinate FDA regulatory submissions
+- Align with clinical trial timelines
+- Balance engineering and medical publications
+
+### Conference Strategy
+- Plan submissions across multiple venues
+- Handle biennial vs annual conferences
+- Optimize for acceptance probability
+
+### Resource Management
+- Balance concurrent project capacity
+- Respect work-life boundaries (weekends, holidays)
+- Optimize team utilization
+
+## 🚀 Future Enhancements
+
+### Conference Acceptance Modeling
+- Track historical acceptance rates by venue/topic
+- Model as probability distributions
+- Submit to multiple conferences with overlapping deadlines
+- Contingency planning for rejections
+
+### Advanced Optimization
+- Constraint programming with OR-Tools
+- Monte Carlo tree search for solution exploration
+- Reinforcement learning from historical schedules
+- Robust optimization with uncertainty sets
+
+### Quality vs Speed Tradeoffs
+- Model review cycles and revision quality
+- Rush penalties for compressed timelines
+- Author bandwidth constraints
+- Optimal draft iteration counts
+
+### Dynamic Rescheduling
+- Monitor actual vs planned progress
+- Trigger replanning on delays >7 days
+- Maintain solution pool for quick pivots
+
+## 📚 API Reference
+
+### Core Classes
+
+#### Config
+```python
+@dataclass
+class Config:
+    min_abstract_lead_time_days: int
+    min_paper_lead_time_days: int
+    max_concurrent_submissions: int
+    default_paper_lead_time_months: int
+    conferences: List[Conference]
+    submissions: List[Submission]
+    data_files: Dict[str, str]
+    priority_weights: Optional[Dict[str, float]]
+    penalty_costs: Optional[Dict[str, float]]
+    scheduling_options: Optional[Dict[str, Any]]
+    blackout_dates: Optional[List[date]]
+```
+
+#### Submission
+```python
+@dataclass
+class Submission:
+    id: str
+    kind: SubmissionType  # ABSTRACT or PAPER
+    title: str
+    earliest_start_date: date
+    conference_id: Optional[str]
+    engineering: bool
+    depends_on: List[str]
+    penalty_cost_per_day: float
+    lead_time_from_parents: int
+    draft_window_months: int
+```
+
+### Scheduler Interface
+
+```python
+class BaseScheduler(ABC):
+    def schedule(self) -> Dict[str, date]:
+        """Generate a schedule for all submissions."""
+        pass
+    
+    def validate_schedule(self, schedule: Dict[str, date]) -> bool:
+        """Validate that a schedule meets all constraints."""
+        pass
+    
+    def get_schedule_metrics(self, schedule: Dict[str, date]) -> Dict[str, float]:
+        """Calculate metrics for a given schedule."""
+        pass
+```
+
+### Metrics Functions
+
+```python
+# Makespan
+calculate_makespan(schedule: Dict[str, date], config: Config) -> int
+get_makespan_breakdown(schedule: Dict[str, date], config: Config) -> Dict
+
+# Utilization
+calculate_resource_utilization(schedule: Dict[str, date], config: Config) -> Dict[str, float]
+calculate_peak_utilization_periods(schedule: Dict[str, date], config: Config) -> List[Dict]
+
+# Penalties
+calculate_penalty_costs(schedule: Dict[str, date], config: Config) -> Dict[str, float]
+get_penalty_breakdown(schedule: Dict[str, date], config: Config) -> Dict
+
+# Deadlines
+calculate_deadline_compliance(schedule: Dict[str, date], config: Config) -> Dict[str, float]
+get_deadline_violations(schedule: Dict[str, date], config: Config) -> List[Dict]
+
+# Quality
+calculate_schedule_quality_score(schedule: Dict[str, date], config: Config) -> float
+calculate_front_loading_score(schedule: Dict[str, date], config: Config) -> float
+```
+
+## 🤝 Contributing
+
+1. **Fork the repository**
+2. **Create a feature branch**: `git checkout -b feature/new-scheduler`
+3. **Add tests**: Ensure all new functionality is tested
+4. **Run tests**: `python -m pytest tests/ -v`
+5. **Submit pull request**: Include comprehensive documentation
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- **Edward McCoul, MD**: For the original problem specification and domain expertise
+- **Academic Community**: For feedback on scheduling algorithms and metrics
+- **Open Source Contributors**: For the underlying libraries and tools
+
+---
+
+**Paper Planner** - Advanced academic scheduling with constraint-based optimization

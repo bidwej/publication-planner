@@ -4,10 +4,16 @@ from __future__ import annotations
 import sys
 import platform
 import argparse
+import os
 from datetime import datetime, date
-from loader import load_config
-from scheduler import greedy_schedule, save_schedule
-from plots import plot_schedule
+
+# Add src to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+
+from core.config import load_config
+from core.dates import parse_date
+from schedulers.greedy import GreedyScheduler
+from output.plots import plot_schedule
 
 def generate_schedule_cli() -> None:
     parser = argparse.ArgumentParser(description="Endoscope AI Scheduling Tool")
@@ -16,18 +22,19 @@ def generate_schedule_cli() -> None:
     parser.add_argument("--end-date", type=str, help="Crop Gantt chart end date (YYYY-MM-DD)")
     args = parser.parse_args()
     
-    cfg = load_config(args.config)
+    config = load_config(args.config)
+    scheduler = GreedyScheduler(config)
     
     while True:
         # Generate schedule
-        schedule = greedy_schedule(cfg)
+        schedule = scheduler.schedule()
         
         # Plot it
         plot_schedule(
             schedule=schedule,
-            submissions=cfg.submissions,
-            start_date=_parse_date(args.start_date),
-            end_date=_parse_date(args.end_date),
+            submissions=config.submissions,
+            start_date=parse_date(args.start_date),
+            end_date=parse_date(args.end_date),
             save_path=None
         )
         
@@ -37,7 +44,11 @@ def generate_schedule_cli() -> None:
             continue
         elif key in ("\r", "\n"):
             out_path = f"schedule_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-            save_schedule(schedule, cfg.submissions, out_path)
+            # Save schedule using the new structure
+            import json
+            with open(out_path, 'w') as f:
+                json.dump(schedule, f, default=str, indent=2)
+            print(f"Schedule saved to: {out_path}")
             break
         elif key.lower() == "q" or key == "\x1b":
             print("Exiting without saving.")
@@ -46,16 +57,7 @@ def generate_schedule_cli() -> None:
             print(f"Unknown key: {repr(key)} → quitting.")
             break
 
-# --------------------- Internals -------------------------
-def _parse_date(d: str | None) -> None | date:
-    # Parse a date string or return None
-    if d is None:
-        return None
-    clean = d.split("T")[0]
-    try:
-        return datetime.fromisoformat(clean).date()
-    except ValueError as exc:
-        raise ValueError(f"Invalid date format: {d}. Expected YYYY-MM-DD.") from exc
+
 
 def _prompt_keypress() -> str:
     # Cross-platform keypress prompt

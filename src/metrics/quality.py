@@ -2,6 +2,9 @@ from __future__ import annotations
 from typing import Dict, List
 from datetime import date, timedelta
 from core.types import Config, Submission, SubmissionType
+from .deadlines import calculate_deadline_compliance
+from .utilization import calculate_resource_utilization
+from .penalties import calculate_penalty_costs
 
 def calculate_schedule_quality_score(schedule: Dict[str, date], config: Config) -> float:
     """Calculate overall quality score for a schedule."""

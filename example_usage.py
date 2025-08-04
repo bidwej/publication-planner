@@ -28,7 +28,7 @@ def main():
     """Demonstrate the new modular structure."""
     
     # Load configuration
-    config_path = "data/config.json"  # Adjust path as needed
+    config_path = "config.json"  # Adjust path as needed
     try:
         config = load_config(config_path)
         print(f"Loaded configuration with {len(config.submissions)} submissions and {len(config.conferences)} conferences")
