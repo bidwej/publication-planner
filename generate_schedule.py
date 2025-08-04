@@ -12,7 +12,7 @@ from datetime import datetime, date
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 from core.config import load_config
-from core.dates import parse_date
+from core.dates import parse_date_safe
 from schedulers.greedy import GreedyScheduler
 from schedulers.stochastic import StochasticGreedyScheduler
 from schedulers.lookahead import LookaheadGreedyScheduler
@@ -142,8 +142,8 @@ def analyze_schedule(config, args):
         plot_schedule(
             schedule=schedule,
             submissions=config.submissions,
-            start_date=parse_date(args.start_date),
-            end_date=parse_date(args.end_date),
+            start_date=parse_date_safe(args.start_date),
+            end_date=parse_date_safe(args.end_date),
             save_path=None
         )
         
@@ -170,8 +170,8 @@ def interactive_mode(config, args):
         plot_schedule(
             schedule=schedule,
             submissions=config.submissions,
-            start_date=parse_date(args.start_date),
-            end_date=parse_date(args.end_date),
+            start_date=parse_date_safe(args.start_date),
+            end_date=parse_date_safe(args.end_date),
             save_path=None
         )
         

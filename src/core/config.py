@@ -11,7 +11,7 @@ from .types import (
     Submission,
     SubmissionType,
 )
-from .dates import parse_date, parse_date_safe
+from .dates import parse_date_safe
 
 def load_config(config_path: str) -> Config:
     """Load the master config and all child JSON files."""
@@ -68,12 +68,12 @@ def _load_blackout_dates(path: str) -> List[date]:
         for year_key in ["federal_holidays_2025", "federal_holidays_2026"]:
             if year_key in raw:
                 for date_str in raw[year_key]:
-                    blackout_dates.append(parse_date(date_str))
+                    blackout_dates.append(parse_date_safe(date_str))
         # Add custom blackout periods
         if "custom_blackout_periods" in raw:
             for period in raw["custom_blackout_periods"]:
-                start = parse_date(period["start"])
-                end = parse_date(period["end"])
+                start = parse_date_safe(period["start"])
+                end = parse_date_safe(period["end"])
                 current = start
                 while current <= end:
                     blackout_dates.append(current)
@@ -90,9 +90,9 @@ def _load_conferences(path: str) -> List[Conference]:
     for c in raw:
         deadlines: Dict[SubmissionType, date] = {}
         if c.get("abstract_deadline"):
-            deadlines[SubmissionType.ABSTRACT] = parse_date(c["abstract_deadline"])
+            deadlines[SubmissionType.ABSTRACT] = parse_date_safe(c["abstract_deadline"])
         if c.get("full_paper_deadline"):
-            deadlines[SubmissionType.PAPER] = parse_date(c["full_paper_deadline"])
+            deadlines[SubmissionType.PAPER] = parse_date_safe(c["full_paper_deadline"])
         out.append(
             Conference(
                 id=c["name"],
@@ -130,7 +130,7 @@ def _load_submissions(
                 id=f"{mod_id}-wrk",
                 kind=SubmissionType.ABSTRACT,
                 title=mod.get("title", f"Mod {mod_id}"),
-                earliest_start_date=parse_date(mod.get("earliest_start_date", "2025-01-01")),
+                earliest_start_date=parse_date_safe(mod.get("earliest_start_date", "2025-01-01")),
                 conference_id=mod.get("conference_id"),
                 engineering=mod.get("engineering", False),
                 depends_on=mod.get("depends_on", []),
@@ -159,7 +159,7 @@ def _load_submissions(
                 id=f"{paper_id}-pap",
                 kind=SubmissionType.PAPER,
                 title=paper.get("title", f"Paper {paper_id}"),
-                earliest_start_date=parse_date(paper.get("earliest_start_date", "2025-01-01")),
+                earliest_start_date=parse_date_safe(paper.get("earliest_start_date", "2025-01-01")),
                 conference_id=paper.get("conference_id"),
                 engineering=paper.get("engineering", False),
                 depends_on=mod_deps + parent_deps,

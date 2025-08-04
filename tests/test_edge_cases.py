@@ -1,7 +1,7 @@
 from datetime import datetime
 from planner import Planner
 import pytest
-from core.dates import parse_date
+from core.dates import parse_date_safe
 
 @pytest.fixture
 def planner():
@@ -19,8 +19,8 @@ def test_abstract_before_full_each_year(planner):
         f0 = c.get("full_paper_deadline")
         if not a0 or not f0:
             continue
-        base_a = parse_date(a0)
-        base_f = parse_date(f0)
+        base_a = parse_date_safe(a0)
+        base_f = parse_date_safe(f0)
         # Check month ordering within each year in table
         a_month = f"{base_a.year}-{base_a.month:02d}"
         f_month = f"{base_f.year}-{base_f.month:02d}"

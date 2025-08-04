@@ -5,50 +5,31 @@ from typing import Optional, Union
 from dateutil.relativedelta import relativedelta
 
 
-def parse_date(date_str: Optional[Union[str, date]]) -> Optional[date]:
-    """
-    Parse a date string to a date object.
-    
-    Args:
-        date_str: Date string in YYYY-MM-DD format, or None, or already a date object
-        
-    Returns:
-        Parsed date object or None if input is None
-        
-    Raises:
-        ValueError: If date string is in invalid format
-    """
-    if date_str is None:
-        return None
-    
-    if isinstance(date_str, date):
-        return date_str
-    
-    if not isinstance(date_str, str):
-        raise ValueError(f"Invalid date input: {date_str}. Expected string or date object.")
-    
-    # Clean the string (remove time component if present)
-    clean = date_str.split("T")[0]
-    
-    try:
-        return datetime.fromisoformat(clean).date()
-    except ValueError as exc:
-        raise ValueError(f"Invalid date format: {date_str}. Expected YYYY-MM-DD.") from exc
-
-
 def parse_date_safe(date_str: Optional[Union[str, date]], default: Optional[date] = None) -> Optional[date]:
     """
     Parse a date string safely, returning default value on error.
-    
+
     Args:
         date_str: Date string in YYYY-MM-DD format, or None, or already a date object
         default: Default value to return if parsing fails
-        
+
     Returns:
         Parsed date object, default value, or None
     """
+    if date_str is None:
+        return None
+
+    if isinstance(date_str, date):
+        return date_str
+
+    if not isinstance(date_str, str):
+        return default
+
+    # Clean the string (remove time component if present)
+    clean = date_str.split("T")[0]
+
     try:
-        return parse_date(date_str)
+        return datetime.fromisoformat(clean).date()
     except ValueError:
         return default
 

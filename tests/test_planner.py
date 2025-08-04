@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 
 from planner import Planner
 from datetime import datetime
-from core.dates import parse_date
+from core.dates import parse_date_safe
 
 @pytest.fixture  # type: ignore
 def planner():
@@ -28,6 +28,6 @@ def test_free_slack(planner):
 def test_biennial_conference(planner):
     # ICCV is biennial => odd years
     iccv = next(c for c in planner.config["conferences"] if c["name"] == "ICCV")
-    deadline_date = parse_date(iccv["full_paper_deadline"])
+    deadline_date = parse_date_safe(iccv["full_paper_deadline"])
     year = deadline_date.year
     assert year % 2 == 1

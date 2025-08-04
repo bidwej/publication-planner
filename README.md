@@ -169,6 +169,38 @@ plot_schedule(schedule, config.submissions, save_path="schedule.png")
 print_metrics_summary(schedule, config)
 ```
 
+### Command Line Interface
+
+The `generate_schedule.py` script provides a powerful CLI with multiple modes:
+
+```bash
+# Interactive mode (default) - generate and visualize schedules
+python generate_schedule.py
+
+# Compare all schedulers and show performance metrics
+python generate_schedule.py --mode compare
+
+# Detailed analysis with specific scheduler
+python generate_schedule.py --mode analyze --scheduler greedy
+
+# Use different scheduler in interactive mode
+python generate_schedule.py --scheduler backtracking
+
+# Custom configuration and date ranges
+python generate_schedule.py --config custom_config.json --start-date 2025-01-01 --end-date 2026-12-31
+```
+
+**Available Modes:**
+- **Interactive**: Press SPACE to regenerate, ENTER to save, or Q/ESC to quit
+- **Compare**: Tests all schedulers and shows comprehensive performance metrics
+- **Analyze**: Detailed schedule analysis with tables, plots, and deadline status
+
+**Available Schedulers:**
+- **greedy**: Fast, deterministic scheduling (default)
+- **stochastic**: Randomized greedy with multiple attempts
+- **lookahead**: Considers future impact of current decisions
+- **backtracking**: Can undo decisions when stuck
+
 ## ⚙️ Configuration
 
 ### Configuration File (config.json)
@@ -192,7 +224,8 @@ print_metrics_summary(schedule, config)
   "scheduling_options": {
     "enable_early_abstract_scheduling": true,
     "abstract_advance_days": 30,
-    "enable_blackout_periods": true
+    "enable_blackout_periods": true,
+    "conference_response_time_days": 90
   },
   "data_files": {
     "conferences": "data/conferences.json",
@@ -324,6 +357,14 @@ python -m pytest tests/ -v
 - `test_free_slack`: Slack time analysis
 - `test_biennial_conference`: Conference recurrence patterns
 
+### Advanced Test Scenarios
+- **Blackout Period Boundary Conditions**: Weekend and holiday handling
+- **Priority Weight Edge Cases**: Weight application and sorting
+- **Backtracking Convergence**: Algorithm stability and solution quality
+- **Conference Reassignment Scenarios**: Dynamic conference switching
+- **Full 37-Submission Problem**: Complete system validation
+- **Performance Benchmarks**: Runtime, memory usage, and quality metrics
+
 ## 🔍 Metrics Explained
 
 ### Makespan Analysis
@@ -392,6 +433,28 @@ Maintains exactly 1-2 papers in drafting pipeline at all times:
 ```
 1 ≤ Σ_j 1[W_j ≤ t < S_j] ≤ 2  ∀t
 ```
+
+### Algorithm Implementation Details
+
+#### Stochastic Exploration
+- **Priority Randomization**: Base priority × random(0.8, 1.2) noise factor
+- **Iteration Tracking**: Multiple attempts with best solution retention
+- **Pattern Biasing**: Learning from successful scheduling patterns
+
+#### Lookahead Heuristic
+- **30-Day Horizon**: Future impact evaluation window
+- **Scoring Factors**: Resource availability, dependent readiness, deadline proximity
+- **Weight Balancing**: 0.5 factor for immediate vs future scores
+
+#### Backtracking Capability
+- **Decision History**: Maintains undo stack for recent decisions
+- **Trigger Conditions**: Utilization drops below 70%
+- **Depth Limiting**: Prevents thrashing with maximum backtrack depth
+
+#### Critical Path Analysis
+- **Slack Calculation**: Total slack for each submission
+- **Zero-Slack Items**: Critical path identification
+- **Dynamic Updates**: Real-time slack recalculation during scheduling
 
 ### Optimization Objective
 The system minimizes a multi-objective function:
@@ -473,6 +536,29 @@ SlackCost_j = P_j(S_j - S_j,earliest) + Y_j(1_year-deferred) + A_j(1_abstract-mi
 - **End-to-End Validation**: Verify SlackCost, conference-penalty, and FDA-penalty calculations
 - **Real Data Population**: Finalize all mod→paper dependencies and conference mappings
 
+### Implementation Status
+
+#### ✅ Completed Features
+- **Blackout Period Support**: Weekend and holiday handling with configurable blackout dates
+- **Priority Weighting System**: Engineering papers (2.0), Medical papers (1.0), Mods (1.5), Abstracts (0.5)
+- **Penalty Cost Implementation**: Daily penalty calculations with configurable rates
+- **Early Abstract Scheduling**: 30-day advance scheduling during slack periods
+- **Advanced Algorithms**: Stochastic exploration, 30-day lookahead, backtracking capability
+- **Critical Path Analysis**: Slack calculation and zero-slack critical item identification
+- **Comprehensive Metrics**: Makespan, utilization, deadline compliance, quality scores
+
+#### 🔄 Medium Priority - Algorithm Enhancements
+- **Conference Flexibility**: Dynamic reassignment near deadlines with alternate conference tracking
+- **Pause/Resume Support**: Partial progress recording and checkpoint resumption
+- **Interactive Mode Improvements**: Real-time metrics display and convergence indicators
+- **Local Minima Detection**: Utilization tracking and penalty accumulation monitoring
+
+#### 📋 Lower Priority - Additional Features
+- **Conference Response Time**: 90-day response time handling
+- **Contingency Recommendations**: Automated fallback conference suggestions
+- **Historical Pattern Learning**: Algorithm improvement based on past performance
+- **Enhanced Stochastic Exploration**: Iteration tracking and successful pattern biasing
+
 ## 📊 Problem Specification
 
 ### Paper Portfolio (20 Papers)
@@ -546,7 +632,7 @@ The system provides centralized date parsing and utility functions:
 from core.dates import parse_date, parse_date_safe, is_working_day, add_working_days
 
 # Parse dates safely
-date_obj = parse_date("2025-01-15")  # Returns date object
+date_obj = parse_date_safe("2025-01-15")  # Returns date object
 date_obj = parse_date_safe("invalid", default=date(2025, 1, 1))  # Returns default on error
 
 # Check working days
