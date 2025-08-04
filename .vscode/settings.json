@@ -1,0 +1,25 @@
+// .vscode/settings.json
+{
+    "files.exclude": {
+      "**/.pytest_cache": true,
+      "**/__pycache__": true,
+      "**/third_party/*": true
+    },
+    "python.analysis.extraPaths": [
+      "./src"
+    ],
+    "python.defaultInterpreterPath": "./.venv/Scripts/python.exe",
+    "python.terminal.activateEnvironment": true,
+    "markdown-preview-enhanced.enableScriptExecution": true,
+    "python.testing.pytestArgs": [
+      "tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "python.testing.autoTestDiscoverOnSaveEnabled": true,
+  
+    // Cursor extension settings
+    "cursor.confirmOnExecute": false,
+    "cursor.autoExecute": true
+  }
+  
