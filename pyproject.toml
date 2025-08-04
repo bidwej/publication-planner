@@ -1,10 +1,11 @@
 [tool.pylint]
-extension-pkg-allow-list = ["cv2", "numpy"]
+# allow compiled/extension packages
+extension-pkg-allow-list = ["cv2", "numpy", "dateutil"]
 ignore = ["__pycache__"]
 
 [tool.pylint.messages_control]
 disable = [
-  "invalid-name",                 # e.g. x, y, t, K common in CV/math
+  "invalid-name",
   "missing-module-docstring",
   "missing-function-docstring",
   "missing-class-docstring",
@@ -13,9 +14,9 @@ disable = [
   "multiple-statements",
   "redefined-outer-name",
   "broad-exception-caught",
-  "unused-import",
-  "import-outside-toplevel",     # (optional) disable globally
-  "multiple-imports"             # Allow grouped imports when logical
+  "unused-import",            # <– keep this
+  "import-outside-toplevel",
+  "multiple-imports"
 ]
 
 [tool.pylint.typecheck]
@@ -26,3 +27,9 @@ generated-members = [
 
 [tool.pylint.format]
 max-line-length = 250
+
+[tool.pyright]            # <— new section
+reportMissingModuleSource = false
+venvPath = "."
+venv = ".venv"
+pythonVersion = "3.10"
