@@ -19,73 +19,90 @@ class GreedyScheduler(BaseScheduler):
         dict
             {submission_id: start_date}
         """
-        # Handle empty submissions
-        if not self.submissions:
-            return {}
-        
-        self._auto_link_abstract_paper()
-        self._validate_venue_compatibility()
-        topo = self._topological_order()
-        
-        # Global time window
-        dates = [s.earliest_start_date for s in self.submissions.values()]
-        for c in self.conferences.values():
-            dates.extend(c.deadlines.values())
-        current = min(dates)
-        end = max(dates) + timedelta(days=self.config.min_paper_lead_time_days * 2)
-        
-        schedule: Dict[str, date] = {}
-        active: Set[str] = set()
-        
-        # Early abstract scheduling if enabled
-        if (self.config.scheduling_options and 
-            self.config.scheduling_options.get("enable_early_abstract_scheduling", False)):
-            abstract_advance = self.config.scheduling_options.get("abstract_advance_days", 30)
-            self._schedule_early_abstracts(schedule, abstract_advance)
-        
-        while current <= end + timedelta(days=365) and len(schedule) < len(self.submissions):
-            # Skip blackout dates
-            if not is_working_day(current, self.config.blackout_dates):
+        try:
+            # Handle empty submissions
+            if not self.submissions:
+                return {}
+            
+            self._auto_link_abstract_paper()
+            self._validate_venue_compatibility()
+            topo = self._topological_order()
+            
+            # Global time window
+            dates = [s.earliest_start_date for s in self.submissions.values()]
+            for c in self.conferences.values():
+                dates.extend(c.deadlines.values())
+            
+            if not dates:
+                raise RuntimeError("No valid dates found for scheduling")
+                
+            current = min(dates)
+            end = max(dates) + timedelta(days=self.config.min_paper_lead_time_days * 2)
+            
+            schedule: Dict[str, date] = {}
+            active: Set[str] = set()
+            
+            # Early abstract scheduling if enabled
+            if (self.config.scheduling_options and 
+                self.config.scheduling_options.get("enable_early_abstract_scheduling", False)):
+                abstract_advance = self.config.scheduling_options.get("abstract_advance_days", 30)
+                self._schedule_early_abstracts(schedule, abstract_advance)
+            
+            max_iterations = 1000  # Prevent infinite loops
+            iteration_count = 0
+            
+            while current <= end + timedelta(days=365) and len(schedule) < len(self.submissions):
+                iteration_count += 1
+                if iteration_count > max_iterations:
+                    raise RuntimeError(f"Maximum iterations exceeded. Scheduled {len(schedule)}/{len(self.submissions)} submissions")
+                
+                # Skip blackout dates
+                if not is_working_day(current, self.config.blackout_dates):
+                    current += timedelta(days=1)
+                    continue
+                
+                # Retire finished drafts
+                active = {
+                    sid for sid in active
+                    if self._get_end_date(schedule[sid], self.submissions[sid]) > current
+                }
+                
+                # Gather ready submissions
+                ready: List[str] = []
+                for sid in topo:
+                    if sid in schedule:
+                        continue
+                    s = self.submissions[sid]
+                    if not self._deps_satisfied(s, schedule, current):
+                        continue
+                    if current < s.earliest_start_date:
+                        continue
+                    ready.append(sid)
+                
+                # Sort by priority weight
+                ready = self._sort_by_priority(ready)
+                
+                # Schedule up to concurrency limit
+                for sid in ready:
+                    if len(active) >= self.config.max_concurrent_submissions:
+                        break
+                    if not self._meets_deadline(self.submissions[sid], current):
+                        continue
+                    schedule[sid] = current
+                    active.add(sid)
+                
                 current += timedelta(days=1)
-                continue
             
-            # Retire finished drafts
-            active = {
-                sid for sid in active
-                if self._get_end_date(schedule[sid], self.submissions[sid]) > current
-            }
+            if len(schedule) != len(self.submissions):
+                missing = [sid for sid in self.submissions if sid not in schedule]
+                raise RuntimeError(f"Could not schedule submissions: {missing}")
             
-            # Gather ready submissions
-            ready: List[str] = []
-            for sid in topo:
-                if sid in schedule:
-                    continue
-                s = self.submissions[sid]
-                if not self._deps_satisfied(s, schedule, current):
-                    continue
-                if current < s.earliest_start_date:
-                    continue
-                ready.append(sid)
+            return schedule
             
-            # Sort by priority weight
-            ready = self._sort_by_priority(ready)
-            
-            # Schedule up to concurrency limit
-            for sid in ready:
-                if len(active) >= self.config.max_concurrent_submissions:
-                    break
-                if not self._meets_deadline(self.submissions[sid], current):
-                    continue
-                schedule[sid] = current
-                active.add(sid)
-            
-            current += timedelta(days=1)
-        
-        if len(schedule) != len(self.submissions):
-            missing = [sid for sid in self.submissions if sid not in schedule]
-            raise RuntimeError(f"Could not schedule submissions: {missing}")
-        
-        return schedule
+        except RuntimeError:
+            raise
+        except Exception as e:
+            raise RuntimeError(f"Unexpected error in greedy scheduler: {e}")
     
 
     

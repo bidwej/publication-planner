@@ -138,21 +138,25 @@ def analyze_schedule(config, args):
         summary_table = generate_schedule_summary_table(schedule, config)
         deadline_table = generate_deadline_table(schedule, config)
         
+        # Create output directory with timestamp
+        output_dir = f"output/output_{timestamp}"
+        os.makedirs(output_dir, exist_ok=True)
+        
         # Save tables to CSV files
         import csv
         if summary_table:
-            with open(f"schedule_summary_{timestamp}.csv", 'w', newline='') as f:
+            with open(os.path.join(output_dir, f"schedule_summary.csv"), 'w', newline='') as f:
                 writer = csv.DictWriter(f, fieldnames=summary_table[0].keys())
                 writer.writeheader()
                 writer.writerows(summary_table)
         
         if deadline_table:
-            with open(f"deadline_status_{timestamp}.csv", 'w', newline='') as f:
+            with open(os.path.join(output_dir, f"deadline_status.csv"), 'w', newline='') as f:
                 writer = csv.DictWriter(f, fieldnames=deadline_table[0].keys())
                 writer.writeheader()
                 writer.writerows(deadline_table)
         
-        print(f"\nTables saved: schedule_summary_{timestamp}.csv, deadline_status_{timestamp}.csv")
+        print(f"\nTables saved to {output_dir}: schedule_summary.csv, deadline_status.csv")
         
         # 3. Generate all plots
         plot_schedule(
@@ -160,28 +164,28 @@ def analyze_schedule(config, args):
             submissions=config.submissions,
             start_date=parse_date_safe(args.start_date),
             end_date=parse_date_safe(args.end_date),
-            save_path=f"schedule_gantt_{timestamp}.png"
+            save_path=os.path.join(output_dir, "schedule_gantt.png")
         )
         
         plot_utilization_chart(
             schedule=schedule,
             config=config,
-            save_path=f"utilization_chart_{timestamp}.png"
+            save_path=os.path.join(output_dir, "utilization_chart.png")
         )
         
         plot_deadline_compliance(
             schedule=schedule,
             config=config,
-            save_path=f"deadline_compliance_{timestamp}.png"
+            save_path=os.path.join(output_dir, "deadline_compliance.png")
         )
         
-        print(f"Plots saved: schedule_gantt_{timestamp}.png, utilization_chart_{timestamp}.png, deadline_compliance_{timestamp}.png")
+        print(f"Plots saved to {output_dir}: schedule_gantt.png, utilization_chart.png, deadline_compliance.png")
         
         # 4. Save schedule as JSON
-        with open(f"schedule_{timestamp}.json", 'w') as f:
+        with open(os.path.join(output_dir, "schedule.json"), 'w') as f:
             json.dump(schedule, f, default=str, indent=2)
         
-        print(f"Schedule saved: schedule_{timestamp}.json")
+        print(f"Schedule saved to {output_dir}: schedule.json")
         
     except Exception as e:
         print(f"Error generating schedule: {e}")
@@ -225,8 +229,12 @@ def interactive_mode(config, args):
             # Save everything with timestamp
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             
+            # Create output directory with timestamp
+            output_dir = f"output/output_{timestamp}"
+            os.makedirs(output_dir, exist_ok=True)
+            
             # Save schedule JSON
-            out_path = f"schedule_{timestamp}.json"
+            out_path = os.path.join(output_dir, "schedule.json")
             with open(out_path, 'w') as f:
                 json.dump(schedule, f, default=str, indent=2)
             
@@ -237,12 +245,12 @@ def interactive_mode(config, args):
                 deadline_table = generate_deadline_table(schedule, config)
                 
                 import csv
-                with open(f"schedule_summary_{timestamp}.csv", 'w', newline='') as f:
+                with open(os.path.join(output_dir, "schedule_summary.csv"), 'w', newline='') as f:
                     writer = csv.DictWriter(f, fieldnames=summary_table[0].keys())
                     writer.writeheader()
                     writer.writerows(summary_table)
                 
-                with open(f"deadline_status_{timestamp}.csv", 'w', newline='') as f:
+                with open(os.path.join(output_dir, "deadline_status.csv"), 'w', newline='') as f:
                     writer = csv.DictWriter(f, fieldnames=deadline_table[0].keys())
                     writer.writeheader()
                     writer.writerows(deadline_table)
@@ -253,32 +261,34 @@ def interactive_mode(config, args):
                     submissions=config.submissions,
                     start_date=parse_date_safe(args.start_date),
                     end_date=parse_date_safe(args.end_date),
-                    save_path=f"schedule_gantt_{timestamp}.png"
+                    save_path=os.path.join(output_dir, "schedule_gantt.png")
                 )
                 
                 plot_utilization_chart(
                     schedule=schedule,
                     config=config,
-                    save_path=f"utilization_chart_{timestamp}.png"
+                    save_path=os.path.join(output_dir, "utilization_chart.png")
                 )
                 
                 plot_deadline_compliance(
                     schedule=schedule,
                     config=config,
-                    save_path=f"deadline_compliance_{timestamp}.png"
+                    save_path=os.path.join(output_dir, "deadline_compliance.png")
                 )
                 
-                print(f"All outputs saved with timestamp {timestamp}:")
-                print(f"  - schedule_{timestamp}.json")
-                print(f"  - schedule_summary_{timestamp}.csv")
-                print(f"  - deadline_status_{timestamp}.csv")
-                print(f"  - schedule_gantt_{timestamp}.png")
-                print(f"  - utilization_chart_{timestamp}.png")
-                print(f"  - deadline_compliance_{timestamp}.png")
+                print(f"All outputs saved to {output_dir}:")
+                print(f"  - schedule.json")
+                print(f"  - schedule_summary.csv")
+                print(f"  - deadline_status.csv")
+                print(f"  - schedule_gantt.png")
+                print(f"  - utilization_chart.png")
+                print(f"  - deadline_compliance.png")
                 
             except Exception as e:
                 print(f"Warning: Some outputs failed to save: {e}")
                 print(f"Schedule JSON saved to: {out_path}")
+                import traceback
+                traceback.print_exc()
             
             break
         elif key.lower() == "q" or key == "\x1b":

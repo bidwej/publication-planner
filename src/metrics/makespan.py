@@ -97,4 +97,23 @@ def get_makespan_breakdown(schedule: Dict[str, date], config: Config) -> Dict[st
     
     breakdown["total"] = calculate_makespan(schedule, config)
     
-    return breakdown 
+    return breakdown
+
+
+def get_schedule_metrics(schedule: Dict[str, date], config: Config) -> Dict[str, float]:
+    """Calculate comprehensive metrics for a given schedule."""
+    if not schedule:
+        return {}
+    
+    # Calculate makespan
+    makespan = calculate_makespan(schedule, config)
+    
+    # Calculate average start date (as days from epoch)
+    start_dates = list(schedule.values())
+    avg_start_date = sum(d.toordinal() for d in start_dates) / len(start_dates) if start_dates else 0
+    
+    return {
+        "makespan_days": makespan,
+        "total_submissions": len(schedule),
+        "avg_start_date": avg_start_date
+    } 

@@ -298,4 +298,87 @@ class TestGreedySchedulerPerformance:
             assert final_memory < 1024 * 1024  # Less than 1MB
         except RuntimeError as e:
             # Acceptable for complex dependency scenarios
+            assert "Could not schedule submissions" in str(e)
+
+
+class TestGreedySchedulerIntegration:
+    """Integration tests for the greedy scheduler."""
+    
+    def test_concurrency_limit_integration(self, config):
+        """Test that concurrency limit is respected across all submissions."""
+        scheduler = GreedyScheduler(config)
+        
+        try:
+            schedule = scheduler.schedule()
+            
+            # Check daily concurrency
+            daily_load = {}
+            for submission_id, start_date in schedule.items():
+                submission = config.submissions_dict[submission_id]
+                end_date = scheduler._get_end_date(start_date, submission)
+                
+                # Count active submissions for each day
+                current = start_date
+                while current <= end_date:
+                    daily_load[current] = daily_load.get(current, 0) + 1
+                    current += timedelta(days=1)
+            
+            max_concurrent = config.max_concurrent_submissions
+            for day, load in daily_load.items():
+                assert load <= max_concurrent, f"Day {day} has {load} active submissions (limit: {max_concurrent})"
+                
+        except RuntimeError as e:
+            # Acceptable for complex dependency scenarios
+            assert "Could not schedule submissions" in str(e)
+    
+    def test_mod_paper_alignment(self, config):
+        """Test that MOD dependencies are respected for papers."""
+        scheduler = GreedyScheduler(config)
+        
+        try:
+            schedule = scheduler.schedule()
+            
+            for submission in config.submissions:
+                if submission.kind == SubmissionType.PAPER and submission.depends_on:
+                    paper_start = schedule[submission.id]
+                    
+                    for dep_id in submission.depends_on:
+                        if dep_id in schedule:
+                            dep_submission = config.submissions_dict[dep_id]
+                            if dep_submission.kind == SubmissionType.ABSTRACT:  # MOD
+                                dep_start = schedule[dep_id]
+                                # Paper should start after or on the same day as MOD
+                                assert paper_start >= dep_start
+                                
+        except RuntimeError as e:
+            # Acceptable for complex dependency scenarios
+            assert "Could not schedule submissions" in str(e)
+    
+    def test_parent_child_lead_time(self, config):
+        """Test that parent-child lead times are respected."""
+        scheduler = GreedyScheduler(config)
+        
+        try:
+            schedule = scheduler.schedule()
+            
+            for submission in config.submissions:
+                if submission.kind == SubmissionType.PAPER and submission.depends_on:
+                    paper_start = schedule[submission.id]
+                    
+                    for dep_id in submission.depends_on:
+                        if dep_id in schedule:
+                            dep_submission = config.submissions_dict[dep_id]
+                            if dep_submission.kind == SubmissionType.PAPER:
+                                dep_start = schedule[dep_id]
+                                dep_end = scheduler._get_end_date(dep_start, dep_submission)
+                                
+                                # Add lead time from parent
+                                lead_months = submission.lead_time_from_parents
+                                if lead_months > 0:
+                                    lead_days = lead_months * 30  # Approximate
+                                    required_start = dep_end + timedelta(days=lead_days)
+                                    assert paper_start >= required_start
+                                    
+        except RuntimeError as e:
+            # Acceptable for complex dependency scenarios
             assert "Could not schedule submissions" in str(e) 

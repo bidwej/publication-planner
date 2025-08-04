@@ -15,48 +15,89 @@ from .dates import parse_date_safe
 
 def load_config(config_path: str) -> Config:
     """Load the master config and all child JSON files."""
-    with open(config_path, "r", encoding="utf-8") as f:
-        raw_cfg = json.load(f)
-    config_dir = os.path.dirname(os.path.abspath(config_path))
-    conferences = _load_conferences(os.path.join(config_dir, raw_cfg["data_files"]["conferences"]))
-    submissions = _load_submissions(
-        mods_path=os.path.join(config_dir, raw_cfg["data_files"]["mods"]),
-        papers_path=os.path.join(config_dir, raw_cfg["data_files"]["papers"]),
-        conferences=conferences,
-        abs_lead=raw_cfg["min_abstract_lead_time_days"],
-        pap_lead=raw_cfg["min_paper_lead_time_days"],
-        penalty_costs=raw_cfg.get("penalty_costs", {}),
-    )
-    # Load blackout dates if enabled
-    blackout_dates = []
-    if raw_cfg.get("scheduling_options", {}).get("enable_blackout_periods", False):
-        blackouts_rel = raw_cfg["data_files"].get("blackouts")
-        if blackouts_rel:
-            blackout_path = os.path.join(config_dir, blackouts_rel)
-            blackout_dates = _load_blackout_dates(blackout_path)
-    return Config(
-        min_abstract_lead_time_days=raw_cfg["min_abstract_lead_time_days"],
-        min_paper_lead_time_days=raw_cfg["min_paper_lead_time_days"],
-        max_concurrent_submissions=raw_cfg["max_concurrent_submissions"],
-        default_paper_lead_time_months=raw_cfg.get("default_paper_lead_time_months", 3),
-        conferences=conferences,
-        submissions=submissions,
-        data_files=raw_cfg["data_files"],
-        priority_weights=raw_cfg.get(
-            "priority_weights",
-            {
-                "engineering_paper": 2.0,
-                "medical_paper": 1.0,
-                "mod": 1.5,
-                "abstract": 0.5,
-            },
-        ),
-        penalty_costs=raw_cfg.get(
-            "penalty_costs", {"default_mod_penalty_per_day": 1000}
-        ),
-        scheduling_options=raw_cfg.get("scheduling_options", {}),
-        blackout_dates=blackout_dates,
-    )
+    try:
+        if not os.path.exists(config_path):
+            raise FileNotFoundError(f"Config file not found: {config_path}")
+            
+        with open(config_path, "r", encoding="utf-8") as f:
+            raw_cfg = json.load(f)
+        
+        # Validate required fields
+        required_fields = ["min_abstract_lead_time_days", "min_paper_lead_time_days", 
+                          "max_concurrent_submissions", "data_files"]
+        for field in required_fields:
+            if field not in raw_cfg:
+                raise ValueError(f"Missing required field in config: {field}")
+        
+        config_dir = os.path.dirname(os.path.abspath(config_path))
+        
+        # Load conferences
+        conferences_path = os.path.join(config_dir, raw_cfg["data_files"]["conferences"])
+        if not os.path.exists(conferences_path):
+            raise FileNotFoundError(f"Conferences file not found: {conferences_path}")
+        conferences = _load_conferences(conferences_path)
+        
+        # Load submissions
+        mods_path = os.path.join(config_dir, raw_cfg["data_files"]["mods"])
+        papers_path = os.path.join(config_dir, raw_cfg["data_files"]["papers"])
+        
+        if not os.path.exists(mods_path):
+            raise FileNotFoundError(f"Mods file not found: {mods_path}")
+        if not os.path.exists(papers_path):
+            raise FileNotFoundError(f"Papers file not found: {papers_path}")
+            
+        submissions = _load_submissions(
+            mods_path=mods_path,
+            papers_path=papers_path,
+            conferences=conferences,
+            abs_lead=raw_cfg["min_abstract_lead_time_days"],
+            pap_lead=raw_cfg["min_paper_lead_time_days"],
+            penalty_costs=raw_cfg.get("penalty_costs", {}),
+        )
+        
+        # Load blackout dates if enabled
+        blackout_dates = []
+        if raw_cfg.get("scheduling_options", {}).get("enable_blackout_periods", False):
+            blackouts_rel = raw_cfg["data_files"].get("blackouts")
+            if blackouts_rel:
+                blackout_path = os.path.join(config_dir, blackouts_rel)
+                if os.path.exists(blackout_path):
+                    blackout_dates = _load_blackout_dates(blackout_path)
+                else:
+                    print(f"Warning: Blackout file not found: {blackout_path}")
+        
+        return Config(
+            min_abstract_lead_time_days=raw_cfg["min_abstract_lead_time_days"],
+            min_paper_lead_time_days=raw_cfg["min_paper_lead_time_days"],
+            max_concurrent_submissions=raw_cfg["max_concurrent_submissions"],
+            default_paper_lead_time_months=raw_cfg.get("default_paper_lead_time_months", 3),
+            conferences=conferences,
+            submissions=submissions,
+            data_files=raw_cfg["data_files"],
+            priority_weights=raw_cfg.get(
+                "priority_weights",
+                {
+                    "engineering_paper": 2.0,
+                    "medical_paper": 1.0,
+                    "mod": 1.5,
+                    "abstract": 0.5,
+                },
+            ),
+            penalty_costs=raw_cfg.get(
+                "penalty_costs", {"default_mod_penalty_per_day": 1000}
+            ),
+            scheduling_options=raw_cfg.get("scheduling_options", {}),
+            blackout_dates=blackout_dates,
+        )
+        
+    except FileNotFoundError as e:
+        raise FileNotFoundError(f"Configuration file error: {e}")
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON in configuration file: {e}")
+    except KeyError as e:
+        raise ValueError(f"Missing required field in configuration: {e}")
+    except Exception as e:
+        raise RuntimeError(f"Failed to load configuration: {e}")
 
 def _load_blackout_dates(path: str) -> List[date]:
     """Load blackout dates from JSON file."""
