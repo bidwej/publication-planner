@@ -3,6 +3,9 @@
 import pytest
 from datetime import date, timedelta
 from schedulers.greedy import GreedyScheduler
+from schedulers.stochastic import StochasticGreedyScheduler
+from schedulers.lookahead import LookaheadGreedyScheduler
+from schedulers.backtracking import BacktrackingGreedyScheduler
 from core.types import SubmissionType, Submission, Conference, ConferenceType
 
 
@@ -382,3 +385,45 @@ class TestGreedySchedulerIntegration:
         except RuntimeError as e:
             # Acceptable for complex dependency scenarios
             assert "Could not schedule submissions" in str(e) 
+
+
+class TestGreedySchedulerStrategyRegistry:
+    """Test the strategy registry functionality."""
+    
+    def test_strategy_registry(self, config):
+        """Test that all strategies are properly registered."""
+        from core.types import SchedulerStrategy
+        from schedulers.base import BaseScheduler
+        
+        # Test that all strategies are registered
+        assert SchedulerStrategy.GREEDY in BaseScheduler._strategies
+        assert SchedulerStrategy.STOCHASTIC in BaseScheduler._strategies
+        assert SchedulerStrategy.LOOKAHEAD in BaseScheduler._strategies
+        assert SchedulerStrategy.BACKTRACKING in BaseScheduler._strategies
+    
+    def test_create_scheduler_via_registry(self, config):
+        """Test creating schedulers via the registry."""
+        from core.types import SchedulerStrategy
+        from schedulers.base import BaseScheduler
+        
+        # Test creating each scheduler type
+        greedy = BaseScheduler.create_scheduler(SchedulerStrategy.GREEDY, config)
+        assert isinstance(greedy, GreedyScheduler)
+        
+        stochastic = BaseScheduler.create_scheduler(SchedulerStrategy.STOCHASTIC, config)
+        assert isinstance(stochastic, StochasticGreedyScheduler)
+        
+        lookahead = BaseScheduler.create_scheduler(SchedulerStrategy.LOOKAHEAD, config)
+        assert isinstance(lookahead, LookaheadGreedyScheduler)
+        
+        backtracking = BaseScheduler.create_scheduler(SchedulerStrategy.BACKTRACKING, config)
+        assert isinstance(backtracking, BacktrackingGreedyScheduler)
+    
+    def test_invalid_strategy(self, config):
+        """Test that invalid strategies raise appropriate errors."""
+        from core.types import SchedulerStrategy
+        from schedulers.base import BaseScheduler
+        
+        # Test with an invalid strategy string
+        with pytest.raises(ValueError, match="Unknown strategy"):
+            BaseScheduler.create_scheduler("invalid_strategy", config) 

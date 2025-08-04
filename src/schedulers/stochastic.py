@@ -3,8 +3,9 @@ import random
 from typing import Dict, List
 from datetime import date
 from .greedy import GreedyScheduler
-from core.types import Config
+from core.types import Config, SchedulerStrategy
 
+@GreedyScheduler.register_strategy(SchedulerStrategy.STOCHASTIC)
 class StochasticGreedyScheduler(GreedyScheduler):
     """Stochastic greedy scheduler that adds randomness to priority selection."""
     

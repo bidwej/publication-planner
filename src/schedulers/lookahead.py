@@ -2,8 +2,9 @@ from __future__ import annotations
 from typing import Dict, List
 from datetime import date, timedelta
 from .greedy import GreedyScheduler
-from core.types import Config, SubmissionType, Submission
+from core.types import Config, SubmissionType, Submission, SchedulerStrategy
 
+@GreedyScheduler.register_strategy(SchedulerStrategy.LOOKAHEAD)
 class LookaheadGreedyScheduler(GreedyScheduler):
     """Lookahead greedy scheduler that considers future implications of decisions."""
     

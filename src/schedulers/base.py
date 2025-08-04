@@ -1,16 +1,36 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Dict, List
+from typing import Dict, List, Type
 from datetime import date, timedelta
-from core.types import Config, Submission
+from core.types import Config, Submission, SchedulerStrategy
 
 class BaseScheduler(ABC):
     """Abstract base class for all schedulers."""
+    
+    # Strategy registry - maps strategy names to scheduler classes
+    _strategies: Dict[SchedulerStrategy, Type['BaseScheduler']] = {}
     
     def __init__(self, config: Config):
         self.config = config
         self.submissions = {s.id: s for s in config.submissions}
         self.conferences = {c.id: c for c in config.conferences}
+    
+    @classmethod
+    def register_strategy(cls, strategy: SchedulerStrategy):
+        """Decorator to register a scheduler class with a strategy."""
+        def decorator(scheduler_class: Type['BaseScheduler']):
+            cls._strategies[strategy] = scheduler_class
+            return scheduler_class
+        return decorator
+    
+    @classmethod
+    def create_scheduler(cls, strategy: SchedulerStrategy, config: Config) -> 'BaseScheduler':
+        """Create a scheduler instance for the given strategy."""
+        if strategy not in cls._strategies:
+            raise ValueError(f"Unknown strategy: {strategy}")
+        
+        scheduler_class = cls._strategies[strategy]
+        return scheduler_class(config)
     
     @abstractmethod
     def schedule(self) -> Dict[str, date]:

@@ -12,6 +12,12 @@ class ConferenceType(str, Enum):
     ENGINEERING = "ENGINEERING"
     MEDICAL = "MEDICAL"
 
+class SchedulerStrategy(str, Enum):
+    GREEDY = "greedy"
+    STOCHASTIC = "stochastic"
+    LOOKAHEAD = "lookahead"
+    BACKTRACKING = "backtracking"
+
 @dataclass
 class Conference:
     id: str

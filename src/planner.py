@@ -3,11 +3,8 @@ import os
 from typing import Dict, Any, List
 from datetime import date
 from core.config import load_config
-from core.types import Config
-from schedulers.greedy import GreedyScheduler
-from schedulers.stochastic import StochasticGreedyScheduler
-from schedulers.lookahead import LookaheadGreedyScheduler
-from schedulers.backtracking import BacktrackingGreedyScheduler
+from core.types import Config, SchedulerStrategy
+from schedulers.base import BaseScheduler
 from output.tables import generate_simple_monthly_table
 
 
@@ -65,20 +62,11 @@ class Planner:
         """Validate the configuration."""
         pass  # no-op for backward compatibility
 
-    def schedule(self, strategy: str = "greedy") -> tuple[Dict[Any, Any], Dict[Any, Any]]:
+    def schedule(self, strategy: SchedulerStrategy = SchedulerStrategy.GREEDY) -> tuple[Dict[Any, Any], Dict[Any, Any]]:
         """Generate a schedule using the specified strategy."""
         try:
-            # Create scheduler based on strategy
-            if strategy == "greedy":
-                scheduler = GreedyScheduler(self.cfg)
-            elif strategy == "stochastic":
-                scheduler = StochasticGreedyScheduler(self.cfg)
-            elif strategy == "lookahead":
-                scheduler = LookaheadGreedyScheduler(self.cfg)
-            elif strategy == "backtracking":
-                scheduler = BacktrackingGreedyScheduler(self.cfg)
-            else:
-                raise ValueError(f"Unknown strategy: {strategy}")
+            # Create scheduler using the strategy registry
+            scheduler = BaseScheduler.create_scheduler(strategy, self.cfg)
 
             # Generate schedule
             full_schedule = scheduler.schedule()
@@ -119,13 +107,11 @@ class Planner:
 
     def greedy_schedule(self) -> tuple[Dict[Any, int], Dict[Any, int]]:
         """Legacy method for backward compatibility."""
-        return self.schedule("greedy")
+        return self.schedule(SchedulerStrategy.GREEDY)
 
     def concurrent_schedule(self) -> tuple[Dict[Any, int], Dict[Any, int]]:
         """Legacy method for backward compatibility."""
-        return self.schedule("greedy")
-
-
+        return self.schedule(SchedulerStrategy.GREEDY)
 
     def generate_monthly_table(self) -> List[Dict[str, Any]]:
         """Generate monthly table for backward compatibility."""

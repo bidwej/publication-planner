@@ -13,10 +13,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 from core.config import load_config
 from core.dates import parse_date_safe
-from schedulers.greedy import GreedyScheduler
-from schedulers.stochastic import StochasticGreedyScheduler
-from schedulers.lookahead import LookaheadGreedyScheduler
-from schedulers.backtracking import BacktrackingGreedyScheduler
+from core.types import SchedulerStrategy
+from schedulers.base import BaseScheduler
 from output.console import print_schedule_summary, print_deadline_status, print_utilization_summary, print_metrics_summary
 from output.tables import generate_schedule_summary_table, generate_deadline_table
 from output.plots import plot_schedule, plot_utilization_chart, plot_deadline_compliance
@@ -55,21 +53,22 @@ def generate_schedule_cli() -> None:
 
 def compare_all_schedulers(config, args):
     """Compare all available schedulers."""
-    schedulers = {
-        "Greedy": GreedyScheduler(config),
-        "Stochastic": StochasticGreedyScheduler(config),
-        "Lookahead": LookaheadGreedyScheduler(config),
-        "Backtracking": BacktrackingGreedyScheduler(config)
+    strategies = {
+        "Greedy": SchedulerStrategy.GREEDY,
+        "Stochastic": SchedulerStrategy.STOCHASTIC,
+        "Lookahead": SchedulerStrategy.LOOKAHEAD,
+        "Backtracking": SchedulerStrategy.BACKTRACKING
     }
     
     results = {}
     
-    for name, scheduler in schedulers.items():
+    for name, strategy in strategies.items():
         print(f"\n{'='*50}")
         print(f"Testing {name} Scheduler")
         print(f"{'='*50}")
         
         try:
+            scheduler = BaseScheduler.create_scheduler(strategy, config)
             schedule = scheduler.schedule()
             results[name] = schedule
             
@@ -108,15 +107,16 @@ def compare_all_schedulers(config, args):
 
 def analyze_schedule(config, args):
     """Detailed analysis of a single scheduler with all output features."""
-    scheduler_map = {
-        "greedy": GreedyScheduler,
-        "stochastic": StochasticGreedyScheduler,
-        "lookahead": LookaheadGreedyScheduler,
-        "backtracking": BacktrackingGreedyScheduler
+    # Convert string to enum
+    strategy_map = {
+        "greedy": SchedulerStrategy.GREEDY,
+        "stochastic": SchedulerStrategy.STOCHASTIC,
+        "lookahead": SchedulerStrategy.LOOKAHEAD,
+        "backtracking": SchedulerStrategy.BACKTRACKING
     }
     
-    scheduler_class = scheduler_map.get(args.scheduler, GreedyScheduler)
-    scheduler = scheduler_class(config)
+    strategy = strategy_map.get(args.scheduler, SchedulerStrategy.GREEDY)
+    scheduler = BaseScheduler.create_scheduler(strategy, config)
     
     print(f"\n{'='*50}")
     print(f"Detailed Analysis for {args.scheduler.title()} Scheduler")
@@ -194,15 +194,16 @@ def analyze_schedule(config, args):
 
 def interactive_mode(config, args):
     """Interactive mode for schedule generation with full output features."""
-    scheduler_map = {
-        "greedy": GreedyScheduler,
-        "stochastic": StochasticGreedyScheduler,
-        "lookahead": LookaheadGreedyScheduler,
-        "backtracking": BacktrackingGreedyScheduler
+    # Convert string to enum
+    strategy_map = {
+        "greedy": SchedulerStrategy.GREEDY,
+        "stochastic": SchedulerStrategy.STOCHASTIC,
+        "lookahead": SchedulerStrategy.LOOKAHEAD,
+        "backtracking": SchedulerStrategy.BACKTRACKING
     }
     
-    scheduler_class = scheduler_map.get(args.scheduler, GreedyScheduler)
-    scheduler = scheduler_class(config)
+    strategy = strategy_map.get(args.scheduler, SchedulerStrategy.GREEDY)
+    scheduler = BaseScheduler.create_scheduler(strategy, config)
     
     while True:
         # Generate schedule

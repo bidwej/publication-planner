@@ -81,7 +81,7 @@ def get_deadline_violations(schedule: Dict[str, date], config: Config) -> List[D
                 "deadline": deadline,
                 "end_date": end_date,
                 "days_late": days_late,
-                "penalty_cost": days_late * (sub.penalty_cost_per_day or config.penalty_costs.get("default_penalty_per_day", 100.0))
+                "penalty_cost": days_late * (sub.penalty_cost_per_day or (config.penalty_costs or {}).get("default_penalty_per_day", 100.0))
             })
     
     return violations

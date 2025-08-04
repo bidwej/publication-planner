@@ -2,9 +2,10 @@ from __future__ import annotations
 from typing import Dict, List, Optional, Set
 from datetime import date, timedelta
 from .greedy import GreedyScheduler
-from core.types import Config, Submission, SubmissionType
+from core.types import Config, Submission, SubmissionType, SchedulerStrategy
 from core.dates import is_working_day
 
+@GreedyScheduler.register_strategy(SchedulerStrategy.BACKTRACKING)
 class BacktrackingGreedyScheduler(GreedyScheduler):
     """Backtracking greedy scheduler that can undo decisions when stuck."""
     

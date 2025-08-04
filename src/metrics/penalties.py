@@ -55,7 +55,7 @@ def calculate_deadline_penalty(sub: Submission, start_date: date, config: Config
     # Calculate penalty if deadline is missed
     if end_date > deadline:
         days_late = (end_date - deadline).days
-        penalty_per_day = sub.penalty_cost_per_day or config.penalty_costs.get("default_penalty_per_day", 100.0)
+        penalty_per_day = sub.penalty_cost_per_day or (config.penalty_costs or {}).get("default_penalty_per_day", 100.0)
         return days_late * penalty_per_day
     
     return 0.0
