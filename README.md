@@ -23,7 +23,7 @@ The system ensures regulatory compliance while optimizing for early completion, 
 ### **Advanced Scheduling Algorithms**
 - **GreedyScheduler**: Priority-weighted greedy algorithm with blackout date handling
 - **StochasticGreedyScheduler**: Adds randomness for exploration and tie-breaking
-- **LookaheadGreedyScheduler**: Considers future implications and dependencies
+- **LookaheadGreedyScheduler**: Considers future implications and dependencies (30-day lookahead)
 - **BacktrackingGreedyScheduler**: Can undo decisions when stuck
 
 ### **Comprehensive Metrics**
@@ -32,6 +32,7 @@ The system ensures regulatory compliance while optimizing for early completion, 
 - **Penalty Calculations**: Deadline violations, dependency costs, earliness bonuses
 - **Deadline Compliance**: Risk assessment, margin analysis, violation tracking
 - **Quality Metrics**: Front-loading, slack distribution, workload balance
+- **Solution Quality Metrics**: Critical path analysis and slack calculation
 
 ### **Rich Output Options**
 - **Tables**: Summary tables, deadline tables, monthly views
@@ -43,6 +44,10 @@ The system ensures regulatory compliance while optimizing for early completion, 
 - **Concurrency Control**: Maintains 1-2 papers in drafting pipeline
 - **Conference Compatibility**: Ensures papers match appropriate venues
 - **Dependency Satisfaction**: Respects complex paper-to-paper and mod-to-paper relationships
+- **Early Abstract Scheduling**: Abstracts can be scheduled 30 days in advance
+- **Priority Weighting**: Engineering papers (2.0), Medical papers (1.0), Mods (1.5), Abstracts (0.5)
+- **Single-Conference Policy**: Each paper submitted to one venue per annual cycle
+- **Mod-to-Mod Dependencies**: Specific technical dependencies (Mod 3→4, Mod 4→5)
 
 ## 📁 Project Structure
 
@@ -74,6 +79,12 @@ src/
 │   └── console.py        # Console output formatting
 └── planner.py            # Simple facade for backward compatibility
 ```
+
+### **Modular Architecture Benefits**
+- **Separation of Concerns**: Each module has a specific responsibility
+- **Extensibility**: Easy to add new schedulers, metrics, or output formats
+- **Testability**: Each component can be tested independently
+- **Maintainability**: Clear boundaries between different system components
 
 ## 🛠️ Installation
 
@@ -382,6 +393,16 @@ Maintains exactly 1-2 papers in drafting pipeline at all times:
 1 ≤ Σ_j 1[W_j ≤ t < S_j] ≤ 2  ∀t
 ```
 
+### Optimization Objective
+The system minimizes a multi-objective function:
+```
+Minimize: f(x) = w₁ × EarlyCompletion + w₂ × PenaltyCosts - w₃ × ResourceUtilization
+```
+where:
+- EarlyCompletion = Σᵢ priority[i] × start[i]
+- PenaltyCosts = Σᵢ∈mods penalty_cost[i] × max(0, start[i] - ready_date[i])
+- ResourceUtilization = Σₜ min(active[t], max_concurrent) × (T-t)/T
+
 ### Conference Compatibility Matrix
 | Paper Type | Venue Type | Penalty $ | Rationale |
 |------------|------------|-----------|-----------|
@@ -390,10 +411,29 @@ Maintains exactly 1-2 papers in drafting pipeline at all times:
 | Full-paper capable | Abstract-only venue | 2000 | Reduces publication depth |
 | Good match | Good match | 0 | — |
 
+### Slack Cost Formulation
+The system calculates penalties for delays and missed opportunities:
+```
+SlackCost_j = P_j(S_j - S_j,earliest) + Y_j(1_year-deferred) + A_j(1_abstract-miss)
+```
+
+| Coefficient | Default $ | Notes |
+|-------------|-----------|-------|
+| P_j | 1,000 per month (3,000 for J19-J20) | Monthly slip penalty |
+| Y_j | 5,000 (10,000 for J19-J20) | Full-year deferral penalty |
+| A_j | 3,000 | Missed abstract-only window penalty |
+
 ### Paper-to-Paper Dependencies
 - **Default lead time**: 3 months between parent and child papers
 - **Special cases**: J11→J12 (1 month), J12→J13 (1 month), J19→J20 (2 months)
 - **Lead time calculation**: Child paper waits specified months after parent completion
+
+### Mod-to-Mod Dependencies
+- **Sequential order**: All mods follow numeric order (1→2→3...→17)
+- **Technical dependencies**: 
+  - Mod 3 → Mod 4 (Bayesian evidence logic requires SLAM poses)
+  - Mod 4 → Mod 5 (Coverage guidance consumes Bayesian confidences)
+- **Independent otherwise**: All other mods assumed sequential but independent
 
 ## 🚀 Future Enhancements
 
@@ -419,6 +459,19 @@ Maintains exactly 1-2 papers in drafting pipeline at all times:
 - Monitor actual vs planned progress
 - Trigger replanning on delays >7 days
 - Maintain solution pool for quick pivots
+
+### Rolling Optimization Cadence
+- Re-solve ILP quarterly or on trigger events
+- Triggers: Mod slips >2 months, paper misses deadline, resource changes
+- FDA submission timing: 0-month gap between mod finish and paper drafting
+
+### Future Development Work
+- **ILP Optimizer Integration**: Implement true integer linear programming (e.g., using `pulp`)
+- **Advanced Optimizer Module**: Develop `src/optimizer.py` for formal constraint solving
+- **Comprehensive Testing**: Add `tests/test_optimizer.py` for optimizer validation
+- **Gantt Chart Generation**: Implement automated visualization (matplotlib/plotly)
+- **End-to-End Validation**: Verify SlackCost, conference-penalty, and FDA-penalty calculations
+- **Real Data Population**: Finalize all mod→paper dependencies and conference mappings
 
 ## 📊 Problem Specification
 
@@ -448,6 +501,21 @@ The system manages 20 specific papers (J1-J20) with complex dependencies:
 | J19 | CT max vs NE Maxillary Mucosa (MM) | 3 months | RSNA, SPIE | Mod 19 |
 | J20 | CT eth vs NE Middle Turbinate (MT) | 3 months | RSNA, SPIE | Mod 20, J19 |
 
+### Capacity Analysis
+- **Theoretical maximum**: 32 papers across 48 months
+- **Planned capacity**: 20 papers (Ed) + ≤5 additional = ≤25 papers
+- **Utilization**: ~78% of capacity, leaving room for new ideas
+- **Clinical papers**: Can be moved earlier if pipeline gaps exist (e.g., J1, J9, J17)
+
+### Annual Schedule Summary (Historical Reference)
+| Year | TotalPaperMonths | PapersCompleted | PeakConcurrency | AvgConcurrency | ModMonths |
+|------|------------------|-----------------|-----------------|----------------|-----------|
+| 2025 | 5                | 2               | 2               | 0.71           | 2         |
+| 2026 | 7                | 2               | 2               | 0.58           | 4         |
+| 2027 | 11               | 4               | 2               | 0.92           | 6         |
+| 2028 | 16               | 8               | 2               | 1.33           | 5         |
+| 2029 | 8                | 4               | 2               | 1.33           | 1         |
+
 ### Conference Portfolio (14 Venues)
 Major conferences with strict deadlines:
 
@@ -465,6 +533,8 @@ Major conferences with strict deadlines:
 | SPIE Medical Imaging | Medical Imaging | Yes | Yes | February |
 | EMBC | Biomedical Engineering | Yes | No | July |
 | NeurIPS | AI/ML | Yes | Yes | December |
+
+**Note**: ICCV runs biennially (odd-numbered years only). All other conferences repeat annually.
 
 ## 📚 API Reference
 
