@@ -200,7 +200,7 @@ def _load_submissions(
                     kind=SubmissionType.ABSTRACT,
                     title=f"{p['title']} (abstract)",
                     earliest_start_date=abs_deadline,  # zero-day task
-                    conference_id=conf_obj.id,
+                    conference_id=conf_obj.id if conf_obj is not None else None,
                     engineering=engineering,
                     depends_on=mod_deps + parent_deps,
                 )
@@ -211,6 +211,18 @@ def _load_submissions(
         if deadline:
             lead_days = pap_lead
             start_date = deadline - relativedelta(days=lead_days)
+            
+            # Ensure start date is not in the past relative to the earliest deadline
+            # Find the earliest deadline across all conferences (only 2025+ deadlines)
+            all_deadlines = []
+            for conf in conferences:
+                for dl in conf.deadlines.values():
+                    if dl.year >= 2025:  # Only consider 2025+ deadlines
+                        all_deadlines.append(dl)
+            if all_deadlines:
+                earliest_deadline = min(all_deadlines)
+                earliest_allowed = earliest_deadline - relativedelta(days=30)
+                start_date = max(start_date, earliest_allowed)
 
             subs.append(
                 Submission(
@@ -218,7 +230,7 @@ def _load_submissions(
                     kind=SubmissionType.PAPER,
                     title=p["title"],
                     earliest_start_date=start_date,
-                    conference_id=conf_obj.id if conf_obj else None,
+                    conference_id=conf_obj.id if conf_obj is not None else None,
                     engineering=engineering,
                     depends_on=mod_deps + parent_deps + ([abs_id] if abs_id else []),
                 )

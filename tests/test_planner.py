@@ -15,9 +15,9 @@ def test_multi_parent(planner):
     mod_sched, paper_sched = planner.greedy_schedule()
     j2 = paper_sched["J2"]
     j3 = paper_sched["J3"]
-    lead = planner.papers["J3"].get("lead_time_from_parents",
+    lead = planner.papers_dict["J3"].get("lead_time_from_parents",
                                      planner.config["default_paper_lead_time_months"])
-    assert j3 >= j2 + planner.papers["J2"]["draft_window_months"] + lead
+    assert j3 >= j2 + planner.papers_dict["J2"]["draft_window_months"] + lead
 
 def test_free_slack(planner):
     for m in planner.mods:
