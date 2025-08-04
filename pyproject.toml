@@ -47,3 +47,8 @@ analysis.extraPaths = ["src"]
 
 # have Pyright/Pylance use library code for types
 analysis.useLibraryCodeForTypes = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-v --tb=short"
