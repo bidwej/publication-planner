@@ -45,3 +45,8 @@ class Config:
     penalty_costs: Optional[Dict[str, float]] = None
     scheduling_options: Optional[Dict[str, Any]] = None
     blackout_dates: Optional[List[date]] = None  # computed from blackout.json
+    
+    def __post_init__(self):
+        """Create convenience dictionaries after initialization."""
+        self.conferences_dict = {c.id: c for c in self.conferences}
+        self.submissions_dict = {s.id: s for s in self.submissions} 

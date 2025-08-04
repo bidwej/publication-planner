@@ -1,3 +1,35 @@
+Please  refactor to be like this
+
+src/
+├── core/
+│   ├── __init__.py
+│   ├── types.py          # Data structures
+│   ├── config.py         # Configuration loading also Date/time 
+│   
+├── schedulers/
+│   ├── __init__.py
+│   ├── base.py           # Abstract base scheduler
+│   ├── greedy.py         # Basic greedy
+│   ├── stochastic.py     # Stochastic greedy
+│   ├── lookahead.py      # Lookahead greedy
+│   └── backtracking.py   # Backtracking greedy
+├── metrics/
+│   ├── __init__.py
+│   ├── makespan.py       # Makespan calculations
+│   ├── utilization.py    # Resource utilization metrics
+│   ├── penalties.py      # Penalty cost calculations
+│   ├── deadlines.py      # Deadline compliance metrics
+│   └── quality.py        # Quality metrics (front-loading, slack, etc.)
+planner.py        # Simple facade
+
+└── output/
+    ├── __init__.py
+    ├── tables.py         # Table generation
+    ├── plots.py          # Plot generation
+    └── console.py        # Console output formatting
+
+
+
 ## Limitations
 
 - No true global optimization (NP-hard problem)
