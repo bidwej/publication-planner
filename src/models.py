@@ -100,6 +100,7 @@ class DeadlineViolation(ConstraintViolation):
     deadline: date
     end_date: date
     days_late: int
+    severity: str = "medium"  # Re-declare to maintain order
 
 @dataclass
 class DependencyViolation(ConstraintViolation):
@@ -107,6 +108,7 @@ class DependencyViolation(ConstraintViolation):
     dependency_id: str
     issue: str  # "missing_dependency", "invalid_dependency", "timing_violation"
     days_violation: Optional[int] = None
+    severity: str = "medium"  # Re-declare to maintain order
 
 @dataclass
 class ResourceViolation(ConstraintViolation):
@@ -115,6 +117,7 @@ class ResourceViolation(ConstraintViolation):
     load: int
     limit: int
     excess: int
+    severity: str = "medium"  # Re-declare to maintain order
 
 @dataclass
 class ConstraintValidation:
@@ -183,6 +186,7 @@ class ScheduleAnalysis:
     completion_rate: float
     missing_submissions: List[Dict[str, Any]]
     summary: str
+    metadata: Optional[Dict[str, Any]] = None
 
 @dataclass
 class ScheduleDistribution:
@@ -191,6 +195,7 @@ class ScheduleDistribution:
     quarterly_distribution: Dict[str, int]
     yearly_distribution: Dict[str, int]
     summary: str
+    metadata: Optional[Dict[str, Any]] = None
 
 @dataclass
 class SubmissionTypeAnalysis:
@@ -198,6 +203,7 @@ class SubmissionTypeAnalysis:
     type_counts: Dict[str, int]
     type_percentages: Dict[str, float]
     summary: str
+    metadata: Optional[Dict[str, Any]] = None
 
 @dataclass
 class TimelineAnalysis:
@@ -207,6 +213,7 @@ class TimelineAnalysis:
     duration_days: int
     avg_submissions_per_month: float
     summary: str
+    metadata: Optional[Dict[str, Any]] = None
 
 @dataclass
 class ResourceAnalysis:
@@ -214,4 +221,5 @@ class ResourceAnalysis:
     peak_load: int
     avg_load: float
     utilization_pattern: Dict[date, int]
-    summary: str 
+    summary: str
+    metadata: Optional[Dict[str, Any]] = None 

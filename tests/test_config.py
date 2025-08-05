@@ -210,7 +210,7 @@ class TestLoadSubmissions:
         # Check that papers have proper dependency IDs
         papers = [s for s in submissions if s.kind == SubmissionType.PAPER]
         for paper in papers:
-            for dep in paper.depends_on:
+            for dep in (paper.depends_on or []):
                 # Dependencies should be in format "id-kind"
                 assert '-' in dep, f"Dependency {dep} should contain '-' separator"
 
@@ -318,3 +318,129 @@ class TestConfigIntegration:
             assert config.blackout_dates == []
         finally:
             os.unlink(temp_path) 
+
+
+class TestEnums:
+    def test_submission_type_enum(self):
+        from src.models import SubmissionType
+        assert SubmissionType.PAPER.value == "paper"
+        assert SubmissionType.ABSTRACT.value == "abstract"
+        assert SubmissionType.POSTER.value == "poster"
+
+    def test_scheduler_strategy_enum(self):
+        from src.models import SchedulerStrategy
+        assert SchedulerStrategy.GREEDY.value == "greedy"
+        assert SchedulerStrategy.STOCHASTIC.value == "stochastic"
+        assert SchedulerStrategy.LOOKAHEAD.value == "lookahead"
+        assert SchedulerStrategy.BACKTRACKING.value == "backtracking"
+
+    def test_conference_type_enum(self):
+        from src.models import ConferenceType
+        assert ConferenceType.MEDICAL.value == "MEDICAL"
+        assert ConferenceType.ENGINEERING.value == "ENGINEERING"
+        assert ConferenceType.GENERAL.value == "GENERAL"
+
+    def test_conference_recurrence_enum(self):
+        from src.models import ConferenceRecurrence
+        assert ConferenceRecurrence.ANNUAL.value == "annual"
+        assert ConferenceRecurrence.BIENNIAL.value == "biennial"
+        assert ConferenceRecurrence.QUARTERLY.value == "quarterly"
+
+class TestConferenceMappingAndEngineering:
+    def test_conference_mapping_by_family(self, tmp_path):
+        # Create a minimal conferences list
+        from src.models import Conference, ConferenceType, ConferenceRecurrence
+        from src.config import _load_submissions
+        import json
+        confs = [
+            Conference(
+                id="ICML",
+                name="ICML",
+                conf_type=ConferenceType.ENGINEERING,
+                recurrence=ConferenceRecurrence.ANNUAL,
+                deadlines={}
+            ),
+            Conference(
+                id="MICCAI",
+                name="MICCAI",
+                conf_type=ConferenceType.MEDICAL,
+                recurrence=ConferenceRecurrence.ANNUAL,
+                deadlines={}
+            )
+        ]
+        # Paper with conference_families
+        paper = {
+            "id": "J1",
+            "title": "Test Paper",
+            "conference_families": ["ENGINEERING"],
+            "draft_window_months": 4
+        }
+        papers_path = tmp_path / "papers.json"
+        mods_path = tmp_path / "mods.json"
+        papers_path.write_text(json.dumps([paper]))
+        mods_path.write_text(json.dumps([]))
+        submissions = _load_submissions(
+            str(mods_path), str(papers_path), confs, 0, 60, {"default_paper_penalty_per_day": 500}
+        )
+        # Should map to ICML
+        paper_sub = next(s for s in submissions if s.kind.value == "paper")
+        assert paper_sub.conference_id == "ICML"
+        assert paper_sub.draft_window_months == 4
+
+    def test_engineering_flag_inference(self, tmp_path):
+        from src.models import Conference, ConferenceType, ConferenceRecurrence
+        from src.config import _load_submissions
+        import json
+        confs = [
+            Conference(
+                id="ICML",
+                name="ICML",
+                conf_type=ConferenceType.ENGINEERING,
+                recurrence=ConferenceRecurrence.ANNUAL,
+                deadlines={}
+            )
+        ]
+        paper = {
+            "id": "J2",
+            "title": "Engineering Paper",
+            "conference_families": ["ENGINEERING"]
+            # No engineering flag set
+        }
+        papers_path = tmp_path / "papers.json"
+        mods_path = tmp_path / "mods.json"
+        papers_path.write_text(json.dumps([paper]))
+        mods_path.write_text(json.dumps([]))
+        submissions = _load_submissions(
+            str(mods_path), str(papers_path), confs, 0, 60, {"default_paper_penalty_per_day": 500}
+        )
+        paper_sub = next(s for s in submissions if s.kind.value == "paper")
+        assert paper_sub.engineering is True
+
+    def test_duration_calculation_from_config(self, tmp_path):
+        from src.models import Conference, ConferenceType, ConferenceRecurrence
+        from src.config import _load_submissions
+        import json
+        confs = [
+            Conference(
+                id="ICML",
+                name="ICML",
+                conf_type=ConferenceType.ENGINEERING,
+                recurrence=ConferenceRecurrence.ANNUAL,
+                deadlines={}
+            )
+        ]
+        paper = {
+            "id": "J3",
+            "title": "Duration Test Paper",
+            "conference_id": "ICML"
+            # No draft_window_months set, should use default (3)
+        }
+        papers_path = tmp_path / "papers.json"
+        mods_path = tmp_path / "mods.json"
+        papers_path.write_text(json.dumps([paper]))
+        mods_path.write_text(json.dumps([]))
+        submissions = _load_submissions(
+            str(mods_path), str(papers_path), confs, 0, 60, {"default_paper_penalty_per_day": 500}
+        )
+        paper_sub = next(s for s in submissions if s.kind.value == "paper")
+        assert paper_sub.draft_window_months == 3  # Default 

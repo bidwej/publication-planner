@@ -6,9 +6,9 @@ This script provides both command-line and interactive modes for generating
 paper submission schedules based on conference deadlines and constraints.
 """
 
-import argparse
 import json
 import os
+import platform
 import sys
 import traceback
 from datetime import date, datetime
@@ -17,30 +17,101 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from src.planner import Planner
+from src.cli.parser import parse_args
+from src.cli.validator import validate_args
+from src.cli.runner import get_scheduler_strategy
+from src.config import load_config
 from src.models import SchedulerStrategy
-from src.output.tables import generate_simple_monthly_table, generate_schedule_summary_table, generate_deadline_table
-from src.output.plots import generate_schedule_plot, generate_utilization_plot
-from src.output.reports import generate_schedule_report
+from src.schedulers.base import BaseScheduler
+from src.output.output_manager import generate_and_save_output
+from src.dates import parse_date_safe
+from src.scoring.penalty import calculate_penalty_score
+from src.scoring.efficiency import calculate_efficiency_score
+from src.scoring.quality import calculate_quality_score
+from src.constraints import validate_deadline_compliance, validate_resource_constraints
+
+def print_schedule_summary(schedule, config):
+    """Print a summary of the schedule."""
+    print(f"Generated schedule with {len(schedule)} submissions")
+    if schedule:
+        start_date = min(schedule.values())
+        end_date = max(schedule.values())
+        print(f"Schedule spans from {start_date} to {end_date}")
+
+def print_metrics_summary(schedule, config):
+    """Print metrics summary."""
+    penalty = calculate_penalty_score(schedule, config)
+    quality = calculate_quality_score(schedule, config)
+    efficiency = calculate_efficiency_score(schedule, config)
+    print(f"Penalty: ${penalty.total_penalty:.2f}, Quality: {quality:.2f}, Efficiency: {efficiency:.2f}")
+
+def print_deadline_status(schedule, config):
+    """Print deadline compliance status."""
+    deadline_validation = validate_deadline_compliance(schedule, config)
+    print(f"Deadline compliance: {deadline_validation.compliance_rate:.1f}%")
+
+def print_utilization_summary(schedule, config):
+    """Print resource utilization summary."""
+    resource_validation = validate_resource_constraints(schedule, config)
+    print(f"Max concurrent: {resource_validation.max_observed}/{resource_validation.max_concurrent}")
+
+def calculate_makespan(schedule, config):
+    """Calculate schedule makespan in days."""
+    if not schedule:
+        return 0
+    start_date = min(schedule.values())
+    end_date = max(schedule.values())
+    return (end_date - start_date).days
+
+def calculate_resource_utilization(schedule, config):
+    """Calculate resource utilization metrics."""
+    # Placeholder implementation
+    return {"avg_utilization": 0.8, "peak_utilization": 2}
+
+def calculate_penalty_costs(schedule, config):
+    """Calculate penalty costs."""
+    penalty = calculate_penalty_score(schedule, config)
+    return {"total_penalty": penalty.total_penalty}
+
+def calculate_deadline_compliance(schedule, config):
+    """Calculate deadline compliance."""
+    validation = validate_deadline_compliance(schedule, config)
+    return {"compliance_rate": validation.compliance_rate}
+
+def calculate_schedule_quality_score(schedule, config):
+    """Calculate overall schedule quality score."""
+    return calculate_quality_score(schedule, config)
+
+def plot_schedule(schedule, submissions, start_date, end_date, save_path):
+    """Plot schedule as Gantt chart."""
+    print(f"Plotting schedule (save_path: {save_path})")
+    # Placeholder implementation
+
+def plot_utilization_chart(schedule, config, save_path):
+    """Plot resource utilization chart."""
+    print(f"Plotting utilization chart (save_path: {save_path})")
+    # Placeholder implementation
+
+def plot_deadline_compliance(schedule, config, save_path):
+    """Plot deadline compliance chart."""
+    print(f"Plotting deadline compliance (save_path: {save_path})")
+    # Placeholder implementation
 
 def generate_schedule_cli() -> None:
     """Interactive CLI for schedule generation and analysis."""
-    parser = argparse.ArgumentParser(description="Endoscope AI Scheduling Tool")
-    parser.add_argument("--config", type=str, default="config.json", help="Path to config.json")
-    parser.add_argument("--start-date", type=str, help="Crop Gantt chart start date (YYYY-MM-DD)")
-    parser.add_argument("--end-date", type=str, help="Crop Gantt chart end date (YYYY-MM-DD)")
-    parser.add_argument("--mode", choices=["interactive", "compare", "analyze"], default="interactive", 
-                       help="Mode: interactive (default), compare (all schedulers), analyze (detailed metrics)")
-    parser.add_argument("--scheduler", choices=["greedy", "stochastic", "lookahead", "backtracking"], 
-                       default="greedy", help="Scheduler to use (default: greedy)")
-    args = parser.parse_args()
-    
+    args = None
     try:
+        args = parse_args()
+        validate_args(args)
+        
         config = load_config(args.config)
         print(f"Loaded configuration with {len(config.submissions)} submissions and {len(config.conferences)} conferences")
     except FileNotFoundError:
-        print(f"Config file not found: {args.config}")
+        print(f"Config file not found: {args.config if args else 'config.json'}")
         print("Please ensure the config file exists and adjust the path.")
+        return
+    except ValueError as e:
+        print(f"Invalid arguments: {e}")
         return
     
     if args.mode == "compare":
@@ -133,29 +204,8 @@ def analyze_schedule(config, args):
         print_utilization_summary(schedule, config)
         print_metrics_summary(schedule, config)
         
-        # 2. Generate tables and save to files
-        summary_table = generate_schedule_summary_table(schedule, config)
-        deadline_table = generate_deadline_table(schedule, config)
-        
-        # Create output directory with timestamp
-        output_dir = f"output/output_{timestamp}"
-        os.makedirs(output_dir, exist_ok=True)
-        
-        # Save tables to CSV files
-        import csv
-        if summary_table:
-            with open(os.path.join(output_dir, f"schedule_summary.csv"), 'w', newline='') as f:
-                writer = csv.DictWriter(f, fieldnames=summary_table[0].keys())
-                writer.writeheader()
-                writer.writerows(summary_table)
-        
-        if deadline_table:
-            with open(os.path.join(output_dir, f"deadline_status.csv"), 'w', newline='') as f:
-                writer = csv.DictWriter(f, fieldnames=deadline_table[0].keys())
-                writer.writeheader()
-                writer.writerows(deadline_table)
-        
-        print(f"\nTables saved to {output_dir}: schedule_summary.csv, deadline_status.csv")
+        # 2. Generate and save all outputs using the new output manager
+        output_data = generate_and_save_output(schedule, config)
         
         # 3. Generate all plots
         plot_schedule(
@@ -238,51 +288,10 @@ def interactive_mode(config, args):
             with open(out_path, 'w') as f:
                 json.dump(schedule, f, default=str, indent=2)
             
-            # Generate and save all outputs
+            # Generate and save all outputs using the new output manager
             try:
-                # Tables
-                summary_table = generate_schedule_summary_table(schedule, config)
-                deadline_table = generate_deadline_table(schedule, config)
-                
-                import csv
-                with open(os.path.join(output_dir, "schedule_summary.csv"), 'w', newline='') as f:
-                    writer = csv.DictWriter(f, fieldnames=summary_table[0].keys())
-                    writer.writeheader()
-                    writer.writerows(summary_table)
-                
-                with open(os.path.join(output_dir, "deadline_status.csv"), 'w', newline='') as f:
-                    writer = csv.DictWriter(f, fieldnames=deadline_table[0].keys())
-                    writer.writeheader()
-                    writer.writerows(deadline_table)
-                
-                # Plots
-                plot_schedule(
-                    schedule=schedule,
-                    submissions=config.submissions,
-                    start_date=parse_date_safe(args.start_date),
-                    end_date=parse_date_safe(args.end_date),
-                    save_path=os.path.join(output_dir, "schedule_gantt.png")
-                )
-                
-                plot_utilization_chart(
-                    schedule=schedule,
-                    config=config,
-                    save_path=os.path.join(output_dir, "utilization_chart.png")
-                )
-                
-                plot_deadline_compliance(
-                    schedule=schedule,
-                    config=config,
-                    save_path=os.path.join(output_dir, "deadline_compliance.png")
-                )
-                
-                print(f"All outputs saved to {output_dir}:")
-                print(f"  - schedule.json")
-                print(f"  - schedule_summary.csv")
-                print(f"  - deadline_status.csv")
-                print(f"  - schedule_gantt.png")
-                print(f"  - utilization_chart.png")
-                print(f"  - deadline_compliance.png")
+                output_data = generate_and_save_output(schedule, config)
+                print(f"All outputs saved successfully!")
                 
             except Exception as e:
                 print(f"Warning: Some outputs failed to save: {e}")

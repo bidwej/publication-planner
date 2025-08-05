@@ -1,7 +1,7 @@
 """Greedy scheduler implementation."""
 
 from __future__ import annotations
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
 from .base import BaseScheduler
@@ -32,7 +32,7 @@ class GreedyScheduler(BaseScheduler):
             topo = self._topological_order()
             
             # Global time window
-            dates = [s.earliest_start_date for s in self.submissions.values()]
+            dates = [s.earliest_start_date for s in self.submissions.values() if s.earliest_start_date]
             for c in self.conferences.values():
                 dates.extend(c.deadlines.values())
             
@@ -78,7 +78,7 @@ class GreedyScheduler(BaseScheduler):
                     s = self.submissions[sid]
                     if not self._deps_satisfied(s, schedule, current):
                         continue
-                    if current < s.earliest_start_date:
+                    if s.earliest_start_date and current < s.earliest_start_date:
                         continue
                     ready.append(sid)
                 
@@ -146,7 +146,7 @@ class GreedyScheduler(BaseScheduler):
                 if SubmissionType.ABSTRACT in conf.deadlines:
                     deadline = conf.deadlines[SubmissionType.ABSTRACT]
                     early_start = deadline - timedelta(days=advance_days)
-                    if early_start >= sub.earliest_start_date:
+                    if sub.earliest_start_date and early_start >= sub.earliest_start_date:
                         schedule[sid] = early_start
     
     def _auto_link_abstract_paper(self) -> None:

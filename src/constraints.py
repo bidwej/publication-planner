@@ -5,19 +5,6 @@ from typing import Dict, List, Any
 from datetime import date, timedelta
 from ..models import Config, Submission, SubmissionType, DeadlineValidation, DependencyValidation, ResourceValidation, DeadlineViolation, DependencyViolation, ResourceViolation
 
-def _get_submission_end_date(start_date: date, sub: Submission, config: Config) -> date:
-    """Calculate the end date for a submission using proper duration logic."""
-    if sub.kind == SubmissionType.ABSTRACT:
-        return start_date
-    else:
-        # Use draft_window_months if available, otherwise fall back to config
-        if sub.draft_window_months > 0:
-            # Approximate months as 30 days each
-            duration_days = sub.draft_window_months * 30
-        else:
-            duration_days = config.min_paper_lead_time_days
-        return start_date + timedelta(days=duration_days)
-
 def validate_all_constraints(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
     """Validate all constraints for a schedule."""
     deadline_validation = validate_deadline_compliance(schedule, config)
@@ -229,4 +216,17 @@ def validate_resource_constraints(schedule: Dict[str, date], config: Config) -> 
         max_concurrent=max_concurrent,
         max_observed=max_observed,
         total_days=len(daily_load)
-    ) 
+    )
+
+def _get_submission_end_date(start_date: date, sub: Submission, config: Config) -> date:
+    """Calculate the end date for a submission using proper duration logic."""
+    if sub.kind == SubmissionType.ABSTRACT:
+        return start_date
+    else:
+        # Use draft_window_months if available, otherwise fall back to config
+        if sub.draft_window_months > 0:
+            # Approximate months as 30 days each
+            duration_days = sub.draft_window_months * 30
+        else:
+            duration_days = config.min_paper_lead_time_days
+        return start_date + timedelta(days=duration_days) 

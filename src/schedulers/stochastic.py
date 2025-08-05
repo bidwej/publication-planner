@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 import random
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 from datetime import date, timedelta
 from .greedy import GreedyScheduler
 from .base import BaseScheduler

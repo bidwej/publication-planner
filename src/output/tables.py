@@ -104,6 +104,9 @@ def generate_simple_monthly_table(config: Dict[str, Any]) -> List[Dict[str, Any]
     return rows
 
 def generate_schedule_summary_table(schedule: Dict[str, date], config: Config) -> List[Dict[str, str]]:
+    """Generate schedule summary table (legacy function - use output_manager instead)."""
+    from .formatters.tables import format_schedule_table
+    return format_schedule_table(schedule, config)
     """Generate a summary table of the schedule."""
     if not schedule:
         return []
@@ -163,6 +166,9 @@ def generate_schedule_summary_table(schedule: Dict[str, date], config: Config) -
     return rows
 
 def generate_deadline_table(schedule: Dict[str, date], config: Config) -> List[Dict[str, str]]:
+    """Generate deadline table (legacy function - use output_manager instead)."""
+    from .formatters.tables import format_deadline_table
+    return format_deadline_table(schedule, config)
     """Generate a table showing deadline information."""
     if not schedule:
         return []

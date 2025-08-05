@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Any
 from datetime import date
 from .models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
 from .dates import parse_date_safe
+from dateutil.relativedelta import relativedelta
 
 def load_config(config_path: str) -> Config:
     """Load the master config and all child JSON files."""
@@ -154,23 +155,39 @@ def _load_submissions(
 
     submissions: List[Submission] = []
     conf_map = {c.id: c for c in conferences}
+    conf_type_map = {c.id: c.conf_type for c in conferences}
+    conf_family_map = {}
+    for c in conferences:
+        # Build a mapping from family/type to conference IDs
+        conf_family_map.setdefault(str(c.conf_type), []).append(c.id)
 
     # Load mods as abstracts
     for mod in mods:
         mod_id = mod.get("id") or mod.get("mod_id")
         if not mod_id:
             continue
+        conf_id = mod.get("conference_id")
+        # If not set, try to map by family
+        if not conf_id and mod.get("conference_families"):
+            for fam in mod["conference_families"]:
+                if fam in conf_family_map:
+                    conf_id = conf_family_map[fam][0]  # Pick the first match
+                    break
+        # Set engineering flag based on conference type if not set
+        engineering = mod.get("engineering")
+        if engineering is None and conf_id in conf_type_map:
+            engineering = conf_type_map[conf_id] == ConferenceType.ENGINEERING
         submissions.append(
             Submission(
                 id=f"{mod_id}-wrk",
                 title=mod.get("title", f"Mod {mod_id}"),
                 kind=SubmissionType.ABSTRACT,
-                conference_id=mod.get("conference_id"),
+                conference_id=conf_id,
                 depends_on=mod.get("depends_on", []),
                 draft_window_months=mod.get("draft_window_months", 0),
                 lead_time_from_parents=mod.get("lead_time_from_parents", 0),
                 penalty_cost_per_day=penalty_costs.get("default_mod_penalty_per_day", 0.0),
-                engineering=mod.get("engineering", False),
+                engineering=engineering if engineering is not None else False,
                 earliest_start_date=parse_date_safe(mod.get("est_data_ready", "2025-01-01")),
             )
         )
@@ -180,28 +197,36 @@ def _load_submissions(
         paper_id = paper.get("id")
         if not paper_id:
             continue
-        
         # Convert mod_dependencies to new submission IDs
         mod_deps = []
         for mod_id in paper.get("mod_dependencies", []):
             mod_deps.append(f"{mod_id}-wrk")
-        
         # Convert parent_papers to new submission IDs
         parent_deps = []
         for parent_id in paper.get("parent_papers", []):
             parent_deps.append(f"{parent_id}-pap")
-        
+        conf_id = paper.get("conference_id")
+        # If not set, try to map by family
+        if not conf_id and paper.get("conference_families"):
+            for fam in paper["conference_families"]:
+                if fam in conf_family_map:
+                    conf_id = conf_family_map[fam][0]  # Pick the first match
+                    break
+        # Set engineering flag based on conference type if not set
+        engineering = paper.get("engineering")
+        if engineering is None and conf_id in conf_type_map:
+            engineering = conf_type_map[conf_id] == ConferenceType.ENGINEERING
         submissions.append(
             Submission(
                 id=f"{paper_id}-pap",
                 title=paper.get("title", f"Paper {paper_id}"),
                 kind=SubmissionType.PAPER,
-                conference_id=paper.get("conference_id"),
+                conference_id=conf_id,
                 depends_on=mod_deps + parent_deps,
                 draft_window_months=paper.get("draft_window_months", 3),
                 lead_time_from_parents=paper.get("lead_time_from_parents", 0),
                 penalty_cost_per_day=penalty_costs.get("default_paper_penalty_per_day", 0.0),
-                engineering=paper.get("engineering", False),
+                engineering=engineering if engineering is not None else False,
                 earliest_start_date=parse_date_safe(paper.get("earliest_start_date", "2025-01-01")),
             )
         )

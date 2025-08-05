@@ -2,9 +2,6 @@ import pytest
 import os
 import sys
 
-# ensure src folder on path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
-
 from planner import Planner
 from datetime import datetime
 from core.dates import parse_date_safe
