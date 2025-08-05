@@ -3,8 +3,8 @@
 from __future__ import annotations
 from typing import Dict
 from datetime import date, timedelta
-from ..models import Config, Submission, SubmissionType
-from ..constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
+from ..core.models import Config, Submission, SubmissionType
+from ..core.constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
 
 def calculate_quality_score(schedule: Dict[str, date], config: Config) -> float:
     """Calculate overall quality score (0-100) based on constraint compliance."""

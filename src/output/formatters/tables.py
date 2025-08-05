@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import Dict, List, Any, Optional
 from datetime import date, timedelta
-from ...models import Config, Submission, SubmissionType
+from ...core.models import Config, Submission, SubmissionType
 from .dates import format_date_display, format_month_year, format_relative_time, format_duration_days
 
 def format_schedule_table(schedule: Dict[str, date], config: Config) -> List[Dict[str, str]]:

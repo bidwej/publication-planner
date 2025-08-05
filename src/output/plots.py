@@ -5,7 +5,7 @@ from typing import Dict, List, Optional
 from datetime import date, timedelta
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from ..models import Submission, SubmissionType, Config
+from ..core.models import Submission, SubmissionType, Config
 
 
 def plot_schedule(

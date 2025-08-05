@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import Dict
 from datetime import date, timedelta
-from ..models import Config, Submission, SubmissionType, PenaltyBreakdown
+from ..core.models import Config, Submission, SubmissionType, PenaltyBreakdown
 
 def calculate_penalty_score(schedule: Dict[str, date], config: Config) -> PenaltyBreakdown:
     """Calculate total penalty score for the schedule."""

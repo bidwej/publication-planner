@@ -2,7 +2,7 @@
 
 from typing import Dict, Any, List
 from datetime import date, timedelta
-from ..models import Config
+from ..core.models import Config
 
 def print_schedule_summary(schedule: Dict[str, date], config: Config) -> None:
     """Print a summary of the schedule to console."""

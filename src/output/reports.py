@@ -3,8 +3,8 @@
 from __future__ import annotations
 from typing import Dict, Any
 from datetime import date
-from ..models import Config
-from ..constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
+from ..core.models import Config
+from ..core.constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
 from scoring import calculate_penalty_score
 from .analytics import analyze_timeline, analyze_resources
 

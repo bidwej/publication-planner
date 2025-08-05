@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import Dict
 from datetime import date, timedelta
-from ..models import Config, Submission, SubmissionType, EfficiencyMetrics, TimelineMetrics
+from ..core.models import Config, Submission, SubmissionType, EfficiencyMetrics, TimelineMetrics
 
 def calculate_efficiency_score(schedule: Dict[str, date], config: Config) -> float:
     """Calculate efficiency score based on resource utilization and timeline."""

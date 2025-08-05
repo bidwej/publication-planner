@@ -6,7 +6,7 @@ from typing import Dict, List, Optional, Set
 from datetime import date, timedelta
 from .greedy import GreedyScheduler
 from .base import BaseScheduler
-from ..models import Config, SchedulerStrategy
+from ..core.models import Config, SchedulerStrategy
 
 @BaseScheduler.register_strategy(SchedulerStrategy.STOCHASTIC)
 class StochasticGreedyScheduler(GreedyScheduler):

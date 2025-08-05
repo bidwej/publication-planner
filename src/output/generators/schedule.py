@@ -3,11 +3,11 @@
 from __future__ import annotations
 from typing import Dict, List, Any
 from datetime import date, datetime
-from ...models import Config, Submission
+from ...core.models import Config, Submission
 from ...scoring.penalty import calculate_penalty_score
 from ...scoring.quality import calculate_quality_score
 from ...scoring.efficiency import calculate_efficiency_score
-from ...constraints import validate_deadline_compliance, validate_resource_constraints
+from ...core.constraints import validate_deadline_compliance, validate_resource_constraints
 
 def generate_schedule_summary(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
     """Generate a comprehensive schedule summary."""

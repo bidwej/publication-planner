@@ -3,7 +3,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Dict, Type
-from ..models import Config, Submission, SchedulerStrategy
+from ..core.models import Config, Submission, SchedulerStrategy
 from datetime import date, timedelta
 
 class BaseScheduler(ABC):
@@ -33,7 +33,7 @@ class BaseScheduler(ABC):
         """Validate that a schedule meets all constraints."""
         # This method is deprecated. Use constraints module instead.
         # Import here to avoid circular imports
-        from ..constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
+        from ..core.constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
         
         deadline_validation = validate_deadline_compliance(schedule, self.config)
         dependency_validation = validate_dependency_satisfaction(schedule, self.config)

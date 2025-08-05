@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import Dict, List, Any
 from datetime import date, timedelta
-from ..models import Config, Submission, SubmissionType, DeadlineValidation, DependencyValidation, ResourceValidation, DeadlineViolation, DependencyViolation, ResourceViolation
+from .models import Config, Submission, SubmissionType, DeadlineValidation, DependencyValidation, ResourceValidation, DeadlineViolation, DependencyViolation, ResourceViolation
 
 def validate_deadline_compliance(schedule: Dict[str, date], config: Config) -> DeadlineValidation:
     """Validate that all submissions meet their deadlines."""

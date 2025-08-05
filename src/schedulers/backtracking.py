@@ -5,8 +5,8 @@ from typing import Dict, List, Optional, Set
 from datetime import date, timedelta
 from .greedy import GreedyScheduler
 from .base import BaseScheduler
-from ..models import Config, SubmissionType, Submission, SchedulerStrategy
-from ..dates import is_working_day
+from ..core.models import Config, SubmissionType, Submission, SchedulerStrategy
+from ..core.dates import is_working_day
 @BaseScheduler.register_strategy(SchedulerStrategy.BACKTRACKING)
 class BacktrackingGreedyScheduler(GreedyScheduler):
     """Backtracking greedy scheduler that can undo decisions when stuck."""
