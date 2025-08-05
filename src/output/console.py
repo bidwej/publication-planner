@@ -1,7 +1,8 @@
-from __future__ import annotations
-from typing import Dict, List, Any
+"""Console output formatting for schedules."""
+
+from typing import Dict, Any, List
 from datetime import date, timedelta
-from core.types import Config
+from ..models import Config
 
 def print_schedule_summary(schedule: Dict[str, date], config: Config) -> None:
     """Print a summary of the schedule to console."""

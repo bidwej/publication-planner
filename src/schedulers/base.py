@@ -1,8 +1,10 @@
+"""Base scheduler class and strategy registry."""
+
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Dict, List, Type
+from typing import Dict, Type
+from ..models import Config, Submission, SchedulerStrategy
 from datetime import date, timedelta
-from core.types import Config, Submission, SchedulerStrategy
 
 class BaseScheduler(ABC):
     """Abstract base class for all schedulers."""
@@ -46,28 +48,14 @@ class BaseScheduler(ABC):
     
     def validate_schedule(self, schedule: Dict[str, date]) -> bool:
         """Validate that a schedule meets all constraints."""
-        # Check that all submissions are scheduled
-        if len(schedule) != len(self.submissions):
-            return False
+        # This method is deprecated. Use constraints module instead.
+        # Import here to avoid circular imports
+        from ..constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
         
-        # Check dependencies
-        for sid, start_date in schedule.items():
-            sub = self.submissions[sid]
-            for dep_id in sub.depends_on:
-                if dep_id not in schedule:
-                    return False
-                dep_start = schedule[dep_id]
-                dep_sub = self.submissions[dep_id]
-                
-                # Calculate dependency end date
-                if dep_sub.kind.value == "PAPER":
-                    dep_duration = self.config.min_paper_lead_time_days
-                else:
-                    dep_duration = 0
-                dep_end = dep_start + timedelta(days=dep_duration)
-                
-                # Submission should start after dependency ends
-                if start_date <= dep_end:
-                    return False
+        deadline_validation = validate_deadline_compliance(schedule, self.config)
+        dependency_validation = validate_dependency_satisfaction(schedule, self.config)
+        resource_validation = validate_resource_constraints(schedule, self.config)
         
-        return True 
+        return (deadline_validation.is_valid and 
+                dependency_validation.is_valid and 
+                resource_validation.is_valid) 

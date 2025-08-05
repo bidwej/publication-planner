@@ -1,10 +1,12 @@
+"""Greedy scheduler implementation."""
+
 from __future__ import annotations
+from typing import Dict, List, Optional
 from datetime import date, timedelta
-from typing import Dict, List, Optional, Set
 from dateutil.relativedelta import relativedelta
 from .base import BaseScheduler
-from core.types import Config, Submission, SubmissionType, SchedulerStrategy
-from core.dates import is_working_day
+from ..models import Config, Submission, SubmissionType, SchedulerStrategy
+from ..dates import is_working_day
 
 @BaseScheduler.register_strategy(SchedulerStrategy.GREEDY)
 class GreedyScheduler(BaseScheduler):

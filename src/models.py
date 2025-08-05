@@ -26,14 +26,36 @@ class Submission:
     title: str
     kind: SubmissionType
     conference_id: str
-    depends_on: List[str]
+    depends_on: Optional[List[str]] = None
+    draft_window_months: int = 3
+    lead_time_from_parents: int = 0
     penalty_cost_per_day: Optional[float] = None
+    engineering: bool = False
+    earliest_start_date: Optional[date] = None
+    
+    def __post_init__(self):
+        if self.depends_on is None:
+            self.depends_on = []
+
+class ConferenceType(str, Enum):
+    """Types of conferences."""
+    MEDICAL = "MEDICAL"
+    ENGINEERING = "ENGINEERING"
+    GENERAL = "GENERAL"
+
+class ConferenceRecurrence(str, Enum):
+    """Conference recurrence patterns."""
+    ANNUAL = "annual"
+    BIENNIAL = "biennial"
+    QUARTERLY = "quarterly"
 
 @dataclass
 class Conference:
     """A conference with deadlines."""
     id: str
     name: str
+    conf_type: ConferenceType
+    recurrence: ConferenceRecurrence
     deadlines: Dict[SubmissionType, date]
 
 @dataclass
@@ -41,9 +63,15 @@ class Config:
     """Configuration for the scheduler."""
     submissions: List[Submission]
     conferences: List[Conference]
+    min_abstract_lead_time_days: int
     min_paper_lead_time_days: int
     max_concurrent_submissions: int
+    default_paper_lead_time_months: int = 3
     penalty_costs: Optional[Dict[str, float]] = None
+    priority_weights: Optional[Dict[str, float]] = None
+    scheduling_options: Optional[Dict[str, Any]] = None
+    blackout_dates: Optional[List[date]] = None
+    data_files: Optional[Dict[str, str]] = None
     
     # Computed properties
     @property
@@ -139,6 +167,14 @@ class TimelineMetrics:
     avg_daily_load: float
     timeline_efficiency: float
 
+# ===== UNIFIED ANALYTICS BASE CLASS =====
+
+@dataclass
+class AnalyticsResult:
+    """Base class for all analytics results."""
+    summary: str
+    metadata: Optional[Dict[str, Any]] = None
+
 @dataclass
 class ScheduleAnalysis:
     """Analysis of schedule completeness."""
@@ -146,6 +182,7 @@ class ScheduleAnalysis:
     total_count: int
     completion_rate: float
     missing_submissions: List[Dict[str, Any]]
+    summary: str
 
 @dataclass
 class ScheduleDistribution:
@@ -153,9 +190,28 @@ class ScheduleDistribution:
     monthly_distribution: Dict[str, int]
     quarterly_distribution: Dict[str, int]
     yearly_distribution: Dict[str, int]
+    summary: str
 
 @dataclass
 class SubmissionTypeAnalysis:
     """Analysis of submission types."""
     type_counts: Dict[str, int]
-    type_percentages: Dict[str, float] 
+    type_percentages: Dict[str, float]
+    summary: str
+
+@dataclass
+class TimelineAnalysis:
+    """Timeline analysis results."""
+    start_date: Optional[date]
+    end_date: Optional[date]
+    duration_days: int
+    avg_submissions_per_month: float
+    summary: str
+
+@dataclass
+class ResourceAnalysis:
+    """Resource analysis results."""
+    peak_load: int
+    avg_load: float
+    utilization_pattern: Dict[date, int]
+    summary: str 

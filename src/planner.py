@@ -1,10 +1,13 @@
+"""Main planner facade for the paper planning system."""
+
+from __future__ import annotations
 import json
 import os
-from typing import Dict, Any, List
+from typing import Dict, Optional, Any, List
 from datetime import date
-from core.config import load_config
-from core.types import Config, SchedulerStrategy
-from schedulers.base import BaseScheduler
+from .models import Config, SchedulerStrategy
+from .config import load_config
+from .schedulers.base import BaseScheduler
 from output.tables import generate_simple_monthly_table
 
 

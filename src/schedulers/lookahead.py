@@ -1,10 +1,13 @@
+"""Lookahead greedy scheduler implementation."""
+
 from __future__ import annotations
-from typing import Dict, List
+from typing import Dict, List, Optional
 from datetime import date, timedelta
 from .greedy import GreedyScheduler
-from core.types import Config, SubmissionType, Submission, SchedulerStrategy
+from .base import BaseScheduler
+from ..models import Config, SubmissionType, Submission, SchedulerStrategy
 
-@GreedyScheduler.register_strategy(SchedulerStrategy.LOOKAHEAD)
+@BaseScheduler.register_strategy(SchedulerStrategy.LOOKAHEAD)
 class LookaheadGreedyScheduler(GreedyScheduler):
     """Lookahead greedy scheduler that considers future implications of decisions."""
     

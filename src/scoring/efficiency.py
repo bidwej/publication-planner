@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import Dict
 from datetime import date, timedelta
-from core.types import Config, Submission, SubmissionType
+from ..models import Config, Submission, SubmissionType, EfficiencyMetrics, TimelineMetrics
 
 def calculate_efficiency_score(schedule: Dict[str, date], config: Config) -> float:
     """Calculate efficiency score based on resource utilization and timeline."""
@@ -47,15 +47,15 @@ def calculate_efficiency_score(schedule: Dict[str, date], config: Config) -> flo
     
     return min(100.0, max(0.0, efficiency_score))
 
-def calculate_resource_efficiency(schedule: Dict[str, date], config: Config) -> Dict[str, float]:
+def calculate_resource_efficiency(schedule: Dict[str, date], config: Config) -> EfficiencyMetrics:
     """Calculate detailed resource efficiency metrics."""
     if not schedule:
-        return {
-            "utilization_rate": 0.0,
-            "peak_utilization": 0,
-            "avg_utilization": 0.0,
-            "efficiency_score": 0.0
-        }
+        return EfficiencyMetrics(
+            utilization_rate=0.0,
+            peak_utilization=0,
+            avg_utilization=0.0,
+            efficiency_score=0.0
+        )
     
     daily_load = {}
     max_concurrent = config.max_concurrent_submissions
@@ -76,12 +76,12 @@ def calculate_resource_efficiency(schedule: Dict[str, date], config: Config) -> 
             daily_load[day] = daily_load.get(day, 0) + 1
     
     if not daily_load:
-        return {
-            "utilization_rate": 0.0,
-            "peak_utilization": 0,
-            "avg_utilization": 0.0,
-            "efficiency_score": 0.0
-        }
+        return EfficiencyMetrics(
+            utilization_rate=0.0,
+            peak_utilization=0,
+            avg_utilization=0.0,
+            efficiency_score=0.0
+        )
     
     # Calculate metrics
     total_load = sum(daily_load.values())
@@ -95,21 +95,21 @@ def calculate_resource_efficiency(schedule: Dict[str, date], config: Config) -> 
     utilization_penalty = abs(utilization_rate - target_utilization) / target_utilization * 100
     efficiency_score = max(0, 100 - utilization_penalty)
     
-    return {
-        "utilization_rate": utilization_rate,
-        "peak_utilization": peak_utilization,
-        "avg_utilization": avg_utilization,
-        "efficiency_score": efficiency_score
-    }
+    return EfficiencyMetrics(
+        utilization_rate=utilization_rate,
+        peak_utilization=peak_utilization,
+        avg_utilization=avg_utilization,
+        efficiency_score=efficiency_score
+    )
 
-def calculate_timeline_efficiency(schedule: Dict[str, date], config: Config) -> Dict[str, float]:
+def calculate_timeline_efficiency(schedule: Dict[str, date], config: Config) -> TimelineMetrics:
     """Calculate timeline efficiency metrics."""
     if not schedule:
-        return {
-            "duration_days": 0,
-            "avg_daily_load": 0.0,
-            "timeline_efficiency": 0.0
-        }
+        return TimelineMetrics(
+            duration_days=0,
+            avg_daily_load=0.0,
+            timeline_efficiency=0.0
+        )
     
     # Calculate timeline metrics
     dates = list(schedule.values())
@@ -138,8 +138,8 @@ def calculate_timeline_efficiency(schedule: Dict[str, date], config: Config) -> 
     optimal_duration = total_submissions * 30  # Assume 30 days per submission
     timeline_efficiency = max(0, 100 - abs(duration_days - optimal_duration) / optimal_duration * 100) if optimal_duration > 0 else 100
     
-    return {
-        "duration_days": duration_days,
-        "avg_daily_load": avg_daily_load,
-        "timeline_efficiency": timeline_efficiency
-    } 
+    return TimelineMetrics(
+        duration_days=duration_days,
+        avg_daily_load=avg_daily_load,
+        timeline_efficiency=timeline_efficiency
+    ) 

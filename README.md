@@ -16,8 +16,10 @@ The system ensures regulatory compliance while optimizing for early completion, 
 
 ### **Modular Architecture**
 - **Core**: Data structures, configuration management, and centralized date utilities
+- **Constraints**: Validation logic for schedulers to ensure schedule feasibility
+- **Scoring**: Independent scoring functions for quality, penalty, and efficiency evaluation
 - **Schedulers**: Multiple scheduling algorithms (Greedy, Stochastic, Lookahead, Backtracking)
-- **Metrics**: Comprehensive schedule analysis (Makespan, Utilization, Penalties, Deadlines, Quality)
+- **Analytics**: Comprehensive schedule analysis and insights
 - **Output**: Rich visualization and reporting (Tables, Plots, Console)
 
 ### **Advanced Scheduling Algorithms**
@@ -26,13 +28,11 @@ The system ensures regulatory compliance while optimizing for early completion, 
 - **LookaheadGreedyScheduler**: Considers future implications and dependencies (30-day lookahead)
 - **BacktrackingGreedyScheduler**: Can undo decisions when stuck
 
-### **Comprehensive Metrics**
-- **Makespan Analysis**: Total duration, parallel makespan, breakdowns
-- **Resource Utilization**: Peak periods, idle time, efficiency analysis
-- **Penalty Calculations**: Deadline violations, dependency costs, earliness bonuses
-- **Deadline Compliance**: Risk assessment, margin analysis, violation tracking
-- **Quality Metrics**: Front-loading, slack distribution, workload balance
-- **Solution Quality Metrics**: Critical path analysis and slack calculation
+### **Comprehensive Analysis**
+- **Constraints**: Deadline compliance, dependency satisfaction, resource constraints
+- **Scoring**: Independent quality, penalty, and efficiency scores
+- **Analytics**: Schedule completeness, distribution analysis, timeline insights
+- **Reports**: Comprehensive schedule reports with unified summaries
 
 ### **Rich Output Options**
 - **Tables**: Summary tables, deadline tables, monthly views
@@ -53,36 +53,39 @@ The system ensures regulatory compliance while optimizing for early completion, 
 
 ```
 src/
+├── models.py              # Data structures (Config, Submission, Conference, Analytics)
+├── config.py              # Configuration loading
+├── dates.py               # Date utilities and parsing
 ├── core/
 │   ├── __init__.py
-│   ├── types.py          # Data structures (Config, Submission, Conference)
-│   ├── config.py         # Configuration loading
-│   └── dates.py          # Centralized date parsing and utilities
+│   └── constraints.py     # Constraint validation for schedulers
 ├── schedulers/
 │   ├── __init__.py
-│   ├── base.py           # Abstract base scheduler
-│   ├── greedy.py         # Basic greedy scheduler
+│   ├── base.py           # Abstract base scheduler with strategy registry
+│   ├── greedy.py         # Greedy scheduler
 │   ├── stochastic.py     # Stochastic greedy with randomness
 │   ├── lookahead.py      # Lookahead greedy with future consideration
 │   └── backtracking.py   # Backtracking greedy with undo capability
-├── metrics/
+├── scoring/
 │   ├── __init__.py
-│   ├── makespan.py       # Makespan calculations
-│   ├── utilization.py    # Resource utilization metrics
-│   ├── penalties.py      # Penalty cost calculations
-│   ├── deadlines.py      # Deadline compliance metrics
-│   └── quality.py        # Quality metrics (front-loading, slack, etc.)
+│   ├── penalty.py        # Penalty cost calculations
+│   ├── quality.py        # Quality scoring based on constraint compliance
+│   └── efficiency.py     # Efficiency metrics and resource utilization
 ├── output/
 │   ├── __init__.py
+│   ├── analytics.py      # Schedule analysis and insights
+│   ├── reports.py        # Comprehensive schedule reports
 │   ├── tables.py         # Table generation
 │   ├── plots.py          # Plot generation
 │   └── console.py        # Console output formatting
 └── planner.py            # Simple facade for backward compatibility
 ```
 
-### **Modular Architecture Benefits**
-- **Separation of Concerns**: Each module has a specific responsibility
-- **Extensibility**: Easy to add new schedulers, metrics, or output formats
+### **Architecture Benefits**
+- **Clear Separation**: Constraints vs Scoring vs Analytics vs Reports
+- **Independent Scoring**: Quality, penalty, and efficiency are independent
+- **Unified Analytics**: All analytics return structured dataclasses with consistent interfaces
+- **Extensibility**: Easy to add new schedulers, scoring functions, or analytics
 - **Testability**: Each component can be tested independently
 - **Maintainability**: Clear boundaries between different system components
 
@@ -106,67 +109,118 @@ src/
 
 ## 📖 Quick Start
 
-### Basic Usage
-
 ```python
-from core.config import load_config
-from schedulers.greedy import GreedyScheduler
-from output.console import print_schedule_summary
+from src.planner import Planner
+from src.core.constraints import validate_deadline_compliance
+from src.scoring import calculate_penalty_score
+from src.output.analytics import analyze_schedule_completeness
+from src.output.reports import generate_schedule_report
 
 # Load configuration
-config = load_config("config.json")
-
-# Create scheduler
-scheduler = GreedyScheduler(config)
+planner = Planner("config.json")
 
 # Generate schedule
-schedule = scheduler.schedule()
+schedule = planner.generate_schedule("greedy")
 
-# Print summary
-print_schedule_summary(schedule, config)
+# Validate constraints
+deadline_validation = validate_deadline_compliance(schedule, planner.config)
+
+# Calculate scores
+penalty_breakdown = calculate_penalty_score(schedule, planner.config)
+
+# Analyze schedule
+completeness = analyze_schedule_completeness(schedule, planner.config)
+
+# Generate comprehensive report
+report = generate_schedule_report(schedule, planner.config)
+```
+
+### Constraint Validation
+
+```python
+from src.core.constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
+
+# Validate constraints
+deadline_check = validate_deadline_compliance(schedule, config)
+dependency_check = validate_dependency_satisfaction(schedule, config)
+resource_check = validate_resource_constraints(schedule, config)
+
+print(f"Deadline compliance: {deadline_check.compliance_rate:.1f}%")
+print(f"Dependency satisfaction: {dependency_check.satisfaction_rate:.1f}%")
+print(f"Resource constraints: {'Valid' if resource_check.is_valid else 'Invalid'}")
+```
+
+### Independent Scoring
+
+```python
+from src.scoring import calculate_penalty_score, calculate_quality_score, calculate_efficiency_score
+
+# Calculate independent scores
+penalty_breakdown = calculate_penalty_score(schedule, config)
+quality_score = calculate_quality_score(schedule, config)  # Based on constraint compliance
+efficiency_score = calculate_efficiency_score(schedule, config)
+
+print(f"Penalty score: ${penalty_breakdown.total_penalty:.2f}")
+print(f"Quality score: {quality_score:.1f}/100")
+print(f"Efficiency score: {efficiency_score:.1f}/100")
+```
+
+### Analytics and Insights
+
+```python
+from src.output.analytics import analyze_schedule_completeness, analyze_timeline, analyze_resources
+
+# Get analytics (returns dataclasses with unified summary field)
+completeness = analyze_schedule_completeness(schedule, config)
+timeline = analyze_timeline(schedule, config)
+resources = analyze_resources(schedule, config)
+
+# Access unified summary field
+print(completeness.summary)  # "Scheduled 5/10 submissions (50.0% complete)"
+print(timeline.summary)      # "Timeline: 120 days, 2.5 submissions/month"
+print(resources.summary)     # "Resource usage: peak 3, avg 1.2 submissions/day"
+```
+
+### Comprehensive Reports
+
+```python
+from src.output.reports import generate_schedule_report
+
+# Generate comprehensive report
+report = generate_schedule_report(schedule, config)
+
+print(f"Schedule feasibility: {report['summary']['is_feasible']}")
+print(f"Total violations: {report['summary']['total_violations']}")
+print(f"Overall score: {report['summary']['overall_score']:.1f}/100")
 ```
 
 ### Comparing Multiple Schedulers
 
 ```python
-from schedulers.greedy import GreedyScheduler
-from schedulers.stochastic import StochasticGreedyScheduler
-from schedulers.lookahead import LookaheadGreedyScheduler
-from metrics.quality import calculate_schedule_quality_score
+from src.schedulers.base import BaseScheduler
+from src.models import SchedulerStrategy
+from src.scoring import calculate_penalty_score
+from src.scoring.quality import calculate_quality_score
+from src.scoring.efficiency import calculate_efficiency_score
 
-# Test different schedulers
-schedulers = {
-    "Greedy": GreedyScheduler(config),
-    "Stochastic": StochasticGreedyScheduler(config),
-    "Lookahead": LookaheadGreedyScheduler(config)
-}
+# Load configuration
+config = load_config("config.json")
 
-results = {}
-for name, scheduler in schedulers.items():
-    schedule = scheduler.schedule()
-    quality = calculate_schedule_quality_score(schedule, config)
-    results[name] = quality
-    print(f"{name}: Quality Score = {quality:.3f}")
+# Compare all strategies
+strategies = [SchedulerStrategy.GREEDY, SchedulerStrategy.STOCHASTIC, 
+              SchedulerStrategy.LOOKAHEAD, SchedulerStrategy.BACKTRACKING]
 
-best_scheduler = max(results, key=results.get)
-print(f"Best scheduler: {best_scheduler}")
-```
-
-### Generating Rich Output
-
-```python
-from output.tables import generate_schedule_summary_table
-from output.plots import plot_schedule
-from output.console import print_metrics_summary
-
-# Generate tables
-summary_table = generate_schedule_summary_table(schedule, config)
-
-# Generate plots
-plot_schedule(schedule, config.submissions, save_path="schedule.png")
-
-# Print comprehensive metrics
-print_metrics_summary(schedule, config)
+for strategy in strategies:
+    scheduler = BaseScheduler.create_scheduler(strategy, config)
+    schedule = scheduler.generate_schedule()
+    
+    # Calculate all three scores
+    penalty = calculate_penalty_score(schedule, config)
+    quality = calculate_quality_score(schedule, config)
+    efficiency = calculate_efficiency_score(schedule, config)
+    
+    print(f"{strategy.value}: penalty={penalty.total_penalty:.2f}, "
+          f"quality={quality:.2f}, efficiency={efficiency:.2f}")
 ```
 
 ### Command Line Interface
@@ -273,7 +327,7 @@ python generate_schedule.py --config custom_config.json --start-date 2025-01-01 
 ### Custom Scheduler Configuration
 
 ```python
-from schedulers.stochastic import StochasticGreedyScheduler
+from src.schedulers.stochastic import StochasticGreedyScheduler
 
 # Configure stochastic scheduler with custom randomness
 scheduler = StochasticGreedyScheduler(
@@ -282,39 +336,44 @@ scheduler = StochasticGreedyScheduler(
 )
 ```
 
-### Detailed Metrics Analysis
+### Detailed Analytics Analysis
 
 ```python
-from metrics.makespan import calculate_makespan, get_makespan_breakdown
-from metrics.utilization import calculate_resource_utilization
-from metrics.penalties import calculate_penalty_costs
-from metrics.deadlines import calculate_deadline_compliance
-from metrics.quality import calculate_schedule_quality_score
+from src.output.analytics import (
+    analyze_schedule_completeness,
+    analyze_schedule_distribution,
+    analyze_submission_types,
+    analyze_timeline,
+    analyze_resources
+)
 
 # Comprehensive analysis
-makespan = calculate_makespan(schedule, config)
-utilization = calculate_resource_utilization(schedule, config)
-penalties = calculate_penalty_costs(schedule, config)
-compliance = calculate_deadline_compliance(schedule, config)
-quality = calculate_schedule_quality_score(schedule, config)
+completeness = analyze_schedule_completeness(schedule, config)
+distribution = analyze_schedule_distribution(schedule, config)
+types_analysis = analyze_submission_types(schedule, config)
+timeline = analyze_timeline(schedule, config)
+resources = analyze_resources(schedule, config)
 
-print(f"Makespan: {makespan} days")
-print(f"Avg Utilization: {utilization['avg_utilization']:.1%}")
-print(f"Total Penalties: ${penalties['total_penalty']:.2f}")
-print(f"Deadline Compliance: {compliance['compliance_rate']:.1f}%")
-print(f"Quality Score: {quality:.3f}")
+print(f"Completeness: {completeness.summary}")
+print(f"Distribution: {distribution.summary}")
+print(f"Types: {types_analysis.summary}")
+print(f"Timeline: {timeline.summary}")
+print(f"Resources: {resources.summary}")
 ```
 
 ### Backward Compatibility
 
-The system maintains backward compatibility through the `planner.py` facade:
+The old `Planner` class still works:
 
 ```python
-from planner import Planner
+from src.planner import Planner
 
-# Old-style usage still works
 planner = Planner("config.json")
-mod_sched, paper_sched = planner.schedule("greedy")
+schedule = planner.generate_schedule("greedy")
+
+# Old methods still work
+table = planner.generate_monthly_table()
+print(table)
 ```
 
 ## 📊 Performance Characteristics
@@ -344,7 +403,8 @@ python -m pytest tests/ -v
 - **Unit Tests**: 92 comprehensive tests across all modules
 - **Core Module Tests**: Date utilities, configuration loading, data parsing
 - **Scheduler Tests**: All scheduling algorithms (Greedy, Stochastic, Lookahead, Backtracking)
-- **Metrics Tests**: Makespan, utilization, penalties, deadlines, quality calculations
+- **Scoring Tests**: Quality, penalty, and efficiency calculations
+- **Analytics Tests**: Schedule analysis and insights
 - **Edge Cases**: Biennial conferences, concurrency limits, parent-child relationships
 - **Integration Tests**: Full workflow validation
 - **Backward Compatibility**: Legacy interface testing
@@ -353,20 +413,21 @@ python -m pytest tests/ -v
 ```
 tests/
 ├── conftest.py              # Shared fixtures and test configuration
-├── data/                    # Isolated test data files
-│   ├── config.json         # Test configuration
-│   ├── conferences.json    # Test conference data
-│   ├── mods.json          # Test modification data
-│   ├── papers.json        # Test paper data
-│   └── blackout.json      # Test blackout dates
+├── common/                  # Common test data and configurations
+│   ├── data/               # Isolated test data files
+│   └── tests_config.json   # Test configuration
 ├── core/                   # Core module tests
 │   ├── test_dates.py      # Date utility tests (26 tests)
 │   └── test_config.py     # Configuration loading tests (15 tests)
 ├── schedulers/             # Scheduler algorithm tests
 │   └── test_greedy.py     # Greedy scheduler tests (25 tests)
-├── metrics/                # Metrics calculation tests
-│   └── test_makespan.py   # Makespan calculation tests (26 tests)
-├── output/                 # Output module tests (planned)
+├── scoring/                # Scoring function tests
+│   ├── test_penalty.py    # Penalty calculation tests
+│   ├── test_quality.py    # Quality scoring tests
+│   └── test_efficiency.py # Efficiency calculation tests
+├── output/                 # Output module tests
+│   ├── test_analytics.py  # Analytics function tests
+│   └── test_reports.py    # Report generation tests
 ├── test_edge_cases.py      # Edge case validation (6 tests)
 └── test_planner.py         # Legacy planner tests (3 tests)
 ```
@@ -375,7 +436,8 @@ tests/
 - **Date Utilities**: 26 tests covering all date parsing and calculation functions
 - **Configuration Loading**: 15 tests for config file parsing and validation
 - **Scheduler Algorithms**: 25 tests for greedy scheduler functionality
-- **Metrics Calculations**: 26 tests for makespan and performance metrics
+- **Scoring Functions**: Tests for quality, penalty, and efficiency calculations
+- **Analytics Functions**: Tests for schedule analysis and insights
 - **Edge Cases**: 6 tests for boundary conditions and error handling
 - **Legacy Integration**: 3 tests for backward compatibility
 
@@ -388,36 +450,126 @@ tests/
 - **Performance Benchmarks**: Runtime, memory usage, and quality metrics
 - **Isolated Test Data**: Separate test data prevents interference with production data
 
-## 🔍 Metrics Explained
+## 🔍 Architecture Deep Dive
 
-### Makespan Analysis
-- **Total Duration**: Complete schedule timeline
-- **Parallel Makespan**: Optimal parallel execution time
-- **Breakdown**: Detailed time allocation per submission type
+### **Constraints** (`src/core/constraints.py`)
+Validates that schedules meet business rules and requirements. Used by schedulers to ensure feasibility.
 
-### Resource Utilization
-- **Average Utilization**: Overall resource efficiency
-- **Peak Periods**: High-activity time windows
-- **Idle Time**: Underutilized periods
-- **Efficiency**: Resource optimization metrics
+- `validate_deadline_compliance()` - Validates deadline adherence
+- `validate_dependency_satisfaction()` - Validates dependency relationships  
+- `validate_resource_constraints()` - Validates concurrency limits
 
-### Penalty Calculations
-- **Deadline Violations**: Late submission costs
-- **Dependency Costs**: Violation of dependency constraints
-- **Earliness Bonuses**: Rewards for early completion
-- **Total Penalty**: Comprehensive cost assessment
+**Returns**: Dataclasses (`DeadlineValidation`, `DependencyValidation`, `ResourceValidation`)
 
-### Deadline Compliance
-- **Compliance Rate**: Percentage of on-time submissions
-- **Risk Assessment**: Probability of deadline violations
-- **Margin Analysis**: Buffer time before deadlines
-- **Violation Tracking**: Detailed late submission analysis
+### **Scoring** (`src/scoring/`)
+Calculates numerical scores for schedule evaluation. Each scoring function is independent.
 
-### Quality Metrics
-- **Front-loading Score**: Early work distribution
-- **Slack Distribution**: Buffer time allocation
-- **Workload Balance**: Even resource distribution
-- **Dependency Satisfaction**: Constraint compliance
+- `scoring/penalty.py` - Calculates penalty costs for violations
+- `scoring/quality.py` - Calculates quality based on constraint compliance
+- `scoring/efficiency.py` - Calculates efficiency metrics and resource utilization
+
+**Returns**: Dataclasses (`PenaltyBreakdown`, `EfficiencyMetrics`, `TimelineMetrics`) or floats (0-100 scores)
+
+### **Analytics** (`src/output/analytics.py`)
+Provides detailed insights and breakdowns for reporting.
+
+- `analyze_schedule_completeness()` - Schedule completeness analysis
+- `analyze_schedule_distribution()` - Time distribution analysis
+- `analyze_submission_types()` - Submission type breakdown
+- `analyze_timeline()` - Timeline characteristics
+- `analyze_resources()` - Resource utilization patterns
+
+**Returns**: Dataclasses (`ScheduleAnalysis`, `ScheduleDistribution`, `SubmissionTypeAnalysis`, `TimelineAnalysis`, `ResourceAnalysis`)
+
+### **Reports** (`src/output/`)
+Generates formatted reports and summaries.
+
+- `reports.py` - Comprehensive schedule reports
+- `tables.py` - Tabular output generation
+- `console.py` - Console output formatting
+
+## 📚 API Reference
+
+### Core Classes
+
+#### Config
+```python
+@dataclass
+class Config:
+    min_abstract_lead_time_days: int
+    min_paper_lead_time_days: int
+    max_concurrent_submissions: int
+    default_paper_lead_time_months: int
+    conferences: List[Conference]
+    submissions: List[Submission]
+    data_files: Dict[str, str]
+    priority_weights: Optional[Dict[str, float]]
+    penalty_costs: Optional[Dict[str, float]]
+    scheduling_options: Optional[Dict[str, Any]]
+    blackout_dates: Optional[List[date]]
+```
+
+#### Submission
+```python
+@dataclass
+class Submission:
+    id: str
+    kind: SubmissionType  # ABSTRACT or PAPER
+    title: str
+    earliest_start_date: date
+    conference_id: Optional[str]
+    engineering: bool
+    depends_on: List[str]
+    penalty_cost_per_day: float
+    lead_time_from_parents: int
+    draft_window_months: int
+```
+
+### Scheduler Interface
+
+```python
+class BaseScheduler(ABC):
+    def schedule(self) -> Dict[str, date]:
+        """Generate a schedule for all submissions."""
+        pass
+    
+    def validate_schedule(self, schedule: Dict[str, date]) -> bool:
+        """Validate that a schedule meets all constraints."""
+        pass
+    
+    def get_schedule_metrics(self, schedule: Dict[str, date]) -> Dict[str, float]:
+        """Calculate metrics for a given schedule."""
+        pass
+```
+
+### Constraint Functions
+
+```python
+# Constraints
+validate_deadline_compliance(schedule: Dict[str, date], config: Config) -> DeadlineValidation
+validate_dependency_satisfaction(schedule: Dict[str, date], config: Config) -> DependencyValidation
+validate_resource_constraints(schedule: Dict[str, date], config: Config) -> ResourceValidation
+```
+
+### Scoring Functions
+
+```python
+# Scoring
+calculate_penalty_score(schedule: Dict[str, date], config: Config) -> PenaltyBreakdown
+calculate_quality_score(schedule: Dict[str, date], config: Config) -> float
+calculate_efficiency_score(schedule: Dict[str, date], config: Config) -> float
+```
+
+### Analytics Functions
+
+```python
+# Analytics
+analyze_schedule_completeness(schedule: Dict[str, date], config: Config) -> ScheduleAnalysis
+analyze_schedule_distribution(schedule: Dict[str, date], config: Config) -> ScheduleDistribution
+analyze_submission_types(schedule: Dict[str, date], config: Config) -> SubmissionTypeAnalysis
+analyze_timeline(schedule: Dict[str, date], config: Config) -> TimelineAnalysis
+analyze_resources(schedule: Dict[str, date], config: Config) -> ResourceAnalysis
+```
 
 ## 🎯 Use Cases
 
@@ -569,6 +721,7 @@ SlackCost_j = P_j(S_j - S_j,earliest) + Y_j(1_year-deferred) + A_j(1_abstract-mi
 - **Advanced Algorithms**: Stochastic exploration, 30-day lookahead, backtracking capability
 - **Critical Path Analysis**: Slack calculation and zero-slack critical item identification
 - **Comprehensive Metrics**: Makespan, utilization, deadline compliance, quality scores
+- **Unified Architecture**: Clear separation of constraints, scoring, analytics, and reports
 
 #### 🔄 Medium Priority - Algorithm Enhancements
 - **Conference Flexibility**: Dynamic reassignment near deadlines with alternate conference tracking
@@ -644,102 +797,6 @@ Major conferences with strict deadlines:
 | NeurIPS | AI/ML | Yes | Yes | December |
 
 **Note**: ICCV runs biennially (odd-numbered years only). All other conferences repeat annually.
-
-## 📚 API Reference
-
-### Date Utilities (`core.dates`)
-
-The system provides centralized date parsing and utility functions:
-
-```python
-from core.dates import parse_date, parse_date_safe, is_working_day, add_working_days
-
-# Parse dates safely
-date_obj = parse_date_safe("2025-01-15")  # Returns date object
-date_obj = parse_date_safe("invalid", default=date(2025, 1, 1))  # Returns default on error
-
-# Check working days
-is_workday = is_working_day(date(2025, 1, 15), blackout_dates)
-
-# Add working days (skipping weekends/holidays)
-end_date = add_working_days(start_date, 60, blackout_dates)
-```
-
-### Core Classes
-
-#### Config
-```python
-@dataclass
-class Config:
-    min_abstract_lead_time_days: int
-    min_paper_lead_time_days: int
-    max_concurrent_submissions: int
-    default_paper_lead_time_months: int
-    conferences: List[Conference]
-    submissions: List[Submission]
-    data_files: Dict[str, str]
-    priority_weights: Optional[Dict[str, float]]
-    penalty_costs: Optional[Dict[str, float]]
-    scheduling_options: Optional[Dict[str, Any]]
-    blackout_dates: Optional[List[date]]
-```
-
-#### Submission
-```python
-@dataclass
-class Submission:
-    id: str
-    kind: SubmissionType  # ABSTRACT or PAPER
-    title: str
-    earliest_start_date: date
-    conference_id: Optional[str]
-    engineering: bool
-    depends_on: List[str]
-    penalty_cost_per_day: float
-    lead_time_from_parents: int
-    draft_window_months: int
-```
-
-### Scheduler Interface
-
-```python
-class BaseScheduler(ABC):
-    def schedule(self) -> Dict[str, date]:
-        """Generate a schedule for all submissions."""
-        pass
-    
-    def validate_schedule(self, schedule: Dict[str, date]) -> bool:
-        """Validate that a schedule meets all constraints."""
-        pass
-    
-    def get_schedule_metrics(self, schedule: Dict[str, date]) -> Dict[str, float]:
-        """Calculate metrics for a given schedule."""
-        pass
-```
-
-### Metrics Functions
-
-```python
-# Makespan
-calculate_makespan(schedule: Dict[str, date], config: Config) -> int
-get_makespan_breakdown(schedule: Dict[str, date], config: Config) -> Dict
-
-# Utilization
-calculate_resource_utilization(schedule: Dict[str, date], config: Config) -> Dict[str, float]
-calculate_peak_utilization_periods(schedule: Dict[str, date], config: Config) -> List[Dict]
-
-# Penalties
-calculate_penalty_costs(schedule: Dict[str, date], config: Config) -> Dict[str, float]
-get_penalty_breakdown(schedule: Dict[str, date], config: Config) -> Dict
-
-# Deadlines
-calculate_deadline_compliance(schedule: Dict[str, date], config: Config) -> Dict[str, float]
-get_deadline_violations(schedule: Dict[str, date], config: Config) -> List[Dict]
-
-# Quality
-calculate_schedule_quality_score(schedule: Dict[str, date], config: Config) -> float
-calculate_front_loading_score(schedule: Dict[str, date], config: Config) -> float
-```
 
 ## 🤝 Contributing
 

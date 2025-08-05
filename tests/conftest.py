@@ -9,7 +9,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
 from core.config import load_config
-from core.types import Config, Submission, Conference
+from src.models import Config, Submission, Conference
 from schedulers.greedy import GreedyScheduler
 from schedulers.stochastic import StochasticGreedyScheduler
 from schedulers.lookahead import LookaheadGreedyScheduler
@@ -79,7 +79,7 @@ def all_schedulers(greedy_scheduler, stochastic_scheduler, lookahead_scheduler, 
 @pytest.fixture
 def sample_submission():
     """Provide a sample submission for testing."""
-    from core.types import Submission, SubmissionType
+    from src.models import Submission, SubmissionType
     from datetime import date
     
     return Submission(
@@ -99,16 +99,17 @@ def sample_submission():
 @pytest.fixture
 def sample_conference():
     """Provide a sample conference for testing."""
-    from core.types import Conference, ConferenceType
+    from src.models import Conference, ConferenceType, ConferenceRecurrence
     from datetime import date
     
     return Conference(
         id="ICML",
+        name="ICML",
         conf_type=ConferenceType.ENGINEERING,
-        recurrence="annual",
+        recurrence=ConferenceRecurrence.ANNUAL,
         deadlines={
-            "ABSTRACT": date(2025, 1, 15),
-            "PAPER": date(2025, 1, 30)
+            SubmissionType.ABSTRACT: date(2025, 1, 15),
+            SubmissionType.PAPER: date(2025, 1, 30)
         }
     )
 
@@ -122,26 +123,27 @@ def empty_schedule():
 @pytest.fixture
 def minimal_config():
     """Provide a minimal config for testing edge cases."""
-    from core.types import Config, Submission, Conference
+    from src.models import Config, Submission, Conference, ConferenceType, ConferenceRecurrence
     from datetime import date
     
     return Config(
+        submissions=[],
+        conferences=[
+            Conference(
+                id="ICML",
+                name="ICML",
+                conf_type=ConferenceType.ENGINEERING,
+                recurrence=ConferenceRecurrence.ANNUAL,
+                deadlines={}
+            )
+        ],
         min_abstract_lead_time_days=0,
         min_paper_lead_time_days=60,
         max_concurrent_submissions=1,
         default_paper_lead_time_months=3,
-        conferences=[
-            Conference(
-                id="ICML",
-                conf_type="ENGINEERING",
-                recurrence="annual",
-                deadlines={}
-            )
-        ],
-        submissions=[],
-        data_files={},
-        priority_weights={},
         penalty_costs={},
+        priority_weights={},
         scheduling_options={},
-        blackout_dates=[]
+        blackout_dates=[],
+        data_files={}
     )

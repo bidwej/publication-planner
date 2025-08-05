@@ -1,11 +1,14 @@
+"""Backtracking greedy scheduler implementation."""
+
 from __future__ import annotations
 from typing import Dict, List, Optional, Set
 from datetime import date, timedelta
 from .greedy import GreedyScheduler
-from core.types import Config, Submission, SubmissionType, SchedulerStrategy
-from core.dates import is_working_day
+from .base import BaseScheduler
+from ..models import Config, SubmissionType, Submission, SchedulerStrategy
+from ..dates import is_working_day
 
-@GreedyScheduler.register_strategy(SchedulerStrategy.BACKTRACKING)
+@BaseScheduler.register_strategy(SchedulerStrategy.BACKTRACKING)
 class BacktrackingGreedyScheduler(GreedyScheduler):
     """Backtracking greedy scheduler that can undo decisions when stuck."""
     
@@ -20,9 +23,11 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
         topo = self._topological_order()
         
         # Global time window
-        dates = [s.earliest_start_date for s in self.submissions.values()]
+        dates = [s.earliest_start_date for s in self.submissions.values() if s.earliest_start_date]
         for c in self.conferences.values():
             dates.extend(c.deadlines.values())
+        if not dates:
+            raise RuntimeError("No valid dates found for scheduling")
         current = min(dates)
         end = max(dates) + timedelta(days=self.config.min_paper_lead_time_days * 2)
         
@@ -56,7 +61,7 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
                 s = self.submissions[sid]
                 if not self._deps_satisfied(s, schedule, current):
                     continue
-                if current < s.earliest_start_date:
+                if s.earliest_start_date and current < s.earliest_start_date:
                     continue
                 ready.append(sid)
             
@@ -122,10 +127,11 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
         current_start = schedule[sid]
         
         # Try to find an earlier start date
-        for test_date in range((current_start - current).days - 1, -1, -1):
+        days_diff = (current_start - current).days
+        for test_date in range(days_diff - 1, -1, -1):
             test_start = current + timedelta(days=test_date)
             if (is_working_day(test_start, self.config.blackout_dates) and 
-                test_start >= sub.earliest_start_date and
+                (not sub.earliest_start_date or test_start >= sub.earliest_start_date) and
                 self._meets_deadline(sub, test_start)):
                 return True
         

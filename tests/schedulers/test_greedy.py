@@ -6,7 +6,7 @@ from schedulers.greedy import GreedyScheduler
 from schedulers.stochastic import StochasticGreedyScheduler
 from schedulers.lookahead import LookaheadGreedyScheduler
 from schedulers.backtracking import BacktrackingGreedyScheduler
-from core.types import SubmissionType, Submission, Conference, ConferenceType
+from src.models import SubmissionType, Submission, Conference, ConferenceType
 
 
 class TestGreedyScheduler:
@@ -392,7 +392,7 @@ class TestGreedySchedulerStrategyRegistry:
     
     def test_strategy_registry(self, config):
         """Test that all strategies are properly registered."""
-        from core.types import SchedulerStrategy
+        from src.models import SchedulerStrategy
         from schedulers.base import BaseScheduler
         
         # Test that all strategies are registered
@@ -403,7 +403,7 @@ class TestGreedySchedulerStrategyRegistry:
     
     def test_create_scheduler_via_registry(self, config):
         """Test creating schedulers via the registry."""
-        from core.types import SchedulerStrategy
+        from src.models import SchedulerStrategy
         from schedulers.base import BaseScheduler
         
         # Test creating each scheduler type
@@ -421,7 +421,7 @@ class TestGreedySchedulerStrategyRegistry:
     
     def test_invalid_strategy(self, config):
         """Test that invalid strategies raise appropriate errors."""
-        from core.types import SchedulerStrategy
+        from src.models import SchedulerStrategy
         from schedulers.base import BaseScheduler
         
         # Test with an invalid strategy string

@@ -1,11 +1,14 @@
+"""Stochastic greedy scheduler implementation."""
+
 from __future__ import annotations
 import random
-from typing import Dict, List
-from datetime import date
+from typing import Dict, List, Optional
+from datetime import date, timedelta
 from .greedy import GreedyScheduler
-from core.types import Config, SchedulerStrategy
+from .base import BaseScheduler
+from ..models import Config, SchedulerStrategy
 
-@GreedyScheduler.register_strategy(SchedulerStrategy.STOCHASTIC)
+@BaseScheduler.register_strategy(SchedulerStrategy.STOCHASTIC)
 class StochasticGreedyScheduler(GreedyScheduler):
     """Stochastic greedy scheduler that adds randomness to priority selection."""
     

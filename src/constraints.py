@@ -1,9 +1,37 @@
 """Constraint validation for schedules."""
 
 from __future__ import annotations
-from typing import Dict, List
+from typing import Dict, List, Any
 from datetime import date, timedelta
-from core.types import Config, Submission, SubmissionType, DeadlineValidation, DependencyValidation, ResourceValidation, DeadlineViolation, DependencyViolation, ResourceViolation
+from ..models import Config, Submission, SubmissionType, DeadlineValidation, DependencyValidation, ResourceValidation, DeadlineViolation, DependencyViolation, ResourceViolation
+
+def _get_submission_end_date(start_date: date, sub: Submission, config: Config) -> date:
+    """Calculate the end date for a submission using proper duration logic."""
+    if sub.kind == SubmissionType.ABSTRACT:
+        return start_date
+    else:
+        # Use draft_window_months if available, otherwise fall back to config
+        if sub.draft_window_months > 0:
+            # Approximate months as 30 days each
+            duration_days = sub.draft_window_months * 30
+        else:
+            duration_days = config.min_paper_lead_time_days
+        return start_date + timedelta(days=duration_days)
+
+def validate_all_constraints(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+    """Validate all constraints for a schedule."""
+    deadline_validation = validate_deadline_compliance(schedule, config)
+    dependency_validation = validate_dependency_satisfaction(schedule, config)
+    resource_validation = validate_resource_constraints(schedule, config)
+    
+    return {
+        "deadlines": deadline_validation,
+        "dependencies": dependency_validation,
+        "resources": resource_validation,
+        "is_valid": (deadline_validation.is_valid and 
+                     dependency_validation.is_valid and 
+                     resource_validation.is_valid)
+    }
 
 def validate_deadline_compliance(schedule: Dict[str, date], config: Config) -> DeadlineValidation:
     """Validate that all submissions meet their deadlines."""
@@ -37,13 +65,8 @@ def validate_deadline_compliance(schedule: Dict[str, date], config: Config) -> D
         total_submissions += 1
         deadline = conf.deadlines[sub.kind]
         
-        # Calculate end date
-        if sub.kind == SubmissionType.PAPER:
-            duration = config.min_paper_lead_time_days
-        else:
-            duration = 0
-        
-        end_date = start_date + timedelta(days=duration)
+        # Calculate end date using proper duration logic
+        end_date = _get_submission_end_date(start_date, sub, config)
         
         # Check if deadline is met
         if end_date <= deadline:
@@ -122,13 +145,8 @@ def validate_dependency_satisfaction(schedule: Dict[str, date], config: Config) 
                 ))
                 continue
             
-            # Calculate dependency end date
-            if dep_sub.kind == SubmissionType.PAPER:
-                dep_duration = config.min_paper_lead_time_days
-            else:
-                dep_duration = 0
-            
-            dep_end = dep_start + timedelta(days=dep_duration)
+            # Calculate dependency end date using proper duration logic
+            dep_end = _get_submission_end_date(dep_start, dep_sub, config)
             
             # Check if dependency is completed before this submission starts
             if dep_end > start_date:
@@ -178,14 +196,12 @@ def validate_resource_constraints(schedule: Dict[str, date], config: Config) -> 
         if not sub:
             continue
         
-        # Calculate duration
-        if sub.kind == SubmissionType.PAPER:
-            duration = config.min_paper_lead_time_days
-        else:
-            duration = 0
+        # Calculate duration using proper logic
+        end_date = _get_submission_end_date(start_date, sub, config)
+        duration_days = (end_date - start_date).days
         
         # Add workload for each day
-        for i in range(duration + 1):
+        for i in range(duration_days + 1):
             day = start_date + timedelta(days=i)
             daily_load[day] = daily_load.get(day, 0) + 1
     

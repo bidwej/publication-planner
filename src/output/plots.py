@@ -1,11 +1,11 @@
-# src/output/plots.py
+"""Plot generation for schedules."""
+
 from __future__ import annotations
 from typing import Dict, List, Optional
-from datetime import date, datetime
-from dateutil.relativedelta import relativedelta  # type: ignore
+from datetime import date, timedelta
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches  # type: ignore
-from core.types import Submission, SubmissionType, Config
+import matplotlib.dates as mdates
+from ..models import Submission, SubmissionType, Config
 
 
 def plot_schedule(
@@ -42,7 +42,7 @@ def plot_schedule(
         return
 
     min_date = min(all_dates)
-    max_date = max(all_dates) + relativedelta(days=90)  # Show 3 months beyond
+    max_date = max(all_dates) + timedelta(days=90)  # Show 3 months beyond
 
     # Apply cropping
     if start_date:
@@ -178,7 +178,7 @@ def plot_utilization_chart(schedule: Dict[str, date], config: Config, save_path:
         
         # Add load for each day
         for i in range(duration + 1):
-            day = start_date + relativedelta(days=i)
+            day = start_date + timedelta(days=i)
             daily_load[day] = daily_load.get(day, 0) + 1
     
     if not daily_load:
@@ -240,7 +240,7 @@ def plot_deadline_compliance(schedule: Dict[str, date], config: Config, save_pat
         # Calculate end date
         if sub.kind == SubmissionType.PAPER:
             duration = config.min_paper_lead_time_days
-            end_date = start_date + relativedelta(days=duration)
+            end_date = start_date + timedelta(days=duration)
         else:
             end_date = start_date
         

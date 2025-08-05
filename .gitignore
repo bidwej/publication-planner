@@ -1,5 +1,8 @@
-
-# ─── But do NOT ignore src/output ────────────────────
+# ─── Explicitly include these project files ─────────
+!test_planner.py
+!config.json
+!pyproject.toml
+!requirements.txt
 
 # ─── Python bytecode & compiled ───────────────────────
 __pycache__/
@@ -30,8 +33,6 @@ parts/
 sdist/
 wheels/
 
-
-
-
+# ─── Other artifacts ──────────────────────────────────
 *.pyc
 .env

@@ -1,16 +1,11 @@
+"""Configuration loading and parsing."""
+
 from __future__ import annotations
 import json
 import os
-from datetime import datetime, date
-from typing import Dict, List, Optional
-from dateutil.relativedelta import relativedelta
-from .types import (
-    Config,
-    Conference,
-    ConferenceType,
-    Submission,
-    SubmissionType,
-)
+from typing import Dict, List, Optional, Any
+from datetime import date
+from .models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
 from .dates import parse_date_safe
 
 def load_config(config_path: str) -> Config:
@@ -67,13 +62,13 @@ def load_config(config_path: str) -> Config:
                     print(f"Warning: Blackout file not found: {blackout_path}")
         
         return Config(
+            submissions=submissions,
+            conferences=conferences,
             min_abstract_lead_time_days=raw_cfg["min_abstract_lead_time_days"],
             min_paper_lead_time_days=raw_cfg["min_paper_lead_time_days"],
             max_concurrent_submissions=raw_cfg["max_concurrent_submissions"],
             default_paper_lead_time_months=raw_cfg.get("default_paper_lead_time_months", 3),
-            conferences=conferences,
-            submissions=submissions,
-            data_files=raw_cfg["data_files"],
+            penalty_costs=raw_cfg.get("penalty_costs", {"default_mod_penalty_per_day": 1000}),
             priority_weights=raw_cfg.get(
                 "priority_weights",
                 {
@@ -83,11 +78,9 @@ def load_config(config_path: str) -> Config:
                     "abstract": 0.5,
                 },
             ),
-            penalty_costs=raw_cfg.get(
-                "penalty_costs", {"default_mod_penalty_per_day": 1000}
-            ),
             scheduling_options=raw_cfg.get("scheduling_options", {}),
             blackout_dates=blackout_dates,
+            data_files=raw_cfg["data_files"],
         )
         
     except FileNotFoundError as e:
@@ -137,8 +130,9 @@ def _load_conferences(path: str) -> List[Conference]:
         out.append(
             Conference(
                 id=c["name"],
+                name=c["name"],
                 conf_type=ConferenceType(c["conference_type"]),
-                recurrence=c["recurrence"],
+                recurrence=ConferenceRecurrence(c["recurrence"]),
                 deadlines=deadlines,
             )
         )
@@ -169,13 +163,15 @@ def _load_submissions(
         submissions.append(
             Submission(
                 id=f"{mod_id}-wrk",
-                kind=SubmissionType.ABSTRACT,
                 title=mod.get("title", f"Mod {mod_id}"),
-                earliest_start_date=parse_date_safe(mod.get("earliest_start_date", "2025-01-01")),
+                kind=SubmissionType.ABSTRACT,
                 conference_id=mod.get("conference_id"),
-                engineering=mod.get("engineering", False),
                 depends_on=mod.get("depends_on", []),
+                draft_window_months=mod.get("draft_window_months", 0),
+                lead_time_from_parents=mod.get("lead_time_from_parents", 0),
                 penalty_cost_per_day=penalty_costs.get("default_mod_penalty_per_day", 0.0),
+                engineering=mod.get("engineering", False),
+                earliest_start_date=parse_date_safe(mod.get("est_data_ready", "2025-01-01")),
             )
         )
 
@@ -198,15 +194,15 @@ def _load_submissions(
         submissions.append(
             Submission(
                 id=f"{paper_id}-pap",
-                kind=SubmissionType.PAPER,
                 title=paper.get("title", f"Paper {paper_id}"),
-                earliest_start_date=parse_date_safe(paper.get("earliest_start_date", "2025-01-01")),
+                kind=SubmissionType.PAPER,
                 conference_id=paper.get("conference_id"),
-                engineering=paper.get("engineering", False),
                 depends_on=mod_deps + parent_deps,
-                penalty_cost_per_day=penalty_costs.get("default_paper_penalty_per_day", 0.0),
+                draft_window_months=paper.get("draft_window_months", 3),
                 lead_time_from_parents=paper.get("lead_time_from_parents", 0),
-                draft_window_months=paper.get("draft_window_months", 0),
+                penalty_cost_per_day=penalty_costs.get("default_paper_penalty_per_day", 0.0),
+                engineering=paper.get("engineering", False),
+                earliest_start_date=parse_date_safe(paper.get("earliest_start_date", "2025-01-01")),
             )
         )
 

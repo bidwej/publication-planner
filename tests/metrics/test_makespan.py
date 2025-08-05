@@ -3,7 +3,7 @@
 import pytest
 from datetime import date, timedelta
 from metrics.makespan import calculate_makespan, calculate_parallel_makespan, get_makespan_breakdown
-from core.types import SubmissionType
+from src.models import SubmissionType
 
 
 class TestCalculateMakespan:

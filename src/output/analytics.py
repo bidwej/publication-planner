@@ -1,9 +1,9 @@
 """Analytics functions for schedule insights and reporting."""
 
 from __future__ import annotations
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from datetime import date, timedelta
-from core.types import Config, Submission, SubmissionType, ScheduleAnalysis, ScheduleDistribution, SubmissionTypeAnalysis
+from ..models import Config, Submission, SubmissionType, ScheduleAnalysis, ScheduleDistribution, SubmissionTypeAnalysis, TimelineAnalysis, ResourceAnalysis
 
 def analyze_schedule_completeness(schedule: Dict[str, date], config: Config) -> ScheduleAnalysis:
     """Analyze how complete the schedule is."""
@@ -12,7 +12,8 @@ def analyze_schedule_completeness(schedule: Dict[str, date], config: Config) -> 
             scheduled_count=0,
             total_count=0,
             completion_rate=0.0,
-            missing_submissions=[]
+            missing_submissions=[],
+            summary="No submissions to analyze"
         )
     
     total_submissions = len(config.submissions)
@@ -39,7 +40,8 @@ def analyze_schedule_completeness(schedule: Dict[str, date], config: Config) -> 
         scheduled_count=scheduled_count,
         total_count=total_submissions,
         completion_rate=completion_rate,
-        missing_submissions=missing_submissions
+        missing_submissions=missing_submissions,
+        summary=f"Scheduled {scheduled_count}/{total_submissions} submissions ({completion_rate:.1f}% complete)"
     )
 
 def analyze_schedule_distribution(schedule: Dict[str, date], config: Config) -> ScheduleDistribution:
@@ -48,7 +50,8 @@ def analyze_schedule_distribution(schedule: Dict[str, date], config: Config) -> 
         return ScheduleDistribution(
             monthly_distribution={},
             quarterly_distribution={},
-            yearly_distribution={}
+            yearly_distribution={},
+            summary="No submissions to analyze"
         )
     
     # Monthly distribution
@@ -73,7 +76,8 @@ def analyze_schedule_distribution(schedule: Dict[str, date], config: Config) -> 
     return ScheduleDistribution(
         monthly_distribution=monthly_dist,
         quarterly_distribution=quarterly_dist,
-        yearly_distribution=yearly_dist
+        yearly_distribution=yearly_dist,
+        summary=f"Distribution across {len(monthly_dist)} months, {len(quarterly_dist)} quarters, {len(yearly_dist)} years"
     )
 
 def analyze_submission_types(schedule: Dict[str, date], config: Config) -> SubmissionTypeAnalysis:
@@ -81,7 +85,8 @@ def analyze_submission_types(schedule: Dict[str, date], config: Config) -> Submi
     if not schedule:
         return SubmissionTypeAnalysis(
             type_counts={},
-            type_percentages={}
+            type_percentages={},
+            summary="No submissions to analyze"
         )
     
     type_counts = {}
@@ -102,18 +107,20 @@ def analyze_submission_types(schedule: Dict[str, date], config: Config) -> Submi
     
     return SubmissionTypeAnalysis(
         type_counts=type_counts,
-        type_percentages=type_percentages
+        type_percentages=type_percentages,
+        summary=f"Submission types: {', '.join(f'{k}: {v}' for k, v in type_counts.items())}"
     )
 
-def analyze_timeline(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+def analyze_timeline(schedule: Dict[str, date], config: Config) -> TimelineAnalysis:
     """Analyze timeline characteristics of the schedule."""
     if not schedule:
-        return {
-            "start_date": None,
-            "end_date": None,
-            "duration_days": 0,
-            "avg_submissions_per_month": 0.0
-        }
+        return TimelineAnalysis(
+            start_date=None,
+            end_date=None,
+            duration_days=0,
+            avg_submissions_per_month=0.0,
+            summary="No submissions to analyze"
+        )
     
     dates = list(schedule.values())
     start_date = min(dates)
@@ -124,21 +131,23 @@ def analyze_timeline(schedule: Dict[str, date], config: Config) -> Dict[str, Any
     months_span = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month) + 1
     avg_per_month = len(schedule) / months_span if months_span > 0 else 0.0
     
-    return {
-        "start_date": start_date,
-        "end_date": end_date,
-        "duration_days": duration_days,
-        "avg_submissions_per_month": avg_per_month
-    }
+    return TimelineAnalysis(
+        start_date=start_date,
+        end_date=end_date,
+        duration_days=duration_days,
+        avg_submissions_per_month=avg_per_month,
+        summary=f"Timeline: {duration_days} days, {avg_per_month:.1f} submissions/month"
+    )
 
-def analyze_resources(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+def analyze_resources(schedule: Dict[str, date], config: Config) -> ResourceAnalysis:
     """Analyze resource utilization patterns."""
     if not schedule:
-        return {
-            "peak_load": 0,
-            "avg_load": 0.0,
-            "utilization_pattern": {}
-        }
+        return ResourceAnalysis(
+            peak_load=0,
+            avg_load=0.0,
+            utilization_pattern={},
+            summary="No submissions to analyze"
+        )
     
     daily_load = {}
     max_concurrent = config.max_concurrent_submissions
@@ -159,17 +168,19 @@ def analyze_resources(schedule: Dict[str, date], config: Config) -> Dict[str, An
             daily_load[day] = daily_load.get(day, 0) + 1
     
     if not daily_load:
-        return {
-            "peak_load": 0,
-            "avg_load": 0.0,
-            "utilization_pattern": {}
-        }
+        return ResourceAnalysis(
+            peak_load=0,
+            avg_load=0.0,
+            utilization_pattern={},
+            summary="No workload to analyze"
+        )
     
     peak_load = max(daily_load.values())
     avg_load = sum(daily_load.values()) / len(daily_load)
     
-    return {
-        "peak_load": peak_load,
-        "avg_load": avg_load,
-        "utilization_pattern": daily_load
-    } 
+    return ResourceAnalysis(
+        peak_load=peak_load,
+        avg_load=avg_load,
+        utilization_pattern=daily_load,
+        summary=f"Resource usage: peak {peak_load}, avg {avg_load:.1f} submissions/day"
+    ) 

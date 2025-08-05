@@ -1,8 +1,10 @@
+"""Table generation for schedules."""
+
 from __future__ import annotations
-from datetime import datetime, date
 from typing import Dict, List, Any
+from datetime import date, timedelta, datetime
+from ..models import SubmissionType, Config, Submission
 from dateutil.relativedelta import relativedelta
-from core.types import SubmissionType, Config, Submission
 
 def generate_monthly_table(
     schedule: Dict[str, date], submissions: List[Submission], config: Config
@@ -130,7 +132,6 @@ def generate_schedule_summary_table(schedule: Dict[str, date], config: Config) -
             conf_name = conf.id
         
         # Calculate relative time information
-        from datetime import datetime
         today = datetime.now().date()
         days_until_start = (start_date - today).days
         weeks_until_start = days_until_start // 7 if days_until_start > 0 else 0
@@ -197,6 +198,7 @@ def generate_deadline_table(schedule: Dict[str, date], config: Config) -> List[D
         margin_status = "On Time" if margin_days >= 0 else "Late"
         
         # Calculate relative deadline information
+        today = datetime.now().date()
         days_until_deadline = (deadline - today).days
         weeks_until_deadline = days_until_deadline // 7 if days_until_deadline > 0 else 0
         

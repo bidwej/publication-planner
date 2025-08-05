@@ -1,28 +1,27 @@
 #!/usr/bin/env python3
-# generate_schedule.py
-from __future__ import annotations
-import sys
-import platform
+"""
+Generate paper submission schedules using various algorithms.
+
+This script provides both command-line and interactive modes for generating
+paper submission schedules based on conference deadlines and constraints.
+"""
+
 import argparse
-import os
 import json
-from datetime import datetime, date
+import os
+import sys
+import traceback
+from datetime import date, datetime
+from pathlib import Path
 
-# Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+# Add src to path for imports
+sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from core.config import load_config
-from core.dates import parse_date_safe
-from core.types import SchedulerStrategy
-from schedulers.base import BaseScheduler
-from output.console import print_schedule_summary, print_deadline_status, print_utilization_summary, print_metrics_summary
-from output.tables import generate_schedule_summary_table, generate_deadline_table
-from output.plots import plot_schedule, plot_utilization_chart, plot_deadline_compliance
-from metrics.makespan import calculate_makespan, get_makespan_breakdown
-from metrics.utilization import calculate_resource_utilization, calculate_peak_utilization_periods
-from metrics.penalties import calculate_penalty_costs, get_penalty_breakdown
-from metrics.deadlines import calculate_deadline_compliance, get_deadline_violations
-from metrics.quality import calculate_schedule_quality_score, calculate_front_loading_score
+from src.planner import Planner
+from src.models import SchedulerStrategy
+from src.output.tables import generate_simple_monthly_table, generate_schedule_summary_table, generate_deadline_table
+from src.output.plots import generate_schedule_plot, generate_utilization_plot
+from src.output.reports import generate_schedule_report
 
 def generate_schedule_cli() -> None:
     """Interactive CLI for schedule generation and analysis."""

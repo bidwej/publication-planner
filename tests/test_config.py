@@ -5,8 +5,8 @@ import tempfile
 import json
 import os
 from datetime import date
-from core.config import load_config, _load_conferences, _load_submissions, _load_blackout_dates
-from core.types import Config, SubmissionType, ConferenceType
+from src.config import load_config, _load_conferences, _load_submissions, _load_blackout_dates
+from src.models import Config, SubmissionType, ConferenceType
 
 
 class TestLoadConfig:
@@ -119,12 +119,13 @@ class TestLoadSubmissions:
         papers_path = os.path.join(test_data_dir, 'papers.json')
         
         # Create a minimal conferences list for testing
-        from core.types import Conference, ConferenceType
+        from src.models import Conference, ConferenceType, ConferenceRecurrence
         conferences = [
             Conference(
                 id="ICML",
+                name="ICML",
                 conf_type=ConferenceType.ENGINEERING,
-                recurrence="annual",
+                recurrence=ConferenceRecurrence.ANNUAL,
                 deadlines={}
             )
         ]
@@ -152,12 +153,13 @@ class TestLoadSubmissions:
         mods_path = os.path.join(test_data_dir, 'mods.json')
         papers_path = os.path.join(test_data_dir, 'papers.json')
         
-        from core.types import Conference, ConferenceType
+        from src.models import Conference, ConferenceType, ConferenceRecurrence
         conferences = [
             Conference(
                 id="ICML",
+                name="ICML",
                 conf_type=ConferenceType.ENGINEERING,
-                recurrence="annual",
+                recurrence=ConferenceRecurrence.ANNUAL,
                 deadlines={}
             )
         ]
@@ -185,12 +187,13 @@ class TestLoadSubmissions:
         mods_path = os.path.join(test_data_dir, 'mods.json')
         papers_path = os.path.join(test_data_dir, 'papers.json')
         
-        from core.types import Conference, ConferenceType
+        from src.models import Conference, ConferenceType, ConferenceRecurrence
         conferences = [
             Conference(
                 id="ICML",
+                name="ICML",
                 conf_type=ConferenceType.ENGINEERING,
-                recurrence="annual",
+                recurrence=ConferenceRecurrence.ANNUAL,
                 deadlines={}
             )
         ]
