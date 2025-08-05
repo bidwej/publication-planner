@@ -5,21 +5,6 @@ from typing import Dict, List, Any
 from datetime import date, timedelta
 from ..models import Config, Submission, SubmissionType, DeadlineValidation, DependencyValidation, ResourceValidation, DeadlineViolation, DependencyViolation, ResourceViolation
 
-def validate_all_constraints(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
-    """Validate all constraints for a schedule."""
-    deadline_validation = validate_deadline_compliance(schedule, config)
-    dependency_validation = validate_dependency_satisfaction(schedule, config)
-    resource_validation = validate_resource_constraints(schedule, config)
-    
-    return {
-        "deadlines": deadline_validation,
-        "dependencies": dependency_validation,
-        "resources": resource_validation,
-        "is_valid": (deadline_validation.is_valid and 
-                     dependency_validation.is_valid and 
-                     resource_validation.is_valid)
-    }
-
 def validate_deadline_compliance(schedule: Dict[str, date], config: Config) -> DeadlineValidation:
     """Validate that all submissions meet their deadlines."""
     if not schedule:
@@ -217,6 +202,21 @@ def validate_resource_constraints(schedule: Dict[str, date], config: Config) -> 
         max_observed=max_observed,
         total_days=len(daily_load)
     )
+
+def validate_all_constraints(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+    """Validate all constraints for a schedule."""
+    deadline_validation = validate_deadline_compliance(schedule, config)
+    dependency_validation = validate_dependency_satisfaction(schedule, config)
+    resource_validation = validate_resource_constraints(schedule, config)
+    
+    return {
+        "deadlines": deadline_validation,
+        "dependencies": dependency_validation,
+        "resources": resource_validation,
+        "is_valid": (deadline_validation.is_valid and 
+                     dependency_validation.is_valid and 
+                     resource_validation.is_valid)
+    }
 
 def _get_submission_end_date(start_date: date, sub: Submission, config: Config) -> date:
     """Calculate the end date for a submission using proper duration logic."""

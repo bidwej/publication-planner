@@ -17,18 +17,16 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from src.cli.parser import parse_args
-from src.cli.validator import validate_args
-from src.cli.runner import get_scheduler_strategy
-from src.config import load_config
-from src.models import SchedulerStrategy
+from src.cli import parse_args, validate_args, get_scheduler_strategy
+from src.core.config import load_config
+from src.core.models import SchedulerStrategy
 from src.schedulers.base import BaseScheduler
 from src.output.output_manager import generate_and_save_output
-from src.dates import parse_date_safe
+from src.core.dates import parse_date_safe
 from src.scoring.penalty import calculate_penalty_score
 from src.scoring.efficiency import calculate_efficiency_score
 from src.scoring.quality import calculate_quality_score
-from src.constraints import validate_deadline_compliance, validate_resource_constraints
+from src.core.constraints import validate_deadline_compliance, validate_resource_constraints
 
 def print_schedule_summary(schedule, config):
     """Print a summary of the schedule."""

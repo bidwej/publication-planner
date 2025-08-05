@@ -17,23 +17,6 @@ class BaseScheduler(ABC):
         self.submissions = {s.id: s for s in config.submissions}
         self.conferences = {c.id: c for c in config.conferences}
     
-    @classmethod
-    def register_strategy(cls, strategy: SchedulerStrategy):
-        """Decorator to register a scheduler class with a strategy."""
-        def decorator(scheduler_class: Type['BaseScheduler']):
-            cls._strategies[strategy] = scheduler_class
-            return scheduler_class
-        return decorator
-    
-    @classmethod
-    def create_scheduler(cls, strategy: SchedulerStrategy, config: Config) -> 'BaseScheduler':
-        """Create a scheduler instance for the given strategy."""
-        if strategy not in cls._strategies:
-            raise ValueError(f"Unknown strategy: {strategy}")
-        
-        scheduler_class = cls._strategies[strategy]
-        return scheduler_class(config)
-    
     @abstractmethod
     def schedule(self) -> Dict[str, date]:
         """
@@ -58,4 +41,21 @@ class BaseScheduler(ABC):
         
         return (deadline_validation.is_valid and 
                 dependency_validation.is_valid and 
-                resource_validation.is_valid) 
+                resource_validation.is_valid)
+    
+    @classmethod
+    def register_strategy(cls, strategy: SchedulerStrategy):
+        """Decorator to register a scheduler class with a strategy."""
+        def decorator(scheduler_class: Type['BaseScheduler']):
+            cls._strategies[strategy] = scheduler_class
+            return scheduler_class
+        return decorator
+    
+    @classmethod
+    def create_scheduler(cls, strategy: SchedulerStrategy, config: Config) -> 'BaseScheduler':
+        """Create a scheduler instance for the given strategy."""
+        if strategy not in cls._strategies:
+            raise ValueError(f"Unknown strategy: {strategy}")
+        
+        scheduler_class = cls._strategies[strategy]
+        return scheduler_class(config) 

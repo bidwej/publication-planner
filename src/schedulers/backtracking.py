@@ -15,39 +15,6 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
         super().__init__(config)
         self.max_backtracks = max_backtracks
     
-    # Explicitly declare inherited methods for linter
-    def _deps_satisfied(self, sub: Submission, schedule: Dict[str, date], now: date) -> bool:
-        """Check if all dependencies are satisfied."""
-        return super()._deps_satisfied(sub, schedule, now)
-    
-    def _get_end_date(self, start_date: date, sub: Submission) -> date:
-        """Calculate the end date for a submission."""
-        return super()._get_end_date(start_date, sub)
-    
-    def _meets_deadline(self, sub: Submission, start: date) -> bool:
-        """Check if starting on this date meets the deadline."""
-        return super()._meets_deadline(sub, start)
-    
-    def _sort_by_priority(self, ready: List[str]) -> List[str]:
-        """Sort ready submissions by priority weight."""
-        return super()._sort_by_priority(ready)
-    
-    def _schedule_early_abstracts(self, schedule: Dict[str, date], advance_days: int) -> None:
-        """Schedule abstracts early if enabled."""
-        return super()._schedule_early_abstracts(schedule, advance_days)
-    
-    def _auto_link_abstract_paper(self) -> None:
-        """Automatically link abstracts to papers if they share the same conference."""
-        return super()._auto_link_abstract_paper()
-    
-    def _validate_venue_compatibility(self) -> None:
-        """Validate that submissions are compatible with their venues."""
-        return super()._validate_venue_compatibility()
-    
-    def _topological_order(self) -> List[str]:
-        """Generate topological order of submissions."""
-        return super()._topological_order()
-    
     def schedule(self) -> Dict[str, date]:
         """Generate schedule with backtracking capability."""
         self._auto_link_abstract_paper()
