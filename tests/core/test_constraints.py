@@ -57,7 +57,7 @@ class TestDeadlineCompliance:
         assert isinstance(result, DeadlineValidation)
         assert result.total_submissions == 0
         assert result.compliant_submissions == 0
-        assert result.compliance_rate == 0.0
+        assert result.compliance_rate == 100.0  # No violations = 100% compliance
 
 
 class TestDependencySatisfaction:
@@ -113,7 +113,7 @@ class TestDependencySatisfaction:
         assert isinstance(result, DependencyValidation)
         assert result.total_dependencies == 0
         assert result.satisfied_dependencies == 0
-        assert result.satisfaction_rate == 0.0
+        assert result.satisfaction_rate == 100.0  # No violations = 100% satisfaction
 
 
 class TestResourceConstraints:

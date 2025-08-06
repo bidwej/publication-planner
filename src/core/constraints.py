@@ -222,7 +222,14 @@ def _get_submission_end_date(start_date: date, sub: Submission, config: Config) 
     """Calculate the end date for a submission using proper duration logic."""
     if sub.kind == SubmissionType.ABSTRACT:
         return start_date
-    else:
+    elif sub.kind == SubmissionType.POSTER:
+        # Posters typically have shorter duration than papers
+        if sub.draft_window_months > 0:
+            duration_days = sub.draft_window_months * 30
+        else:
+            duration_days = 30  # Default 1 month for posters
+        return start_date + timedelta(days=duration_days)
+    else:  # SubmissionType.PAPER
         # Use draft_window_months if available, otherwise fall back to config
         if sub.draft_window_months > 0:
             # Approximate months as 30 days each

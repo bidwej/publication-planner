@@ -153,7 +153,7 @@ class TestLoadSubmissions:
         mods_path = os.path.join(test_data_dir, 'mods.json')
         papers_path = os.path.join(test_data_dir, 'papers.json')
         
-        from models import Conference, ConferenceType, ConferenceRecurrence
+        from src.core.models import Conference, ConferenceType, ConferenceRecurrence
         conferences = [
             Conference(
                 id="ICML",
