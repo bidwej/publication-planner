@@ -24,13 +24,88 @@ def test_config_path(test_data_dir):
     return os.path.join(test_data_dir, 'config.json')
 
 
-@pytest.fixture(scope="session")
-def config(test_config_path):
-    """Load the test configuration."""
-    return load_config(test_config_path)
+@pytest.fixture(scope="function")
+def config():
+    """Provide a full configuration for testing."""
+    # Create test conferences with realistic deadlines
+    conferences = [
+        Conference(
+            id="ICML",
+            name="ICML",
+            conf_type=ConferenceType.ENGINEERING,
+            recurrence=ConferenceRecurrence.ANNUAL,
+            deadlines={
+                SubmissionType.ABSTRACT: date(2025, 1, 15),
+                SubmissionType.PAPER: date(2025, 1, 30)
+            }
+        ),
+        Conference(
+            id="MICCAI",
+            name="MICCAI",
+            conf_type=ConferenceType.MEDICAL,
+            recurrence=ConferenceRecurrence.ANNUAL,
+            deadlines={
+                SubmissionType.ABSTRACT: date(2025, 2, 15),
+                SubmissionType.PAPER: date(2025, 3, 1)
+            }
+        )
+    ]
+    
+    # Create test submissions that can actually be scheduled
+    submissions = [
+        Submission(
+            id="J1-pap",
+            title="Test Paper",
+            kind=SubmissionType.PAPER,
+            conference_id="ICML",
+            depends_on=[],
+            draft_window_months=2,
+            lead_time_from_parents=0,
+            penalty_cost_per_day=500,
+            engineering=True,
+            earliest_start_date=date(2024, 11, 1)  # Early enough to meet deadline
+        ),
+        Submission(
+            id="J2-pap",
+            title="Medical Paper",
+            kind=SubmissionType.PAPER,
+            conference_id="MICCAI",
+            depends_on=["J1-pap"],
+            draft_window_months=3,
+            lead_time_from_parents=2,
+            penalty_cost_per_day=300,
+            engineering=False,
+            earliest_start_date=date(2024, 12, 1)  # Early enough to meet deadline
+        )
+    ]
+    
+    return Config(
+        submissions=submissions,
+        conferences=conferences,
+        min_abstract_lead_time_days=30,
+        min_paper_lead_time_days=60,
+        max_concurrent_submissions=2,
+        default_paper_lead_time_months=3,
+        penalty_costs={
+            "default_mod_penalty_per_day": 1000,
+            "default_paper_penalty_per_day": 500
+        },
+        priority_weights={
+            "engineering_paper": 2.0,
+            "medical_paper": 1.0,
+            "mod": 1.5,
+            "abstract": 0.5
+        },
+        scheduling_options={
+            "enable_early_abstract_scheduling": True,
+            "abstract_advance_days": 30
+        },
+        blackout_dates=[],
+        data_files={}
+    )
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def sample_schedule(config):
     """Generate a sample schedule for testing."""
     scheduler = GreedyScheduler(config)
@@ -96,87 +171,6 @@ def minimal_config():
         penalty_costs={},
         priority_weights={},
         scheduling_options={},
-        blackout_dates=[],
-        data_files={}
-    )
-
-
-@pytest.fixture
-def config():
-    """Provide a full configuration for testing."""
-    # Create test conferences
-    conferences = [
-        Conference(
-            id="ICML",
-            name="ICML",
-            conf_type=ConferenceType.ENGINEERING,
-            recurrence=ConferenceRecurrence.ANNUAL,
-            deadlines={
-                SubmissionType.ABSTRACT: date(2025, 1, 15),
-                SubmissionType.PAPER: date(2025, 1, 30)
-            }
-        ),
-        Conference(
-            id="MICCAI",
-            name="MICCAI",
-            conf_type=ConferenceType.MEDICAL,
-            recurrence=ConferenceRecurrence.ANNUAL,
-            deadlines={
-                SubmissionType.ABSTRACT: date(2025, 2, 15),
-                SubmissionType.PAPER: date(2025, 3, 1)
-            }
-        )
-    ]
-    
-    # Create test submissions
-    submissions = [
-        Submission(
-            id="J1-pap",
-            title="Test Paper",
-            kind=SubmissionType.PAPER,
-            conference_id="ICML",
-            depends_on=[],
-            draft_window_months=4,
-            lead_time_from_parents=0,
-            penalty_cost_per_day=500,
-            engineering=True,
-            earliest_start_date=date(2025, 1, 1)
-        ),
-        Submission(
-            id="J2-pap",
-            title="Medical Paper",
-            kind=SubmissionType.PAPER,
-            conference_id="MICCAI",
-            depends_on=["J1-pap"],
-            draft_window_months=3,
-            lead_time_from_parents=2,
-            penalty_cost_per_day=300,
-            engineering=False,
-            earliest_start_date=date(2025, 2, 1)
-        )
-    ]
-    
-    return Config(
-        submissions=submissions,
-        conferences=conferences,
-        min_abstract_lead_time_days=30,
-        min_paper_lead_time_days=60,
-        max_concurrent_submissions=2,
-        default_paper_lead_time_months=3,
-        penalty_costs={
-            "default_mod_penalty_per_day": 1000,
-            "default_paper_penalty_per_day": 500
-        },
-        priority_weights={
-            "engineering_paper": 2.0,
-            "medical_paper": 1.0,
-            "mod": 1.5,
-            "abstract": 0.5
-        },
-        scheduling_options={
-            "enable_early_abstract_scheduling": True,
-            "abstract_advance_days": 30
-        },
         blackout_dates=[],
         data_files={}
     )

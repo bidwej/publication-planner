@@ -6,6 +6,7 @@ from datetime import date, timedelta
 from abc import ABC, abstractmethod
 from src.core.models import Config, Submission, Conference, SubmissionType, SchedulerStrategy
 from src.core.dates import is_working_day
+from src.core.constraints import validate_deadline_compliance_single, validate_dependencies_satisfied, validate_venue_compatibility
 
 
 class BaseScheduler(ABC):
@@ -55,15 +56,7 @@ class BaseScheduler(ABC):
     
     def _deps_satisfied(self, sub: Submission, schedule: Dict[str, date], current: date) -> bool:
         """Check if all dependencies are satisfied."""
-        if not sub.depends_on:
-            return True
-        for dep_id in sub.depends_on:
-            if dep_id not in schedule:
-                return False
-            dep_end = self._get_end_date(schedule[dep_id], self.submissions[dep_id])
-            if current < dep_end + timedelta(days=sub.lead_time_from_parents):
-                return False
-        return True
+        return validate_dependencies_satisfied(sub, schedule, self.submissions, self.config, current)
     
     def _get_end_date(self, start: date, sub: Submission) -> date:
         """Calculate end date for a submission."""
@@ -74,19 +67,7 @@ class BaseScheduler(ABC):
     
     def _meets_deadline(self, sub: Submission, start: date) -> bool:
         """Check if starting on this date meets the deadline."""
-        if not sub.conference_id or sub.conference_id not in self.conferences:
-            return True
-        
-        conf = self.conferences[sub.conference_id]
-        if sub.kind not in conf.deadlines:
-            return True
-        
-        deadline = conf.deadlines[sub.kind]
-        if deadline is None:
-            return True
-        
-        end_date = self._get_end_date(start, sub)
-        return end_date <= deadline
+        return validate_deadline_compliance_single(start, sub, self.config)
     
     def _auto_link_abstract_paper(self):
         """Auto-link abstracts to papers if not already linked."""
@@ -94,9 +75,7 @@ class BaseScheduler(ABC):
     
     def _validate_venue_compatibility(self):
         """Validate that submissions are compatible with their venues."""
-        for sid, submission in self.submissions.items():
-            if submission.conference_id and submission.conference_id not in self.conferences:
-                raise ValueError(f"Submission {sid} references unknown conference {submission.conference_id}")
+        validate_venue_compatibility(self.submissions, self.conferences)
     
     def _schedule_early_abstracts(self, schedule: Dict[str, date], abstract_advance: int):
         """Schedule abstracts early if enabled."""

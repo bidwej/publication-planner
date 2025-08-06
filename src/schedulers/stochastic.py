@@ -4,6 +4,7 @@ from __future__ import annotations
 import random
 from typing import List
 from .greedy import GreedyScheduler
+from .base import BaseScheduler
 from src.core.models import SchedulerStrategy
 
 

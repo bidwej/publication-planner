@@ -124,9 +124,9 @@ def print_metrics_summary(schedule: Dict[str, date], config: Config) -> None:
     
     # Import scoring functions
     from scoring.penalty import calculate_penalty_score
-from scoring.quality import calculate_quality_score
-from scoring.efficiency import calculate_efficiency_score
-from core.constraints import validate_deadline_compliance
+    from scoring.quality import calculate_quality_score
+    from scoring.efficiency import calculate_efficiency_score
+    from core.constraints import validate_deadline_compliance
     
     # Calculate metrics
     penalty_breakdown = calculate_penalty_score(schedule, config)

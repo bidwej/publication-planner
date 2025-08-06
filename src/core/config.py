@@ -169,10 +169,24 @@ def _load_submissions(
                 if conf in conf_map:  # Check if this specific conference exists
                     conf_id = conf
                     break
-        # Set engineering flag based on conference type if not set
+        
+        # Determine engineering flag from candidate conferences
         engineering = mod.get("engineering")
-        if engineering is None and conf_id in conf_type_map:
-            engineering = conf_type_map[conf_id] == ConferenceType.ENGINEERING
+        if engineering is None:
+            if mod.get("candidate_conferences"):
+                # Check if any candidate conference is engineering
+                has_engineering = any(conf in conf_type_map and conf_type_map[conf] == ConferenceType.ENGINEERING 
+                                   for conf in mod["candidate_conferences"])
+                has_medical = any(conf in conf_type_map and conf_type_map[conf] == ConferenceType.MEDICAL 
+                                for conf in mod["candidate_conferences"])
+                # If it can go to engineering conferences, it's engineering
+                engineering = has_engineering
+            elif conf_id in conf_type_map:
+                # Fallback to assigned conference
+                engineering = conf_type_map[conf_id] == ConferenceType.ENGINEERING
+            else:
+                engineering = False
+        
         submissions.append(
             Submission(
                 id=f"{mod_id}-wrk",
@@ -183,7 +197,7 @@ def _load_submissions(
                 draft_window_months=mod.get("draft_window_months", 0),
                 lead_time_from_parents=mod.get("lead_time_from_parents", 0),
                 penalty_cost_per_day=penalty_costs.get("default_mod_penalty_per_day", 0.0),
-                engineering=engineering if engineering is not None else False,
+                engineering=engineering,
                 earliest_start_date=parse_date_safe(mod.get("est_data_ready", "2025-01-01")),
             )
         )
@@ -208,10 +222,24 @@ def _load_submissions(
                 if conf in conf_map:  # Check if this specific conference exists
                     conf_id = conf
                     break
-        # Set engineering flag based on conference type if not set
+        
+        # Determine engineering flag from candidate conferences
         engineering = paper.get("engineering")
-        if engineering is None and conf_id in conf_type_map:
-            engineering = conf_type_map[conf_id] == ConferenceType.ENGINEERING
+        if engineering is None:
+            if paper.get("candidate_conferences"):
+                # Check if any candidate conference is engineering
+                has_engineering = any(conf in conf_type_map and conf_type_map[conf] == ConferenceType.ENGINEERING 
+                                   for conf in paper["candidate_conferences"])
+                has_medical = any(conf in conf_type_map and conf_type_map[conf] == ConferenceType.MEDICAL 
+                                for conf in paper["candidate_conferences"])
+                # If it can go to engineering conferences, it's engineering
+                engineering = has_engineering
+            elif conf_id in conf_type_map:
+                # Fallback to assigned conference
+                engineering = conf_type_map[conf_id] == ConferenceType.ENGINEERING
+            else:
+                engineering = False
+        
         submissions.append(
             Submission(
                 id=f"{paper_id}-pap",
@@ -222,7 +250,7 @@ def _load_submissions(
                 draft_window_months=paper.get("draft_window_months", 3),
                 lead_time_from_parents=paper.get("lead_time_from_parents", 0),
                 penalty_cost_per_day=penalty_costs.get("default_paper_penalty_per_day", 0.0),
-                engineering=engineering if engineering is not None else False,
+                engineering=engineering,
                 earliest_start_date=parse_date_safe(paper.get("earliest_start_date", "2025-01-01")),
             )
         )

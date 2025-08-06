@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import List
 from datetime import timedelta, date
 from .greedy import GreedyScheduler
+from .base import BaseScheduler
 from src.core.models import Submission, SchedulerStrategy
 
 

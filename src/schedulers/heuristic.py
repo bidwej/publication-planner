@@ -6,6 +6,7 @@ from datetime import date, timedelta
 from enum import Enum
 from .base import BaseScheduler
 from src.core.dates import is_working_day
+from src.core.models import SchedulerStrategy
 
 
 class HeuristicStrategy(Enum):
@@ -17,6 +18,7 @@ class HeuristicStrategy(Enum):
     CRITICAL_PATH = "critical_path"
 
 
+@BaseScheduler.register_strategy(SchedulerStrategy.HEURISTIC)
 class HeuristicScheduler(BaseScheduler):
     """Heuristic scheduler that implements different scheduling strategies."""
     

@@ -18,6 +18,9 @@ class SchedulerStrategy(str, Enum):
     STOCHASTIC = "stochastic"
     LOOKAHEAD = "lookahead"
     BACKTRACKING = "backtracking"
+    RANDOM = "random"
+    HEURISTIC = "heuristic"
+    OPTIMAL = "optimal"
 
 @dataclass
 class Submission:

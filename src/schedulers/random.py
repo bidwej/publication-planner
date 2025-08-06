@@ -6,8 +6,10 @@ from typing import Dict, List, Set
 from datetime import date, timedelta
 from .base import BaseScheduler
 from src.core.dates import is_working_day
+from src.core.models import SchedulerStrategy
 
 
+@BaseScheduler.register_strategy(SchedulerStrategy.RANDOM)
 class RandomScheduler(BaseScheduler):
     """Random scheduler that schedules submissions in random order for baseline comparison."""
     
