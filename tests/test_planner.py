@@ -4,7 +4,7 @@ import pytest
 from datetime import date, timedelta
 from unittest.mock import Mock, patch, MagicMock
 
-from core.models import Paper, Schedule, ScheduleItem, Config
+from core.models import Config, Submission, SubmissionType
 from planner import Planner
 
 

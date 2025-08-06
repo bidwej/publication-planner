@@ -32,13 +32,13 @@ class PenaltyScorer(BaseScorer):
     
     def calculate_score(self, schedule: Dict[str, date]) -> float:
         """Calculate penalty score (lower is better)."""
-        from .penalty import calculate_penalty_score
+        from scoring.penalty import calculate_penalty_score
         penalty_breakdown = calculate_penalty_score(schedule, self.config)
         return penalty_breakdown.total_penalty
     
     def get_score_breakdown(self, schedule: Dict[str, date]) -> Dict[str, Any]:
         """Get detailed penalty breakdown."""
-        from .penalty import calculate_penalty_score
+        from scoring.penalty import calculate_penalty_score
         penalty_breakdown = calculate_penalty_score(schedule, self.config)
         return {
             "total_penalty": penalty_breakdown.total_penalty,
@@ -53,12 +53,12 @@ class QualityScorer(BaseScorer):
     
     def calculate_score(self, schedule: Dict[str, date]) -> float:
         """Calculate quality score (higher is better)."""
-        from .quality import calculate_quality_score
+        from scoring.quality import calculate_quality_score
         return calculate_quality_score(schedule, self.config)
     
     def get_score_breakdown(self, schedule: Dict[str, date]) -> Dict[str, Any]:
         """Get detailed quality breakdown."""
-        from .quality import calculate_quality_score
+        from scoring.quality import calculate_quality_score
         quality_score = calculate_quality_score(schedule, self.config)
         return {
             "quality_score": quality_score,
@@ -73,7 +73,7 @@ class EfficiencyScorer(BaseScorer):
     
     def calculate_score(self, schedule: Dict[str, date]) -> float:
         """Calculate efficiency score (higher is better)."""
-        from .efficiency import calculate_efficiency_score
+        from scoring.efficiency import calculate_efficiency_score
         return calculate_efficiency_score(schedule, self.config)
     
     def get_score_breakdown(self, schedule: Dict[str, date]) -> Dict[str, Any]:
