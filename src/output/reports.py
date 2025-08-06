@@ -7,6 +7,7 @@ from core.models import Config
 from core.constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
 from scoring.penalty import calculate_penalty_score
 from .analytics import analyze_timeline, analyze_resources
+from core.constants import REPORT_MAX_SCORE, REPORT_MIN_SCORE, REPORT_SCORE_INCREMENT, PENALTY_NORMALIZATION_FACTOR, MAX_PENALTY_FACTOR
 
 def generate_schedule_report(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
     """Generate a comprehensive schedule report for presentation."""
@@ -15,7 +16,7 @@ def generate_schedule_report(schedule: Dict[str, date], config: Config) -> Dict[
             "summary": {
                 "is_feasible": True,
                 "total_violations": 0,
-                "overall_score": 100.0,
+                "overall_score": REPORT_MAX_SCORE,
                 "total_submissions": 0
             },
             "constraints": {},
@@ -114,7 +115,7 @@ def calculate_overall_score(deadline_validation, dependency_validation,
     score -= len(resource_validation.violations) * 0.2
     
     # Deduct for penalty costs (normalized)
-    penalty_factor = min(penalty_breakdown.total_penalty / 10000.0, 0.5)  # Cap at 0.5
+    penalty_factor = min(penalty_breakdown.total_penalty / PENALTY_NORMALIZATION_FACTOR, MAX_PENALTY_FACTOR)  # Cap at MAX_PENALTY_FACTOR
     score -= penalty_factor
     
     # Bonus for high compliance rates (but cap at 1.0)
@@ -123,4 +124,4 @@ def calculate_overall_score(deadline_validation, dependency_validation,
     if dependency_validation.satisfaction_rate > 95:
         score += 0.05
     
-    return max(min(score, 1.0), 0.0)  # Clamp between 0.0 and 1.0 
+    return max(min(score, REPORT_MAX_SCORE), REPORT_MIN_SCORE)  # Clamp between REPORT_MIN_SCORE and REPORT_MAX_SCORE 

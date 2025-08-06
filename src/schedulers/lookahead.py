@@ -6,13 +6,14 @@ from datetime import timedelta, date
 from .greedy import GreedyScheduler
 from .base import BaseScheduler
 from core.models import Submission, SchedulerStrategy
+from core.constants import DEFAULT_LOOKAHEAD_DAYS
 
 
 @BaseScheduler.register_strategy(SchedulerStrategy.LOOKAHEAD)
 class LookaheadGreedyScheduler(GreedyScheduler):
     """Lookahead greedy scheduler that considers future implications of decisions."""
     
-    def __init__(self, config, lookahead_days: int = 30):
+    def __init__(self, config, lookahead_days: int = DEFAULT_LOOKAHEAD_DAYS):
         """Initialize scheduler with config and lookahead buffer."""
         super().__init__(config)
         self.lookahead_days = lookahead_days

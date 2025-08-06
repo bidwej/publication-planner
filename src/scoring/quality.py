@@ -8,7 +8,7 @@ from core.models import Config, SubmissionType
 from core.constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
 from core.constants import (
     MAX_SCORE, MIN_SCORE, ROBUSTNESS_SCALE_FACTOR, BALANCE_VARIANCE_FACTOR,
-    SINGLE_SUBMISSION_ROBUSTNESS, SINGLE_SUBMISSION_BALANCE
+    SINGLE_SUBMISSION_ROBUSTNESS, SINGLE_SUBMISSION_BALANCE, QUALITY_RESOURCE_FALLBACK_SCORE
 )
 
 def calculate_quality_score(schedule: Dict[str, date], config: Config) -> float:
@@ -24,7 +24,7 @@ def calculate_quality_score(schedule: Dict[str, date], config: Config) -> float:
     # Calculate component scores from constraint compliance
     deadline_score = deadline_validation.compliance_rate
     dependency_score = dependency_validation.satisfaction_rate
-    resource_score = MAX_SCORE if resource_validation.is_valid else 50.0
+    resource_score = MAX_SCORE if resource_validation.is_valid else QUALITY_RESOURCE_FALLBACK_SCORE
     
     # Weighted average based on constraint importance
     weights = {
@@ -64,12 +64,8 @@ def calculate_quality_robustness(schedule: Dict[str, date], config: Config) -> f
         if not current_sub:
             continue
         
-        # Calculate current submission end date
-        if current_sub.kind == SubmissionType.PAPER:
-            current_duration = config.min_paper_lead_time_days
-        else:
-            current_duration = 0
-        
+        # Calculate current submission end date using proper duration logic
+        current_duration = current_sub.get_duration_days(config)
         current_end = current_start + timedelta(days=current_duration)
         
         # Calculate slack between current and next submission
@@ -95,10 +91,8 @@ def calculate_quality_balance(schedule: Dict[str, date], config: Config) -> floa
         if not sub:
             continue
         
-        if sub.kind == SubmissionType.PAPER:
-            duration = config.min_paper_lead_time_days
-        else:
-            duration = 0
+        # Use proper duration calculation for all submission types
+        duration = sub.get_duration_days(config)
         
         # Add work for each day
         for i in range(duration + 1):

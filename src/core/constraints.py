@@ -5,10 +5,7 @@ from typing import Dict, Any
 from datetime import date, timedelta
 from .models import Config, Submission, SubmissionType, ConferenceType, DeadlineValidation, DependencyValidation, ResourceValidation, DeadlineViolation, DependencyViolation, ResourceViolation, ConstraintValidationResult
 from .dates import is_working_day
-from .constants import (
-    PERFECT_COMPLIANCE_RATE, ZERO_COMPLIANCE_RATE, PERCENTAGE_MULTIPLIER,
-    DEFAULT_ABSTRACT_ADVANCE_DAYS, DAYS_PER_MONTH, DEFAULT_POSTER_DURATION_DAYS
-)
+from core.constants import PERFECT_COMPLIANCE_RATE, ZERO_COMPLIANCE_RATE, PERCENTAGE_MULTIPLIER, DAYS_PER_MONTH, DEFAULT_ABSTRACT_ADVANCE_DAYS
 
 
 def validate_deadline_compliance(schedule: Dict[str, date], config: Config) -> DeadlineValidation:

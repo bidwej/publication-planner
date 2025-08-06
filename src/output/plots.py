@@ -6,6 +6,7 @@ from datetime import date, timedelta
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from core.models import Submission, SubmissionType, Config
+from core.constants import DEFAULT_PLOT_EXTENSION_DAYS, DEFAULT_DPI, MIN_PLOT_HEIGHT, DEFAULT_MIN_PAPER_LEAD_TIME_DAYS
 
 
 def plot_schedule(
@@ -42,7 +43,7 @@ def plot_schedule(
         return
 
     min_date = min(all_dates)
-    max_date = max(all_dates) + timedelta(days=90)  # Show 3 months beyond
+    max_date = max(all_dates) + timedelta(days=DEFAULT_PLOT_EXTENSION_DAYS)  # Show extension beyond
 
     # Apply cropping
     if start_date:
@@ -70,7 +71,7 @@ def plot_schedule(
         color = _get_priority_color(s, config)
 
         if s.kind == SubmissionType.PAPER:
-            duration = config.min_paper_lead_time_days if config else 60
+            duration = config.min_paper_lead_time_days if config else DEFAULT_MIN_PAPER_LEAD_TIME_DAYS
             ax.barh(
                 y=idx,
                 width=duration,
@@ -124,7 +125,7 @@ def plot_schedule(
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
 
     if save_path:
-        plt.savefig(save_path, bbox_inches="tight", dpi=300)
+        plt.savefig(save_path, bbox_inches="tight", dpi=DEFAULT_DPI)
         plt.close()
     else:
         plt.show()
@@ -200,7 +201,7 @@ def plot_utilization_chart(schedule: Dict[str, date], config: Config, save_path:
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
 
     if save_path:
-        plt.savefig(save_path, bbox_inches="tight", dpi=300)
+        plt.savefig(save_path, bbox_inches="tight", dpi=DEFAULT_DPI)
         plt.close()
     else:
         plt.show()
@@ -264,7 +265,7 @@ def plot_deadline_compliance(schedule: Dict[str, date], config: Config, save_pat
     plt.tight_layout()
     
     if save_path:
-        plt.savefig(save_path, bbox_inches="tight", dpi=300)
+        plt.savefig(save_path, bbox_inches="tight", dpi=DEFAULT_DPI)
         plt.close()
     else:
         plt.show() 

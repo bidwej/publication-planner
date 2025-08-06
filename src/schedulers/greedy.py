@@ -6,6 +6,7 @@ from datetime import date, timedelta
 from .base import BaseScheduler
 from core.dates import is_working_day
 from core.models import SchedulerStrategy
+from core.constants import DEFAULT_ABSTRACT_ADVANCE_DAYS
 
 
 @BaseScheduler.register_strategy(SchedulerStrategy.GREEDY)
@@ -40,7 +41,7 @@ class GreedyScheduler(BaseScheduler):
         # Early abstract scheduling if enabled
         if (self.config.scheduling_options and 
             self.config.scheduling_options.get("enable_early_abstract_scheduling", False)):
-            abstract_advance = self.config.scheduling_options.get("abstract_advance_days", 30)
+            abstract_advance = self.config.scheduling_options.get("abstract_advance_days", DEFAULT_ABSTRACT_ADVANCE_DAYS)
             self._schedule_early_abstracts(schedule, abstract_advance)
         
         while current <= end and len(schedule) < len(self.submissions):

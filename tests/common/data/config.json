@@ -11,7 +11,11 @@
   },
   "penalty_costs": {
     "default_mod_penalty_per_day": 1000,
-    "default_paper_penalty_per_day": 500
+    "default_paper_penalty_per_day": 500,
+    "default_monthly_slip_penalty": 1000,
+    "default_full_year_deferral_penalty": 5000,
+    "missed_abstract_penalty": 3000,
+    "resource_violation_penalty": 200
   },
   "scheduling_options": {
     "enable_early_abstract_scheduling": true,
@@ -23,6 +27,7 @@
     "enable_concurrency_control": true,
     "enable_working_days_only": true
   },
+  "blackout_dates": [],
   "data_files": {
     "conferences": "conferences.json",
     "mods": "mods.json",

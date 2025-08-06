@@ -11,7 +11,10 @@
   },
   "penalty_costs": {
     "default_mod_penalty_per_day": 1000,
-    "default_paper_penalty_per_day": 500
+    "default_paper_penalty_per_day": 500,
+    "default_monthly_slip_penalty": 1000,
+    "default_full_year_deferral_penalty": 5000,
+    "missed_abstract_penalty": 3000
   },
   "scheduling_options": {
     "enable_early_abstract_scheduling": true,

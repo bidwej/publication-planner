@@ -5,6 +5,7 @@ from typing import Dict
 from datetime import date
 from core.models import Config, ScheduleAnalysis, ScheduleDistribution, SubmissionTypeAnalysis, TimelineAnalysis, ResourceAnalysis
 from core.constraints import _calculate_daily_load
+from core.constants import ANALYTICS_MONTHLY_CONVERSION_FACTOR
 
 def analyze_schedule_completeness(schedule: Dict[str, date], config: Config) -> ScheduleAnalysis:
     """Analyze how complete the schedule is."""
@@ -140,7 +141,7 @@ def analyze_timeline(schedule: Dict[str, date], config: Config) -> TimelineAnaly
         start_date=timeline_start,
         end_date=timeline_end,
         duration_days=duration_days,
-        avg_submissions_per_month=avg_daily_load * 30,  # Convert daily to monthly
+        avg_submissions_per_month=avg_daily_load * ANALYTICS_MONTHLY_CONVERSION_FACTOR,  # Convert daily to monthly
         summary=f"Timeline spans {duration_days} days with peak load of {peak_daily_load} submissions"
     )
 

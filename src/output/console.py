@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Dict, Any, List
 from datetime import date, timedelta
 from core.models import Config
+from core.constants import MAX_TITLE_LENGTH
 
 def print_schedule_summary(schedule: Dict[str, date], config: Config) -> None:
     """Print a summary of the schedule to console."""
@@ -67,7 +68,7 @@ def print_deadline_status(schedule: Dict[str, date], config: Config) -> None:
         else:
             late += 1
             days_late = (end_date - deadline).days
-            print(f"  LATE: {sid} ({sub.title[:30]}...) - {days_late} days late")
+            print(f"  LATE: {sid} ({sub.title[:MAX_TITLE_LENGTH]}...) - {days_late} days late")
     
     if total > 0:
         print(f"On time: {on_time}/{total} ({on_time/total*100:.1f}%)")
