@@ -56,13 +56,21 @@ The Paper Planner is designed to help researchers and teams efficiently schedule
 
 ### Running the Application
 
-#### Web Dashboard (Recommended)
+#### Web Dashboard (Full Features)
 ```bash
-python run_web_app.py
+python run_web_dashboard.py
 ```
 - **URL**: http://127.0.0.1:8050
 - **Features**: Interactive charts, real-time updates, strategy selection
-- **Debug Mode**: Enabled by default for development
+- **Debug Mode**: Disabled for stability
+
+#### Web Timeline (Timeline Only)
+```bash
+python run_web_timeline.py
+```
+- **URL**: http://127.0.0.1:8050
+- **Features**: Timeline-only view with Gantt chart
+- **Debug Mode**: Disabled for stability
 
 #### Command Line Interface
 ```bash
