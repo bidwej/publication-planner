@@ -3,6 +3,7 @@
 from typing import Dict, List
 from datetime import date, timedelta
 from collections import defaultdict
+import statistics
 
 from core.models import Config, SubmissionType
 from core.constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
@@ -105,14 +106,13 @@ def calculate_quality_balance(schedule: Dict[str, date], config: Config) -> floa
     
     # Calculate balance score based on work distribution
     work_values = list(daily_work.values())
-    avg_work = sum(work_values) / len(work_values)
-    max_work = max(work_values)
+    avg_work = statistics.mean(work_values)
     
     # Balance score (lower variance is better)
     if avg_work == 0:
         return SINGLE_SUBMISSION_BALANCE
     
-    variance = sum((w - avg_work) ** 2 for w in work_values) / len(work_values)
+    variance = statistics.variance(work_values)
     balance_score = max(MIN_SCORE, MAX_SCORE - (variance / avg_work) * BALANCE_VARIANCE_FACTOR)
     
     return min(MAX_SCORE, balance_score) 

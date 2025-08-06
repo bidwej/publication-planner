@@ -3,6 +3,7 @@
 from typing import Dict, List
 from datetime import date, timedelta
 from collections import defaultdict
+import statistics
 
 from core.models import Config, EfficiencyMetrics, TimelineMetrics
 from core.constants import (
@@ -99,7 +100,7 @@ def calculate_efficiency_resource(schedule: Dict[str, date], config: Config) -> 
     
     # Calculate metrics
     peak_utilization = max(daily_load.values())
-    avg_utilization = sum(daily_load.values()) / len(daily_load)
+    avg_utilization = statistics.mean(daily_load.values())
     max_concurrent = config.max_concurrent_submissions
     
     # Calculate utilization rate

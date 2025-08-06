@@ -6,11 +6,11 @@ from collections import defaultdict
 
 from core.models import Config, PenaltyBreakdown, SubmissionType, ConferenceType
 from core.constants import (
-    MIN_SCORE, DEFAULT_PENALTY_PER_DAY, MISSED_ABSTRACT_PENALTY,
-    TECHNICAL_AUDIENCE_LOSS_PENALTY, AUDIENCE_MISMATCH_PENALTY,
-    DEFAULT_FULL_YEAR_DEFERRAL_PENALTY, DEFAULT_MONTHLY_SLIP_PENALTY,
-    DEFAULT_DEPENDENCY_VIOLATION_PENALTY, DEFAULT_RESOURCE_VIOLATION_PENALTY
+    MIN_SCORE, TECHNICAL_AUDIENCE_LOSS_PENALTY, AUDIENCE_MISMATCH_PENALTY,
+    DEFAULT_DEPENDENCY_VIOLATION_PENALTY
 )
+# Note: Penalty costs moved to config.json because they are project-specific
+# and should be configurable by users. Only algorithm constants remain in constants.py.
 
 def calculate_penalty_score(schedule: Dict[str, date], config: Config) -> PenaltyBreakdown:
     """Calculate total penalty score for the schedule."""
@@ -66,7 +66,8 @@ def _calculate_deadline_penalties(schedule: Dict[str, date], config: Config) -> 
         # Calculate penalty if deadline is missed
         if end_date > deadline:
             days_late = (end_date - deadline).days
-            penalty_per_day = sub.penalty_cost_per_day or (config.penalty_costs or {}).get("default_penalty_per_day", DEFAULT_PENALTY_PER_DAY)
+            # Use config penalty costs (project-specific) instead of constants
+            penalty_per_day = sub.penalty_cost_per_day or (config.penalty_costs or {}).get("default_mod_penalty_per_day", 1000.0)
             total_penalty += days_late * penalty_per_day
     
     return total_penalty
@@ -82,8 +83,9 @@ def _calculate_dependency_penalties(schedule: Dict[str, date], config: Config) -
         
         for dep_id in (sub.depends_on or []):
             if dep_id not in schedule:
-                # Missing dependency - high penalty
-                total_penalty += DEFAULT_MONTHLY_SLIP_PENALTY
+                # Missing dependency - use config penalty (project-specific)
+                monthly_penalty = (config.penalty_costs or {}).get("default_monthly_slip_penalty", 1000.0)
+                total_penalty += monthly_penalty
                 continue
             
             dep_start = schedule[dep_id]
@@ -100,49 +102,53 @@ def _calculate_dependency_penalties(schedule: Dict[str, date], config: Config) -
             dep_end = dep_start + timedelta(days=dep_duration)
             
             # Check if dependency is satisfied
-            if dep_end > start_date:
-                days_violation = (dep_end - start_date).days
-                total_penalty += days_violation * DEFAULT_DEPENDENCY_VIOLATION_PENALTY
+            if start_date < dep_end:
+                # Dependency violation - use config penalty (project-specific)
+                penalty = (config.penalty_costs or {}).get("default_dependency_violation_penalty", DEFAULT_DEPENDENCY_VIOLATION_PENALTY)
+                total_penalty += penalty
     
     return total_penalty
 
 def _calculate_resource_penalties(schedule: Dict[str, date], config: Config) -> float:
     """Calculate penalties for resource constraint violations."""
     total_penalty = 0.0
-    daily_load = {}
-    max_concurrent = config.max_concurrent_submissions
     
-    # Calculate daily workload
+    # Calculate daily load
+    daily_load = defaultdict(int)
     for sid, start_date in schedule.items():
         sub = config.submissions_dict.get(sid)
         if not sub:
             continue
         
+        # Calculate duration
         if sub.kind == SubmissionType.PAPER:
             duration = config.min_paper_lead_time_days
         else:
             duration = 0
         
-        for i in range(duration + 1):
-            day = start_date + timedelta(days=i)
-            daily_load[day] = daily_load.get(day, 0) + 1
+        # Add load for each day
+        for i in range(duration):
+            check_date = start_date + timedelta(days=i)
+            daily_load[check_date] += 1
     
-    # Calculate penalties for violations
-    for day, load in daily_load.items():
+    # Check against max concurrent submissions
+    max_concurrent = config.max_concurrent_submissions
+    for load in daily_load.values():
         if load > max_concurrent:
             excess = load - max_concurrent
-            penalty_per_excess = (config.penalty_costs or {}).get("resource_violation_penalty", DEFAULT_RESOURCE_VIOLATION_PENALTY)
+            # Use config penalty costs (project-specific) instead of constants
+            penalty_per_excess = (config.penalty_costs or {}).get("resource_violation_penalty", 200.0)
             total_penalty += excess * penalty_per_excess
     
     return total_penalty
 
 def _calculate_conference_compatibility_penalties(schedule: Dict[str, date], config: Config) -> float:
-    """Calculate penalties for conference compatibility violations based on README matrix."""
+    """Calculate penalties for conference compatibility issues."""
     total_penalty = 0.0
     
     for sid, start_date in schedule.items():
         sub = config.submissions_dict.get(sid)
-        if not sub or sub.kind != SubmissionType.PAPER:
+        if not sub:
             continue
         
         if not sub.conference_id or sub.conference_id not in config.conferences_dict:
@@ -150,40 +156,32 @@ def _calculate_conference_compatibility_penalties(schedule: Dict[str, date], con
         
         conf = config.conferences_dict[sub.conference_id]
         
-        # Check engineering paper to clinical/ENT abstract-only venue
+        # Check engineering vs medical mismatch
         if sub.engineering and conf.conf_type == ConferenceType.MEDICAL:
-            # Check if it's abstract-only venue
-            if conf.deadlines and SubmissionType.PAPER not in conf.deadlines:
-                total_penalty += TECHNICAL_AUDIENCE_LOSS_PENALTY  # Loss of technical audience
-        
-        # Check clinical paper to engineering venue
+            total_penalty += TECHNICAL_AUDIENCE_LOSS_PENALTY
         elif not sub.engineering and conf.conf_type == ConferenceType.ENGINEERING:
-            total_penalty += AUDIENCE_MISMATCH_PENALTY  # Audience mis-match
-        
-        # Check full-paper capable to abstract-only venue
-        elif conf.deadlines and SubmissionType.PAPER in conf.deadlines and SubmissionType.PAPER not in conf.deadlines:
-            total_penalty += TECHNICAL_AUDIENCE_LOSS_PENALTY  # Reduces publication depth
+            total_penalty += AUDIENCE_MISMATCH_PENALTY
     
     return total_penalty
 
 def _calculate_slack_cost_penalties(schedule: Dict[str, date], config: Config) -> float:
-    """Calculate SlackCost penalties as per README formula."""
+    """Calculate penalties for slack costs (opportunity costs)."""
     total_penalty = 0.0
     
+    # Calculate P_j (monthly slip penalty)
+    P_j = (config.penalty_costs or {}).get("default_monthly_slip_penalty", 1000.0)
+    
+    # Calculate Y_j (full-year deferral penalty)
+    Y_j = (config.penalty_costs or {}).get("default_full_year_deferral_penalty", 5000.0)
+    
+    A_j = (config.penalty_costs or {}).get("missed_abstract_penalty", 3000.0)  # Missed abstract-only window penalty
+    
+    # Calculate slack cost components for each submission
     for sid, start_date in schedule.items():
         sub = config.submissions_dict.get(sid)
         if not sub or sub.kind != SubmissionType.PAPER:
             continue
         
-        # Calculate P_j (monthly slip penalty)
-        P_j = (config.penalty_costs or {}).get("default_monthly_slip_penalty", DEFAULT_MONTHLY_SLIP_PENALTY)
-        
-        # Calculate Y_j (full-year deferral penalty)
-        Y_j = (config.penalty_costs or {}).get("default_full_year_deferral_penalty", DEFAULT_FULL_YEAR_DEFERRAL_PENALTY)
-        
-        A_j = (config.penalty_costs or {}).get("missed_abstract_penalty", MISSED_ABSTRACT_PENALTY)  # Missed abstract-only window penalty
-        
-        # Calculate slack cost components
         if sub.earliest_start_date:
             # P_j(S_j - S_j,earliest) - monthly slip penalty
             months_delay = max(0, (start_date.year - sub.earliest_start_date.year) * 12 + 
@@ -198,7 +196,7 @@ def _calculate_slack_cost_penalties(schedule: Dict[str, date], config: Config) -
             
             # A_j(1_abstract-miss) - missed abstract penalty
             # This would need more complex logic to determine if abstract was missed
-            abstract_penalty = 0  # Placeholder
+            abstract_penalty = 0  # Placeholder for now
             
             total_penalty += slip_penalty + deferral_penalty + abstract_penalty
     

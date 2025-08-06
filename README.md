@@ -439,7 +439,6 @@ src/
 │   ├── efficiency.py  # Efficiency metrics
 │   └── penalty.py  # Penalty calculations
 ├── output/         # Output generation
-│   ├── plots.py    # Matplotlib (static)
 │   ├── reports.py  # Report generation
 │   ├── analytics.py # Analysis functions
 │   ├── console.py  # Console output formatting

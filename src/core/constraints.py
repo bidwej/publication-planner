@@ -3,9 +3,34 @@
 from __future__ import annotations
 from typing import Dict, Any
 from datetime import date, timedelta
+import statistics
 from .models import Config, Submission, SubmissionType, ConferenceType, DeadlineValidation, DependencyValidation, ResourceValidation, DeadlineViolation, DependencyViolation, ResourceViolation, ConstraintValidationResult
-from .dates import is_working_day
 from core.constants import PERFECT_COMPLIANCE_RATE, PERCENTAGE_MULTIPLIER, DAYS_PER_MONTH, DEFAULT_ABSTRACT_ADVANCE_DAYS, DEFAULT_POSTER_DURATION_DAYS
+
+
+def is_working_day(check_date: date, blackout_dates: list[date] = None) -> bool:
+    """
+    Check if a date is a working day (not weekend or blackout).
+    
+    Args:
+        check_date: Date to check
+        blackout_dates: List of blackout dates (weekends, holidays, etc.)
+        
+    Returns:
+        True if it's a working day, False otherwise
+    """
+    if blackout_dates is None:
+        blackout_dates = []
+    
+    # Check if it's a weekend
+    if check_date.weekday() in [5, 6]:  # Saturday, Sunday
+        return False
+    
+    # Check if it's in the blackout dates
+    if check_date in blackout_dates:
+        return False
+    
+    return True
 
 
 def validate_deadline_compliance(schedule: Dict[str, date], config: Config) -> DeadlineValidation:
@@ -510,8 +535,8 @@ def validate_priority_weighting(schedule: Dict[str, date], config: Config) -> Di
             "engineering": sub.engineering
         })
     
-    # Check if priorities are reasonable
-    avg_priority = sum(p["priority"] for p in actual_priorities) / len(actual_priorities) if actual_priorities else 0
+    # Calculate average priority for summary
+    avg_priority = statistics.mean(p["priority"] for p in actual_priorities) if actual_priorities else 0
     
     return {
         "is_valid": True,

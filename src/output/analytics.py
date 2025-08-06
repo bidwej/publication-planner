@@ -1,11 +1,14 @@
-"""Analytics functions for schedule insights and reporting."""
+"""Analytics and reporting functions."""
 
 from __future__ import annotations
-from typing import Dict
-from datetime import date
-from core.models import Config, ScheduleAnalysis, ScheduleDistribution, SubmissionTypeAnalysis, TimelineAnalysis, ResourceAnalysis
-from core.constraints import _calculate_daily_load
-from core.constants import ANALYTICS_MONTHLY_CONVERSION_FACTOR, PERCENTAGE_MULTIPLIER, ANALYTICS_DEFAULT_COMPLETION_RATE
+from typing import Dict, List, Optional, Any
+from datetime import date, timedelta
+import statistics
+from collections import defaultdict
+
+from core.models import Config, ScheduleAnalysis, ScheduleDistribution, SubmissionTypeAnalysis, TimelineAnalysis, ResourceAnalysis, SubmissionType
+from core.constraints import _calculate_daily_load, validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
+from core.constants import ANALYTICS_MONTHLY_CONVERSION_FACTOR, PERCENTAGE_MULTIPLIER, ANALYTICS_DEFAULT_COMPLETION_RATE, PERFECT_COMPLIANCE_RATE
 
 def analyze_schedule_completeness(schedule: Dict[str, date], config: Config) -> ScheduleAnalysis:
     """Analyze how complete the schedule is."""
@@ -134,7 +137,8 @@ def analyze_timeline(schedule: Dict[str, date], config: Config) -> TimelineAnaly
     # Calculate daily load using constraints logic
     daily_load = _calculate_daily_load(schedule, config)
     
-    avg_daily_load = sum(daily_load.values()) / len(daily_load) if daily_load else 0.0
+    # Calculate average daily load
+    avg_daily_load = statistics.mean(daily_load.values()) if daily_load else 0.0
     peak_daily_load = max(daily_load.values()) if daily_load else 0
     
     return TimelineAnalysis(
@@ -166,8 +170,9 @@ def analyze_resources(schedule: Dict[str, date], config: Config) -> ResourceAnal
             summary="No active days in schedule"
         )
     
+    # Calculate average load
+    avg_load = statistics.mean(daily_load.values())
     peak_load = max(daily_load.values())
-    avg_load = sum(daily_load.values()) / len(daily_load)
     
     return ResourceAnalysis(
         peak_load=peak_load,

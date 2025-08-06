@@ -3,8 +3,9 @@
 from __future__ import annotations
 from typing import Dict, List, Optional, Any
 from datetime import date
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict, replace
 from enum import Enum
+from dateutil.parser import parse as parse_date
 
 from .constants import DAYS_PER_MONTH, DEFAULT_POSTER_DURATION_DAYS
 
@@ -574,59 +575,60 @@ class ScheduleState:
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
+        # Use asdict for config serialization
+        config_dict = asdict(self.config)
+        # Convert date objects to ISO format strings
+        if config_dict.get("blackout_dates"):
+            config_dict["blackout_dates"] = [d.isoformat() for d in config_dict["blackout_dates"]]
+        
         return {
             "schedule": {k: v.isoformat() for k, v in self.schedule.items()},
-            "config": self._config_to_dict(),
+            "config": config_dict,
             "strategy": self.strategy.value,
             "metadata": self.metadata,
             "timestamp": self.timestamp,
             "version": self.version
         }
     
-    def _config_to_dict(self) -> Dict[str, Any]:
-        """Convert config to dictionary."""
-        return {
-            "min_abstract_lead_time_days": self.config.min_abstract_lead_time_days,
-            "min_paper_lead_time_days": self.config.min_paper_lead_time_days,
-            "max_concurrent_submissions": self.config.max_concurrent_submissions,
-            "default_paper_lead_time_months": self.config.default_paper_lead_time_months,
-            "penalty_costs": self.config.penalty_costs,
-            "priority_weights": self.config.priority_weights,
-            "scheduling_options": self.config.scheduling_options,
-            "blackout_dates": [d.isoformat() for d in (self.config.blackout_dates or [])],
-            "data_files": self.config.data_files
-        }
-    
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ScheduleState':
-        """Create from dictionary."""
-        from datetime import datetime
-        
+        """Create a ScheduleState from a dictionary."""
         # Parse schedule dates
-        schedule = {k: datetime.fromisoformat(v).date() for k, v in data["schedule"].items()}
+        schedule = {}
+        if "schedule" in data:
+            for k, v in data["schedule"].items():
+                try:
+                    schedule[k] = parse_date(v).date()
+                except (ValueError, TypeError):
+                    continue
         
-        # Reconstruct config (simplified - would need full reconstruction in practice)
-        config_dict = data["config"]
-        config = Config(
-            submissions=[],  # Would need to reconstruct from data files
-            conferences=[],  # Would need to reconstruct from data files
-            min_abstract_lead_time_days=config_dict["min_abstract_lead_time_days"],
-            min_paper_lead_time_days=config_dict["min_paper_lead_time_days"],
-            max_concurrent_submissions=config_dict["max_concurrent_submissions"],
-            default_paper_lead_time_months=config_dict["default_paper_lead_time_months"],
-            penalty_costs=config_dict["penalty_costs"],
-            priority_weights=config_dict["priority_weights"],
-            scheduling_options=config_dict["scheduling_options"],
-            blackout_dates=[datetime.fromisoformat(d).date() for d in config_dict["blackout_dates"]],
-            data_files=config_dict["data_files"]
-        )
+        # Parse blackout dates
+        blackout_dates = []
+        if "blackout_dates" in data:
+            for d in data["blackout_dates"]:
+                try:
+                    blackout_dates.append(parse_date(d).date())
+                except (ValueError, TypeError):
+                    continue
         
         return cls(
             schedule=schedule,
-            config=config,
-            strategy=SchedulerStrategy(data["strategy"]),
-            metadata=data["metadata"],
-            timestamp=data["timestamp"],
+            config=Config(
+                submissions=[],  # Would need to reconstruct from data files
+                conferences=[],  # Would need to reconstruct from data files
+                min_abstract_lead_time_days=data.get("min_abstract_lead_time_days", 30),
+                min_paper_lead_time_days=data.get("min_paper_lead_time_days", 90),
+                max_concurrent_submissions=data.get("max_concurrent_submissions", 3),
+                default_paper_lead_time_months=data.get("default_paper_lead_time_months", 3),
+                penalty_costs=data.get("penalty_costs", {}),
+                priority_weights=data.get("priority_weights", {}),
+                scheduling_options=data.get("scheduling_options", {}),
+                blackout_dates=blackout_dates,
+                data_files=data.get("data_files", {})
+            ),
+            strategy=SchedulerStrategy(data.get("strategy", "greedy")),
+            metadata=data.get("metadata", {}),
+            timestamp=data.get("timestamp", ""),
             version=data.get("version", "1.0")
         )
 
@@ -634,9 +636,9 @@ class ScheduleState:
 class WebAppState:
     """State for the web application."""
     current_schedule: Optional[ScheduleState] = None
-    available_strategies: List[SchedulerStrategy] = None
+    available_strategies: Optional[List[SchedulerStrategy]] = None
     config_path: str = "config.json"
-    saved_schedules: List[Dict[str, Any]] = None
+    saved_schedules: Optional[List[Dict[str, Any]]] = None
     
     def __post_init__(self):
         if self.available_strategies is None:

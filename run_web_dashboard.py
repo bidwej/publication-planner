@@ -5,17 +5,17 @@ This runs the full dashboard with all features.
 """
 
 import sys
-import os
+from pathlib import Path
 
 # Add the project root to Python path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(str(Path(__file__).parent))
 
 try:
     from app.main import main
     
     if __name__ == "__main__":
-        # Set up arguments for dashboard mode
-        sys.argv = ['main.py', '--mode', 'dashboard', '--debug', 'False']
+        # Set up arguments for dashboard mode (no debug flag = debug=False)
+        sys.argv = ['main.py', '--mode', 'dashboard']
         
         # Run the main function
         main()

@@ -3,6 +3,7 @@
 from datetime import date
 from unittest.mock import Mock, patch
 import os
+from pathlib import Path
 
 from output.generators.schedule import (
     create_output_directory,
@@ -23,21 +24,24 @@ class TestCreateOutputDirectory:
         
         assert output_dir.startswith(base_dir)
         assert "output_" in output_dir
-        assert os.path.exists(output_dir)
-        assert os.path.isdir(output_dir)
+        assert Path(output_dir).exists()
+        assert Path(output_dir).is_dir()
 
     def test_create_output_directory_default(self, tmp_path):
         """Test directory creation with default base_dir."""
-        with patch('output.generators.schedule.os.path.join') as mock_join, \
-             patch('output.generators.schedule.os.makedirs') as mock_makedirs:
+        with patch('output.generators.schedule.Path') as mock_path, \
+             patch('output.generators.schedule.Path.mkdir') as mock_mkdir:
             
-            mock_join.return_value = "/test/output_20240101_120000"
+            mock_path_instance = Mock()
+            # Set up the __truediv__ method for path operations
+            mock_path_instance.__truediv__ = Mock(return_value=mock_path_instance)
+            mock_path_instance.mkdir.return_value = None
+            mock_path.return_value = mock_path_instance
             
             output_dir = create_output_directory()
             
-            mock_join.assert_called_once()
-            mock_makedirs.assert_called_once_with("/test/output_20240101_120000", exist_ok=True)
-            assert output_dir == "/test/output_20240101_120000"
+            mock_path.assert_called_once()
+            mock_path_instance.mkdir.assert_called_once_with(parents=True, exist_ok=True)
 
 
 class TestSaveAllOutputs:

@@ -1,23 +1,25 @@
-"""Schedule-specific output generation."""
+"""Schedule generation and output functions."""
 
 from __future__ import annotations
-from typing import Dict, List
+from typing import Dict, List, Optional, Any
 from datetime import date, timedelta, datetime
-import os
+import statistics
+from collections import defaultdict
+from pathlib import Path
 from core.models import Config, ScheduleSummary, ScheduleMetrics, SubmissionType
 from scoring.penalty import calculate_penalty_score
 from scoring.quality import calculate_quality_score
 from scoring.efficiency import calculate_efficiency_score
 from core.constraints import validate_deadline_compliance, validate_resource_constraints
-from output.formatters.tables import save_schedule_json, save_table_csv, save_metrics_json
-from core.constants import DAYS_PER_MONTH
+from src.output.tables import save_schedule_json, save_table_csv, save_metrics_json
+from core.constants import DAYS_PER_MONTH, PERFECT_COMPLIANCE_RATE, PERCENTAGE_MULTIPLIER
 
 def create_output_directory(base_dir: str = "output") -> str:
     """Create a timestamped output directory."""
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    output_dir = os.path.join(base_dir, f"output_{timestamp}")
-    os.makedirs(output_dir, exist_ok=True)
-    return output_dir
+    output_dir = Path(base_dir) / f"output_{timestamp}"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    return str(output_dir)
 
 def save_all_outputs(
     schedule: Dict[str, str],
@@ -126,7 +128,8 @@ def generate_schedule_metrics(schedule: Dict[str, date], config: Config) -> Sche
             day = start_date + timedelta(days=i)
             daily_load[day] = daily_load.get(day, 0) + 1
     
-    avg_utilization = sum(daily_load.values()) / len(daily_load) if daily_load else 0.0
+    # Calculate average utilization
+    avg_utilization = statistics.mean(daily_load.values()) if daily_load else 0.0
     peak_utilization = max(daily_load.values()) if daily_load else 0
     
     # Calculate penalties and compliance

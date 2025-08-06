@@ -1,21 +1,17 @@
 # Core dependencies
 # Note: pandas, numpy, scipy are not currently used in the codebase
 
-# Visualization and plotting
-matplotlib>=3.7.0
-plotly>=5.15.0
+# Web dashboard and visualization
 dash>=2.14.0
-# Note: seaborn is not currently used
+plotly>=5.15.0
 
 # Data handling and utilities
 python-dateutil>=2.8.0
-# Note: pytz is not currently used
 
 # Testing
 pytest>=7.4.0
 pytest-cov>=4.1.0
 pytest-timeout>=2.1.0
-playwright
 
 # Optimization libraries
 pulp>=2.7.0  # For MILP optimization in optimal scheduler

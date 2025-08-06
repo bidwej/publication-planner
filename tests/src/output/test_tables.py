@@ -1,7 +1,22 @@
 """Tests for output tables module."""
 
 from datetime import date
-from output.tables import generate_simple_monthly_table, generate_schedule_summary_table, generate_deadline_table
+from src.output.tables import (
+    generate_simple_monthly_table, 
+    generate_schedule_summary_table, 
+    generate_deadline_table,
+    format_schedule_table,
+    format_metrics_table,
+    format_deadline_table,
+    create_schedule_table,
+    create_violations_table,
+    create_metrics_table,
+    create_analytics_table,
+    save_schedule_json,
+    save_table_csv,
+    save_metrics_json,
+    get_output_summary
+)
 
 
 class TestGenerateSimpleMonthlyTable:
@@ -110,6 +125,269 @@ class TestGenerateDeadlineTable:
         
         assert isinstance(table, list)
         assert len(table) >= 0
+
+
+class TestFormatScheduleTable:
+    """Test formatted schedule table generation."""
+    
+    def test_empty_schedule(self, config):
+        """Test formatted table generation with empty schedule."""
+        schedule = {}
+        table = format_schedule_table(schedule, config)
+        
+        assert isinstance(table, list)
+        assert len(table) == 0
+    
+    def test_single_submission(self, config):
+        """Test formatted table generation with single submission."""
+        schedule = {"test-pap": date(2025, 1, 15)}
+        table = format_schedule_table(schedule, config)
+        
+        assert isinstance(table, list)
+        assert len(table) >= 0
+    
+    def test_table_structure(self, config):
+        """Test that formatted table has expected structure."""
+        schedule = {"test-pap": date(2025, 1, 15)}
+        table = format_schedule_table(schedule, config)
+        
+        if table:
+            row = table[0]
+            expected_keys = ["Submission", "Type", "Conference", "Start Date", "End Date", "Duration", "Deadline", "Relative Time"]
+            for key in expected_keys:
+                assert key in row
+
+
+class TestFormatMetricsTable:
+    """Test metrics table formatting."""
+    
+    def test_metrics_table_structure(self, mock_schedule_summary):
+        """Test that metrics table has expected structure."""
+        table = format_metrics_table(mock_schedule_summary)
+        
+        assert isinstance(table, list)
+        assert len(table) > 0
+        
+        for row in table:
+            assert "Metric" in row
+            assert "Value" in row
+            assert "Description" in row
+
+
+class TestFormatDeadlineTable:
+    """Test deadline table formatting."""
+    
+    def test_empty_schedule(self, config):
+        """Test deadline formatting with empty schedule."""
+        schedule = {}
+        table = format_deadline_table(schedule, config)
+        
+        assert isinstance(table, list)
+        assert len(table) == 0
+    
+    def test_single_submission(self, config):
+        """Test deadline formatting with single submission."""
+        schedule = {"test-pap": date(2025, 1, 15)}
+        table = format_deadline_table(schedule, config)
+        
+        assert isinstance(table, list)
+        assert len(table) >= 0
+
+
+class TestCreateScheduleTable:
+    """Test web-specific schedule table creation."""
+    
+    def test_empty_schedule(self, config):
+        """Test web table creation with empty schedule."""
+        schedule = {}
+        table = create_schedule_table(schedule, config)
+        
+        assert isinstance(table, list)
+        assert len(table) == 0
+    
+    def test_single_submission(self, config):
+        """Test web table creation with single submission."""
+        schedule = {"test-pap": date(2025, 1, 15)}
+        table = create_schedule_table(schedule, config)
+        
+        assert isinstance(table, list)
+        assert len(table) >= 0
+    
+    def test_table_structure(self, config):
+        """Test that web table has expected structure."""
+        schedule = {"test-pap": date(2025, 1, 15)}
+        table = create_schedule_table(schedule, config)
+        
+        if table:
+            row = table[0]
+            expected_keys = ['id', 'title', 'type', 'start_date', 'end_date', 'conference', 'status', 'duration', 'engineering']
+            for key in expected_keys:
+                assert key in row
+
+
+class TestCreateViolationsTable:
+    """Test violations table creation."""
+    
+    def test_empty_validation_result(self):
+        """Test violations table with empty validation result."""
+        validation_result = {}
+        table = create_violations_table(validation_result)
+        
+        assert isinstance(table, list)
+        assert len(table) == 0
+    
+    def test_with_violations(self):
+        """Test violations table with actual violations."""
+        validation_result = {
+            'constraints': {
+                'deadline_constraint': {
+                    'violations': [
+                        {
+                            'submission_id': 'test-pap',
+                            'message': 'Deadline missed',
+                            'severity': 'high',
+                            'impact': 'critical'
+                        }
+                    ]
+                }
+            }
+        }
+        table = create_violations_table(validation_result)
+        
+        assert isinstance(table, list)
+        assert len(table) > 0
+        
+        if table:
+            row = table[0]
+            expected_keys = ['type', 'submission', 'description', 'severity', 'impact']
+            for key in expected_keys:
+                assert key in row
+
+
+class TestCreateMetricsTable:
+    """Test metrics table creation."""
+    
+    def test_empty_validation_result(self):
+        """Test metrics table with empty validation result."""
+        validation_result = {}
+        table = create_metrics_table(validation_result)
+        
+        assert isinstance(table, list)
+        assert len(table) == 0  # Should return empty list when no data
+        # No rows to check when empty
+    
+    def test_with_scores(self):
+        """Test metrics table with actual scores."""
+        validation_result = {
+            'scores': {
+                'penalty_score': 85.5,
+                'quality_score': 92.3,
+                'efficiency_score': 78.9
+            },
+            'summary': {
+                'overall_score': 88.2
+            }
+        }
+        table = create_metrics_table(validation_result)
+        
+        assert isinstance(table, list)
+        assert len(table) > 0
+        
+        for row in table:
+            assert 'metric' in row
+            assert 'value' in row
+            assert 'status' in row
+
+
+class TestCreateAnalyticsTable:
+    """Test analytics table creation."""
+    
+    def test_empty_validation_result(self):
+        """Test analytics table with empty validation result."""
+        validation_result = {}
+        table = create_analytics_table(validation_result)
+        
+        assert isinstance(table, list)
+        assert len(table) == 0  # Should return empty list when no data
+        # No rows to check when empty
+    
+    def test_with_summary(self):
+        """Test analytics table with actual summary."""
+        validation_result = {
+            'summary': {
+                'total_submissions': 10,
+                'duration_days': 45,
+                'deadline_compliance': 85.5,
+                'dependency_satisfaction': 92.3,
+                'total_violations': 2,
+                'critical_violations': 0
+            }
+        }
+        table = create_analytics_table(validation_result)
+        
+        assert isinstance(table, list)
+        assert len(table) > 0
+        
+        for row in table:
+            assert 'category' in row
+            assert 'metric' in row
+            assert 'value' in row
+
+
+class TestFileIOFunctions:
+    """Test file I/O functions."""
+    
+    def test_save_schedule_json(self, tmp_path):
+        """Test saving schedule as JSON."""
+        schedule = {"test-pap": "2025-01-15"}
+        output_dir = str(tmp_path)
+        
+        filepath = save_schedule_json(schedule, output_dir)
+        
+        assert filepath.endswith("schedule.json")
+        assert filepath.startswith(str(tmp_path))
+    
+    def test_save_table_csv(self, tmp_path):
+        """Test saving table as CSV."""
+        table_data = [
+            {"ID": "1", "Title": "Test Paper", "Type": "Paper"},
+            {"ID": "2", "Title": "Test Abstract", "Type": "Abstract"}
+        ]
+        output_dir = str(tmp_path)
+        
+        filepath = save_table_csv(table_data, output_dir, "test_table.csv")
+        
+        assert filepath.endswith("test_table.csv")
+        assert filepath.startswith(str(tmp_path))
+    
+    def test_save_empty_table_csv(self, tmp_path):
+        """Test saving empty table as CSV."""
+        table_data = []
+        output_dir = str(tmp_path)
+        
+        filepath = save_table_csv(table_data, output_dir, "empty.csv")
+        
+        assert filepath == ""
+    
+    def test_get_output_summary(self):
+        """Test output summary generation."""
+        saved_files = {
+            "schedule": "/path/to/schedule.json",
+            "metrics": "/path/to/metrics.json"
+        }
+        
+        summary = get_output_summary(saved_files)
+        
+        assert "schedule.json" in summary
+        assert "metrics.json" in summary
+    
+    def test_get_empty_output_summary(self):
+        """Test output summary with no files."""
+        saved_files = {}
+        
+        summary = get_output_summary(saved_files)
+        
+        assert "No files were saved" in summary
 
 
 class TestTableFormats:

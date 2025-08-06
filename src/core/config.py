@@ -2,23 +2,24 @@
 
 from __future__ import annotations
 import json
-import os
+from pathlib import Path
 from typing import Dict, List
 from datetime import date
 from .models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
-from .dates import parse_date_safe
+from dateutil.parser import parse as parse_date
 
 from dateutil.relativedelta import relativedelta
 
 def load_config(config_path: str) -> Config:
     """Load the master config and all child JSON files."""
     try:
-        if not os.path.exists(config_path):
+        config_file = Path(config_path)
+        if not config_file.exists():
             print(f"Config file not found: {config_path}")
             print("Using default configuration with sample data...")
             return Config.create_default()
             
-        with open(config_path, "r", encoding="utf-8") as f:
+        with open(config_file, "r", encoding="utf-8") as f:
             raw_cfg = json.load(f)
         
         # Validate required fields
@@ -28,21 +29,21 @@ def load_config(config_path: str) -> Config:
             if field not in raw_cfg:
                 raise ValueError(f"Missing required field in config: {field}")
         
-        config_dir = os.path.dirname(os.path.abspath(config_path))
+        config_dir = config_file.parent
         
         # Load conferences
-        conferences_path = os.path.join(config_dir, raw_cfg["data_files"]["conferences"])
-        if not os.path.exists(conferences_path):
+        conferences_path = config_dir / raw_cfg["data_files"]["conferences"]
+        if not conferences_path.exists():
             raise FileNotFoundError(f"Conferences file not found: {conferences_path}")
         conferences = _load_conferences(conferences_path)
         
         # Load submissions
-        mods_path = os.path.join(config_dir, raw_cfg["data_files"]["mods"])
-        papers_path = os.path.join(config_dir, raw_cfg["data_files"]["papers"])
+        mods_path = config_dir / raw_cfg["data_files"]["mods"]
+        papers_path = config_dir / raw_cfg["data_files"]["papers"]
         
-        if not os.path.exists(mods_path):
+        if not mods_path.exists():
             raise FileNotFoundError(f"Mods file not found: {mods_path}")
-        if not os.path.exists(papers_path):
+        if not papers_path.exists():
             raise FileNotFoundError(f"Papers file not found: {papers_path}")
             
         submissions = _load_submissions(
@@ -59,8 +60,8 @@ def load_config(config_path: str) -> Config:
         if raw_cfg.get("scheduling_options", {}).get("enable_blackout_periods", False):
             blackouts_rel = raw_cfg["data_files"].get("blackouts")
             if blackouts_rel:
-                blackout_path = os.path.join(config_dir, blackouts_rel)
-                if os.path.exists(blackout_path):
+                blackout_path = config_dir / blackouts_rel
+                if blackout_path.exists():
                     blackout_dates = _load_blackout_dates(blackout_path)
                 else:
                     print(f"Warning: Blackout file not found: {blackout_path}")
@@ -96,7 +97,7 @@ def load_config(config_path: str) -> Config:
     except Exception as e:
         raise RuntimeError(f"Failed to load configuration: {e}")
 
-def _load_blackout_dates(path: str) -> List[date]:
+def _load_blackout_dates(path: Path) -> List[date]:
     """Load blackout dates from JSON file."""
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -106,31 +107,43 @@ def _load_blackout_dates(path: str) -> List[date]:
         for year_key in ["federal_holidays_2025", "federal_holidays_2026"]:
             if year_key in raw:
                 for date_str in raw[year_key]:
-                    blackout_dates.append(parse_date_safe(date_str))
+                    try:
+                        blackout_dates.append(parse_date(date_str).date())
+                    except (ValueError, TypeError):
+                        continue
         # Add custom blackout periods
         if "custom_blackout_periods" in raw:
             for period in raw["custom_blackout_periods"]:
-                start = parse_date_safe(period["start"])
-                end = parse_date_safe(period["end"])
-                current = start
-                while current <= end:
-                    blackout_dates.append(current)
-                    current += relativedelta(days=1)
+                try:
+                    start = parse_date(period["start"]).date()
+                    end = parse_date(period["end"]).date()
+                    current = start
+                    while current <= end:
+                        blackout_dates.append(current)
+                        current += relativedelta(days=1)
+                except (ValueError, TypeError):
+                    continue
         return blackout_dates
     except Exception as e:
         print(f"Warning: Could not load blackout dates: {e}")
         return []
 
-def _load_conferences(path: str) -> List[Conference]:
+def _load_conferences(path: Path) -> List[Conference]:
     with open(path, "r", encoding="utf-8") as f:
         raw = json.load(f)
     out: List[Conference] = []
     for c in raw:
         deadlines: Dict[SubmissionType, date] = {}
         if c.get("abstract_deadline"):
-            deadlines[SubmissionType.ABSTRACT] = parse_date_safe(c["abstract_deadline"])
+            try:
+                deadlines[SubmissionType.ABSTRACT] = parse_date(c["abstract_deadline"]).date()
+            except (ValueError, TypeError):
+                continue
         if c.get("full_paper_deadline"):
-            deadlines[SubmissionType.PAPER] = parse_date_safe(c["full_paper_deadline"])
+            try:
+                deadlines[SubmissionType.PAPER] = parse_date(c["full_paper_deadline"]).date()
+            except (ValueError, TypeError):
+                continue
         out.append(
             Conference(
                 id=c["name"],
@@ -143,8 +156,8 @@ def _load_conferences(path: str) -> List[Conference]:
     return out
 
 def _load_submissions(
-    mods_path: str,
-    papers_path: str,
+    mods_path: Path,
+    papers_path: Path,
     conferences: List[Conference],
     abs_lead: int,
     pap_lead: int,
@@ -162,7 +175,7 @@ def _load_submissions(
 
     # Load mods as abstracts
     for mod in mods:
-        mod_id = mod.get("id") or mod.get("mod_id")
+        mod_id = mod.get("id")
         if not mod_id:
             continue
         conf_id = mod.get("conference_id")
@@ -201,7 +214,7 @@ def _load_submissions(
                 lead_time_from_parents=mod.get("lead_time_from_parents", 0),
                 penalty_cost_per_day=penalty_costs.get("default_mod_penalty_per_day", 0.0),
                 engineering=engineering,
-                earliest_start_date=parse_date_safe(mod.get("est_data_ready", "2025-01-01")),
+                earliest_start_date=parse_date(mod.get("est_data_ready", "2025-01-01")).date(),
             )
         )
 
@@ -251,10 +264,10 @@ def _load_submissions(
                 conference_id=conf_id,
                 depends_on=mod_deps + parent_deps,
                 draft_window_months=paper.get("draft_window_months", 3),
-                lead_time_from_parents=paper.get("lead_time_from_parents", 0),
+                lead_time_from_parents=paper.get("lead_time_from_parents", pap_lead),
                 penalty_cost_per_day=penalty_costs.get("default_paper_penalty_per_day", 0.0),
                 engineering=engineering,
-                earliest_start_date=parse_date_safe(paper.get("earliest_start_date", "2025-01-01")),
+                earliest_start_date=parse_date(paper.get("earliest_start_date", "2025-01-01")).date(),
             )
         )
 

@@ -10,12 +10,12 @@
     "abstract": 0.5
   },
   "penalty_costs": {
-    "default_mod_penalty_per_day": 1000,
-    "default_paper_penalty_per_day": 500,
-    "default_monthly_slip_penalty": 1000,
-    "default_full_year_deferral_penalty": 5000,
-    "missed_abstract_penalty": 3000,
-    "resource_violation_penalty": 200
+    "default_mod_penalty_per_day": 1000.0,
+    "default_paper_penalty_per_day": 500.0,
+    "default_monthly_slip_penalty": 1000.0,
+    "default_full_year_deferral_penalty": 5000.0,
+    "missed_abstract_penalty": 3000.0,
+    "resource_violation_penalty": 200.0
   },
   "scheduling_options": {
     "enable_early_abstract_scheduling": true,

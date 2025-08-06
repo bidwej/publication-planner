@@ -8,6 +8,7 @@ from datetime import date
 from core.config import load_config
 from core.models import Config, SchedulerStrategy, ValidationResult, ScoringResult, ScheduleResult, ScheduleSummary, ScheduleMetrics
 from core.constants import PERFECT_COMPLIANCE_RATE
+from dataclasses import replace
 from schedulers.base import BaseScheduler
 # Import all schedulers to register them
 from schedulers.greedy import GreedyScheduler
@@ -21,7 +22,7 @@ from core.constraints import validate_schedule_comprehensive
 from scoring.penalty import calculate_penalty_score
 from scoring.quality import calculate_quality_score
 from scoring.efficiency import calculate_efficiency_score, calculate_efficiency_resource, calculate_efficiency_timeline
-from output.tables import generate_simple_monthly_table
+from src.output.tables import generate_simple_monthly_table
 
 
 class Planner:
@@ -58,6 +59,32 @@ class Planner:
         if validation_errors:
             error_msg = "Configuration validation failed:\n" + "\n".join(f"  - {error}" for error in validation_errors)
             raise ValueError(error_msg)
+    
+    def update_config(self, **kwargs) -> None:
+        """
+        Update configuration parameters using dataclasses.replace().
+        
+        Parameters
+        ----------
+        **kwargs
+            Configuration parameters to update
+            
+        Raises
+        ------
+        ValueError
+            If updated configuration is invalid
+        """
+        # Use replace() to create a new config instance with updated parameters
+        updated_config = replace(self.config, **kwargs)
+        
+        # Validate the updated configuration
+        validation_errors = updated_config.validate()
+        if validation_errors:
+            error_msg = "Updated configuration validation failed:\n" + "\n".join(f"  - {error}" for error in validation_errors)
+            raise ValueError(error_msg)
+        
+        # Update the config if validation passes
+        self.config = updated_config
     
     def schedule(self, strategy: SchedulerStrategy = SchedulerStrategy.GREEDY) -> Dict[str, date]:
         """

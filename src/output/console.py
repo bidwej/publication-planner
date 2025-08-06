@@ -3,6 +3,7 @@
 from __future__ import annotations
 from typing import Dict, Any, List, Optional
 from datetime import date, timedelta
+import statistics
 from core.models import Config, SchedulerStrategy
 from core.constants import MAX_TITLE_LENGTH
 from core.constraints import validate_schedule_comprehensive
@@ -103,7 +104,7 @@ def print_utilization_summary(schedule: Dict[str, date], config: Config) -> None
         return
     
     max_load = max(daily_load.values())
-    avg_load = sum(daily_load.values()) / len(daily_load)
+    avg_load = statistics.mean(daily_load.values())
     max_utilization = max_load / config.max_concurrent_submissions
     avg_utilization = avg_load / config.max_concurrent_submissions
     

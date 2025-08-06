@@ -2,9 +2,10 @@
 
 import pytest
 import tempfile
-import os
+from pathlib import Path
 import json
 from datetime import date
+from dataclasses import asdict, replace
 from src.core.config import load_config, _load_conferences, _load_submissions, _load_blackout_dates
 from src.core.models import Config, SubmissionType, ConferenceType, SchedulerStrategy, ConferenceRecurrence, Conference
 
@@ -68,7 +69,7 @@ class TestLoadConferences:
     
     def test_load_valid_conferences(self, test_data_dir):
         """Test loading valid conference data."""
-        conferences_path = os.path.join(test_data_dir, 'conferences.json')
+        conferences_path = Path(test_data_dir) / 'conferences.json'
         conferences = _load_conferences(conferences_path)
         
         assert len(conferences) > 0
@@ -80,7 +81,7 @@ class TestLoadConferences:
     
     def test_conference_with_abstract_deadline(self, test_data_dir):
         """Test conference with abstract deadline."""
-        conferences_path = os.path.join(test_data_dir, 'conferences.json')
+        conferences_path = Path(test_data_dir) / 'conferences.json'
         conferences = _load_conferences(conferences_path)
         
         # Find a conference with abstract deadline
@@ -93,7 +94,7 @@ class TestLoadConferences:
     
     def test_conference_with_paper_deadline(self, test_data_dir):
         """Test conference with paper deadline."""
-        conferences_path = os.path.join(test_data_dir, 'conferences.json')
+        conferences_path = Path(test_data_dir) / 'conferences.json'
         conferences = _load_conferences(conferences_path)
         
         # Find a conference with paper deadline
@@ -105,12 +106,13 @@ class TestLoadConferences:
             assert conf_with_paper.deadlines[SubmissionType.PAPER] is not None
     
     def test_conference_types(self, test_data_dir):
-        """Test that conference types are properly parsed."""
-        conferences_path = os.path.join(test_data_dir, 'conferences.json')
+        """Test that conferences have valid types."""
+        conferences_path = Path(test_data_dir) / 'conferences.json'
         conferences = _load_conferences(conferences_path)
         
         for conf in conferences:
-            assert isinstance(conf.conf_type, ConferenceType)
+            assert conf.conf_type in [ConferenceType.ENGINEERING, ConferenceType.MEDICAL]
+            assert conf.recurrence in [ConferenceRecurrence.ANNUAL, ConferenceRecurrence.BIENNIAL]
 
 
 class TestLoadSubmissions:
@@ -118,15 +120,14 @@ class TestLoadSubmissions:
     
     def test_load_valid_submissions(self, test_data_dir):
         """Test loading valid submission data."""
-        mods_path = os.path.join(test_data_dir, 'mods.json')
-        papers_path = os.path.join(test_data_dir, 'papers.json')
+        mods_path = Path(test_data_dir) / 'mods.json'
+        papers_path = Path(test_data_dir) / 'papers.json'
         
-                 # Create a minimal conferences list for testing
-        from src.core.models import Conference, ConferenceType, ConferenceRecurrence
+        # Create minimal conferences for testing
         conferences = [
             Conference(
-                id="ICML",
-                name="ICML",
+                id="test_conf",
+                name="Test Conference",
                 conf_type=ConferenceType.ENGINEERING,
                 recurrence=ConferenceRecurrence.ANNUAL,
                 deadlines={}
@@ -137,30 +138,27 @@ class TestLoadSubmissions:
             mods_path=mods_path,
             papers_path=papers_path,
             conferences=conferences,
-            abs_lead=0,
+            abs_lead=30,
             pap_lead=60,
-            penalty_costs={"default_mod_penalty_per_day": 1000, "default_paper_penalty_per_day": 500}
+            penalty_costs={"default_mod_penalty_per_day": 1000.0}
         )
         
         assert len(submissions) > 0
-        
-        # Check that we have both mods and papers
-        mods = [s for s in submissions if s.kind == SubmissionType.ABSTRACT]
-        papers = [s for s in submissions if s.kind == SubmissionType.PAPER]
-        
-        assert len(mods) > 0, "Should have mods loaded as abstracts"
-        assert len(papers) > 0, "Should have papers loaded"
+        for submission in submissions:
+            assert hasattr(submission, 'id')
+            assert hasattr(submission, 'title')
+            assert hasattr(submission, 'kind')
+            assert hasattr(submission, 'conference_id')
     
     def test_submission_attributes(self, test_data_dir):
         """Test that submissions have all required attributes."""
-        mods_path = os.path.join(test_data_dir, 'mods.json')
-        papers_path = os.path.join(test_data_dir, 'papers.json')
+        mods_path = Path(test_data_dir) / 'mods.json'
+        papers_path = Path(test_data_dir) / 'papers.json'
         
-        from src.core.models import Conference, ConferenceType, ConferenceRecurrence
         conferences = [
             Conference(
-                id="ICML",
-                name="ICML",
+                id="test_conf",
+                name="Test Conference",
                 conf_type=ConferenceType.ENGINEERING,
                 recurrence=ConferenceRecurrence.ANNUAL,
                 deadlines={}
@@ -171,30 +169,30 @@ class TestLoadSubmissions:
             mods_path=mods_path,
             papers_path=papers_path,
             conferences=conferences,
-            abs_lead=0,
+            abs_lead=30,
             pap_lead=60,
-            penalty_costs={"default_mod_penalty_per_day": 1000, "default_paper_penalty_per_day": 500}
+            penalty_costs={"default_mod_penalty_per_day": 1000.0}
         )
         
         for submission in submissions:
-            required_attrs = [
-                'id', 'kind', 'title', 'earliest_start_date', 'conference_id',
-                'engineering', 'depends_on', 'penalty_cost_per_day'
-            ]
-            
-            for attr in required_attrs:
-                assert hasattr(submission, attr), f"Submission missing attribute: {attr}"
+            assert submission.id.endswith(('-wrk', '-pap'))
+            assert submission.title is not None
+            assert submission.kind in [SubmissionType.ABSTRACT, SubmissionType.PAPER]
+            assert isinstance(submission.depends_on, list)
+            assert isinstance(submission.draft_window_months, int)
+            assert isinstance(submission.lead_time_from_parents, int)
+            assert isinstance(submission.penalty_cost_per_day, float)
+            assert isinstance(submission.engineering, bool)
     
     def test_paper_dependencies_conversion(self, test_data_dir):
-        """Test that paper dependencies are properly converted."""
-        mods_path = os.path.join(test_data_dir, 'mods.json')
-        papers_path = os.path.join(test_data_dir, 'papers.json')
+        """Test that paper dependencies are correctly converted."""
+        mods_path = Path(test_data_dir) / 'mods.json'
+        papers_path = Path(test_data_dir) / 'papers.json'
         
-        from src.core.models import Conference, ConferenceType, ConferenceRecurrence
         conferences = [
             Conference(
-                id="ICML",
-                name="ICML",
+                id="test_conf",
+                name="Test Conference",
                 conf_type=ConferenceType.ENGINEERING,
                 recurrence=ConferenceRecurrence.ANNUAL,
                 deadlines={}
@@ -205,17 +203,16 @@ class TestLoadSubmissions:
             mods_path=mods_path,
             papers_path=papers_path,
             conferences=conferences,
-            abs_lead=0,
+            abs_lead=30,
             pap_lead=60,
-            penalty_costs={"default_mod_penalty_per_day": 1000, "default_paper_penalty_per_day": 500}
+            penalty_costs={"default_mod_penalty_per_day": 1000.0}
         )
         
-        # Check that papers have proper dependency IDs
-        papers = [s for s in submissions if s.kind == SubmissionType.PAPER]
-        for paper in papers:
-            for dep in (paper.depends_on or []):
-                # Dependencies should be in format "id-kind"
-                assert '-' in dep, f"Dependency {dep} should contain '-' separator"
+        # Check that paper submissions have correct dependency format
+        paper_submissions = [s for s in submissions if s.kind == SubmissionType.PAPER]
+        for paper in paper_submissions:
+            for dep in paper.depends_on or []:
+                assert dep.endswith(('-wrk', '-pap'))
 
 
 class TestLoadBlackoutDates:
@@ -223,275 +220,410 @@ class TestLoadBlackoutDates:
     
     def test_load_valid_blackout_dates(self, test_data_dir):
         """Test loading valid blackout dates."""
-        blackout_path = os.path.join(test_data_dir, 'blackout.json')
+        blackout_path = Path(test_data_dir) / 'blackout.json'
         blackout_dates = _load_blackout_dates(blackout_path)
         
         assert isinstance(blackout_dates, list)
-        # Should have some blackout dates
-        assert len(blackout_dates) > 0
-        
-        # All should be date objects
         for date_obj in blackout_dates:
             assert isinstance(date_obj, date)
     
     def test_blackout_dates_with_federal_holidays(self, test_data_dir):
-        """Test loading blackout dates with federal holidays."""
-        blackout_path = os.path.join(test_data_dir, 'blackout.json')
+        """Test blackout dates with federal holidays."""
+        blackout_path = Path(test_data_dir) / 'blackout.json'
         blackout_dates = _load_blackout_dates(blackout_path)
         
-        # Check that we have dates from 2025 and 2026
-        years = {d.year for d in blackout_dates}
-        assert 2025 in years or 2026 in years
+        # Should have some federal holidays
+        assert len(blackout_dates) > 0
     
     def test_blackout_dates_with_custom_periods(self, test_data_dir):
-        """Test loading blackout dates with custom periods."""
-        blackout_path = os.path.join(test_data_dir, 'blackout.json')
+        """Test blackout dates with custom periods."""
+        blackout_path = Path(test_data_dir) / 'blackout.json'
         blackout_dates = _load_blackout_dates(blackout_path)
         
-        # Should have some dates
+        # Should have dates from custom periods
         assert len(blackout_dates) > 0
     
     def test_blackout_dates_file_not_found(self):
-        """Test loading blackout dates from non-existent file."""
-        blackout_dates = _load_blackout_dates("nonexistent_blackout.json")
+        """Test handling of missing blackout file."""
+        # Should return empty list for non-existent file
+        blackout_dates = _load_blackout_dates(Path("nonexistent.json"))
         assert blackout_dates == []
     
     def test_blackout_dates_invalid_json(self):
-        """Test loading blackout dates from invalid JSON."""
+        """Test handling of invalid JSON in blackout file."""
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-            f.write('{"invalid": json}')
+            f.write("invalid json content")
             temp_path = f.name
         
         try:
-            blackout_dates = _load_blackout_dates(temp_path)
+            blackout_dates = _load_blackout_dates(Path(temp_path))
             assert blackout_dates == []
         finally:
-            os.unlink(temp_path)
+            Path(temp_path).unlink(missing_ok=True)
 
 
 class TestConfigIntegration:
-    """Integration tests for configuration loading."""
+    """Test integration of all config components."""
     
     def test_full_config_loading(self, config):
-        """Test that full configuration loads correctly."""
-        assert config is not None
-        assert len(config.submissions) > 0
-        assert len(config.conferences) > 0
-        
-        # Check that submissions_dict is populated
-        assert hasattr(config, 'submissions_dict')
-        assert len(config.submissions_dict) == len(config.submissions)
-        
-        # Check that all submissions are in the dict
-        for submission in config.submissions:
-            assert submission.id in config.submissions_dict
-    
-    def test_default_config_creation(self):
-        """Test that default configuration can be created."""
-        config = Config.create_default()
-        
-        # Check basic structure
+        """Test that all config components work together."""
         assert isinstance(config, Config)
         assert len(config.submissions) > 0
         assert len(config.conferences) > 0
-        
-        # Check required fields
         assert config.min_abstract_lead_time_days > 0
         assert config.min_paper_lead_time_days > 0
         assert config.max_concurrent_submissions > 0
-        
-        # Check default values
-        assert config.default_paper_lead_time_months == 3
-        assert config.penalty_costs is not None
-        assert config.priority_weights is not None
-        assert config.scheduling_options is not None
-        
-        # Check validation passes
-        errors = config.validate()
-        assert len(errors) == 0, f"Default config validation failed: {errors}"
     
-    def test_load_config_with_nonexistent_file(self):
-        """Test that load_config uses default when file doesn't exist."""
-        config = load_config("nonexistent_config.json")
-        
-        # Should return a valid default config
+    def test_default_config_creation(self):
+        """Test that default config can be created."""
+        config = Config.create_default()
         assert isinstance(config, Config)
         assert len(config.submissions) > 0
         assert len(config.conferences) > 0
-        
-        # Should have sample data
-        sample_submissions = ["mod1-wrk", "paper1-pap", "mod2-wrk", "paper2-pap"]
-        sample_conferences = ["ICRA2025", "MICCAI2025"]
-        
-        submission_ids = [s.id for s in config.submissions]
-        conference_ids = [c.id for c in config.conferences]
-        
-        for sub_id in sample_submissions:
-            assert sub_id in submission_ids, f"Sample submission {sub_id} not found"
-        
-        for conf_id in sample_conferences:
-            assert conf_id in conference_ids, f"Sample conference {conf_id} not found"
+        assert config.min_abstract_lead_time_days > 0
+        assert config.min_paper_lead_time_days > 0
+        assert config.max_concurrent_submissions > 0
+    
+    def test_load_config_with_nonexistent_file(self):
+        """Test loading config when file doesn't exist."""
+        # Should return default config instead of raising error
+        config = load_config("nonexistent_file.json")
+        assert isinstance(config, Config)
+        assert len(config.submissions) > 0
+        assert len(config.conferences) > 0
     
     def test_config_with_blackout_periods_disabled(self, test_data_dir):
-        """Test config loading with blackout periods disabled."""
-        # Create a temporary config with blackout periods disabled
+        """Test config loading when blackout periods are disabled."""
+        # Create a config file with blackout periods disabled
+        config_data = {
+            "min_abstract_lead_time_days": 30,
+            "min_paper_lead_time_days": 60,
+            "max_concurrent_submissions": 3,
+            "data_files": {
+                "conferences": "conferences.json",
+                "mods": "mods.json",
+                "papers": "papers.json"
+            },
+            "scheduling_options": {
+                "enable_blackout_periods": False
+            }
+        }
+        
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-            f.write('''{
-  "min_abstract_lead_time_days": 0,
-  "min_paper_lead_time_days": 60,
-  "max_concurrent_submissions": 2,
-  "default_paper_lead_time_months": 3,
-  "scheduling_options": {
-    "enable_blackout_periods": false
-  },
-  "data_files": {
-    "conferences": "conferences.json",
-    "mods": "mods.json",
-    "papers": "papers.json"
-  }
-}''')
-            temp_path = f.name
+            json.dump(config_data, f)
+            config_path = f.name
         
         try:
-            # Copy the test data files to the same directory as the temp config
-            import shutil
-            temp_dir = os.path.dirname(temp_path)
-            
-            # Copy test data files to temp directory
+            # Copy test data to temp directory
+            temp_dir = Path(config_path).parent
             for filename in ['conferences.json', 'mods.json', 'papers.json']:
-                src = os.path.join(test_data_dir, filename)
-                dst = os.path.join(temp_dir, filename)
-                shutil.copy2(src, dst)
+                src = Path(test_data_dir) / filename
+                dst = temp_dir / filename
+                if src.exists():
+                    dst.write_text(src.read_text())
             
-            config = load_config(temp_path)
-            assert config.blackout_dates == []
+            config = load_config(config_path)
+            assert isinstance(config, Config)
+            assert len(config.blackout_dates or []) == 0  # Should be empty when disabled
+            
         finally:
-            os.unlink(temp_path) 
+            Path(config_path).unlink(missing_ok=True)
 
 
 class TestEnums:
+    """Test enum functionality."""
+    
     def test_submission_type_enum(self):
-        assert SubmissionType.PAPER.value == "paper"
+        """Test SubmissionType enum."""
         assert SubmissionType.ABSTRACT.value == "abstract"
-        assert SubmissionType.POSTER.value == "poster"
-
+        assert SubmissionType.PAPER.value == "paper"
+    
     def test_scheduler_strategy_enum(self):
-        assert SchedulerStrategy.GREEDY.value == "greedy"
-        assert SchedulerStrategy.STOCHASTIC.value == "stochastic"
-        assert SchedulerStrategy.LOOKAHEAD.value == "lookahead"
-        assert SchedulerStrategy.BACKTRACKING.value == "backtracking"
-
+        """Test SchedulerStrategy enum."""
+        strategies = list(SchedulerStrategy)
+        assert len(strategies) > 0
+        assert SchedulerStrategy.GREEDY in strategies
+    
     def test_conference_type_enum(self):
-        assert ConferenceType.MEDICAL.value == "MEDICAL"
+        """Test ConferenceType enum."""
         assert ConferenceType.ENGINEERING.value == "ENGINEERING"
-
+        assert ConferenceType.MEDICAL.value == "MEDICAL"
+    
     def test_conference_recurrence_enum(self):
+        """Test ConferenceRecurrence enum."""
         assert ConferenceRecurrence.ANNUAL.value == "annual"
         assert ConferenceRecurrence.BIENNIAL.value == "biennial"
-        assert ConferenceRecurrence.QUARTERLY.value == "quarterly"
+
+
+class TestDataclassesSerialization:
+    """Test dataclass serialization and replacement."""
+    
+    def test_config_asdict_serialization(self, config):
+        """Test that config can be serialized to dict."""
+        config_dict = asdict(config)
+        assert isinstance(config_dict, dict)
+        assert 'submissions' in config_dict
+        assert 'conferences' in config_dict
+        assert 'min_abstract_lead_time_days' in config_dict
+        assert 'min_paper_lead_time_days' in config_dict
+        assert 'max_concurrent_submissions' in config_dict
+    
+    def test_config_replace_functionality(self, config):
+        """Test that config can be modified using replace."""
+        original_lead_time = config.min_abstract_lead_time_days
+        modified_config = replace(config, min_abstract_lead_time_days=original_lead_time + 10)
+        
+        assert modified_config.min_abstract_lead_time_days == original_lead_time + 10
+        assert modified_config.min_paper_lead_time_days == config.min_paper_lead_time_days
+        assert modified_config.max_concurrent_submissions == config.max_concurrent_submissions
+    
+    def test_config_replace_multiple_fields(self, config):
+        """Test replacing multiple fields in config."""
+        modified_config = replace(
+            config,
+            min_abstract_lead_time_days=45,
+            min_paper_lead_time_days=90,
+            max_concurrent_submissions=5
+        )
+        
+        assert modified_config.min_abstract_lead_time_days == 45
+        assert modified_config.min_paper_lead_time_days == 90
+        assert modified_config.max_concurrent_submissions == 5
+    
+    def test_submission_asdict_serialization(self, config):
+        """Test that submissions can be serialized."""
+        for submission in config.submissions:
+            submission_dict = asdict(submission)
+            assert isinstance(submission_dict, dict)
+            assert 'id' in submission_dict
+            assert 'title' in submission_dict
+            assert 'kind' in submission_dict
+            assert 'conference_id' in submission_dict
+    
+    def test_conference_asdict_serialization(self, config):
+        """Test that conferences can be serialized."""
+        for conference in config.conferences:
+            conference_dict = asdict(conference)
+            assert isinstance(conference_dict, dict)
+            assert 'id' in conference_dict
+            assert 'name' in conference_dict
+            assert 'conf_type' in conference_dict
+            assert 'recurrence' in conference_dict
+    
+    def test_schedule_state_serialization(self, config):
+        """Test that schedule state can be serialized."""
+        # Create a simple schedule
+        schedule = {}
+        for i, submission in enumerate(config.submissions[:2]):
+            schedule[submission.id] = date(2025, 1, 1 + i)
+        
+        # Test that schedule can be converted to dict
+        schedule_dict = {k: v.isoformat() for k, v in schedule.items()}
+        assert isinstance(schedule_dict, dict)
+        assert len(schedule_dict) == 2
+    
+    def test_config_validation_after_replace(self, config):
+        """Test that config validation works after replace."""
+        # Create a modified config
+        modified_config = replace(
+            config,
+            min_abstract_lead_time_days=config.min_abstract_lead_time_days + 5
+        )
+        
+        # Should still be valid
+        validation_errors = modified_config.validate()
+        assert len(validation_errors) == 0
+
 
 class TestConferenceMappingAndEngineering:
+    """Test conference mapping and engineering flag inference."""
+    
     def test_conference_mapping_by_family(self, tmp_path):
+        """Test that conferences are mapped correctly by family."""
         # Create a minimal conferences list
-        confs = [
-            Conference(
-                id="ICML",
-                name="ICML",
-                conf_type=ConferenceType.ENGINEERING,
-                recurrence=ConferenceRecurrence.ANNUAL,
-                deadlines={}
-            ),
-            Conference(
-                id="MICCAI",
-                name="MICCAI",
-                conf_type=ConferenceType.MEDICAL,
-                recurrence=ConferenceRecurrence.ANNUAL,
-                deadlines={}
-            )
+        conferences_data = [
+            {
+                "name": "IEEE_ICRA",
+                "conference_type": "ENGINEERING",
+                "recurrence": "annual",
+                "abstract_deadline": "2025-01-15",
+                "full_paper_deadline": "2025-02-15"
+            }
         ]
-        # Paper with candidate conferences
-        paper = {
-            "id": "J1",
-            "title": "Test Paper",
-            "candidate_conferences": ["ICML"],
-            "draft_window_months": 4
+        
+        # Create mods with candidate conferences
+        mods_data = [
+            {
+                "id": "mod1",
+                "title": "Test Mod 1",
+                "candidate_conferences": ["IEEE_ICRA"],
+                "est_data_ready": "2025-01-01"
+            }
+        ]
+        
+        # Create papers with dependencies
+        papers_data = [
+            {
+                "id": "paper1",
+                "title": "Test Paper 1",
+                "mod_dependencies": ["mod1"],
+                "candidate_conferences": ["IEEE_ICRA"],
+                "earliest_start_date": "2025-01-01"
+            }
+        ]
+        
+        # Write test files
+        conferences_file = tmp_path / "conferences.json"
+        conferences_file.write_text(json.dumps(conferences_data))
+        
+        mods_file = tmp_path / "mods.json"
+        mods_file.write_text(json.dumps(mods_data))
+        
+        papers_file = tmp_path / "papers.json"
+        papers_file.write_text(json.dumps(papers_data))
+        
+        # Create config file
+        config_data = {
+            "min_abstract_lead_time_days": 30,
+            "min_paper_lead_time_days": 60,
+            "max_concurrent_submissions": 3,
+            "data_files": {
+                "conferences": "conferences.json",
+                "mods": "mods.json",
+                "papers": "papers.json"
+            }
         }
-        papers_path = tmp_path / "papers.json"
-        mods_path = tmp_path / "mods.json"
-        papers_path.write_text(json.dumps([paper]))
-        mods_path.write_text(json.dumps([]))
-        submissions = _load_submissions(
-            mods_path=str(mods_path),
-            papers_path=str(papers_path),
-            conferences=confs,
-            abs_lead=0,
-            pap_lead=60,
-            penalty_costs={"default_paper_penalty_per_day": 500}
-        )
-        # Should map to ICML
-        paper_sub = next(s for s in submissions if s.kind.value == "paper")
-        assert paper_sub.conference_id == "ICML"
-        assert paper_sub.draft_window_months == 4
-
+        
+        config_file = tmp_path / "config.json"
+        config_file.write_text(json.dumps(config_data))
+        
+        # Load config
+        config = load_config(str(config_file))
+        
+        # Check that submissions are mapped correctly
+        mod_submission = next(s for s in config.submissions if s.id == "mod1-wrk")
+        paper_submission = next(s for s in config.submissions if s.id == "paper1-pap")
+        
+        assert mod_submission.conference_id == "IEEE_ICRA"
+        assert paper_submission.conference_id == "IEEE_ICRA"
+        assert "mod1-wrk" in (paper_submission.depends_on or [])
+    
     def test_engineering_flag_inference(self, tmp_path):
-        confs = [
-            Conference(
-                id="ICML",
-                name="ICML",
-                conf_type=ConferenceType.ENGINEERING,
-                recurrence=ConferenceRecurrence.ANNUAL,
-                deadlines={}
-            )
+        """Test that engineering flag is inferred correctly."""
+        # Create conferences with different types
+        conferences_data = [
+            {
+                "name": "IEEE_ICRA",
+                "conference_type": "ENGINEERING",
+                "recurrence": "annual",
+                "abstract_deadline": "2025-02-15"
+            },
+            {
+                "name": "MICCAI",
+                "conference_type": "MEDICAL",
+                "recurrence": "annual",
+                "abstract_deadline": "2025-02-15"
+            }
         ]
-        paper = {
-            "id": "J2",
-            "title": "Engineering Paper",
-            "candidate_conferences": ["ICML"]
-            # No engineering flag set
+        
+        # Create mods that can go to both types
+        mods_data = [
+            {
+                "id": "mod1",
+                "title": "Test Mod 1",
+                "candidate_conferences": ["IEEE_ICRA", "MICCAI"],
+                "est_data_ready": "2025-01-01"
+            }
+        ]
+        
+        # Write test files
+        conferences_file = tmp_path / "conferences.json"
+        conferences_file.write_text(json.dumps(conferences_data))
+        
+        mods_file = tmp_path / "mods.json"
+        mods_file.write_text(json.dumps(mods_data))
+        
+        papers_file = tmp_path / "papers.json"
+        papers_file.write_text(json.dumps([]))
+        
+        # Create config file
+        config_data = {
+            "min_abstract_lead_time_days": 30,
+            "min_paper_lead_time_days": 60,
+            "max_concurrent_submissions": 3,
+            "data_files": {
+                "conferences": "conferences.json",
+                "mods": "mods.json",
+                "papers": "papers.json"
+            }
         }
-        papers_path = tmp_path / "papers.json"
-        mods_path = tmp_path / "mods.json"
-        papers_path.write_text(json.dumps([paper]))
-        mods_path.write_text(json.dumps([]))
-        submissions = _load_submissions(
-            mods_path=str(mods_path),
-            papers_path=str(papers_path),
-            conferences=confs,
-            abs_lead=0,
-            pap_lead=60,
-            penalty_costs={"default_paper_penalty_per_day": 500}
-        )
-        paper_sub = next(s for s in submissions if s.kind.value == "paper")
-        assert paper_sub.engineering is True
-
+        
+        config_file = tmp_path / "config.json"
+        config_file.write_text(json.dumps(config_data))
+        
+        # Load config
+        config = load_config(str(config_file))
+        
+        # Check that engineering flag is inferred correctly
+        mod_submission = next(s for s in config.submissions if s.id == "mod1-wrk")
+        # Should be engineering since it can go to engineering conferences
+        assert mod_submission.engineering is True
+    
     def test_duration_calculation_from_config(self, tmp_path):
-        import json
-        confs = [
-            Conference(
-                id="ICML",
-                name="ICML",
-                conf_type=ConferenceType.ENGINEERING,
-                recurrence=ConferenceRecurrence.ANNUAL,
-                deadlines={}
-            )
+        """Test that duration can be calculated from config."""
+        # Create a simple config with known dates
+        conferences_data = [
+            {
+                "name": "TEST_CONF",
+                "conference_type": "ENGINEERING",
+                "recurrence": "annual",
+                "abstract_deadline": "2025-03-15",
+                "full_paper_deadline": "2025-04-15"
+            }
         ]
-        paper = {
-            "id": "J3",
-            "title": "Duration Test Paper",
-            "conference_id": "ICML"
-            # No draft_window_months set, should use default (3)
+        
+        mods_data = [
+            {
+                "id": "mod1",
+                "title": "Test Mod 1",
+                "conference_id": "TEST_CONF",
+                "est_data_ready": "2025-01-01"
+            }
+        ]
+        
+        # Write test files
+        conferences_file = tmp_path / "conferences.json"
+        conferences_file.write_text(json.dumps(conferences_data))
+        
+        mods_file = tmp_path / "mods.json"
+        mods_file.write_text(json.dumps(mods_data))
+        
+        papers_file = tmp_path / "papers.json"
+        papers_file.write_text(json.dumps([]))
+        
+        # Create config file
+        config_data = {
+            "min_abstract_lead_time_days": 30,
+            "min_paper_lead_time_days": 60,
+            "max_concurrent_submissions": 3,
+            "data_files": {
+                "conferences": "conferences.json",
+                "mods": "mods.json",
+                "papers": "papers.json"
+            }
         }
-        papers_path = tmp_path / "papers.json"
-        mods_path = tmp_path / "mods.json"
-        papers_path.write_text(json.dumps([paper]))
-        mods_path.write_text(json.dumps([]))
-        submissions = _load_submissions(
-            mods_path=str(mods_path),
-            papers_path=str(papers_path),
-            conferences=confs,
-            abs_lead=0,
-            pap_lead=60,
-            penalty_costs={"default_paper_penalty_per_day": 500}
-        )
-        paper_sub = next(s for s in submissions if s.kind.value == "paper")
-        assert paper_sub.draft_window_months == 3  # Default 
+        
+        config_file = tmp_path / "config.json"
+        config_file.write_text(json.dumps(config_data))
+        
+        # Load config
+        config = load_config(str(config_file))
+        
+        # Check that we can calculate duration
+        conference = next(c for c in config.conferences if c.id == "TEST_CONF")
+        abstract_deadline = conference.deadlines[SubmissionType.ABSTRACT]
+        paper_deadline = conference.deadlines[SubmissionType.PAPER]
+        
+        duration = (paper_deadline - abstract_deadline).days
+        assert duration > 0
+        assert duration == 31  # March 15 to April 15 

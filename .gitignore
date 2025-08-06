@@ -40,3 +40,4 @@ test_output/*
 comparison_results.json
 chart_debug.html
 chart_inspection.png
+chart_current.png

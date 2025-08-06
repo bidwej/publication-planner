@@ -5,6 +5,7 @@ import os
 import json
 import tempfile
 from datetime import date
+from pathlib import Path
 
 from src.core.models import (
     Submission, SubmissionType, Config, Conference, ConferenceType, ConferenceRecurrence
@@ -68,7 +69,7 @@ def create_mock_config(submissions, conferences):
 @pytest.fixture
 def test_data_dir():
     """Fixture to provide test data directory."""
-    return os.path.join(os.path.dirname(__file__), "common", "data")
+    return str(Path(__file__).parent / "common" / "data")
 
 
 @pytest.fixture
@@ -225,3 +226,21 @@ def sample_schedule():
 def sample_scheduler(sample_config):
     """Fixture to provide a sample scheduler for testing."""
     return GreedyScheduler(sample_config)
+
+
+@pytest.fixture
+def mock_schedule_summary():
+    """Fixture to provide a mock schedule summary for testing."""
+    from src.core.models import ScheduleSummary
+    
+    return ScheduleSummary(
+        total_submissions=5,
+        schedule_span=120,
+        start_date=date(2024, 1, 1),
+        end_date=date(2024, 5, 1),
+        penalty_score=150.50,
+        quality_score=0.85,
+        efficiency_score=0.78,
+        deadline_compliance=90.5,
+        resource_utilization=0.75
+    )

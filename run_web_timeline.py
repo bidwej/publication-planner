@@ -5,17 +5,17 @@ This runs the timeline-only view with Gantt chart.
 """
 
 import sys
-import os
+from pathlib import Path
 
 # Add the project root to Python path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(str(Path(__file__).parent))
 
 try:
     from app.main import main
     
     if __name__ == "__main__":
-        # Set up arguments for timeline mode
-        sys.argv = ['main.py', '--mode', 'timeline', '--debug', 'False']
+        # Set up arguments for timeline mode (no debug flag = debug=False)
+        sys.argv = ['main.py', '--mode', 'timeline']
         
         # Run the main function
         main()

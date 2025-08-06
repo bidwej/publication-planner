@@ -1,78 +1,82 @@
-import os
-import shutil
-import importlib.util
-from typing import Optional, Set, List
+#!/usr/bin/env python3
+"""
+Copy a package to a new location with optional filtering.
+"""
+
 import argparse
-from importlib.metadata import distribution, PackageNotFoundError
-import re
+import shutil
+from pathlib import Path
+from typing import List, Callable, Optional
 
-def _package_path(name: str) -> Optional[str]:
-    spec = importlib.util.find_spec(name)
-    return spec.submodule_search_locations[0] if spec and spec.submodule_search_locations else None
+def is_ignored(path: Path, ignore_patterns: List[str]) -> bool:
+    """Check if a path should be ignored based on patterns."""
+    path_str = str(path)
+    return any(pattern in path_str for pattern in ignore_patterns)
 
-def _direct_deps(name: str) -> List[str]:
-    try:
-        dist = distribution(name)
-        requires = dist.requires or []
-        deps = []
-        for r in requires:
-            match = re.match(r"^\s*([A-Za-z0-9_.\-]+)", r)
-            if match:
-                deps.append(match.group(1))
-        return deps
-    except PackageNotFoundError:
-        return []
+def copy_package(
+    source: str,
+    destination: str,
+    ignore_patterns: List[str] = None,
+    filter_func: Optional[Callable[[Path], bool]] = None
+) -> None:
+    """
+    Copy a package to a new location with optional filtering.
+    
+    Args:
+        source: Source directory path
+        destination: Destination directory path
+        ignore_patterns: List of patterns to ignore
+        filter_func: Optional function to filter files
+    """
+    if ignore_patterns is None:
+        ignore_patterns = []
+    
+    src_path = Path(source)
+    dst_path = Path(destination)
+    
+    if not src_path.exists():
+        raise FileNotFoundError(f"Source directory not found: {source}")
+    
+    # Create destination directory
+    dst_path.mkdir(parents=True, exist_ok=True)
+    
+    # Copy files recursively
+    for item in src_path.rglob("*"):
+        if item.is_file():
+            # Check if file should be ignored
+            if is_ignored(item, ignore_patterns):
+                continue
+            
+            # Apply custom filter if provided
+            if filter_func and not filter_func(item):
+                continue
+            
+            # Calculate relative path
+            relative_path = item.relative_to(src_path)
+            dst_file = dst_path / relative_path
+            
+            # Create parent directories
+            dst_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Copy file
+            shutil.copy2(item, dst_file)
+            print(f"Copied: {relative_path}")
 
-def _collect_all_deps(root: str) -> List[str]:
-    seen: Set[str] = set()
-    queue: List[str] = [root]
-    order: List[str] = []
-    while queue:
-        pkg = queue.pop(0)
-        if pkg in seen:
-            continue
-        seen.add(pkg)
-        order.append(pkg)
-        queue.extend(_direct_deps(pkg))
-    return order
-
-def _copy_one(name: str, dest: str) -> None:
-    src = _package_path(name)
-    if not src:
-        print(f"ℹ️  Skipping {name}: not installed in this environment.")
-        return
-    dst = os.path.join(dest, name)
-    if os.path.exists(dst):
-        shutil.rmtree(dst)
-    print(f"→ Copying {name}")
-    shutil.copytree(src, dst, dirs_exist_ok=True)
-
-def copy_with_deps(root_pkg: str, dest_dir: str = "./third_party") -> None:
-    os.makedirs(dest_dir, exist_ok=True)
-    all_pkgs = _collect_all_deps(root_pkg)
-    if not all_pkgs:
-        print(f"⚠️ No packages found for {root_pkg}")
-        return
-    for pkg in all_pkgs:
-        _copy_one(pkg, dest_dir)
-
-def cli() -> None:
-    parser = argparse.ArgumentParser(
-        description="Copy a Python package and all its dependencies into a local folder."
-    )
-    parser.add_argument(
-        "package",
-        nargs="?",
-        default="pulp",
-        help="Root package name to copy (default: pulp)"
-    )
-    parser.add_argument(
-        "--dest",
-        default="./third_party",
-        help="Destination directory (default: ./third_party)"
-    )
+def main():
+    """Main function."""
+    parser = argparse.ArgumentParser(description="Copy a package to a new location")
+    parser.add_argument("source", help="Source directory")
+    parser.add_argument("dest", help="Destination directory")
+    parser.add_argument("--ignore", nargs="*", default=[], help="Patterns to ignore")
+    parser.add_argument("--root-package", default="pulp", help="Root package name to copy (default: pulp)")
+    
     args = parser.parse_args()
-    copy_with_deps(args.package, args.dest)
+    
+    try:
+        copy_package(args.source, args.dest, args.ignore)
+        print(f"Successfully copied {args.source} to {args.dest}")
+    except Exception as e:
+        print(f"Error: {e}")
 
 if __name__ == "__main__":
-    cli()
+    main()
