@@ -1,14 +1,18 @@
-"""Main planner facade for the paper planning system."""
+"""Main planner module for the Endoscope AI project."""
 
-from __future__ import annotations
-import json
-import os
-from typing import Dict, Any, List
+import sys
+from pathlib import Path
+from typing import Dict, Optional
 from datetime import date
-from core.models import Config, SchedulerStrategy
+
+# Add the src directory to the path
+sys.path.insert(0, str(Path(__file__).parent))
+
 from core.config import load_config
-from schedulers.base import Scheduler
-from src.output.tables import generate_simple_monthly_table
+from schedulers.base import BaseScheduler
+from core.constraints import validate_schedule_comprehensive
+from output.console import print_schedule_summary, print_metrics_summary
+from output.output_manager import generate_and_save_output
 
 
 class Planner:
@@ -116,4 +120,4 @@ class Planner:
 
     def generate_monthly_table(self) -> List[Dict[str, Any]]:
         """Generate monthly table for backward compatibility."""
-        return generate_simple_monthly_table(self.config)
+        return generate_simple_monthly_table(self.cfg)

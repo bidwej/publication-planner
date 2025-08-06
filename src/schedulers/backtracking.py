@@ -4,14 +4,13 @@ from __future__ import annotations
 from typing import Dict, List, Set
 from datetime import date, timedelta
 from .greedy import GreedyScheduler
-from .base import BaseScheduler
-from core.models import Config, SchedulerStrategy
-from core.dates import is_working_day
-@BaseScheduler.register_strategy(SchedulerStrategy.BACKTRACKING)
+from src.core.dates import is_working_day
+
+
 class BacktrackingGreedyScheduler(GreedyScheduler):
     """Backtracking greedy scheduler that can undo decisions when stuck."""
     
-    def __init__(self, config: Config, max_backtracks: int = 5):
+    def __init__(self, config, max_backtracks: int = 5):
         super().__init__(config)
         self.max_backtracks = max_backtracks
     

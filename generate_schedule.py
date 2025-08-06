@@ -1,20 +1,22 @@
 #!/usr/bin/env python3
-"""Generate and analyze schedules using various algorithms."""
+"""
+Generate a schedule for the Endoscope AI project.
+
+This script loads configuration data and generates a schedule using the scheduler.
+"""
 
 import sys
-import os
+import json
 from datetime import date
-from typing import Dict
+from pathlib import Path
 
-# Add the project root to the Python path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Add the src directory to the path
+sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from core.config import load_config
-from core.models import SchedulerStrategy
-from schedulers.base import Scheduler
-from core.constraints import validate_schedule_comprehensive
-from output.console import print_schedule_summary, print_metrics_summary
-from output.output_manager import generate_and_save_output
+from src.core.config import load_config
+from src.schedulers.base import BaseScheduler
+from src.output.tables import generate_simple_monthly_table, generate_schedule_summary_table
+from src.output.analytics import analyze_schedule_distribution, analyze_submission_types, analyze_timeline, analyze_resources
 
 
 def analyze_schedule(schedule: Dict[str, date], config, strategy_name: str = "Unknown") -> None:

@@ -3,7 +3,7 @@
 import pytest
 from datetime import date
 from typing import Dict
-from src.schedulers.base import Scheduler
+from src.schedulers.base import BaseScheduler
 from src.core.models import Config, SchedulerStrategy, Submission, Conference, ConferenceType, ConferenceRecurrence, SubmissionType
 
 
@@ -12,7 +12,7 @@ class TestScheduler:
     
     def test_scheduler_initialization(self, minimal_config):
         """Test scheduler initialization."""
-        scheduler = Scheduler(minimal_config)
+        scheduler = BaseScheduler(minimal_config)
         assert scheduler.config == minimal_config
         assert isinstance(scheduler.submissions, dict)
         assert isinstance(scheduler.conferences, dict)
@@ -39,14 +39,14 @@ class TestScheduler:
             data_files={}
         )
         
-        scheduler = Scheduler(empty_config)
+        scheduler = BaseScheduler(empty_config)
         assert scheduler.config == empty_config
         assert len(scheduler.submissions) == 0
         assert len(scheduler.conferences) == 0
     
     def test_scheduler_with_sample_data(self, config):
         """Test scheduler with sample data."""
-        scheduler = Scheduler(config)
+        scheduler = BaseScheduler(config)
         
         # Should have submissions and conferences
         assert len(scheduler.submissions) > 0
@@ -65,7 +65,7 @@ class TestScheduler:
         minimal_config.enable_backtracking = True
         minimal_config.max_backtracks = 10
         
-        scheduler = Scheduler(minimal_config)
+        scheduler = BaseScheduler(minimal_config)
         
         assert scheduler.randomness_factor == 0.1
         assert scheduler.lookahead_days == 30
@@ -74,7 +74,7 @@ class TestScheduler:
     
     def test_default_configuration_options(self, minimal_config):
         """Test default configuration options."""
-        scheduler = Scheduler(minimal_config)
+        scheduler = BaseScheduler(minimal_config)
         
         # Should have sensible defaults
         assert scheduler.randomness_factor == 0.0
@@ -84,7 +84,7 @@ class TestScheduler:
     
     def test_schedule_method(self, config):
         """Test that schedule method returns valid schedule."""
-        scheduler = Scheduler(config)
+        scheduler = BaseScheduler(config)
         schedule = scheduler.schedule()
         
         assert isinstance(schedule, dict)
@@ -97,7 +97,7 @@ class TestScheduler:
     
     def test_schedule_with_no_submissions(self, minimal_config):
         """Test scheduling with no submissions."""
-        scheduler = Scheduler(minimal_config)
+        scheduler = BaseScheduler(minimal_config)
         schedule = scheduler.schedule()
         
         # Should return empty schedule
@@ -106,7 +106,7 @@ class TestScheduler:
     
     def test_schedule_with_dependencies(self, config):
         """Test scheduling with dependencies."""
-        scheduler = Scheduler(config)
+        scheduler = BaseScheduler(config)
         schedule = scheduler.schedule()
         
         # Check that dependencies are satisfied

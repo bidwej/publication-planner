@@ -1,13 +1,13 @@
-"""Lookahead greedy scheduler implementation using inheritance from BaseScheduler."""
+"""Lookahead greedy scheduler implementation."""
 
 from __future__ import annotations
 from typing import List
-from datetime import timedelta
-from .base import BaseScheduler
-from core.models import Submission
+from datetime import timedelta, date
+from .greedy import GreedyScheduler
+from src.core.models import Submission
 
 
-class LookaheadGreedyScheduler(BaseScheduler):
+class LookaheadGreedyScheduler(GreedyScheduler):
     """Lookahead greedy scheduler that considers future implications of decisions."""
     
     def __init__(self, config, lookahead_days: int = 30):
@@ -15,9 +15,7 @@ class LookaheadGreedyScheduler(BaseScheduler):
         super().__init__(config)
         self.lookahead_days = lookahead_days
     
-    # ===== LOOKAHEAD-SPECIFIC OVERRIDES =====
-    
-    def _select_by_priority(self, ready: List[str]) -> List[str]:
+    def _sort_by_priority(self, ready: List[str]) -> List[str]:
         """Override priority selection to add lookahead consideration."""
         def get_priority(sid: str) -> float:
             s = self.submissions[sid]
@@ -56,7 +54,7 @@ class LookaheadGreedyScheduler(BaseScheduler):
         if deadline is None:
             return True
         
-        end_date = sub.get_end_date(start, self.config)
+        end_date = self._get_end_date(start, sub)
         
         # Add lookahead buffer to ensure we don't cut it too close
         buffer_date = deadline - timedelta(days=self.lookahead_days)

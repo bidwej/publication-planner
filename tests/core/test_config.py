@@ -6,7 +6,7 @@ import os
 import json
 from datetime import date
 from core.config import load_config, _load_conferences, _load_submissions, _load_blackout_dates
-from core.models import Config, SubmissionType, ConferenceType, SchedulerStrategy, ConferenceRecurrence
+from core.models import Config, SubmissionType, ConferenceType, SchedulerStrategy, ConferenceRecurrence, Conference
 
 
 class TestLoadConfig:
@@ -372,7 +372,12 @@ class TestConferenceMappingAndEngineering:
         papers_path.write_text(json.dumps([paper]))
         mods_path.write_text(json.dumps([]))
         submissions = _load_submissions(
-            str(mods_path), str(papers_path), confs, 0, 60, {"default_paper_penalty_per_day": 500}
+            mods_path=str(mods_path),
+            papers_path=str(papers_path),
+            conferences=confs,
+            abs_lead=0,
+            pap_lead=60,
+            penalty_costs={"default_paper_penalty_per_day": 500}
         )
         # Should map to ICML
         paper_sub = next(s for s in submissions if s.kind.value == "paper")
@@ -400,7 +405,12 @@ class TestConferenceMappingAndEngineering:
         papers_path.write_text(json.dumps([paper]))
         mods_path.write_text(json.dumps([]))
         submissions = _load_submissions(
-            str(mods_path), str(papers_path), confs, 0, 60, {"default_paper_penalty_per_day": 500}
+            mods_path=str(mods_path),
+            papers_path=str(papers_path),
+            conferences=confs,
+            abs_lead=0,
+            pap_lead=60,
+            penalty_costs={"default_paper_penalty_per_day": 500}
         )
         paper_sub = next(s for s in submissions if s.kind.value == "paper")
         assert paper_sub.engineering is True
@@ -427,7 +437,12 @@ class TestConferenceMappingAndEngineering:
         papers_path.write_text(json.dumps([paper]))
         mods_path.write_text(json.dumps([]))
         submissions = _load_submissions(
-            str(mods_path), str(papers_path), confs, 0, 60, {"default_paper_penalty_per_day": 500}
+            mods_path=str(mods_path),
+            papers_path=str(papers_path),
+            conferences=confs,
+            abs_lead=0,
+            pap_lead=60,
+            penalty_costs={"default_paper_penalty_per_day": 500}
         )
         paper_sub = next(s for s in submissions if s.kind.value == "paper")
         assert paper_sub.draft_window_months == 3  # Default 

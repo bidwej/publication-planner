@@ -1,14 +1,15 @@
-"""Test configuration and fixtures for the paper planner system."""
+"""Test configuration and fixtures."""
 
 import pytest
 import os
-from datetime import date
+from datetime import date, timedelta
+from typing import Dict, List
 
 from src.core.config import load_config
 from src.core.models import (
-    Submission, SubmissionType
+    Submission, SubmissionType, Config, Conference, ConferenceType, ConferenceRecurrence
 )
-from src.schedulers.base import Scheduler
+from src.schedulers.base import BaseScheduler
 
 
 @pytest.fixture(scope="session")
@@ -32,43 +33,14 @@ def config(test_config_path):
 @pytest.fixture(scope="session")
 def sample_schedule(config):
     """Generate a sample schedule for testing."""
-    scheduler = GreedyScheduler(config)
+    scheduler = BaseScheduler(config)
     return scheduler.schedule()
 
 
 @pytest.fixture
 def scheduler(config):
     """Provide a scheduler instance."""
-    return Scheduler(config)
-
-
-@pytest.fixture
-def stochastic_scheduler(config):
-    """Provide a stochastic scheduler instance."""
-    return StochasticGreedyScheduler(config)
-
-
-@pytest.fixture
-def lookahead_scheduler(config):
-    """Provide a lookahead scheduler instance."""
-    return LookaheadGreedyScheduler(config)
-
-
-@pytest.fixture
-def backtracking_scheduler(config):
-    """Provide a backtracking scheduler instance."""
-    return BacktrackingGreedyScheduler(config)
-
-
-@pytest.fixture
-def all_schedulers(greedy_scheduler, stochastic_scheduler, lookahead_scheduler, backtracking_scheduler):
-    """Provide all scheduler instances."""
-    return {
-        "greedy": greedy_scheduler,
-        "stochastic": stochastic_scheduler,
-        "lookahead": lookahead_scheduler,
-        "backtracking": backtracking_scheduler
-    }
+    return BaseScheduler(config)
 
 
 @pytest.fixture

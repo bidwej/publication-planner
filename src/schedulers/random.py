@@ -1,18 +1,25 @@
-"""Greedy scheduler implementation."""
+"""Random scheduler implementation for baseline comparison."""
 
 from __future__ import annotations
+import random
 from typing import Dict, List, Set
 from datetime import date, timedelta
 from .base import BaseScheduler
 from src.core.dates import is_working_day
 
 
-class GreedyScheduler(BaseScheduler):
-    """Greedy scheduler that schedules submissions as early as possible based on priority."""
+class RandomScheduler(BaseScheduler):
+    """Random scheduler that schedules submissions in random order for baseline comparison."""
+    
+    def __init__(self, config, seed: int = None):
+        """Initialize scheduler with config and optional seed."""
+        super().__init__(config)
+        if seed is not None:
+            random.seed(seed)
     
     def schedule(self) -> Dict[str, date]:
         """
-        Generate a schedule using greedy algorithm.
+        Generate a schedule using random selection.
         
         Returns
         -------
@@ -65,8 +72,8 @@ class GreedyScheduler(BaseScheduler):
                     continue
                 ready.append(sid)
             
-            # Sort by priority weight (greedy selection)
-            ready = self._sort_by_priority(ready)
+            # Randomize the order
+            random.shuffle(ready)
             
             # Try to schedule up to concurrency limit
             for sid in ready:
@@ -85,21 +92,3 @@ class GreedyScheduler(BaseScheduler):
             print(f"Successfully scheduled {len(schedule)} out of {len(self.submissions)} submissions")
         
         return schedule
-    
-    def _sort_by_priority(self, ready: List[str]) -> List[str]:
-        """Sort ready submissions by priority weight (greedy selection)."""
-        def get_priority(sid: str) -> float:
-            s = self.submissions[sid]
-            weights = self.config.priority_weights or {}
-            
-            base_priority = 0.0
-            if s.kind.value == "PAPER":
-                base_priority = weights.get("engineering_paper" if s.engineering else "medical_paper", 1.0)
-            elif s.kind.value == "ABSTRACT":
-                base_priority = weights.get("abstract", 0.5)
-            else:
-                base_priority = weights.get("mod", 1.5)
-            
-            return base_priority
-        
-        return sorted(ready, key=get_priority, reverse=True) 
