@@ -2,16 +2,11 @@
 
 import pytest
 from datetime import date, timedelta
-from src.core.models import SubmissionType, Config, Submission, Conference, ConferenceType, ConferenceRecurrence, SchedulerStrategy
-from src.schedulers.greedy import GreedyScheduler
-from src.schedulers.stochastic import StochasticGreedyScheduler
-from src.schedulers.lookahead import LookaheadGreedyScheduler
-from src.schedulers.backtracking import BacktrackingGreedyScheduler
+from src.core.models import SubmissionType, SchedulerStrategy
 from src.core.constraints import validate_all_constraints
 from src.scoring.penalty import calculate_penalty_score
 from src.scoring.quality import calculate_quality_score
 from src.scoring.efficiency import calculate_efficiency_score
-from typing import Set
 
 class TestGreedyScheduler:
     """Test the greedy scheduler."""

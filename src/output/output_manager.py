@@ -1,9 +1,9 @@
 """Output manager that orchestrates all output generation and formatting."""
 
 from __future__ import annotations
-from typing import Dict, List, Any
+from typing import Dict
 from datetime import date
-from core.models import Config, CompleteOutput, ScheduleSummary, ScheduleMetrics
+from core.models import Config, CompleteOutput
 from .generators.schedule import generate_schedule_summary, generate_schedule_metrics
 from .formatters.tables import format_schedule_table, format_metrics_table, format_deadline_table
 from .file_manager import create_output_directory, save_all_outputs, get_output_summary

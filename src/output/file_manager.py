@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 import json
 import csv
-from typing import Dict, List, Any
+from typing import Dict, List
 from datetime import datetime
 from core.models import ScheduleSummary
 

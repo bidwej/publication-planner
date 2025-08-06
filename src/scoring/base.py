@@ -10,7 +10,6 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any
 from datetime import date
 from core.models import Config
-from core.constraints import ConstraintValidationResult
 
 
 class BaseScorer(ABC):
@@ -22,12 +21,10 @@ class BaseScorer(ABC):
     @abstractmethod
     def calculate_score(self, schedule: Dict[str, date]) -> float:
         """Calculate a score for the given schedule."""
-        pass
     
     @abstractmethod
     def get_score_breakdown(self, schedule: Dict[str, date]) -> Dict[str, Any]:
         """Get detailed breakdown of the score calculation."""
-        pass
 
 
 class PenaltyScorer(BaseScorer):

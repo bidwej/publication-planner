@@ -1,13 +1,12 @@
 """Tests for core models."""
 
-import pytest
 from datetime import date
 from typing import Dict
 from src.core.models import (
     Config, Submission, Conference, ConferenceType, 
     ConferenceRecurrence, SubmissionType, SchedulerStrategy,
     ScheduleAnalysis, ScheduleDistribution, SubmissionTypeAnalysis,
-    TimelineAnalysis, ResourceAnalysis, AnalyticsResult
+    TimelineAnalysis, ResourceAnalysis
 )
 
 

@@ -1,11 +1,11 @@
 """Lookahead greedy scheduler implementation."""
 
 from __future__ import annotations
-from typing import Dict, List, Optional, Set
+from typing import List
 from datetime import date, timedelta
 from .greedy import GreedyScheduler
 from .base import BaseScheduler
-from core.models import Config, SubmissionType, Submission, SchedulerStrategy
+from core.models import Config, Submission, SchedulerStrategy
 
 @BaseScheduler.register_strategy(SchedulerStrategy.LOOKAHEAD)
 class LookaheadGreedyScheduler(GreedyScheduler):

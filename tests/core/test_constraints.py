@@ -1,13 +1,9 @@
 """Tests for core constraints module."""
 
-import pytest
 from typing import Dict
-from datetime import date, timedelta
+from datetime import date
 from src.core.models import (
-    Config, Submission, Conference, ConferenceType, 
-    ConferenceRecurrence, SubmissionType,
-    DeadlineValidation, DependencyValidation, ResourceValidation,
-    ConstraintValidationResult
+    DeadlineValidation, DependencyValidation, ResourceValidation, ConstraintValidationResult
 )
 from src.core.constraints import (
     validate_deadline_compliance,

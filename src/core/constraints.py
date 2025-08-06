@@ -1,7 +1,7 @@
 """Constraint validation for schedules."""
 
 from __future__ import annotations
-from typing import Dict, List, Any
+from typing import Dict
 from datetime import date, timedelta
 from .models import Config, Submission, SubmissionType, DeadlineValidation, DependencyValidation, ResourceValidation, DeadlineViolation, DependencyViolation, ResourceViolation, ConstraintValidationResult
 

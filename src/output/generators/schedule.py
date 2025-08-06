@@ -1,9 +1,9 @@
 """Schedule-specific output generation."""
 
 from __future__ import annotations
-from typing import Dict, List, Any
+from typing import Dict
 from datetime import date, timedelta
-from ...core.models import Config, Submission, ScheduleSummary, ScheduleMetrics, SubmissionType
+from ...core.models import Config, ScheduleSummary, ScheduleMetrics, SubmissionType
 from ...scoring.penalty import calculate_penalty_score
 from ...scoring.quality import calculate_quality_score
 from ...scoring.efficiency import calculate_efficiency_score

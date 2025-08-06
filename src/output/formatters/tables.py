@@ -1,10 +1,10 @@
 """Table formatting utilities for output."""
 
 from __future__ import annotations
-from typing import Dict, List, Any, Optional
+from typing import Dict, List
 from datetime import date, timedelta
-from ...core.models import Config, Submission, SubmissionType, ScheduleSummary
-from .dates import format_date_display, format_month_year, format_relative_time, format_duration_days
+from ...core.models import Config, SubmissionType, ScheduleSummary
+from .dates import format_date_display, format_relative_time, format_duration_days
 
 def format_schedule_table(schedule: Dict[str, date], config: Config) -> List[Dict[str, str]]:
     """Format schedule as a table for display."""

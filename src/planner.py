@@ -3,7 +3,7 @@
 from __future__ import annotations
 import json
 import os
-from typing import Dict, Optional, Any, List
+from typing import Dict, Any, List
 from datetime import date
 from core.models import Config, SchedulerStrategy
 from core.config import load_config

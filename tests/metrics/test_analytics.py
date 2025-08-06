@@ -1,8 +1,6 @@
 """Tests for analytics functions."""
 
-import pytest
-from datetime import date, timedelta
-from src.core.models import SubmissionType
+from datetime import date
 from src.output.analytics import analyze_schedule_completeness, analyze_schedule_distribution, analyze_submission_types, analyze_timeline, analyze_resources
 
 

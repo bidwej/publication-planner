@@ -3,7 +3,6 @@
 from __future__ import annotations
 from typing import Optional
 from datetime import date, datetime
-from dateutil.relativedelta import relativedelta
 
 def format_date_display(input_date: date) -> str:
     """Format date for display (e.g., 'January 15, 2025')."""

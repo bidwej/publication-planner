@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import Dict
 from datetime import date, timedelta
-from core.models import Config, Submission, SubmissionType
+from core.models import Config, SubmissionType
 from core.constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
 
 def calculate_quality_score(schedule: Dict[str, date], config: Config) -> float:

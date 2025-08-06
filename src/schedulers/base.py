@@ -3,8 +3,8 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Dict, Type, Union
-from src.core.models import Config, Submission, SchedulerStrategy
-from datetime import date, timedelta
+from src.core.models import Config, SchedulerStrategy
+from datetime import date
 
 class BaseScheduler(ABC):
     """Abstract base class for all schedulers."""
@@ -27,7 +27,6 @@ class BaseScheduler(ABC):
         Dict[str, date]
             Mapping of submission_id to start_date
         """
-        pass
     
     @classmethod
     def register_strategy(cls, strategy: SchedulerStrategy):

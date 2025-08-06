@@ -1,7 +1,6 @@
 """Tests for core date utility functions."""
 
-import pytest
-from datetime import date, datetime
+from datetime import date
 from core.dates import (
     parse_date_safe,
     add_working_days,

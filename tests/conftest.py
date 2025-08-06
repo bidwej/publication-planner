@@ -2,13 +2,11 @@
 
 import pytest
 import os
-from pathlib import Path
 from datetime import date
 
 from src.core.config import load_config
 from src.core.models import (
-    Config, Submission, Conference, ConferenceType, 
-    ConferenceRecurrence, SubmissionType
+    Submission, SubmissionType
 )
 from src.schedulers.greedy import GreedyScheduler
 from src.schedulers.stochastic import StochasticGreedyScheduler
@@ -120,8 +118,7 @@ def empty_schedule():
 @pytest.fixture
 def minimal_config():
     """Provide a minimal config for testing edge cases."""
-    from src.core.models import Config, Submission, Conference, ConferenceType, ConferenceRecurrence
-    from datetime import date
+    from src.core.models import Config, Conference, ConferenceType, ConferenceRecurrence
     
     return Config(
         submissions=[],

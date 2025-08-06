@@ -2,7 +2,6 @@
 
 import pytest
 import tempfile
-import json
 import os
 from datetime import date
 from core.config import load_config, _load_conferences, _load_submissions, _load_blackout_dates
