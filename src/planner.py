@@ -1,8 +1,9 @@
 """Main planner module for the Endoscope AI project."""
 
+import sys
 import json
 from pathlib import Path
-from typing import Dict, Optional, Any, List
+from typing import Dict, Any, List
 from datetime import date
 
 
@@ -10,9 +11,8 @@ from core.config import load_config
 from core.models import Config, SchedulerStrategy
 from schedulers.base import BaseScheduler
 from core.constraints import validate_schedule_comprehensive
-from output.console import print_schedule_summary, print_metrics_summary
 from output.reports import generate_schedule_report
-from output.tables import generate_monthly_table, generate_simple_monthly_table
+from output.tables import generate_simple_monthly_table
 from output.formatters.tables import format_schedule_table, format_deadline_table
 from output.plots import plot_schedule, plot_utilization_chart, plot_deadline_compliance
 
