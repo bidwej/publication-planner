@@ -4,7 +4,7 @@ import pytest
 from datetime import date, timedelta
 from unittest.mock import Mock, patch, MagicMock
 
-from core.models import Paper, Schedule, ScheduleItem, Config
+from core.models import Submission, Config, SubmissionType
 from schedulers.heuristic import HeuristicScheduler
 
 
@@ -38,12 +38,12 @@ class TestHeuristicScheduler:
     def test_schedule_single_paper(self):
         """Test scheduling with single paper."""
         # Create mock paper
-        paper = Mock(spec=Paper)
+        paper = Mock(spec=Submission)
         paper.id = "paper1"
         paper.title = "Test Paper"
         paper.deadline = date(2024, 6, 1)
         paper.estimated_hours = 40
-        paper.kind = Mock(value="PAPER")
+        paper.kind = Mock(value=SubmissionType.PAPER)
         paper.conference_id = "conf1"
         paper.draft_window_months = 3
         
@@ -66,21 +66,21 @@ class TestHeuristicScheduler:
     def test_schedule_multiple_papers(self):
         """Test scheduling with multiple papers."""
         # Create mock papers
-        paper1 = Mock(spec=Paper)
+        paper1 = Mock(spec=Submission)
         paper1.id = "paper1"
         paper1.title = "Test Paper 1"
         paper1.deadline = date(2024, 6, 1)
         paper1.estimated_hours = 40
-        paper1.kind = Mock(value="PAPER")
+        paper1.kind = Mock(value=SubmissionType.PAPER)
         paper1.conference_id = "conf1"
         paper1.draft_window_months = 3
         
-        paper2 = Mock(spec=Paper)
+        paper2 = Mock(spec=Submission)
         paper2.id = "paper2"
         paper2.title = "Test Paper 2"
         paper2.deadline = date(2024, 8, 1)
         paper2.estimated_hours = 60
-        paper2.kind = Mock(value="ABSTRACT")
+        paper2.kind = Mock(value=SubmissionType.ABSTRACT)
         paper2.conference_id = "conf2"
         paper2.draft_window_months = 0
         
@@ -105,21 +105,21 @@ class TestHeuristicScheduler:
     def test_heuristic_algorithm_behavior(self):
         """Test the heuristic algorithm behavior."""
         # Create mock papers with different deadlines
-        paper1 = Mock(spec=Paper)
+        paper1 = Mock(spec=Submission)
         paper1.id = "paper1"
         paper1.title = "Early Deadline Paper"
         paper1.deadline = date(2024, 4, 1)
         paper1.estimated_hours = 40
-        paper1.kind = Mock(value="PAPER")
+        paper1.kind = Mock(value=SubmissionType.PAPER)
         paper1.conference_id = "conf1"
         paper1.draft_window_months = 3
         
-        paper2 = Mock(spec=Paper)
+        paper2 = Mock(spec=Submission)
         paper2.id = "paper2"
         paper2.title = "Late Deadline Paper"
         paper2.deadline = date(2024, 8, 1)
         paper2.estimated_hours = 60
-        paper2.kind = Mock(value="PAPER")
+        paper2.kind = Mock(value=SubmissionType.PAPER)
         paper2.conference_id = "conf2"
         paper2.draft_window_months = 3
         
@@ -147,12 +147,12 @@ class TestHeuristicScheduler:
     def test_schedule_with_constraints(self):
         """Test scheduling with constraints."""
         # Create mock paper with constraints
-        paper = Mock(spec=Paper)
+        paper = Mock(spec=Submission)
         paper.id = "paper1"
         paper.title = "Test Paper"
         paper.deadline = date(2024, 6, 1)
         paper.estimated_hours = 40
-        paper.kind = Mock(value="PAPER")
+        paper.kind = Mock(value=SubmissionType.PAPER)
         paper.conference_id = "conf1"
         paper.draft_window_months = 3
         
@@ -179,21 +179,21 @@ class TestHeuristicScheduler:
     def test_schedule_with_heuristic_rules(self):
         """Test scheduling with different heuristic rules."""
         # Create mock papers
-        paper1 = Mock(spec=Paper)
+        paper1 = Mock(spec=Submission)
         paper1.id = "paper1"
         paper1.title = "Test Paper 1"
         paper1.deadline = date(2024, 6, 1)
         paper1.estimated_hours = 40
-        paper1.kind = Mock(value="PAPER")
+        paper1.kind = Mock(value=SubmissionType.PAPER)
         paper1.conference_id = "conf1"
         paper1.draft_window_months = 3
         
-        paper2 = Mock(spec=Paper)
+        paper2 = Mock(spec=Submission)
         paper2.id = "paper2"
         paper2.title = "Test Paper 2"
         paper2.deadline = date(2024, 8, 1)
         paper2.estimated_hours = 60
-        paper2.kind = Mock(value="PAPER")
+        paper2.kind = Mock(value=SubmissionType.PAPER)
         paper2.conference_id = "conf2"
         paper2.draft_window_months = 3
         
@@ -221,12 +221,12 @@ class TestHeuristicScheduler:
     def test_error_handling_invalid_paper(self):
         """Test error handling with invalid paper data."""
         # Create mock paper with invalid data
-        paper = Mock(spec=Paper)
+        paper = Mock(spec=Submission)
         paper.id = "paper1"
         paper.title = "Test Paper"
         paper.deadline = None  # Invalid deadline
         paper.estimated_hours = 40
-        paper.kind = Mock(value="PAPER")
+        paper.kind = Mock(value=SubmissionType.PAPER)
         paper.conference_id = "conf1"
         paper.draft_window_months = 3
         
@@ -247,22 +247,22 @@ class TestHeuristicScheduler:
     def test_schedule_with_priority_ordering(self):
         """Test scheduling with priority-based ordering."""
         # Create mock papers with different priorities
-        paper1 = Mock(spec=Paper)
+        paper1 = Mock(spec=Submission)
         paper1.id = "paper1"
         paper1.title = "High Priority Paper"
         paper1.deadline = date(2024, 6, 1)
         paper1.estimated_hours = 40
-        paper1.kind = Mock(value="PAPER")
+        paper1.kind = Mock(value=SubmissionType.PAPER)
         paper1.conference_id = "conf1"
         paper1.draft_window_months = 3
         paper1.priority = "high"
         
-        paper2 = Mock(spec=Paper)
+        paper2 = Mock(spec=Submission)
         paper2.id = "paper2"
         paper2.title = "Low Priority Paper"
         paper2.deadline = date(2024, 8, 1)
         paper2.estimated_hours = 60
-        paper2.kind = Mock(value="ABSTRACT")
+        paper2.kind = Mock(value=SubmissionType.ABSTRACT)
         paper2.conference_id = "conf2"
         paper2.draft_window_months = 0
         paper2.priority = "low"
@@ -286,21 +286,21 @@ class TestHeuristicScheduler:
     def test_schedule_with_deadline_compliance(self):
         """Test scheduling with deadline compliance focus."""
         # Create mock papers with tight deadlines
-        paper1 = Mock(spec=Paper)
+        paper1 = Mock(spec=Submission)
         paper1.id = "paper1"
         paper1.title = "Tight Deadline Paper"
         paper1.deadline = date(2024, 3, 1)
         paper1.estimated_hours = 80
-        paper1.kind = Mock(value="PAPER")
+        paper1.kind = Mock(value=SubmissionType.PAPER)
         paper1.conference_id = "conf1"
         paper1.draft_window_months = 3
         
-        paper2 = Mock(spec=Paper)
+        paper2 = Mock(spec=Submission)
         paper2.id = "paper2"
         paper2.title = "Flexible Deadline Paper"
         paper2.deadline = date(2024, 12, 1)
         paper2.estimated_hours = 60
-        paper2.kind = Mock(value="PAPER")
+        paper2.kind = Mock(value=SubmissionType.PAPER)
         paper2.conference_id = "conf2"
         paper2.draft_window_months = 3
         
@@ -327,21 +327,21 @@ class TestHeuristicScheduler:
     def test_schedule_with_resource_optimization(self):
         """Test scheduling with resource optimization."""
         # Create mock papers with different resource requirements
-        paper1 = Mock(spec=Paper)
+        paper1 = Mock(spec=Submission)
         paper1.id = "paper1"
         paper1.title = "Resource Intensive Paper"
         paper1.deadline = date(2024, 6, 1)
         paper1.estimated_hours = 200
-        paper1.kind = Mock(value="PAPER")
+        paper1.kind = Mock(value=SubmissionType.PAPER)
         paper1.conference_id = "conf1"
         paper1.draft_window_months = 3
         
-        paper2 = Mock(spec=Paper)
+        paper2 = Mock(spec=Submission)
         paper2.id = "paper2"
         paper2.title = "Light Paper"
         paper2.deadline = date(2024, 8, 1)
         paper2.estimated_hours = 20
-        paper2.kind = Mock(value="ABSTRACT")
+        paper2.kind = Mock(value=SubmissionType.ABSTRACT)
         paper2.conference_id = "conf2"
         paper2.draft_window_months = 0
         
@@ -365,21 +365,21 @@ class TestHeuristicScheduler:
     def test_schedule_with_heuristic_weights(self):
         """Test scheduling with heuristic weights."""
         # Create mock papers
-        paper1 = Mock(spec=Paper)
+        paper1 = Mock(spec=Submission)
         paper1.id = "paper1"
         paper1.title = "Test Paper 1"
         paper1.deadline = date(2024, 6, 1)
         paper1.estimated_hours = 40
-        paper1.kind = Mock(value="PAPER")
+        paper1.kind = Mock(value=SubmissionType.PAPER)
         paper1.conference_id = "conf1"
         paper1.draft_window_months = 3
         
-        paper2 = Mock(spec=Paper)
+        paper2 = Mock(spec=Submission)
         paper2.id = "paper2"
         paper2.title = "Test Paper 2"
         paper2.deadline = date(2024, 8, 1)
         paper2.estimated_hours = 60
-        paper2.kind = Mock(value="PAPER")
+        paper2.kind = Mock(value=SubmissionType.PAPER)
         paper2.conference_id = "conf2"
         paper2.draft_window_months = 3
         
@@ -407,22 +407,22 @@ class TestHeuristicScheduler:
     def test_schedule_with_complex_heuristics(self):
         """Test scheduling with complex heuristic combinations."""
         # Create mock papers with complex characteristics
-        paper1 = Mock(spec=Paper)
+        paper1 = Mock(spec=Submission)
         paper1.id = "paper1"
         paper1.title = "Complex Paper 1"
         paper1.deadline = date(2024, 6, 1)
         paper1.estimated_hours = 40
-        paper1.kind = Mock(value="PAPER")
+        paper1.kind = Mock(value=SubmissionType.PAPER)
         paper1.conference_id = "conf1"
         paper1.draft_window_months = 3
         paper1.priority = "high"
         
-        paper2 = Mock(spec=Paper)
+        paper2 = Mock(spec=Submission)
         paper2.id = "paper2"
         paper2.title = "Complex Paper 2"
         paper2.deadline = date(2024, 8, 1)
         paper2.estimated_hours = 60
-        paper2.kind = Mock(value="PAPER")
+        paper2.kind = Mock(value=SubmissionType.PAPER)
         paper2.conference_id = "conf2"
         paper2.draft_window_months = 3
         paper2.priority = "low"

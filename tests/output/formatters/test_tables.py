@@ -1,13 +1,16 @@
-"""Tests for the formatters tables module."""
+"""Tests for output formatters tables module."""
 
 import pytest
 from datetime import date, timedelta
 from unittest.mock import Mock, patch
 
-from core.models import Config, ScheduleSummary
 from output.formatters.tables import (
-    format_schedule_table, format_metrics_table, format_deadline_table,
-    save_schedule_json, save_table_csv, save_metrics_json, get_output_summary
+    format_schedule_table,
+    format_metrics_table,
+    format_deadline_table,
+    save_schedule_json,
+    save_table_csv,
+    save_metrics_json
 )
 
 

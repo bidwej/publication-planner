@@ -78,7 +78,7 @@ class EfficiencyScorer(BaseScorer):
     
     def get_score_breakdown(self, schedule: Dict[str, date]) -> Dict[str, Any]:
         """Get detailed efficiency breakdown."""
-        from .efficiency import calculate_efficiency_score, calculate_resource_efficiency, calculate_timeline_efficiency
+        from scoring.efficiency import calculate_efficiency_score, calculate_resource_efficiency, calculate_timeline_efficiency
         efficiency_score = calculate_efficiency_score(schedule, self.config)
         resource_metrics = calculate_resource_efficiency(schedule, self.config)
         timeline_metrics = calculate_timeline_efficiency(schedule, self.config)

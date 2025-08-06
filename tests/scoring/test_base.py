@@ -1,10 +1,14 @@
 """Tests for scoring base module."""
 
 import pytest
-from datetime import date
-from typing import Dict
-from scoring.base import (
-    BaseScorer, PenaltyScorer, QualityScorer, EfficiencyScorer
+from datetime import date, timedelta
+from unittest.mock import Mock, patch
+
+from src.scoring.base import (
+    BaseScorer,
+    calculate_base_score,
+    validate_schedule,
+    get_score_components
 )
 from core.models import Config, Submission, Conference
 

@@ -1,15 +1,17 @@
-"""Tests for the generators schedule module."""
+"""Tests for output generators schedule module."""
 
 import pytest
 from datetime import date, timedelta
 from unittest.mock import Mock, patch
 import os
 
-from core.models import Config, ScheduleSummary, ScheduleMetrics
 from output.generators.schedule import (
-    create_output_directory, save_all_outputs, 
-    generate_schedule_summary, generate_schedule_metrics
+    create_output_directory,
+    save_all_outputs,
+    generate_schedule_summary,
+    generate_schedule_metrics
 )
+from core.models import Config, ScheduleSummary, ScheduleMetrics
 
 
 class TestCreateOutputDirectory:

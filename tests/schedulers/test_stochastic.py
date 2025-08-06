@@ -4,8 +4,8 @@ import pytest
 from datetime import date, timedelta
 from unittest.mock import Mock, patch, MagicMock
 
-from core.models import Paper, Schedule, ScheduleItem, Config
-from schedulers.stochastic import StochasticScheduler
+from core.models import Submission, Config, SubmissionType
+from schedulers.stochastic import StochasticGreedyScheduler
 
 
 class TestStochasticScheduler:
@@ -17,7 +17,7 @@ class TestStochasticScheduler:
         config.submissions = []
         config.conferences = []
         
-        scheduler = StochasticScheduler(config)
+        scheduler = StochasticGreedyScheduler(config)
         
         assert scheduler.config == config
         assert hasattr(scheduler, 'schedule')
@@ -28,7 +28,7 @@ class TestStochasticScheduler:
         config.submissions = []
         config.conferences = []
         
-        scheduler = StochasticScheduler(config)
+        scheduler = StochasticGreedyScheduler(config)
         
         result = scheduler.schedule()
         
@@ -38,12 +38,12 @@ class TestStochasticScheduler:
     def test_schedule_single_paper(self):
         """Test scheduling with single paper."""
         # Create mock paper
-        paper = Mock(spec=Paper)
+        paper = Mock(spec=Submission)
         paper.id = "paper1"
         paper.title = "Test Paper"
         paper.deadline = date(2024, 6, 1)
         paper.estimated_hours = 40
-        paper.kind = Mock(value="PAPER")
+        paper.kind = Mock(value=SubmissionType.PAPER)
         paper.conference_id = "conf1"
         paper.draft_window_months = 3
         
@@ -54,7 +54,7 @@ class TestStochasticScheduler:
         config.end_date = date(2024, 12, 31)
         config.min_paper_lead_time_days = 90
         
-        scheduler = StochasticScheduler(config)
+        scheduler = StochasticGreedyScheduler(config)
         
         result = scheduler.schedule()
         
@@ -66,21 +66,21 @@ class TestStochasticScheduler:
     def test_schedule_multiple_papers(self):
         """Test scheduling with multiple papers."""
         # Create mock papers
-        paper1 = Mock(spec=Paper)
+        paper1 = Mock(spec=Submission)
         paper1.id = "paper1"
         paper1.title = "Test Paper 1"
         paper1.deadline = date(2024, 6, 1)
         paper1.estimated_hours = 40
-        paper1.kind = Mock(value="PAPER")
+        paper1.kind = Mock(value=SubmissionType.PAPER)
         paper1.conference_id = "conf1"
         paper1.draft_window_months = 3
         
-        paper2 = Mock(spec=Paper)
+        paper2 = Mock(spec=Submission)
         paper2.id = "paper2"
         paper2.title = "Test Paper 2"
         paper2.deadline = date(2024, 8, 1)
         paper2.estimated_hours = 60
-        paper2.kind = Mock(value="ABSTRACT")
+        paper2.kind = Mock(value=SubmissionType.ABSTRACT)
         paper2.conference_id = "conf2"
         paper2.draft_window_months = 0
         
@@ -91,7 +91,7 @@ class TestStochasticScheduler:
         config.end_date = date(2024, 12, 31)
         config.min_paper_lead_time_days = 90
         
-        scheduler = StochasticScheduler(config)
+        scheduler = StochasticGreedyScheduler(config)
         
         result = scheduler.schedule()
         
@@ -105,21 +105,21 @@ class TestStochasticScheduler:
     def test_stochastic_algorithm_behavior(self):
         """Test the stochastic algorithm behavior."""
         # Create mock papers
-        paper1 = Mock(spec=Paper)
+        paper1 = Mock(spec=Submission)
         paper1.id = "paper1"
         paper1.title = "Test Paper 1"
         paper1.deadline = date(2024, 6, 1)
         paper1.estimated_hours = 40
-        paper1.kind = Mock(value="PAPER")
+        paper1.kind = Mock(value=SubmissionType.PAPER)
         paper1.conference_id = "conf1"
         paper1.draft_window_months = 3
         
-        paper2 = Mock(spec=Paper)
+        paper2 = Mock(spec=Submission)
         paper2.id = "paper2"
         paper2.title = "Test Paper 2"
         paper2.deadline = date(2024, 8, 1)
         paper2.estimated_hours = 60
-        paper2.kind = Mock(value="PAPER")
+        paper2.kind = Mock(value=SubmissionType.PAPER)
         paper2.conference_id = "conf2"
         paper2.draft_window_months = 3
         
@@ -130,7 +130,7 @@ class TestStochasticScheduler:
         config.end_date = date(2024, 12, 31)
         config.min_paper_lead_time_days = 90
         
-        scheduler = StochasticScheduler(config)
+        scheduler = StochasticGreedyScheduler(config)
         
         # Run multiple times to test stochastic behavior
         results = []
@@ -148,12 +148,12 @@ class TestStochasticScheduler:
     def test_schedule_with_constraints(self):
         """Test scheduling with constraints."""
         # Create mock paper with constraints
-        paper = Mock(spec=Paper)
+        paper = Mock(spec=Submission)
         paper.id = "paper1"
         paper.title = "Test Paper"
         paper.deadline = date(2024, 6, 1)
         paper.estimated_hours = 40
-        paper.kind = Mock(value="PAPER")
+        paper.kind = Mock(value=SubmissionType.PAPER)
         paper.conference_id = "conf1"
         paper.draft_window_months = 3
         
@@ -165,7 +165,7 @@ class TestStochasticScheduler:
         config.min_paper_lead_time_days = 90
         config.blackout_dates = [date(2024, 5, 15), date(2024, 5, 16)]
         
-        scheduler = StochasticScheduler(config)
+        scheduler = StochasticGreedyScheduler(config)
         
         result = scheduler.schedule()
         
@@ -180,21 +180,21 @@ class TestStochasticScheduler:
     def test_schedule_with_temperature_control(self):
         """Test scheduling with temperature control."""
         # Create mock papers
-        paper1 = Mock(spec=Paper)
+        paper1 = Mock(spec=Submission)
         paper1.id = "paper1"
         paper1.title = "Test Paper 1"
         paper1.deadline = date(2024, 6, 1)
         paper1.estimated_hours = 40
-        paper1.kind = Mock(value="PAPER")
+        paper1.kind = Mock(value=SubmissionType.PAPER)
         paper1.conference_id = "conf1"
         paper1.draft_window_months = 3
         
-        paper2 = Mock(spec=Paper)
+        paper2 = Mock(spec=Submission)
         paper2.id = "paper2"
         paper2.title = "Test Paper 2"
         paper2.deadline = date(2024, 8, 1)
         paper2.estimated_hours = 60
-        paper2.kind = Mock(value="PAPER")
+        paper2.kind = Mock(value=SubmissionType.PAPER)
         paper2.conference_id = "conf2"
         paper2.draft_window_months = 3
         
@@ -205,7 +205,7 @@ class TestStochasticScheduler:
         config.end_date = date(2024, 12, 31)
         config.min_paper_lead_time_days = 90
         
-        scheduler = StochasticScheduler(config)
+        scheduler = StochasticGreedyScheduler(config)
         
         # Test with different temperature settings
         result_high_temp = scheduler.schedule(temperature=1.0)
@@ -219,12 +219,12 @@ class TestStochasticScheduler:
     def test_error_handling_invalid_paper(self):
         """Test error handling with invalid paper data."""
         # Create mock paper with invalid data
-        paper = Mock(spec=Paper)
+        paper = Mock(spec=Submission)
         paper.id = "paper1"
         paper.title = "Test Paper"
         paper.deadline = None  # Invalid deadline
         paper.estimated_hours = 40
-        paper.kind = Mock(value="PAPER")
+        paper.kind = Mock(value=SubmissionType.PAPER)
         paper.conference_id = "conf1"
         paper.draft_window_months = 3
         
@@ -235,7 +235,7 @@ class TestStochasticScheduler:
         config.end_date = date(2024, 12, 31)
         config.min_paper_lead_time_days = 90
         
-        scheduler = StochasticScheduler(config)
+        scheduler = StochasticGreedyScheduler(config)
         
         # Should handle invalid data gracefully
         result = scheduler.schedule()
@@ -245,22 +245,22 @@ class TestStochasticScheduler:
     def test_schedule_with_priority_ordering(self):
         """Test scheduling with priority-based ordering."""
         # Create mock papers with different priorities
-        paper1 = Mock(spec=Paper)
+        paper1 = Mock(spec=Submission)
         paper1.id = "paper1"
         paper1.title = "High Priority Paper"
         paper1.deadline = date(2024, 6, 1)
         paper1.estimated_hours = 40
-        paper1.kind = Mock(value="PAPER")
+        paper1.kind = Mock(value=SubmissionType.PAPER)
         paper1.conference_id = "conf1"
         paper1.draft_window_months = 3
         paper1.priority = "high"
         
-        paper2 = Mock(spec=Paper)
+        paper2 = Mock(spec=Submission)
         paper2.id = "paper2"
         paper2.title = "Low Priority Paper"
         paper2.deadline = date(2024, 8, 1)
         paper2.estimated_hours = 60
-        paper2.kind = Mock(value="ABSTRACT")
+        paper2.kind = Mock(value=SubmissionType.ABSTRACT)
         paper2.conference_id = "conf2"
         paper2.draft_window_months = 0
         paper2.priority = "low"
@@ -272,7 +272,7 @@ class TestStochasticScheduler:
         config.end_date = date(2024, 12, 31)
         config.min_paper_lead_time_days = 90
         
-        scheduler = StochasticScheduler(config)
+        scheduler = StochasticGreedyScheduler(config)
         
         result = scheduler.schedule()
         
@@ -284,21 +284,21 @@ class TestStochasticScheduler:
     def test_schedule_with_iterations(self):
         """Test scheduling with multiple iterations."""
         # Create mock papers
-        paper1 = Mock(spec=Paper)
+        paper1 = Mock(spec=Submission)
         paper1.id = "paper1"
         paper1.title = "Test Paper 1"
         paper1.deadline = date(2024, 6, 1)
         paper1.estimated_hours = 40
-        paper1.kind = Mock(value="PAPER")
+        paper1.kind = Mock(value=SubmissionType.PAPER)
         paper1.conference_id = "conf1"
         paper1.draft_window_months = 3
         
-        paper2 = Mock(spec=Paper)
+        paper2 = Mock(spec=Submission)
         paper2.id = "paper2"
         paper2.title = "Test Paper 2"
         paper2.deadline = date(2024, 8, 1)
         paper2.estimated_hours = 60
-        paper2.kind = Mock(value="PAPER")
+        paper2.kind = Mock(value=SubmissionType.PAPER)
         paper2.conference_id = "conf2"
         paper2.draft_window_months = 3
         
@@ -309,7 +309,7 @@ class TestStochasticScheduler:
         config.end_date = date(2024, 12, 31)
         config.min_paper_lead_time_days = 90
         
-        scheduler = StochasticScheduler(config)
+        scheduler = StochasticGreedyScheduler(config)
         
         # Test with different iteration counts
         result_few_iterations = scheduler.schedule(iterations=10)
@@ -323,21 +323,21 @@ class TestStochasticScheduler:
     def test_schedule_with_deadline_compliance(self):
         """Test scheduling with deadline compliance focus."""
         # Create mock papers with tight deadlines
-        paper1 = Mock(spec=Paper)
+        paper1 = Mock(spec=Submission)
         paper1.id = "paper1"
         paper1.title = "Tight Deadline Paper"
         paper1.deadline = date(2024, 3, 1)
         paper1.estimated_hours = 80
-        paper1.kind = Mock(value="PAPER")
+        paper1.kind = Mock(value=SubmissionType.PAPER)
         paper1.conference_id = "conf1"
         paper1.draft_window_months = 3
         
-        paper2 = Mock(spec=Paper)
+        paper2 = Mock(spec=Submission)
         paper2.id = "paper2"
         paper2.title = "Flexible Deadline Paper"
         paper2.deadline = date(2024, 12, 1)
         paper2.estimated_hours = 60
-        paper2.kind = Mock(value="PAPER")
+        paper2.kind = Mock(value=SubmissionType.PAPER)
         paper2.conference_id = "conf2"
         paper2.draft_window_months = 3
         
@@ -348,7 +348,7 @@ class TestStochasticScheduler:
         config.end_date = date(2024, 12, 31)
         config.min_paper_lead_time_days = 90
         
-        scheduler = StochasticScheduler(config)
+        scheduler = StochasticGreedyScheduler(config)
         
         result = scheduler.schedule()
         

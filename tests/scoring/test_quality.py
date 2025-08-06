@@ -1,8 +1,9 @@
-"""Tests for quality scoring module."""
+"""Tests for quality scoring."""
 
 import pytest
 from datetime import date, timedelta
-from typing import Dict
+from unittest.mock import Mock, patch
+
 from scoring.quality import calculate_quality_score, calculate_schedule_robustness, calculate_schedule_balance
 from core.models import Config, Submission, Conference, SubmissionType
 

@@ -1,8 +1,9 @@
-"""Tests for penalty scoring module."""
+"""Tests for penalty scoring."""
 
 import pytest
 from datetime import date, timedelta
-from typing import Dict
+from unittest.mock import Mock, patch
+
 from scoring.penalty import calculate_penalty_score
 from core.models import Config, Submission, Conference, SubmissionType
 

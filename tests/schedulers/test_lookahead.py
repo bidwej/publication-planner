@@ -4,8 +4,8 @@ import pytest
 from datetime import date, timedelta
 from unittest.mock import Mock, patch, MagicMock
 
-from src.core.models import Submission, Config, SubmissionType
-from src.schedulers.lookahead import LookaheadGreedyScheduler
+from core.models import Submission, Config, SubmissionType
+from schedulers.lookahead import LookaheadGreedyScheduler
 
 
 class TestLookaheadScheduler:

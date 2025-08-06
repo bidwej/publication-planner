@@ -1,8 +1,9 @@
-"""Tests for efficiency scoring module."""
+"""Tests for efficiency scoring."""
 
 import pytest
 from datetime import date, timedelta
-from typing import Dict
+from unittest.mock import Mock, patch
+
 from scoring.efficiency import calculate_efficiency_score
 from core.models import Config, Submission, Conference, SubmissionType
 
