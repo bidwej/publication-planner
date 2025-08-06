@@ -2,7 +2,7 @@
 
 from datetime import date
 from typing import Dict
-from core.models import (
+from src.core.models import (
     Config, Submission, Conference, ConferenceType, 
     ConferenceRecurrence, SubmissionType, SchedulerStrategy,
     ScheduleAnalysis, ScheduleDistribution, SubmissionTypeAnalysis,

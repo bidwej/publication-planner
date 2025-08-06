@@ -3,8 +3,8 @@
 from datetime import date
 from unittest.mock import Mock
 
-from core.models import Submission, Config, SubmissionType
-from schedulers.heuristic import HeuristicScheduler
+from src.core.models import Submission, Config, SubmissionType
+from src.schedulers.heuristic import HeuristicScheduler
 
 
 class TestHeuristicScheduler:

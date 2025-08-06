@@ -200,6 +200,7 @@ def validate_blackout_dates(schedule: Dict[str, date], config: Config) -> Dict[s
         return {
             "is_valid": True,
             "violations": [],
+            "compliance_rate": 100.0,
             "summary": "Blackout periods disabled"
         }
     
@@ -207,6 +208,7 @@ def validate_blackout_dates(schedule: Dict[str, date], config: Config) -> Dict[s
         return {
             "is_valid": True,
             "violations": [],
+            "compliance_rate": 100.0,
             "summary": "No blackout dates configured"
         }
     
@@ -836,10 +838,10 @@ def validate_schedule_comprehensive(schedule: Dict[str, date], config: Config) -
         Comprehensive validation results including constraints, scoring, and analytics
     """
     # Import here to avoid circular imports
-    from ..scoring.penalty import calculate_penalty_score
-    from ..scoring.quality import calculate_quality_score
-    from ..scoring.efficiency import calculate_efficiency_score
-    from ..output.analytics import (
+    from scoring.penalty import calculate_penalty_score
+    from scoring.quality import calculate_quality_score
+    from scoring.efficiency import calculate_efficiency_score
+    from output.analytics import (
         analyze_schedule_completeness,
         analyze_schedule_distribution,
         analyze_submission_types,

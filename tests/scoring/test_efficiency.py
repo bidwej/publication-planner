@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from scoring.efficiency import calculate_efficiency_score
+from src.scoring.efficiency import calculate_efficiency_score
 
 
 class TestCalculateEfficiencyScore:

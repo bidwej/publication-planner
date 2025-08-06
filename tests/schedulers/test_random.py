@@ -3,8 +3,8 @@
 from datetime import date
 from unittest.mock import Mock
 
-from core.models import Submission, Config, SubmissionType
-from schedulers.random import RandomScheduler
+from src.core.models import Submission, Config, SubmissionType
+from src.schedulers.random import RandomScheduler
 
 
 class TestRandomScheduler:

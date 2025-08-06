@@ -1,7 +1,7 @@
 """Tests for core date utility functions."""
 
 from datetime import date
-from core.dates import (
+from src.core.dates import (
     parse_date_safe,
     add_working_days,
     is_working_day,

@@ -1,8 +1,8 @@
 """Tests for constraint validation."""
 
 from datetime import date
-from core.config import load_config
-from core.constraints import (
+from src.core.config import load_config
+from src.core.constraints import (
     validate_deadline_compliance,
     validate_dependency_satisfaction,
     validate_resource_constraints,

@@ -1,23 +1,32 @@
 """Date formatting utilities for output."""
 
 from __future__ import annotations
-from typing import Optional
+from typing import Optional, Union
 from datetime import date, datetime
 
-def format_date_display(input_date: date) -> str:
-    """Format date for display (e.g., 'January 15, 2025')."""
-    return input_date.strftime("%B %d, %Y")
+def format_date_display(input_date: Optional[Union[date, datetime]], format_str: str = "%Y-%m-%d") -> str:
+    """Format date for display (e.g., '2025-01-15')."""
+    if input_date is None:
+        return "N/A"
+    if isinstance(input_date, datetime):
+        input_date = input_date.date()
+    return input_date.strftime(format_str)
 
 def format_date_compact(input_date: date) -> str:
     """Format date compactly (e.g., '2025-01-15')."""
     return input_date.strftime("%Y-%m-%d")
 
-def format_month_year(input_date: date) -> str:
+def format_month_year(input_date: Optional[date], format_str: str = "%B %Y") -> str:
     """Format date as month year (e.g., 'January 2025')."""
-    return input_date.strftime("%B %Y")
+    if input_date is None:
+        return "N/A"
+    return input_date.strftime(format_str)
 
-def format_relative_time(input_date: date, reference_date: Optional[date] = None) -> str:
+def format_relative_time(input_date: Optional[date], reference_date: Optional[date] = None) -> str:
     """Format date as relative time from reference date."""
+    if input_date is None:
+        return "Unknown"
+    
     if reference_date is None:
         reference_date = datetime.now().date()
     
@@ -55,19 +64,7 @@ def format_duration_days(days: int) -> str:
         return "0 days"
     elif days == 1:
         return "1 day"
-    elif days < 7:
-        return f"{days} days"
-    elif days < 30:
-        weeks = days // 7
-        remaining_days = days % 7
-        if remaining_days == 0:
-            return f"{weeks} week{'s' if weeks != 1 else ''}"
-        else:
-            return f"{weeks} week{'s' if weeks != 1 else ''} {remaining_days} day{'s' if remaining_days != 1 else ''}"
+    elif days == -1:
+        return "-1 day"
     else:
-        months = days // 30
-        remaining_days = days % 30
-        if remaining_days == 0:
-            return f"{months} month{'s' if months != 1 else ''}"
-        else:
-            return f"{months} month{'s' if months != 1 else ''} {remaining_days} day{'s' if remaining_days != 1 else ''}" 
+        return f"{days} days" 

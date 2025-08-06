@@ -3,8 +3,8 @@
 from datetime import date
 from unittest.mock import Mock
 
-from core.models import Submission, Config
-from schedulers.optimal import OptimalScheduler
+from src.core.models import Submission, Config
+from src.schedulers.optimal import OptimalScheduler
 
 
 class TestOptimalScheduler:

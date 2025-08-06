@@ -3,8 +3,8 @@
 from datetime import date
 from unittest.mock import Mock
 
-from core.models import Submission, Config, SubmissionType
-from schedulers.lookahead import LookaheadGreedyScheduler
+from src.core.models import Submission, Config, SubmissionType
+from src.schedulers.lookahead import LookaheadGreedyScheduler
 
 
 class TestLookaheadScheduler:

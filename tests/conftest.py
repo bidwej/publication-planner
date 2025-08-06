@@ -4,10 +4,10 @@ import pytest
 import os
 from datetime import date
 
-from core.models import (
+from src.core.models import (
     Submission, SubmissionType, Config, Conference, ConferenceType, ConferenceRecurrence
 )
-from schedulers.greedy import GreedyScheduler
+from src.schedulers.greedy import GreedyScheduler
 
 
 @pytest.fixture(scope="session")

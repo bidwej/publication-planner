@@ -82,7 +82,7 @@ class BaseScheduler(ABC):
         for abstract_id in abstracts:
             abstract = self.submissions[abstract_id]
             if abstract.conference_id and abstract.conference_id in self.conferences:
-                conf = self.conferences[abstract_id]
+                conf = self.conferences[abstract.conference_id]
                 if SubmissionType.ABSTRACT in conf.deadlines:
                     early_date = conf.deadlines[SubmissionType.ABSTRACT] - timedelta(days=abstract_advance)
                     if abstract.earliest_start_date is None or early_date >= abstract.earliest_start_date:

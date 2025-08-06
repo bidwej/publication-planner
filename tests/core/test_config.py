@@ -5,8 +5,8 @@ import tempfile
 import os
 import json
 from datetime import date
-from core.config import load_config, _load_conferences, _load_submissions, _load_blackout_dates
-from core.models import Config, SubmissionType, ConferenceType, SchedulerStrategy, ConferenceRecurrence, Conference
+from src.core.config import load_config, _load_conferences, _load_submissions, _load_blackout_dates
+from src.core.models import Config, SubmissionType, ConferenceType, SchedulerStrategy, ConferenceRecurrence, Conference
 
 
 class TestLoadConfig:
@@ -119,7 +119,7 @@ class TestLoadSubmissions:
         papers_path = os.path.join(test_data_dir, 'papers.json')
         
                  # Create a minimal conferences list for testing
-        from core.models import Conference, ConferenceType, ConferenceRecurrence
+        from src.core.models import Conference, ConferenceType, ConferenceRecurrence
         conferences = [
             Conference(
                 id="ICML",
@@ -153,7 +153,7 @@ class TestLoadSubmissions:
         mods_path = os.path.join(test_data_dir, 'mods.json')
         papers_path = os.path.join(test_data_dir, 'papers.json')
         
-        from core.models import Conference, ConferenceType, ConferenceRecurrence
+        from src.core.models import Conference, ConferenceType, ConferenceRecurrence
         conferences = [
             Conference(
                 id="ICML",
@@ -187,7 +187,7 @@ class TestLoadSubmissions:
         mods_path = os.path.join(test_data_dir, 'mods.json')
         papers_path = os.path.join(test_data_dir, 'papers.json')
         
-        from core.models import Conference, ConferenceType, ConferenceRecurrence
+        from src.core.models import Conference, ConferenceType, ConferenceRecurrence
         conferences = [
             Conference(
                 id="ICML",
