@@ -7,7 +7,7 @@ from typing import Dict, Any, List
 from datetime import date
 from core.models import Config, SchedulerStrategy
 from core.config import load_config
-from schedulers.base import BaseScheduler
+from schedulers.base import Scheduler
 from src.output.tables import generate_simple_monthly_table
 
 
@@ -68,8 +68,8 @@ class Planner:
     def schedule(self, strategy: SchedulerStrategy = SchedulerStrategy.GREEDY) -> tuple[Dict[Any, Any], Dict[Any, Any]]:
         """Generate a schedule using the specified strategy."""
         try:
-            # Create scheduler using the strategy registry
-            scheduler = BaseScheduler.create_scheduler(strategy, self.cfg)
+            # Create scheduler (strategy is now just a configuration option)
+            scheduler = Scheduler(self.cfg)
 
             # Generate schedule
             full_schedule = scheduler.schedule()

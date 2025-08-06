@@ -11,11 +11,8 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from core.config import load_config
 from core.models import SchedulerStrategy
-from schedulers.base import BaseScheduler
-from core.constraints import validate_all_constraints
-from scoring.penalty import calculate_penalty_score
-from scoring.quality import calculate_quality_score
-from scoring.efficiency import calculate_efficiency_score
+from schedulers.base import Scheduler
+from core.constraints import validate_schedule_comprehensive
 from output.console import print_schedule_summary, print_metrics_summary
 from output.output_manager import generate_and_save_output
 
@@ -33,15 +30,20 @@ def analyze_schedule(schedule: Dict[str, date], config, strategy_name: str = "Un
     # Print basic summary
     print_schedule_summary(schedule, config)
     
-    # Validate constraints
-    validation_result = validate_all_constraints(schedule, config)
-    print(f"Constraint Validation:")
-    print(f"  Deadlines: {'✓' if validation_result.deadlines.is_valid else '✗'}")
-    print(f"  Dependencies: {'✓' if validation_result.dependencies.is_valid else '✗'}")
-    print(f"  Resources: {'✓' if validation_result.resources.is_valid else '✗'}")
-    print(f"  Overall: {'✓' if validation_result.is_valid else '✗'}")
+    # Comprehensive validation using all constraints, scoring, and analytics
+    validation_result = validate_schedule_comprehensive(schedule, config)
     
-    # Print metrics
+    print(f"Comprehensive Schedule Analysis:")
+    print(f"  Feasibility: {'✓' if validation_result['overall_valid'] else '✗'}")
+    print(f"  Completion: {validation_result['completion_rate']:.1f}%")
+    print(f"  Duration: {validation_result['duration_days']} days")
+    print(f"  Peak Load: {validation_result['peak_load']} submissions")
+    print(f"  Quality Score: {validation_result['quality_score']:.1f}/100")
+    print(f"  Efficiency Score: {validation_result['efficiency_score']:.1f}/100")
+    print(f"  Total Penalty: ${validation_result['total_penalty']:.2f}")
+    print(f"  Total Violations: {validation_result['summary']['total_violations']}")
+    
+    # Print detailed metrics
     print_metrics_summary(schedule, config)
     
     # Generate and save output
@@ -126,7 +128,7 @@ def generate_and_analyze_schedule(config, strategy: SchedulerStrategy, verbose: 
     """Generate and analyze a schedule for the given strategy."""
     try:
         # Create scheduler
-        scheduler = BaseScheduler.create_scheduler(strategy, config)
+        scheduler = Scheduler(config)
         
         # Generate schedule
         schedule = scheduler.schedule()

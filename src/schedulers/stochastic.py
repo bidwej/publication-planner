@@ -1,22 +1,23 @@
-"""Stochastic greedy scheduler implementation."""
+"""Stochastic greedy scheduler implementation using inheritance from BaseScheduler."""
 
 from __future__ import annotations
 import random
 from typing import List
-from .greedy import GreedyScheduler
 from .base import BaseScheduler
-from core.models import Config, SchedulerStrategy
 
-@BaseScheduler.register_strategy(SchedulerStrategy.STOCHASTIC)
-class StochasticGreedyScheduler(GreedyScheduler):
+
+class StochasticGreedyScheduler(BaseScheduler):
     """Stochastic greedy scheduler that adds randomness to priority selection."""
     
-    def __init__(self, config: Config, randomness_factor: float = 0.1):
+    def __init__(self, config, randomness_factor: float = 0.1):
+        """Initialize scheduler with config and randomness factor."""
         super().__init__(config)
         self.randomness_factor = randomness_factor
     
-    def _sort_by_priority(self, ready: List[str]) -> List[str]:
-        """Sort ready submissions by priority weight with added randomness."""
+    # ===== STOCHASTIC-SPECIFIC OVERRIDES =====
+    
+    def _select_by_priority(self, ready: List[str]) -> List[str]:
+        """Override priority selection to add randomness."""
         def get_priority(sid: str) -> float:
             s = self.submissions[sid]
             weights = self.config.priority_weights or {}

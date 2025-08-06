@@ -4,29 +4,16 @@ from __future__ import annotations
 from typing import Dict
 from datetime import date, timedelta
 from core.models import Config, SubmissionType, EfficiencyMetrics, TimelineMetrics
+from core.constraints import _calculate_daily_load
 
 def calculate_efficiency_score(schedule: Dict[str, date], config: Config) -> float:
     """Calculate efficiency score based on resource utilization and timeline."""
     if not schedule:
         return 0.0
     
-    # Calculate resource utilization
-    daily_load = {}
+    # Calculate resource utilization using constraints logic
+    daily_load = _calculate_daily_load(schedule, config)
     max_concurrent = config.max_concurrent_submissions
-    
-    for sid, start_date in schedule.items():
-        sub = config.submissions_dict.get(sid)
-        if not sub:
-            continue
-        
-        if sub.kind == SubmissionType.PAPER:
-            duration = config.min_paper_lead_time_days
-        else:
-            duration = 0
-        
-        for i in range(duration + 1):
-            day = start_date + timedelta(days=i)
-            daily_load[day] = daily_load.get(day, 0) + 1
     
     if not daily_load:
         return 0.0
@@ -57,23 +44,9 @@ def calculate_resource_efficiency(schedule: Dict[str, date], config: Config) -> 
             efficiency_score=0.0
         )
     
-    daily_load = {}
+    # Calculate daily workload using constraints logic
+    daily_load = _calculate_daily_load(schedule, config)
     max_concurrent = config.max_concurrent_submissions
-    
-    # Calculate daily workload
-    for sid, start_date in schedule.items():
-        sub = config.submissions_dict.get(sid)
-        if not sub:
-            continue
-        
-        if sub.kind == SubmissionType.PAPER:
-            duration = config.min_paper_lead_time_days
-        else:
-            duration = 0
-        
-        for i in range(duration + 1):
-            day = start_date + timedelta(days=i)
-            daily_load[day] = daily_load.get(day, 0) + 1
     
     if not daily_load:
         return EfficiencyMetrics(
@@ -115,21 +88,8 @@ def calculate_timeline_efficiency(schedule: Dict[str, date], config: Config) -> 
     dates = list(schedule.values())
     duration_days = (max(dates) - min(dates)).days if dates else 0
     
-    # Calculate daily workload
-    daily_load = {}
-    for sid, start_date in schedule.items():
-        sub = config.submissions_dict.get(sid)
-        if not sub:
-            continue
-        
-        if sub.kind == SubmissionType.PAPER:
-            duration = config.min_paper_lead_time_days
-        else:
-            duration = 0
-        
-        for i in range(duration + 1):
-            day = start_date + timedelta(days=i)
-            daily_load[day] = daily_load.get(day, 0) + 1
+    # Calculate daily workload using constraints logic
+    daily_load = _calculate_daily_load(schedule, config)
     
     avg_daily_load = sum(daily_load.values()) / len(daily_load) if daily_load else 0
     

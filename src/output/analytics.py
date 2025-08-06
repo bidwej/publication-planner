@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Dict
 from datetime import date, timedelta
 from core.models import Config, SubmissionType, ScheduleAnalysis, ScheduleDistribution, SubmissionTypeAnalysis, TimelineAnalysis, ResourceAnalysis
+from core.constraints import _get_submission_duration_days, _calculate_daily_load
 
 def analyze_schedule_completeness(schedule: Dict[str, date], config: Config) -> ScheduleAnalysis:
     """Analyze how complete the schedule is."""
@@ -120,42 +121,24 @@ def analyze_timeline(schedule: Dict[str, date], config: Config) -> TimelineAnaly
             start_date=None,
             end_date=None,
             duration_days=0,
-            avg_daily_load=0.0,
-            peak_daily_load=0,
+            avg_submissions_per_month=0.0,
             summary="No submissions to analyze"
         )
     
     # Calculate timeline metrics
-    start_date = min(schedule.values())
-    end_date = max(schedule.values())
-    duration_days = (end_date - start_date).days + 1
+    timeline_start = min(schedule.values())
+    timeline_end = max(schedule.values())
+    duration_days = (timeline_end - timeline_start).days + 1
     
-    # Calculate daily load
-    daily_load = {}
-    sub_map = {s.id: s for s in config.submissions}
-    
-    for sid, start_date in schedule.items():
-        sub = sub_map.get(sid)
-        if not sub:
-            continue
-        
-        # Calculate duration
-        if sub.kind == SubmissionType.ABSTRACT:
-            duration = 0
-        else:
-            duration = sub.draft_window_months * 30 if sub.draft_window_months > 0 else config.min_paper_lead_time_days
-        
-        # Add load for each day
-        for i in range(duration + 1):
-            day = start_date + timedelta(days=i)
-            daily_load[day] = daily_load.get(day, 0) + 1
+    # Calculate daily load using constraints logic
+    daily_load = _calculate_daily_load(schedule, config)
     
     avg_daily_load = sum(daily_load.values()) / len(daily_load) if daily_load else 0.0
     peak_daily_load = max(daily_load.values()) if daily_load else 0
     
     return TimelineAnalysis(
-        start_date=start_date,
-        end_date=end_date,
+        start_date=timeline_start,
+        end_date=timeline_end,
         duration_days=duration_days,
         avg_submissions_per_month=avg_daily_load * 30,  # Convert daily to monthly
         summary=f"Timeline spans {duration_days} days with peak load of {peak_daily_load} submissions"
@@ -171,25 +154,8 @@ def analyze_resources(schedule: Dict[str, date], config: Config) -> ResourceAnal
         summary="No submissions to analyze"
     )
     
-    # Calculate daily utilization
-    daily_load = {}
-    sub_map = {s.id: s for s in config.submissions}
-    
-    for sid, start_date in schedule.items():
-        sub = sub_map.get(sid)
-        if not sub:
-            continue
-        
-        # Calculate duration
-        if sub.kind == SubmissionType.ABSTRACT:
-            duration = 0
-        else:
-            duration = sub.draft_window_months * 30 if sub.draft_window_months > 0 else config.min_paper_lead_time_days
-        
-        # Add load for each day
-        for i in range(duration + 1):
-            day = start_date + timedelta(days=i)
-            daily_load[day] = daily_load.get(day, 0) + 1
+    # Calculate daily utilization using constraints logic
+    daily_load = _calculate_daily_load(schedule, config)
     
     if not daily_load:
         return ResourceAnalysis(

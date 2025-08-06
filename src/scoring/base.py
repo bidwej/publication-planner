@@ -86,7 +86,7 @@ class EfficiencyScorer(BaseScorer):
         return {
             "efficiency_score": efficiency_score,
             "resource_efficiency": resource_metrics.utilization_rate,
-            "timeline_efficiency": timeline_metrics.makespan_efficiency,
+            "timeline_efficiency": timeline_metrics.timeline_efficiency,
             "resource_metrics": resource_metrics,
             "timeline_metrics": timeline_metrics
         }

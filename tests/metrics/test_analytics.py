@@ -105,7 +105,7 @@ class TestAnalyzeTimeline:
         analysis = analyze_timeline(schedule, config)
         assert analysis.start_date == date(2025, 1, 15)
         assert analysis.end_date == date(2025, 1, 15)
-        assert analysis.duration_days == 0
+        assert analysis.duration_days == 1  # Single day = 1 day duration
         assert analysis.avg_submissions_per_month >= 0.0
     
     def test_multiple_submissions(self, config):
@@ -118,7 +118,7 @@ class TestAnalyzeTimeline:
         analysis = analyze_timeline(schedule, config)
         assert analysis.start_date == date(2025, 1, 1)
         assert analysis.end_date == date(2025, 2, 1)
-        assert analysis.duration_days == 31
+        assert analysis.duration_days == 32  # Jan 1 to Feb 1 = 32 days (inclusive)
         assert analysis.avg_submissions_per_month >= 0.0
 
 

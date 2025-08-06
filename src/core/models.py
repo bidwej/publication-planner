@@ -36,6 +36,29 @@ class Submission:
     def __post_init__(self):
         if self.depends_on is None:
             self.depends_on = []
+    
+    def get_duration_days(self, config: 'Config') -> int:
+        """Calculate the duration in days for this submission."""
+        if self.kind == SubmissionType.ABSTRACT:
+            return 0  # Abstracts are completed on the same day
+        elif self.kind == SubmissionType.POSTER:
+            # Posters typically have shorter duration than papers
+            if self.draft_window_months > 0:
+                return self.draft_window_months * 30
+            else:
+                return 30  # Default 1 month for posters
+        else:  # SubmissionType.PAPER
+            # Use draft_window_months if available, otherwise fall back to config
+            if self.draft_window_months > 0:
+                return self.draft_window_months * 30
+            else:
+                return config.min_paper_lead_time_days
+    
+    def get_end_date(self, start_date: date, config: 'Config') -> date:
+        """Calculate the end date for this submission starting on the given date."""
+        from datetime import timedelta
+        duration_days = self.get_duration_days(config)
+        return start_date + timedelta(days=duration_days)
 
 class ConferenceType(str, Enum):
     """Types of conferences."""
