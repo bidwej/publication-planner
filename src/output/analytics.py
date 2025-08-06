@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import Dict, Any, Optional
 from datetime import date, timedelta
-from ..core.models import Config, Submission, SubmissionType, ScheduleAnalysis, ScheduleDistribution, SubmissionTypeAnalysis, TimelineAnalysis, ResourceAnalysis
+from core.models import Config, Submission, SubmissionType, ScheduleAnalysis, ScheduleDistribution, SubmissionTypeAnalysis, TimelineAnalysis, ResourceAnalysis
 
 def analyze_schedule_completeness(schedule: Dict[str, date], config: Config) -> ScheduleAnalysis:
     """Analyze how complete the schedule is."""

@@ -5,8 +5,8 @@ import tempfile
 import json
 import os
 from datetime import date
-from src.core.config import load_config, _load_conferences, _load_submissions, _load_blackout_dates
-from src.core.models import Config, SubmissionType, ConferenceType
+from core.config import load_config, _load_conferences, _load_submissions, _load_blackout_dates
+from core.models import Config, SubmissionType, ConferenceType
 
 
 class TestLoadConfig:
@@ -118,8 +118,8 @@ class TestLoadSubmissions:
         mods_path = os.path.join(test_data_dir, 'mods.json')
         papers_path = os.path.join(test_data_dir, 'papers.json')
         
-        # Create a minimal conferences list for testing
-        from src.models import Conference, ConferenceType, ConferenceRecurrence
+                 # Create a minimal conferences list for testing
+        from core.models import Conference, ConferenceType, ConferenceRecurrence
         conferences = [
             Conference(
                 id="ICML",
@@ -153,7 +153,7 @@ class TestLoadSubmissions:
         mods_path = os.path.join(test_data_dir, 'mods.json')
         papers_path = os.path.join(test_data_dir, 'papers.json')
         
-        from src.models import Conference, ConferenceType, ConferenceRecurrence
+        from models import Conference, ConferenceType, ConferenceRecurrence
         conferences = [
             Conference(
                 id="ICML",
@@ -187,7 +187,7 @@ class TestLoadSubmissions:
         mods_path = os.path.join(test_data_dir, 'mods.json')
         papers_path = os.path.join(test_data_dir, 'papers.json')
         
-        from src.models import Conference, ConferenceType, ConferenceRecurrence
+        from models import Conference, ConferenceType, ConferenceRecurrence
         conferences = [
             Conference(
                 id="ICML",
@@ -322,26 +322,26 @@ class TestConfigIntegration:
 
 class TestEnums:
     def test_submission_type_enum(self):
-        from src.models import SubmissionType
+        from models import SubmissionType
         assert SubmissionType.PAPER.value == "paper"
         assert SubmissionType.ABSTRACT.value == "abstract"
         assert SubmissionType.POSTER.value == "poster"
 
     def test_scheduler_strategy_enum(self):
-        from src.models import SchedulerStrategy
+        from models import SchedulerStrategy
         assert SchedulerStrategy.GREEDY.value == "greedy"
         assert SchedulerStrategy.STOCHASTIC.value == "stochastic"
         assert SchedulerStrategy.LOOKAHEAD.value == "lookahead"
         assert SchedulerStrategy.BACKTRACKING.value == "backtracking"
 
     def test_conference_type_enum(self):
-        from src.models import ConferenceType
+        from models import ConferenceType
         assert ConferenceType.MEDICAL.value == "MEDICAL"
         assert ConferenceType.ENGINEERING.value == "ENGINEERING"
         assert ConferenceType.GENERAL.value == "GENERAL"
 
     def test_conference_recurrence_enum(self):
-        from src.models import ConferenceRecurrence
+        from models import ConferenceRecurrence
         assert ConferenceRecurrence.ANNUAL.value == "annual"
         assert ConferenceRecurrence.BIENNIAL.value == "biennial"
         assert ConferenceRecurrence.QUARTERLY.value == "quarterly"
@@ -349,8 +349,8 @@ class TestEnums:
 class TestConferenceMappingAndEngineering:
     def test_conference_mapping_by_family(self, tmp_path):
         # Create a minimal conferences list
-        from src.models import Conference, ConferenceType, ConferenceRecurrence
-        from src.config import _load_submissions
+        from models import Conference, ConferenceType, ConferenceRecurrence
+        from config import _load_submissions
         import json
         confs = [
             Conference(
@@ -388,8 +388,8 @@ class TestConferenceMappingAndEngineering:
         assert paper_sub.draft_window_months == 4
 
     def test_engineering_flag_inference(self, tmp_path):
-        from src.models import Conference, ConferenceType, ConferenceRecurrence
-        from src.config import _load_submissions
+        from models import Conference, ConferenceType, ConferenceRecurrence
+        from config import _load_submissions
         import json
         confs = [
             Conference(
@@ -417,8 +417,8 @@ class TestConferenceMappingAndEngineering:
         assert paper_sub.engineering is True
 
     def test_duration_calculation_from_config(self, tmp_path):
-        from src.models import Conference, ConferenceType, ConferenceRecurrence
-        from src.config import _load_submissions
+        from models import Conference, ConferenceType, ConferenceRecurrence
+        from config import _load_submissions
         import json
         confs = [
             Conference(

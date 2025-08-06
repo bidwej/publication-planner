@@ -2,7 +2,7 @@
 
 from typing import Dict, Any, List
 from datetime import date, timedelta
-from ..core.models import Config
+from core.models import Config
 
 def print_schedule_summary(schedule: Dict[str, date], config: Config) -> None:
     """Print a summary of the schedule to console."""
@@ -123,10 +123,10 @@ def print_metrics_summary(schedule: Dict[str, date], config: Config) -> None:
     print(f"\n=== Metrics Summary ===")
     
     # Import scoring functions
-    from ..scoring.penalty import calculate_penalty_score
-    from ..scoring.quality import calculate_quality_score
-    from ..scoring.efficiency import calculate_efficiency_score
-    from ..core.constraints import validate_deadline_compliance
+    from scoring.penalty import calculate_penalty_score
+from scoring.quality import calculate_quality_score
+from scoring.efficiency import calculate_efficiency_score
+from core.constraints import validate_deadline_compliance
     
     # Calculate metrics
     penalty_breakdown = calculate_penalty_score(schedule, config)

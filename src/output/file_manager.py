@@ -6,7 +6,7 @@ import json
 import csv
 from typing import Dict, List, Any
 from datetime import datetime
-from ...core.models import ScheduleSummary
+from core.models import ScheduleSummary
 
 def create_output_directory(base_dir: str = "output") -> str:
     """Create a timestamped output directory."""

@@ -2,7 +2,7 @@
 
 import pytest
 from datetime import date, datetime
-from src.core.dates import (
+from core.dates import (
     parse_date_safe,
     add_working_days,
     is_working_day,

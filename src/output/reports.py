@@ -3,9 +3,9 @@
 from __future__ import annotations
 from typing import Dict, Any
 from datetime import date
-from ..core.models import Config
-from ..core.constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
-from ..scoring.penalty import calculate_penalty_score
+from core.models import Config
+from core.constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
+from scoring.penalty import calculate_penalty_score
 from .analytics import analyze_timeline, analyze_resources
 
 def generate_schedule_report(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:

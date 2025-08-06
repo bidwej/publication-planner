@@ -2,9 +2,9 @@ import pytest
 import os
 import sys
 
-from planner import Planner
+from src.planner import Planner
 from datetime import datetime
-from core.dates import parse_date_safe
+from src.core.dates import parse_date_safe
 
 @pytest.fixture  # type: ignore
 def planner():

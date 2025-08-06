@@ -5,15 +5,15 @@ import os
 from pathlib import Path
 from datetime import date
 
-from core.config import load_config
-from core.models import (
+from src.core.config import load_config
+from src.core.models import (
     Config, Submission, Conference, ConferenceType, 
     ConferenceRecurrence, SubmissionType
 )
-from schedulers.greedy import GreedyScheduler
-from schedulers.stochastic import StochasticGreedyScheduler
-from schedulers.lookahead import LookaheadGreedyScheduler
-from schedulers.backtracking import BacktrackingGreedyScheduler
+from src.schedulers.greedy import GreedyScheduler
+from src.schedulers.stochastic import StochasticGreedyScheduler
+from src.schedulers.lookahead import LookaheadGreedyScheduler
+from src.schedulers.backtracking import BacktrackingGreedyScheduler
 
 
 @pytest.fixture(scope="session")
@@ -96,7 +96,7 @@ def sample_submission():
 @pytest.fixture
 def sample_conference():
     """Provide a sample conference for testing."""
-    from core.models import Conference, ConferenceType, ConferenceRecurrence, SubmissionType
+    from src.core.models import Conference, ConferenceType, ConferenceRecurrence, SubmissionType
     from datetime import date
     
     return Conference(
@@ -120,7 +120,7 @@ def empty_schedule():
 @pytest.fixture
 def minimal_config():
     """Provide a minimal config for testing edge cases."""
-    from core.models import Config, Submission, Conference, ConferenceType, ConferenceRecurrence
+    from src.core.models import Config, Submission, Conference, ConferenceType, ConferenceRecurrence
     from datetime import date
     
     return Config(

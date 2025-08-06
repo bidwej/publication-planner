@@ -9,8 +9,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Dict, Any
 from datetime import date
-from ..core.models import Config
-from ..core.constraints import ConstraintValidationResult
+from core.models import Config
+from core.constraints import ConstraintValidationResult
 
 
 class BaseScorer(ABC):

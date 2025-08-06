@@ -4,9 +4,9 @@ from __future__ import annotations
 from typing import Dict, List, Optional, Set
 from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
-from .base import BaseScheduler
-from ..core.models import Config, Submission, SubmissionType, SchedulerStrategy
-from ..core.dates import is_working_day
+from schedulers.base import BaseScheduler
+from core.models import Config, Submission, SubmissionType, SchedulerStrategy
+from core.dates import is_working_day
 
 @BaseScheduler.register_strategy(SchedulerStrategy.GREEDY)
 class GreedyScheduler(BaseScheduler):

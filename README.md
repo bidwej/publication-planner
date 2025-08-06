@@ -110,11 +110,11 @@ src/
 ## 📖 Quick Start
 
 ```python
-from src.planner import Planner
-from src.core.constraints import validate_deadline_compliance
-from src.scoring import calculate_penalty_score
-from src.output.analytics import analyze_schedule_completeness
-from src.output.reports import generate_schedule_report
+from planner import Planner
+from core.constraints import validate_deadline_compliance
+from scoring import calculate_penalty_score
+from output.analytics import analyze_schedule_completeness
+from output.reports import generate_schedule_report
 
 # Load configuration
 planner = Planner("config.json")
@@ -138,7 +138,7 @@ report = generate_schedule_report(schedule, planner.config)
 ### Constraint Validation
 
 ```python
-from src.core.constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
+from core.constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
 
 # Validate constraints
 deadline_check = validate_deadline_compliance(schedule, config)
@@ -153,7 +153,7 @@ print(f"Resource constraints: {'Valid' if resource_check.is_valid else 'Invalid'
 ### Independent Scoring
 
 ```python
-from src.scoring import calculate_penalty_score, calculate_quality_score, calculate_efficiency_score
+from scoring import calculate_penalty_score, calculate_quality_score, calculate_efficiency_score
 
 # Calculate independent scores
 penalty_breakdown = calculate_penalty_score(schedule, config)
@@ -168,7 +168,7 @@ print(f"Efficiency score: {efficiency_score:.1f}/100")
 ### Analytics and Insights
 
 ```python
-from src.output.analytics import analyze_schedule_completeness, analyze_timeline, analyze_resources
+from output.analytics import analyze_schedule_completeness, analyze_timeline, analyze_resources
 
 # Get analytics (returns dataclasses with unified summary field)
 completeness = analyze_schedule_completeness(schedule, config)
@@ -184,7 +184,7 @@ print(resources.summary)     # "Resource usage: peak 3, avg 1.2 submissions/day"
 ### Comprehensive Reports
 
 ```python
-from src.output.reports import generate_schedule_report
+from output.reports import generate_schedule_report
 
 # Generate comprehensive report
 report = generate_schedule_report(schedule, config)
@@ -197,11 +197,11 @@ print(f"Overall score: {report['summary']['overall_score']:.1f}/100")
 ### Comparing Multiple Schedulers
 
 ```python
-from src.schedulers.base import BaseScheduler
-from src.models import SchedulerStrategy
-from src.scoring import calculate_penalty_score
-from src.scoring.quality import calculate_quality_score
-from src.scoring.efficiency import calculate_efficiency_score
+from schedulers.base import BaseScheduler
+from models import SchedulerStrategy
+from scoring import calculate_penalty_score
+from scoring.quality import calculate_quality_score
+from scoring.efficiency import calculate_efficiency_score
 
 # Load configuration
 config = load_config("config.json")
@@ -327,7 +327,7 @@ python generate_schedule.py --config custom_config.json --start-date 2025-01-01 
 ### Custom Scheduler Configuration
 
 ```python
-from src.schedulers.stochastic import StochasticGreedyScheduler
+from schedulers.stochastic import StochasticGreedyScheduler
 
 # Configure stochastic scheduler with custom randomness
 scheduler = StochasticGreedyScheduler(
@@ -339,7 +339,7 @@ scheduler = StochasticGreedyScheduler(
 ### Detailed Analytics Analysis
 
 ```python
-from src.output.analytics import (
+from output.analytics import (
     analyze_schedule_completeness,
     analyze_schedule_distribution,
     analyze_submission_types,
@@ -366,7 +366,7 @@ print(f"Resources: {resources.summary}")
 The old `Planner` class still works:
 
 ```python
-from src.planner import Planner
+from planner import Planner
 
 planner = Planner("config.json")
 schedule = planner.generate_schedule("greedy")

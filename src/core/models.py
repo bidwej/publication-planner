@@ -92,32 +92,38 @@ class ConstraintViolation:
     severity: str = "medium"
 
 @dataclass
-class DeadlineViolation(ConstraintViolation):
+class DeadlineViolation:
     """A deadline violation."""
+    submission_id: str
+    description: str
     submission_title: str
     conference_id: str
     submission_type: str
     deadline: date
     end_date: date
     days_late: int
-    severity: str = "medium"  # Re-declare to maintain order
+    severity: str = "medium"
 
 @dataclass
-class DependencyViolation(ConstraintViolation):
+class DependencyViolation:
     """A dependency violation."""
+    submission_id: str
+    description: str
     dependency_id: str
     issue: str  # "missing_dependency", "invalid_dependency", "timing_violation"
     days_violation: Optional[int] = None
-    severity: str = "medium"  # Re-declare to maintain order
+    severity: str = "medium"
 
 @dataclass
-class ResourceViolation(ConstraintViolation):
+class ResourceViolation:
     """A resource constraint violation."""
-    severity: str = "medium"  # Re-declare to maintain order
+    submission_id: str
+    description: str
     date: date
     load: int
     limit: int
     excess: int
+    severity: str = "medium"
 
 @dataclass
 class ConstraintValidation:

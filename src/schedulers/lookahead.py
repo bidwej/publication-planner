@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Set
 from datetime import date, timedelta
 from .greedy import GreedyScheduler
 from .base import BaseScheduler
-from ..core.models import Config, SubmissionType, Submission, SchedulerStrategy
+from core.models import Config, SubmissionType, Submission, SchedulerStrategy
 
 @BaseScheduler.register_strategy(SchedulerStrategy.LOOKAHEAD)
 class LookaheadGreedyScheduler(GreedyScheduler):

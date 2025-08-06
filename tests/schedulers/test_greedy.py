@@ -138,7 +138,7 @@ class TestGreedySchedulerStrategyRegistry:
     
     def test_strategy_registry(self):
         """Test that strategies are properly registered."""
-        from src.schedulers.base import BaseScheduler
+        from schedulers.base import BaseScheduler
         
         # Check that all strategies are registered
         assert SchedulerStrategy.GREEDY in BaseScheduler._strategies
@@ -148,7 +148,7 @@ class TestGreedySchedulerStrategyRegistry:
     
     def test_create_scheduler_via_registry(self, minimal_config):
         """Test creating schedulers via the registry."""
-        from src.schedulers.base import BaseScheduler
+        from schedulers.base import BaseScheduler
         
         # Test each strategy
         for strategy in SchedulerStrategy:
@@ -158,7 +158,7 @@ class TestGreedySchedulerStrategyRegistry:
     
     def test_invalid_strategy(self, minimal_config):
         """Test that invalid strategies raise an error."""
-        from src.schedulers.base import BaseScheduler
+        from schedulers.base import BaseScheduler
         
         with pytest.raises(ValueError, match="Unknown strategy"):
             # Pass a string instead of SchedulerStrategy enum

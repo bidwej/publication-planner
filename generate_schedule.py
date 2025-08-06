@@ -9,15 +9,15 @@ from typing import Dict, List, Any
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from src.core.config import load_config
-from src.core.models import SchedulerStrategy
-from src.schedulers.base import BaseScheduler
-from src.core.constraints import validate_all_constraints
-from src.scoring.penalty import calculate_penalty_score
-from src.scoring.quality import calculate_quality_score
-from src.scoring.efficiency import calculate_efficiency_score
-from src.output.console import print_schedule_summary, print_metrics_summary
-from src.output.output_manager import generate_and_save_output
+from core.config import load_config
+from core.models import SchedulerStrategy
+from schedulers.base import BaseScheduler
+from core.constraints import validate_all_constraints
+from scoring.penalty import calculate_penalty_score
+from scoring.quality import calculate_quality_score
+from scoring.efficiency import calculate_efficiency_score
+from output.console import print_schedule_summary, print_metrics_summary
+from output.output_manager import generate_and_save_output
 
 
 def analyze_schedule(schedule: Dict[str, date], config, strategy_name: str = "Unknown") -> None:
