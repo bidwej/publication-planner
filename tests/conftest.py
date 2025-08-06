@@ -1,4 +1,4 @@
-"""Test configuration and fixtures."""
+"""Pytest configuration and shared fixtures."""
 
 import pytest
 import os
@@ -10,165 +10,84 @@ from src.core.models import (
 from src.schedulers.greedy import GreedyScheduler
 
 
-@pytest.fixture(scope="session")
-def test_data_dir():
-    """Provide the test data directory path."""
-    return os.path.join(os.path.dirname(__file__), 'common', 'data')
+def create_mock_submission(submission_id, title, submission_type, conference_id, **kwargs):
+    """Create a mock submission with all required attributes."""
+    submission = Submission(
+        id=submission_id,
+        title=title,
+        kind=submission_type,
+        conference_id=conference_id,
+        draft_window_months=kwargs.get('draft_window_months', 3),
+        earliest_start_date=kwargs.get('earliest_start_date', date(2024, 1, 1)),
+        depends_on=kwargs.get('depends_on', []),
+        engineering=kwargs.get('engineering', False)
+    )
+    return submission
 
 
-@pytest.fixture(scope="session")
-def test_config_path(test_data_dir):
-    """Provide the test config.json path."""
-    return os.path.join(test_data_dir, 'config.json')
+def create_mock_conference(conference_id, name, deadlines):
+    """Create a mock conference with all required attributes."""
+    conference = Conference(
+        id=conference_id,
+        name=name,
+        conf_type=ConferenceType.MEDICAL,
+        recurrence=ConferenceRecurrence.ANNUAL,
+        deadlines=deadlines
+    )
+    return conference
 
 
-@pytest.fixture(scope="function")
-def config():
-    """Provide a full configuration for testing."""
-    # Create test conferences with realistic deadlines
-    conferences = [
-        Conference(
-            id="ICML",
-            name="ICML",
-            conf_type=ConferenceType.ENGINEERING,
-            recurrence=ConferenceRecurrence.ANNUAL,
-            deadlines={
-                SubmissionType.ABSTRACT: date(2025, 1, 15),
-                SubmissionType.PAPER: date(2025, 1, 30)
-            }
-        ),
-        Conference(
-            id="MICCAI",
-            name="MICCAI",
-            conf_type=ConferenceType.MEDICAL,
-            recurrence=ConferenceRecurrence.ANNUAL,
-            deadlines={
-                SubmissionType.ABSTRACT: date(2025, 2, 15),
-                SubmissionType.PAPER: date(2025, 4, 1)  # Extended deadline
-            }
-        )
-    ]
-    
-    # Create test submissions that can actually be scheduled
-    submissions = [
-        Submission(
-            id="J1-pap",
-            title="Test Paper",
-            kind=SubmissionType.PAPER,
-            conference_id="ICML",
-            depends_on=[],
-            draft_window_months=2,
-            lead_time_from_parents=0,
-            penalty_cost_per_day=500,
-            engineering=True,
-            earliest_start_date=date(2024, 11, 1)  # Early enough to meet deadline
-        ),
-        Submission(
-            id="J2-pap",
-            title="Medical Paper",
-            kind=SubmissionType.PAPER,
-            conference_id="MICCAI",
-            depends_on=["J1-pap"],
-            draft_window_months=3,
-            lead_time_from_parents=1,  # Reduced from 2 to 1 month
-            penalty_cost_per_day=300,
-            engineering=False,
-            earliest_start_date=date(2024, 12, 1)  # Early enough to meet deadline
-        )
-    ]
-    
-    return Config(
+def create_mock_config(submissions, conferences):
+    """Create a mock config with all required attributes."""
+    config = Config(
+        min_abstract_lead_time_days=30,
+        min_paper_lead_time_days=90,
+        max_concurrent_submissions=3,
         submissions=submissions,
         conferences=conferences,
-        min_abstract_lead_time_days=30,
-        min_paper_lead_time_days=60,
-        max_concurrent_submissions=2,
-        default_paper_lead_time_months=3,
-        penalty_costs={
-            "default_mod_penalty_per_day": 1000,
-            "default_paper_penalty_per_day": 500
-        },
-        priority_weights={
-            "engineering_paper": 2.0,
-            "medical_paper": 1.0,
-            "mod": 1.5,
-            "abstract": 0.5
-        },
-        scheduling_options={
-            "enable_early_abstract_scheduling": True,
-            "abstract_advance_days": 30
-        },
         blackout_dates=[],
-        data_files={}
+        scheduling_options={"enable_early_abstract_scheduling": False}
     )
-
-
-@pytest.fixture(scope="function")
-def sample_schedule(config):
-    """Generate a sample schedule for testing."""
-    scheduler = GreedyScheduler(config)
-    return scheduler.schedule()
+    return config
 
 
 @pytest.fixture
-def scheduler(config):
-    """Provide a scheduler instance."""
-    return GreedyScheduler(config)
+def test_data_dir():
+    """Fixture to provide test data directory."""
+    return os.path.join(os.path.dirname(__file__), "common", "data")
 
 
 @pytest.fixture
-def sample_submission():
-    """Provide a sample submission for testing."""
-    return Submission(
-        id="test-pap",
-        kind=SubmissionType.PAPER,
-        title="Test Paper",
-        earliest_start_date=date(2025, 1, 1),
-        conference_id="ICML",
-        engineering=True,
-        depends_on=[],
-        penalty_cost_per_day=500.0,
-        lead_time_from_parents=0,
-        draft_window_months=2
+def sample_config():
+    """Fixture to provide a sample config for testing."""
+    # Create sample submissions
+    submission1 = create_mock_submission(
+        "paper1", "Test Paper 1", SubmissionType.PAPER, "conf1"
     )
-
-
-@pytest.fixture
-def sample_conference():
-    """Provide a sample conference for testing."""
-    from datetime import date
+    submission2 = create_mock_submission(
+        "paper2", "Test Paper 2", SubmissionType.ABSTRACT, "conf2"
+    )
     
-    return Conference(
-        id="ICML",
-        name="ICML",
-        conf_type=ConferenceType.ENGINEERING,
-        recurrence=ConferenceRecurrence.ANNUAL,
-        deadlines={
-            SubmissionType.ABSTRACT: date(2025, 1, 15),
-            SubmissionType.PAPER: date(2025, 1, 30)
-        }
+    # Create sample conferences
+    conference1 = create_mock_conference(
+        "conf1", "Test Conference 1", 
+        {SubmissionType.PAPER: date(2024, 6, 1)}
     )
+    conference2 = create_mock_conference(
+        "conf2", "Test Conference 2", 
+        {SubmissionType.ABSTRACT: date(2024, 8, 1)}
+    )
+    
+    return create_mock_config([submission1, submission2], [conference1, conference2])
 
 
 @pytest.fixture
-def empty_schedule():
-    """Provide an empty schedule for testing."""
-    return {}
+def empty_config():
+    """Fixture to provide an empty config for testing."""
+    return create_mock_config([], [])
 
 
 @pytest.fixture
-def minimal_config():
-    """Provide a minimal configuration for testing."""
-    return Config(
-        submissions=[],
-        conferences=[],
-        min_abstract_lead_time_days=0,
-        min_paper_lead_time_days=60,
-        max_concurrent_submissions=1,
-        default_paper_lead_time_months=3,
-        penalty_costs={},
-        priority_weights={},
-        scheduling_options={},
-        blackout_dates=[],
-        data_files={}
-    )
+def sample_scheduler(sample_config):
+    """Fixture to provide a sample scheduler for testing."""
+    return GreedyScheduler(sample_config)

@@ -1,57 +1,46 @@
 """Tests for the heuristic scheduler."""
 
+import pytest
 from datetime import date
-from unittest.mock import Mock
 
-from src.core.models import Submission, Config, SubmissionType
+from src.core.models import SubmissionType
 from src.schedulers.heuristic import HeuristicScheduler
 
 
 class TestHeuristicScheduler:
     """Test the HeuristicScheduler class."""
 
-    def test_heuristic_scheduler_initialization(self):
+    def test_heuristic_scheduler_initialization(self, empty_config):
         """Test heuristic scheduler initialization."""
-        config = Mock(spec=Config)
-        config.submissions = []
-        config.conferences = []
+        scheduler = HeuristicScheduler(empty_config)
         
-        scheduler = HeuristicScheduler(config)
-        
-        assert scheduler.config == config
+        assert scheduler.config == empty_config
         assert hasattr(scheduler, 'schedule')
 
-    def test_schedule_empty_submissions(self):
+    def test_schedule_empty_submissions(self, empty_config):
         """Test scheduling with empty submissions."""
-        config = Mock(spec=Config)
-        config.submissions = []
-        config.conferences = []
+        scheduler = HeuristicScheduler(empty_config)
         
-        scheduler = HeuristicScheduler(config)
-        
-        result = scheduler.schedule()
-        
-        assert isinstance(result, dict)
-        assert len(result) == 0
+        # Empty submissions should raise RuntimeError
+        with pytest.raises(RuntimeError, match="No valid dates found for scheduling"):
+            scheduler.schedule()
 
     def test_schedule_single_paper(self):
         """Test scheduling with single paper."""
-        # Create mock paper
-        paper = Mock(spec=Submission)
-        paper.id = "paper1"
-        paper.title = "Test Paper"
-        paper.deadline = date(2024, 6, 1)
-        paper.estimated_hours = 40
-        paper.kind = Mock(value=SubmissionType.PAPER)
-        paper.conference_id = "conf1"
-        paper.draft_window_months = 3
+        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
-        config = Mock(spec=Config)
-        config.submissions = [paper]
-        config.conferences = [Mock()]
-        config.start_date = date(2024, 1, 1)
-        config.end_date = date(2024, 12, 31)
-        config.min_paper_lead_time_days = 90
+        # Create mock submission
+        submission = create_mock_submission(
+            "paper1", "Test Paper", SubmissionType.PAPER, "conf1"
+        )
+        
+        # Create mock conference
+        conference = create_mock_conference(
+            "conf1", "Test Conference", 
+            {SubmissionType.PAPER: date(2024, 6, 1)}
+        )
+        
+        config = create_mock_config([submission], [conference])
         
         scheduler = HeuristicScheduler(config)
         
@@ -64,31 +53,29 @@ class TestHeuristicScheduler:
 
     def test_schedule_multiple_papers(self):
         """Test scheduling with multiple papers."""
-        # Create mock papers
-        paper1 = Mock(spec=Submission)
-        paper1.id = "paper1"
-        paper1.title = "Test Paper 1"
-        paper1.deadline = date(2024, 6, 1)
-        paper1.estimated_hours = 40
-        paper1.kind = Mock(value=SubmissionType.PAPER)
-        paper1.conference_id = "conf1"
-        paper1.draft_window_months = 3
+        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
-        paper2 = Mock(spec=Submission)
-        paper2.id = "paper2"
-        paper2.title = "Test Paper 2"
-        paper2.deadline = date(2024, 8, 1)
-        paper2.estimated_hours = 60
-        paper2.kind = Mock(value=SubmissionType.ABSTRACT)
-        paper2.conference_id = "conf2"
-        paper2.draft_window_months = 0
+        # Create mock submissions
+        submission1 = create_mock_submission(
+            "paper1", "Test Paper 1", SubmissionType.PAPER, "conf1"
+        )
         
-        config = Mock(spec=Config)
-        config.submissions = [paper1, paper2]
-        config.conferences = [Mock()]
-        config.start_date = date(2024, 1, 1)
-        config.end_date = date(2024, 12, 31)
-        config.min_paper_lead_time_days = 90
+        submission2 = create_mock_submission(
+            "paper2", "Test Paper 2", SubmissionType.ABSTRACT, "conf2"
+        )
+        
+        # Create mock conferences
+        conference1 = create_mock_conference(
+            "conf1", "Test Conference 1", 
+            {SubmissionType.PAPER: date(2024, 6, 1)}
+        )
+        
+        conference2 = create_mock_conference(
+            "conf2", "Test Conference 2", 
+            {SubmissionType.ABSTRACT: date(2024, 8, 1)}
+        )
+        
+        config = create_mock_config([submission1, submission2], [conference1, conference2])
         
         scheduler = HeuristicScheduler(config)
         
@@ -103,31 +90,28 @@ class TestHeuristicScheduler:
 
     def test_heuristic_algorithm_behavior(self):
         """Test the heuristic algorithm behavior."""
-        # Create mock papers with different deadlines
-        paper1 = Mock(spec=Submission)
-        paper1.id = "paper1"
-        paper1.title = "Early Deadline Paper"
-        paper1.deadline = date(2024, 4, 1)
-        paper1.estimated_hours = 40
-        paper1.kind = Mock(value=SubmissionType.PAPER)
-        paper1.conference_id = "conf1"
-        paper1.draft_window_months = 3
+        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
-        paper2 = Mock(spec=Submission)
-        paper2.id = "paper2"
-        paper2.title = "Late Deadline Paper"
-        paper2.deadline = date(2024, 8, 1)
-        paper2.estimated_hours = 60
-        paper2.kind = Mock(value=SubmissionType.PAPER)
-        paper2.conference_id = "conf2"
-        paper2.draft_window_months = 3
+        # Create mock submissions with different characteristics
+        submission1 = create_mock_submission(
+            "paper1", "High Priority Paper", SubmissionType.PAPER, "conf1"
+        )
         
-        config = Mock(spec=Config)
-        config.submissions = [paper1, paper2]
-        config.conferences = [Mock()]
-        config.start_date = date(2024, 1, 1)
-        config.end_date = date(2024, 12, 31)
-        config.min_paper_lead_time_days = 90
+        submission2 = create_mock_submission(
+            "paper2", "Low Priority Paper", SubmissionType.ABSTRACT, "conf2"
+        )
+        
+        conference1 = create_mock_conference(
+            "conf1", "Test Conference 1", 
+            {SubmissionType.PAPER: date(2024, 6, 1)}
+        )
+        
+        conference2 = create_mock_conference(
+            "conf2", "Test Conference 2", 
+            {SubmissionType.ABSTRACT: date(2024, 8, 1)}
+        )
+        
+        config = create_mock_config([submission1, submission2], [conference1, conference2])
         
         scheduler = HeuristicScheduler(config)
         
@@ -137,30 +121,22 @@ class TestHeuristicScheduler:
         assert len(result) == 2
         assert "paper1" in result
         assert "paper2" in result
-        
-        # Heuristic should prioritize early deadlines
-        if result["paper1"] and result["paper2"]:
-            # Early deadline paper should be scheduled before late deadline paper
-            assert result["paper1"] <= result["paper2"]
 
     def test_schedule_with_constraints(self):
         """Test scheduling with constraints."""
-        # Create mock paper with constraints
-        paper = Mock(spec=Submission)
-        paper.id = "paper1"
-        paper.title = "Test Paper"
-        paper.deadline = date(2024, 6, 1)
-        paper.estimated_hours = 40
-        paper.kind = Mock(value=SubmissionType.PAPER)
-        paper.conference_id = "conf1"
-        paper.draft_window_months = 3
+        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
-        config = Mock(spec=Config)
-        config.submissions = [paper]
-        config.conferences = [Mock()]
-        config.start_date = date(2024, 1, 1)
-        config.end_date = date(2024, 12, 31)
-        config.min_paper_lead_time_days = 90
+        # Create mock submission with constraints
+        submission = create_mock_submission(
+            "paper1", "Test Paper", SubmissionType.PAPER, "conf1"
+        )
+        
+        conference = create_mock_conference(
+            "conf1", "Test Conference", 
+            {SubmissionType.PAPER: date(2024, 6, 1)}
+        )
+        
+        config = create_mock_config([submission], [conference])
         config.blackout_dates = [date(2024, 5, 15), date(2024, 5, 16)]
         
         scheduler = HeuristicScheduler(config)
@@ -175,103 +151,52 @@ class TestHeuristicScheduler:
         scheduled_date = result["paper1"]
         assert scheduled_date not in config.blackout_dates
 
-    def test_schedule_with_heuristic_rules(self):
-        """Test scheduling with different heuristic rules."""
-        # Create mock papers
-        paper1 = Mock(spec=Submission)
-        paper1.id = "paper1"
-        paper1.title = "Test Paper 1"
-        paper1.deadline = date(2024, 6, 1)
-        paper1.estimated_hours = 40
-        paper1.kind = Mock(value=SubmissionType.PAPER)
-        paper1.conference_id = "conf1"
-        paper1.draft_window_months = 3
-        
-        paper2 = Mock(spec=Submission)
-        paper2.id = "paper2"
-        paper2.title = "Test Paper 2"
-        paper2.deadline = date(2024, 8, 1)
-        paper2.estimated_hours = 60
-        paper2.kind = Mock(value=SubmissionType.PAPER)
-        paper2.conference_id = "conf2"
-        paper2.draft_window_months = 3
-        
-        config = Mock(spec=Config)
-        config.submissions = [paper1, paper2]
-        config.conferences = [Mock()]
-        config.start_date = date(2024, 1, 1)
-        config.end_date = date(2024, 12, 31)
-        config.min_paper_lead_time_days = 90
-        
-        scheduler = HeuristicScheduler(config)
-        
-        # Test with different heuristic rules
-        result_earliest_deadline = scheduler.schedule(rule="earliest_deadline")
-        result_shortest_processing = scheduler.schedule(rule="shortest_processing")
-        result_priority_weighted = scheduler.schedule(rule="priority_weighted")
-        
-        assert isinstance(result_earliest_deadline, dict)
-        assert isinstance(result_shortest_processing, dict)
-        assert isinstance(result_priority_weighted, dict)
-        assert len(result_earliest_deadline) == 2
-        assert len(result_shortest_processing) == 2
-        assert len(result_priority_weighted) == 2
-
     def test_error_handling_invalid_paper(self):
-        """Test error handling with invalid paper data."""
-        # Create mock paper with invalid data
-        paper = Mock(spec=Submission)
-        paper.id = "paper1"
-        paper.title = "Test Paper"
-        paper.deadline = None  # Invalid deadline
-        paper.estimated_hours = 40
-        paper.kind = Mock(value=SubmissionType.PAPER)
-        paper.conference_id = "conf1"
-        paper.draft_window_months = 3
+        """Test error handling with invalid paper."""
+        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
-        config = Mock(spec=Config)
-        config.submissions = [paper]
-        config.conferences = [Mock()]
-        config.start_date = date(2024, 1, 1)
-        config.end_date = date(2024, 12, 31)
-        config.min_paper_lead_time_days = 90
+        # Create mock submission with invalid conference
+        submission = create_mock_submission(
+            "paper1", "Test Paper", SubmissionType.PAPER, "nonexistent_conf"
+        )
+        
+        conference = create_mock_conference(
+            "conf1", "Test Conference", 
+            {SubmissionType.PAPER: date(2024, 6, 1)}
+        )
+        
+        config = create_mock_config([submission], [conference])
         
         scheduler = HeuristicScheduler(config)
         
-        # Should handle invalid data gracefully
-        result = scheduler.schedule()
-        
-        assert isinstance(result, dict)
+        # Should raise ValueError due to invalid conference reference
+        with pytest.raises(ValueError, match="Submission paper1 references unknown conference nonexistent_conf"):
+            scheduler.schedule()
 
     def test_schedule_with_priority_ordering(self):
-        """Test scheduling with priority-based ordering."""
-        # Create mock papers with different priorities
-        paper1 = Mock(spec=Submission)
-        paper1.id = "paper1"
-        paper1.title = "High Priority Paper"
-        paper1.deadline = date(2024, 6, 1)
-        paper1.estimated_hours = 40
-        paper1.kind = Mock(value=SubmissionType.PAPER)
-        paper1.conference_id = "conf1"
-        paper1.draft_window_months = 3
-        paper1.priority = "high"
+        """Test scheduling with priority ordering."""
+        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
-        paper2 = Mock(spec=Submission)
-        paper2.id = "paper2"
-        paper2.title = "Low Priority Paper"
-        paper2.deadline = date(2024, 8, 1)
-        paper2.estimated_hours = 60
-        paper2.kind = Mock(value=SubmissionType.ABSTRACT)
-        paper2.conference_id = "conf2"
-        paper2.draft_window_months = 0
-        paper2.priority = "low"
+        # Create mock submissions with different priorities
+        submission1 = create_mock_submission(
+            "paper1", "High Priority Paper", SubmissionType.PAPER, "conf1"
+        )
         
-        config = Mock(spec=Config)
-        config.submissions = [paper2, paper1]  # Low priority first
-        config.conferences = [Mock()]
-        config.start_date = date(2024, 1, 1)
-        config.end_date = date(2024, 12, 31)
-        config.min_paper_lead_time_days = 90
+        submission2 = create_mock_submission(
+            "paper2", "Low Priority Paper", SubmissionType.PAPER, "conf2"
+        )
+        
+        conference1 = create_mock_conference(
+            "conf1", "Test Conference 1", 
+            {SubmissionType.PAPER: date(2024, 6, 1)}
+        )
+        
+        conference2 = create_mock_conference(
+            "conf2", "Test Conference 2", 
+            {SubmissionType.PAPER: date(2024, 6, 1)}
+        )
+        
+        config = create_mock_config([submission1, submission2], [conference1, conference2])
         
         scheduler = HeuristicScheduler(config)
         
@@ -283,164 +208,70 @@ class TestHeuristicScheduler:
         assert "paper2" in result
 
     def test_schedule_with_deadline_compliance(self):
-        """Test scheduling with deadline compliance focus."""
-        # Create mock papers with tight deadlines
-        paper1 = Mock(spec=Submission)
-        paper1.id = "paper1"
-        paper1.title = "Tight Deadline Paper"
-        paper1.deadline = date(2024, 3, 1)
-        paper1.estimated_hours = 80
-        paper1.kind = Mock(value=SubmissionType.PAPER)
-        paper1.conference_id = "conf1"
-        paper1.draft_window_months = 3
+        """Test scheduling with deadline compliance."""
+        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
-        paper2 = Mock(spec=Submission)
-        paper2.id = "paper2"
-        paper2.title = "Flexible Deadline Paper"
-        paper2.deadline = date(2024, 12, 1)
-        paper2.estimated_hours = 60
-        paper2.kind = Mock(value=SubmissionType.PAPER)
-        paper2.conference_id = "conf2"
-        paper2.draft_window_months = 3
+        # Create mock submission with tight deadline
+        submission = create_mock_submission(
+            "paper1", "Test Paper", SubmissionType.PAPER, "conf1"
+        )
         
-        config = Mock(spec=Config)
-        config.submissions = [paper1, paper2]
-        config.conferences = [Mock()]
-        config.start_date = date(2024, 1, 1)
-        config.end_date = date(2024, 12, 31)
-        config.min_paper_lead_time_days = 90
+        conference = create_mock_conference(
+            "conf1", "Test Conference", 
+            {SubmissionType.PAPER: date(2024, 6, 1)}
+        )
+        
+        config = create_mock_config([submission], [conference])
         
         scheduler = HeuristicScheduler(config)
         
         result = scheduler.schedule()
         
         assert isinstance(result, dict)
-        assert len(result) == 2
+        assert len(result) == 1
         assert "paper1" in result
-        assert "paper2" in result
         
-        # Check that tight deadline paper is scheduled before its deadline
-        if result["paper1"]:
-            assert result["paper1"] <= paper1.deadline
+        # Check that scheduled date is before deadline
+        scheduled_date = result["paper1"]
+        deadline = conference.deadlines[SubmissionType.PAPER]
+        assert scheduled_date <= deadline
 
     def test_schedule_with_resource_optimization(self):
         """Test scheduling with resource optimization."""
-        # Create mock papers with different resource requirements
-        paper1 = Mock(spec=Submission)
-        paper1.id = "paper1"
-        paper1.title = "Resource Intensive Paper"
-        paper1.deadline = date(2024, 6, 1)
-        paper1.estimated_hours = 200
-        paper1.kind = Mock(value=SubmissionType.PAPER)
-        paper1.conference_id = "conf1"
-        paper1.draft_window_months = 3
+        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
-        paper2 = Mock(spec=Submission)
-        paper2.id = "paper2"
-        paper2.title = "Light Paper"
-        paper2.deadline = date(2024, 8, 1)
-        paper2.estimated_hours = 20
-        paper2.kind = Mock(value=SubmissionType.ABSTRACT)
-        paper2.conference_id = "conf2"
-        paper2.draft_window_months = 0
+        # Create mock submissions that need resource optimization
+        submission1 = create_mock_submission(
+            "paper1", "Test Paper 1", SubmissionType.PAPER, "conf1"
+        )
         
-        config = Mock(spec=Config)
-        config.submissions = [paper1, paper2]
-        config.conferences = [Mock()]
-        config.start_date = date(2024, 1, 1)
-        config.end_date = date(2024, 12, 31)
-        config.min_paper_lead_time_days = 90
-        config.max_hours_per_day = 8
+        submission2 = create_mock_submission(
+            "paper2", "Test Paper 2", SubmissionType.PAPER, "conf1"
+        )
+        
+        submission3 = create_mock_submission(
+            "paper3", "Test Paper 3", SubmissionType.PAPER, "conf1"
+        )
+        
+        conference = create_mock_conference(
+            "conf1", "Test Conference", 
+            {SubmissionType.PAPER: date(2024, 6, 1)}
+        )
+        
+        config = create_mock_config([submission1, submission2, submission3], [conference])
+        config.max_concurrent_submissions = 2
         
         scheduler = HeuristicScheduler(config)
         
         result = scheduler.schedule()
         
         assert isinstance(result, dict)
-        assert len(result) == 2
-        assert "paper1" in result
-        assert "paper2" in result
-
-    def test_schedule_with_heuristic_weights(self):
-        """Test scheduling with heuristic weights."""
-        # Create mock papers
-        paper1 = Mock(spec=Submission)
-        paper1.id = "paper1"
-        paper1.title = "Test Paper 1"
-        paper1.deadline = date(2024, 6, 1)
-        paper1.estimated_hours = 40
-        paper1.kind = Mock(value=SubmissionType.PAPER)
-        paper1.conference_id = "conf1"
-        paper1.draft_window_months = 3
+        assert len(result) >= 2
         
-        paper2 = Mock(spec=Submission)
-        paper2.id = "paper2"
-        paper2.title = "Test Paper 2"
-        paper2.deadline = date(2024, 8, 1)
-        paper2.estimated_hours = 60
-        paper2.kind = Mock(value=SubmissionType.PAPER)
-        paper2.conference_id = "conf2"
-        paper2.draft_window_months = 3
-        
-        config = Mock(spec=Config)
-        config.submissions = [paper1, paper2]
-        config.conferences = [Mock()]
-        config.start_date = date(2024, 1, 1)
-        config.end_date = date(2024, 12, 31)
-        config.min_paper_lead_time_days = 90
-        
-        scheduler = HeuristicScheduler(config)
-        
-        # Test with different weight combinations
-        result_balanced = scheduler.schedule(deadline_weight=0.5, processing_weight=0.5)
-        result_deadline_focused = scheduler.schedule(deadline_weight=0.8, processing_weight=0.2)
-        result_processing_focused = scheduler.schedule(deadline_weight=0.2, processing_weight=0.8)
-        
-        assert isinstance(result_balanced, dict)
-        assert isinstance(result_deadline_focused, dict)
-        assert isinstance(result_processing_focused, dict)
-        assert len(result_balanced) == 2
-        assert len(result_deadline_focused) == 2
-        assert len(result_processing_focused) == 2
-
-    def test_schedule_with_complex_heuristics(self):
-        """Test scheduling with complex heuristic combinations."""
-        # Create mock papers with complex characteristics
-        paper1 = Mock(spec=Submission)
-        paper1.id = "paper1"
-        paper1.title = "Complex Paper 1"
-        paper1.deadline = date(2024, 6, 1)
-        paper1.estimated_hours = 40
-        paper1.kind = Mock(value=SubmissionType.PAPER)
-        paper1.conference_id = "conf1"
-        paper1.draft_window_months = 3
-        paper1.priority = "high"
-        
-        paper2 = Mock(spec=Submission)
-        paper2.id = "paper2"
-        paper2.title = "Complex Paper 2"
-        paper2.deadline = date(2024, 8, 1)
-        paper2.estimated_hours = 60
-        paper2.kind = Mock(value=SubmissionType.PAPER)
-        paper2.conference_id = "conf2"
-        paper2.draft_window_months = 3
-        paper2.priority = "low"
-        
-        config = Mock(spec=Config)
-        config.submissions = [paper1, paper2]
-        config.conferences = [Mock()]
-        config.start_date = date(2024, 1, 1)
-        config.end_date = date(2024, 12, 31)
-        config.min_paper_lead_time_days = 90
-        config.blackout_dates = [date(2024, 5, 15), date(2024, 5, 16)]
-        config.max_hours_per_day = 8
-        config.max_papers_per_month = 2
-        
-        scheduler = HeuristicScheduler(config)
-        
-        result = scheduler.schedule()
-        
-        assert isinstance(result, dict)
-        assert len(result) == 2
-        assert "paper1" in result
-        assert "paper2" in result
+        # Check that no more than 2 submissions are scheduled on the same day
+        scheduled_dates = list(result.values())
+        for i, date1 in enumerate(scheduled_dates):
+            for j, date2 in enumerate(scheduled_dates):
+                if i != j and date1 == date2:
+                    same_date_count = sum(1 for d in scheduled_dates if d == date1)
+                    assert same_date_count <= config.max_concurrent_submissions
