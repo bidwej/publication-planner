@@ -1,14 +1,10 @@
 """
 Main Dash application for the Paper Planner web interface.
-
-This module provides the main entry point for the web application,
-including the Dash app initialization, layout, and callbacks.
 """
 
 import dash
 from dash import html, dcc, Input, Output, State, callback_context
 import plotly.graph_objects as go
-import plotly.express as px
 from datetime import date, datetime
 import json
 from pathlib import Path
@@ -24,6 +20,14 @@ from scoring.penalty import calculate_penalty_score
 from scoring.quality import calculate_quality_score
 from scoring.efficiency import calculate_efficiency_score
 from schedulers.base import BaseScheduler
+# Import all schedulers to ensure they're registered
+from schedulers.greedy import GreedyScheduler
+from schedulers.stochastic import StochasticGreedyScheduler
+from schedulers.lookahead import LookaheadGreedyScheduler
+from schedulers.backtracking import BacktrackingGreedyScheduler
+from schedulers.random import RandomScheduler
+from schedulers.heuristic import HeuristicScheduler
+from schedulers.optimal import OptimalScheduler
 
 # Import app components
 from layouts.header import create_header
@@ -31,9 +35,7 @@ from layouts.sidebar import create_sidebar
 from layouts.main_content import create_main_content
 from components.charts.gantt_chart import create_gantt_chart
 from components.charts.metrics_chart import create_metrics_chart
-from components.controls.strategy_selector import create_strategy_selector
-from components.tables.schedule_table import create_schedule_table
-from components.modals.save_load_modal import create_save_load_modal
+from components.tables.schedule_table import create_schedule_table, create_violations_table
 
 # Initialize the Dash app
 app = dash.Dash(
@@ -51,20 +53,12 @@ app_state = WebAppState()
 def create_app_layout():
     """Create the main application layout."""
     return html.Div([
-        # Header
         create_header(),
         
-        # Main container
         html.Div([
-            # Sidebar
             create_sidebar(),
-            
-            # Main content area
             create_main_content()
         ], className="app-container"),
-        
-        # Save/Load Modal
-        create_save_load_modal(),
         
         # Store components for data persistence
         dcc.Store(id='schedule-store', storage_type='memory'),
@@ -72,11 +66,7 @@ def create_app_layout():
         dcc.Store(id='app-state-store', storage_type='memory'),
         
         # Interval for auto-refresh
-        dcc.Interval(
-            id='interval-component',
-            interval=30*1000,  # 30 seconds
-            n_intervals=0
-        )
+        dcc.Interval(id='interval-component', interval=30*1000, n_intervals=0)
     ], className="app-wrapper")
 
 # Set the layout
@@ -86,8 +76,8 @@ app.layout = create_app_layout()
 @app.callback(
     [Output('gantt-chart', 'figure'),
      Output('metrics-chart', 'figure'),
-     Output('schedule-table', 'data'),
-     Output('violations-table', 'data'),
+     Output('schedule-table-container', 'children'),
+     Output('violations-table-container', 'children'),
      Output('summary-metrics', 'children')],
     [Input('generate-schedule-btn', 'n_clicks'),
      Input('load-schedule-btn', 'n_clicks'),
@@ -96,125 +86,87 @@ app.layout = create_app_layout()
      State('config-store', 'data')]
 )
 def update_schedule(n_generate, n_load, strategy, schedule_data, config_data):
-    """Update the schedule display based on user actions."""
+    """Update schedule display based on user actions."""
     ctx = callback_context
     if not ctx.triggered:
-        return create_default_figures()
+        return _create_default_figures()
     
     trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
     
     if trigger_id == 'generate-schedule-btn':
-        return generate_new_schedule(strategy)
+        return _generate_new_schedule(strategy)
     elif trigger_id == 'load-schedule-btn':
-        return load_saved_schedule()
+        return _load_saved_schedule()
     else:
-        return create_default_figures()
+        return _create_default_figures()
 
-@app.callback(
-    Output('save-load-modal', 'className'),
-    [Input('save-schedule-btn', 'n_clicks'),
-     Input('load-schedule-btn', 'n_clicks'),
-     Input('close-modal-btn', 'n_clicks')],
-    [State('save-load-modal', 'className')]
-)
-def toggle_modal(n_save, n_load, n_close, current_class):
-    """Toggle the save/load modal visibility."""
-    if n_save or n_load or n_close:
-        if 'modal-open' in current_class:
-            return current_class.replace('modal-open', 'modal-closed')
-        else:
-            return current_class.replace('modal-closed', 'modal-open')
-    return current_class
-
-@app.callback(
-    Output('saved-schedules-list', 'options'),
-    [Input('refresh-schedules-btn', 'n_clicks')]
-)
-def update_saved_schedules_list(n_clicks):
-    """Update the list of saved schedules."""
-    schedules = app_state.list_saved_schedules()
-    return [{'label': f"{s['filename']} ({s['strategy']})", 'value': s['filename']} 
-            for s in schedules]
-
-def generate_new_schedule(strategy: str) -> tuple:
-    """Generate a new schedule using the specified strategy."""
+def _generate_new_schedule(strategy: str) -> tuple:
+    """Generate a new schedule using the selected strategy."""
     try:
-        # Load configuration
-        config = load_config("config.json")
-        
-        # Create scheduler
+        config = load_config('config.json')
         scheduler = BaseScheduler.create_scheduler(SchedulerStrategy(strategy), config)
-        
-        # Generate schedule
         schedule = scheduler.schedule()
         
-        # Validate and analyze
+        # Validate schedule
         validation_result = validate_schedule_comprehensive(schedule, config)
         
-        # Create visualizations
+        # Create figures
         gantt_fig = create_gantt_chart(schedule, config)
-        metrics_fig = create_metrics_chart(validation_result)
+        metrics_fig = create_metrics_chart(validation_result, config)
+        
+        # Create tables
         schedule_table = create_schedule_table(schedule, config)
         violations_table = create_violations_table(validation_result)
-        summary_metrics = create_summary_metrics(validation_result)
+        
+        # Create summary metrics
+        summary_metrics = _create_summary_metrics(validation_result)
         
         return gantt_fig, metrics_fig, schedule_table, violations_table, summary_metrics
         
     except Exception as e:
         print(f"Error generating schedule: {e}")
-        return create_default_figures()
+        return _create_default_figures()
 
-def load_saved_schedule() -> tuple:
+def _load_saved_schedule() -> tuple:
     """Load a saved schedule."""
-    # Implementation for loading saved schedules
-    return create_default_figures()
+    # Placeholder for load functionality
+    return _create_default_figures()
 
-def create_default_figures() -> tuple:
+def _create_default_figures() -> tuple:
     """Create default empty figures."""
-    empty_gantt = go.Figure()
-    empty_gantt.add_annotation(
-        text="Generate a schedule to see the Gantt chart",
-        xref="paper", yref="paper",
-        x=0.5, y=0.5, showarrow=False
-    )
+    empty_gantt = create_gantt_chart({}, Config.create_default())
+    empty_metrics = create_metrics_chart({}, Config.create_default())
+    empty_tables = []
+    empty_summary = html.Div("No schedule available")
     
-    empty_metrics = go.Figure()
-    empty_metrics.add_annotation(
-        text="Generate a schedule to see metrics",
-        xref="paper", yref="paper",
-        x=0.5, y=0.5, showarrow=False
-    )
-    
-    return empty_gantt, empty_metrics, [], [], "No schedule loaded"
+    return empty_gantt, empty_metrics, empty_tables, empty_tables, empty_summary
 
-def create_summary_metrics(validation_result: Dict[str, Any]) -> html.Div:
+def _create_summary_metrics(validation_result: Dict[str, Any]) -> html.Div:
     """Create summary metrics display."""
     if not validation_result:
         return html.Div("No metrics available")
     
-    summary = validation_result.get("summary", {})
+    scores = validation_result.get('scores', {})
+    summary = validation_result.get('summary', {})
     
     return html.Div([
-        html.H4("Schedule Summary"),
         html.Div([
-            html.Div([
-                html.H5("Overall Score"),
-                html.P(f"{summary.get('overall_score', 0):.1f}/100")
-            ], className="metric-card"),
-            html.Div([
-                html.H5("Completion Rate"),
-                html.P(f"{summary.get('completion_rate', 0):.1f}%")
-            ], className="metric-card"),
-            html.Div([
-                html.H5("Duration"),
-                html.P(f"{summary.get('duration_days', 0)} days")
-            ], className="metric-card"),
-            html.Div([
-                html.H5("Peak Load"),
-                html.P(f"{summary.get('peak_load', 0)} submissions")
-            ], className="metric-card")
-        ], className="metrics-grid")
-    ])
+            html.H4("Overall Score"),
+            html.Span(f"{summary.get('overall_score', 0):.1f}", className="metric-value")
+        ], className="metric-card"),
+        html.Div([
+            html.H4("Penalty Score"),
+            html.Span(f"{scores.get('penalty_score', 0):.1f}", className="metric-value")
+        ], className="metric-card"),
+        html.Div([
+            html.H4("Quality Score"),
+            html.Span(f"{scores.get('quality_score', 0):.1f}", className="metric-value")
+        ], className="metric-card"),
+        html.Div([
+            html.H4("Efficiency Score"),
+            html.Span(f"{scores.get('efficiency_score', 0):.1f}", className="metric-value")
+        ], className="metric-card")
+    ], className="metrics-grid")
 
 if __name__ == '__main__':
-    app.run(debug=True, host='127.0.0.1', port=8050)
+    app.run_server(debug=True, host='0.0.0.0', port=8050)

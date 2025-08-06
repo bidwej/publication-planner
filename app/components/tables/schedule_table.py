@@ -7,21 +7,7 @@ from datetime import date, timedelta
 from core.models import Config, Submission, SubmissionType
 
 def create_schedule_table(schedule: Dict[str, date], config: Config) -> List[Dict[str, str]]:
-    """
-    Create schedule table data for display.
-    
-    Parameters
-    ----------
-    schedule : Dict[str, date]
-        Schedule mapping submission_id to start_date
-    config : Config
-        Configuration containing submission data
-        
-    Returns
-    -------
-    List[Dict[str, str]]
-        Table data for DataTable component
-    """
+    """Create schedule table data for display."""
     if not schedule:
         return []
     
@@ -47,7 +33,7 @@ def create_schedule_table(schedule: Dict[str, date], config: Config) -> List[Dic
                 conference_name = conference.name
         
         # Determine status
-        status = get_submission_status(submission, start_date, end_date, config)
+        status = _get_submission_status(submission, start_date, end_date, config)
         
         # Create table row
         row = {
@@ -69,7 +55,7 @@ def create_schedule_table(schedule: Dict[str, date], config: Config) -> List[Dic
     
     return table_data
 
-def get_submission_status(submission: Submission, start_date: date, end_date: date, config: Config) -> str:
+def _get_submission_status(submission: Submission, start_date: date, end_date: date, config: Config) -> str:
     """Determine the status of a submission."""
     from datetime import date as current_date
     
@@ -83,184 +69,110 @@ def get_submission_status(submission: Submission, start_date: date, end_date: da
         return "Completed"
 
 def create_violations_table(validation_result: Dict[str, Any]) -> List[Dict[str, str]]:
-    """
-    Create violations table data for display.
-    
-    Parameters
-    ----------
-    validation_result : Dict[str, Any]
-        Validation results containing violations
-        
-    Returns
-    -------
-    List[Dict[str, str]]
-        Table data for violations DataTable
-    """
+    """Create violations table data for display."""
     if not validation_result:
         return []
     
-    constraints = validation_result.get("constraints", {})
-    table_data = []
+    constraints = validation_result.get('constraints', {})
+    violations = []
     
-    # Process deadline violations
-    deadline_violations = constraints.get("deadlines", {}).get("violations", [])
-    for violation in deadline_violations:
-        table_data.append({
-            'submission': violation.get('submission_id', 'Unknown'),
-            'type': 'Deadline',
-            'description': violation.get('description', 'Unknown violation'),
-            'severity': violation.get('severity', 'medium'),
-            'impact': f"{violation.get('days_late', 0)} days late"
-        })
+    # Collect all violations
+    for constraint_type, constraint_data in constraints.items():
+        if isinstance(constraint_data, dict) and 'violations' in constraint_data:
+            for violation in constraint_data['violations']:
+                violations.append({
+                    'type': constraint_type.replace('_', ' ').title(),
+                    'submission': violation.get('submission_id', 'Unknown'),
+                    'description': violation.get('message', 'No description'),
+                    'severity': violation.get('severity', 'medium'),
+                    'impact': violation.get('impact', 'Unknown')
+                })
     
-    # Process dependency violations
-    dependency_violations = constraints.get("dependencies", {}).get("violations", [])
-    for violation in dependency_violations:
-        table_data.append({
-            'submission': violation.get('submission_id', 'Unknown'),
-            'type': 'Dependency',
-            'description': violation.get('description', 'Unknown violation'),
-            'severity': violation.get('severity', 'medium'),
-            'impact': f"{violation.get('days_violation', 0)} days violation"
-        })
-    
-    # Process resource violations
-    resource_violations = constraints.get("resources", {}).get("violations", [])
-    for violation in resource_violations:
-        table_data.append({
-            'submission': violation.get('submission_id', 'Unknown'),
-            'type': 'Resource',
-            'description': violation.get('description', 'Unknown violation'),
-            'severity': violation.get('severity', 'medium'),
-            'impact': f"{violation.get('excess', 0)} excess submissions"
-        })
-    
-    # Process conference compatibility violations
-    conference_violations = constraints.get("conference_compatibility", {}).get("violations", [])
-    for violation in conference_violations:
-        table_data.append({
-            'submission': violation.get('submission_id', 'Unknown'),
-            'type': 'Conference',
-            'description': violation.get('description', 'Unknown violation'),
-            'severity': violation.get('severity', 'medium'),
-            'impact': 'Venue mismatch'
-        })
-    
-    return table_data
+    return violations
 
 def create_metrics_table(validation_result: Dict[str, Any]) -> List[Dict[str, str]]:
-    """
-    Create metrics table data for display.
-    
-    Parameters
-    ----------
-    validation_result : Dict[str, Any]
-        Validation and scoring results
-        
-    Returns
-    -------
-    List[Dict[str, str]]
-        Table data for metrics DataTable
-    """
+    """Create metrics table data for display."""
     if not validation_result:
         return []
     
-    summary = validation_result.get("summary", {})
-    constraints = validation_result.get("constraints", {})
+    scores = validation_result.get('scores', {})
+    summary = validation_result.get('summary', {})
     
-    table_data = [
+    metrics = [
+        {
+            'metric': 'Penalty Score',
+            'value': f"{scores.get('penalty_score', 0):.1f}",
+            'status': _get_score_status(scores.get('penalty_score', 0))
+        },
+        {
+            'metric': 'Quality Score',
+            'value': f"{scores.get('quality_score', 0):.1f}",
+            'status': _get_score_status(scores.get('quality_score', 0))
+        },
+        {
+            'metric': 'Efficiency Score',
+            'value': f"{scores.get('efficiency_score', 0):.1f}",
+            'status': _get_score_status(scores.get('efficiency_score', 0))
+        },
         {
             'metric': 'Overall Score',
-            'value': f"{summary.get('overall_score', 0):.1f}/100",
-            'status': get_score_status(summary.get('overall_score', 0))
-        },
-        {
-            'metric': 'Deadline Compliance',
-            'value': f"{summary.get('deadline_compliance', 0):.1f}%",
-            'status': get_score_status(summary.get('deadline_compliance', 0))
-        },
-        {
-            'metric': 'Dependency Satisfaction',
-            'value': f"{summary.get('dependency_satisfaction', 0):.1f}%",
-            'status': get_score_status(summary.get('dependency_satisfaction', 0))
-        },
-        {
-            'metric': 'Resource Utilization',
-            'value': f"{summary.get('resource_valid', False) and 'Valid' or 'Invalid'}",
-            'status': 'success' if summary.get('resource_valid', False) else 'danger'
-        },
-        {
-            'metric': 'Timeline Duration',
-            'value': f"{summary.get('duration_days', 0)} days",
-            'status': 'info'
-        },
-        {
-            'metric': 'Peak Load',
-            'value': f"{summary.get('peak_load', 0)} submissions",
-            'status': 'info'
-        },
-        {
-            'metric': 'Total Violations',
-            'value': f"{validation_result.get('total_violations', 0)}",
-            'status': 'danger' if validation_result.get('total_violations', 0) > 0 else 'success'
+            'value': f"{summary.get('overall_score', 0):.1f}",
+            'status': _get_score_status(summary.get('overall_score', 0))
         }
     ]
     
-    return table_data
+    return metrics
 
-def get_score_status(score: float) -> str:
-    """Get status color for a score."""
-    if score >= 90:
-        return 'success'
-    elif score >= 70:
-        return 'warning'
+def _get_score_status(score: float) -> str:
+    """Get status based on score value."""
+    if score >= 80:
+        return "Excellent"
+    elif score >= 60:
+        return "Good"
+    elif score >= 40:
+        return "Fair"
     else:
-        return 'danger'
+        return "Poor"
 
 def create_analytics_table(validation_result: Dict[str, Any]) -> List[Dict[str, str]]:
-    """
-    Create analytics table data for display.
-    
-    Parameters
-    ----------
-    validation_result : Dict[str, Any]
-        Validation and analytics results
-        
-    Returns
-    -------
-    List[Dict[str, str]]
-        Table data for analytics DataTable
-    """
+    """Create analytics table data for display."""
     if not validation_result:
         return []
     
-    analytics = validation_result.get("analytics", {})
+    summary = validation_result.get('summary', {})
+    constraints = validation_result.get('constraints', {})
     
-    table_data = [
+    analytics = [
         {
-            'category': 'Schedule Completeness',
-            'metric': 'Completion Rate',
-            'value': f"{analytics.get('completion_rate', 0):.1f}%",
-            'description': 'Percentage of submissions scheduled'
+            'category': 'Schedule Overview',
+            'metric': 'Total Submissions',
+            'value': str(summary.get('total_submissions', 0))
         },
         {
-            'category': 'Timeline Analysis',
-            'metric': 'Duration',
-            'value': f"{analytics.get('duration_days', 0)} days",
-            'description': 'Total schedule duration'
+            'category': 'Schedule Overview',
+            'metric': 'Schedule Duration',
+            'value': f"{summary.get('duration_days', 0)} days"
         },
         {
-            'category': 'Resource Analysis',
-            'metric': 'Peak Load',
-            'value': f"{analytics.get('peak_load', 0)}",
-            'description': 'Maximum concurrent submissions'
+            'category': 'Compliance',
+            'metric': 'Deadline Compliance',
+            'value': f"{summary.get('deadline_compliance', 0):.1f}%"
         },
         {
-            'category': 'Quality Analysis',
-            'metric': 'Overall Quality',
-            'value': f"{analytics.get('overall_score', 0):.1f}/100",
-            'description': 'Overall schedule quality score'
+            'category': 'Compliance',
+            'metric': 'Dependency Satisfaction',
+            'value': f"{summary.get('dependency_satisfaction', 0):.1f}%"
+        },
+        {
+            'category': 'Violations',
+            'metric': 'Total Violations',
+            'value': str(summary.get('total_violations', 0))
+        },
+        {
+            'category': 'Violations',
+            'metric': 'Critical Violations',
+            'value': str(summary.get('critical_violations', 0))
         }
     ]
     
-    return table_data
+    return analytics
