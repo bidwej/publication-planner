@@ -13,8 +13,7 @@
     "python.terminal.activateEnvironment": true,
     "markdown-preview-enhanced.enableScriptExecution": true,
     "python.testing.pytestArgs": [
-      "tests",
-      "--import-mode=importlib"
+      "tests"
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,

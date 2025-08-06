@@ -32,13 +32,13 @@ class PenaltyScorer(BaseScorer):
     
     def calculate_score(self, schedule: Dict[str, date]) -> float:
         """Calculate penalty score (lower is better)."""
-        from scoring.penalty import calculate_penalty_score
+        from .penalty import calculate_penalty_score
         penalty_breakdown = calculate_penalty_score(schedule, self.config)
         return penalty_breakdown.total_penalty
     
     def get_score_breakdown(self, schedule: Dict[str, date]) -> Dict[str, Any]:
         """Get detailed penalty breakdown."""
-        from scoring.penalty import calculate_penalty_score
+        from .penalty import calculate_penalty_score
         penalty_breakdown = calculate_penalty_score(schedule, self.config)
         return {
             "total_penalty": penalty_breakdown.total_penalty,
@@ -53,12 +53,12 @@ class QualityScorer(BaseScorer):
     
     def calculate_score(self, schedule: Dict[str, date]) -> float:
         """Calculate quality score (higher is better)."""
-        from scoring.quality import calculate_quality_score
+        from .quality import calculate_quality_score
         return calculate_quality_score(schedule, self.config)
     
     def get_score_breakdown(self, schedule: Dict[str, date]) -> Dict[str, Any]:
         """Get detailed quality breakdown."""
-        from scoring.quality import calculate_quality_score
+        from .quality import calculate_quality_score
         quality_score = calculate_quality_score(schedule, self.config)
         return {
             "quality_score": quality_score,
@@ -73,12 +73,12 @@ class EfficiencyScorer(BaseScorer):
     
     def calculate_score(self, schedule: Dict[str, date]) -> float:
         """Calculate efficiency score (higher is better)."""
-        from scoring.efficiency import calculate_efficiency_score
+        from .efficiency import calculate_efficiency_score
         return calculate_efficiency_score(schedule, self.config)
     
     def get_score_breakdown(self, schedule: Dict[str, date]) -> Dict[str, Any]:
         """Get detailed efficiency breakdown."""
-        from scoring.efficiency import calculate_efficiency_score, calculate_resource_efficiency, calculate_timeline_efficiency
+        from .efficiency import calculate_efficiency_score, calculate_resource_efficiency, calculate_timeline_efficiency
         efficiency_score = calculate_efficiency_score(schedule, self.config)
         resource_metrics = calculate_resource_efficiency(schedule, self.config)
         timeline_metrics = calculate_timeline_efficiency(schedule, self.config)
@@ -95,7 +95,7 @@ class EfficiencyScorer(BaseScorer):
 class CompositeScorer(BaseScorer):
     """Composite scoring strategy that combines multiple scorers."""
     
-    def __init__(self, config: Config, weights: Dict[str, float] = None):
+    def __init__(self, config: Config, weights: Dict[str, float] | None = None):
         super().__init__(config)
         self.weights = weights or {
             "penalty": 0.4,
