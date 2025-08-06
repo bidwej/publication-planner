@@ -6,7 +6,7 @@ from datetime import timedelta, date
 from .greedy import GreedyScheduler
 from .base import BaseScheduler
 from core.models import Submission, SchedulerStrategy
-from core.constants import DEFAULT_LOOKAHEAD_DAYS
+from core.constants import DEFAULT_LOOKAHEAD_DAYS, SCHEDULER_BASE_PRIORITY, SCHEDULER_LOOKAHEAD_BONUS
 
 
 @BaseScheduler.register_strategy(SchedulerStrategy.LOOKAHEAD)
@@ -24,7 +24,7 @@ class LookaheadGreedyScheduler(GreedyScheduler):
             s = self.submissions[sid]
             weights = self.config.priority_weights or {}
             
-            base_priority = 0.0
+            base_priority = SCHEDULER_BASE_PRIORITY
             if s.kind.value == "PAPER":
                 base_priority = weights.get("engineering_paper" if s.engineering else "medical_paper", 1.0)
             elif s.kind.value == "ABSTRACT":
@@ -33,7 +33,7 @@ class LookaheadGreedyScheduler(GreedyScheduler):
                 base_priority = weights.get("mod", 1.5)
             
             # Add lookahead bonus for submissions with dependencies
-            lookahead_bonus = 0.0
+            lookahead_bonus = SCHEDULER_LOOKAHEAD_BONUS
             for other_sid in self.submissions:
                 other_sub = self.submissions[other_sid]
                 if other_sub.depends_on and sid in other_sub.depends_on:

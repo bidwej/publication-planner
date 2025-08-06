@@ -232,16 +232,25 @@ The Paper Planner is designed to help researchers and teams efficiently schedule
 - Timeline visualization (Gantt charts)
 - Resource utilization plots
 - Deadline compliance analysis
+- **Monthly Tables**: Monthly breakdown of active submissions
+- **Deadline Tables**: Detailed deadline compliance tracking
+- **Metrics Tables**: Comprehensive performance metrics
 
 ### 5. Quality Metrics
 - Overall schedule score (0-100)
 - Constraint violation counts
 - Penalty breakdown by category
+- **Robustness Analysis**: Buffer time and disruption resilience
+- **Balance Metrics**: Workload distribution analysis
+- **Comprehensive Validation**: All constraint types validated
 
 ### 6. Efficiency Analysis
 - Resource utilization rates
 - Timeline efficiency scores
 - Workload distribution analysis
+- **Peak Load Optimization**: Minimize maximum concurrent submissions
+- **Average Load Optimization**: Optimize average daily workload
+- **Timeline Span Analysis**: Optimal schedule duration
 
 ### 7. Reports
 - **JSON-formatted detailed reports**: Complete schedule data in JSON format
@@ -318,22 +327,31 @@ src/
 │   ├── models.py   # Data classes (Submission, Conference, Config)
 │   ├── constraints.py  # Constraint validation logic
 │   ├── constants.py    # Centralized constants
+│   ├── config.py   # Configuration loading and parsing
 │   └── dates.py    # Date/time utilities
 ├── schedulers/     # Scheduling algorithms
 │   ├── base.py     # Base scheduler class
 │   ├── greedy.py   # Greedy algorithm
 │   ├── backtracking.py  # Backtracking algorithm
-│   └── ...         # Other algorithms
+│   ├── optimal.py  # MILP optimization
+│   ├── stochastic.py  # Stochastic methods
+│   ├── lookahead.py  # Lookahead scheduling
+│   ├── heuristic.py  # Heuristic algorithms
+│   └── random.py   # Random baseline
 ├── scoring/        # Scoring and evaluation
 │   ├── quality.py  # Quality metrics
 │   ├── efficiency.py  # Efficiency metrics
 │   └── penalty.py  # Penalty calculations
 ├── output/         # Output generation
 │   ├── plots.py    # Matplotlib (static)
-│   ├── plots_plotly.py  # Plotly (interactive)
 │   ├── reports.py  # Report generation
-│   └── analytics.py # Analysis functions
-└── web_app.py      # Dash web interface
+│   ├── analytics.py # Analysis functions
+│   ├── console.py  # Console output formatting
+│   ├── tables.py   # Table generation
+│   ├── generators/ # Output file generation
+│   └── formatters/ # Data formatting utilities
+├── web_app.py      # Dash web interface
+└── planner.py      # Main planner interface
 ```
 
 ## Testing
@@ -365,6 +383,22 @@ When adding new features:
 - **Interactive Charts**: Real-time updates
 - **Web Dashboard**: Responsive, mobile-friendly
 - **Memory Usage**: < 100MB for full system
+- **Comprehensive Validation**: All constraints validated in < 100ms
+- **Multiple Export Formats**: JSON, CSV, and formatted tables
+- **Timestamped Output**: Organized output directories with timestamps
+
+## Development Tools
+
+### Archive Scripts
+- **Source Code Archiving**: `scripts/archive_source.py` - Create clean source archives
+- **Package Copying**: `scripts/copy_package.py` - Copy packages with exclusions
+- **Source Concatenation**: `scripts/concat_source.py` - Combine source files
+
+### Testing Framework
+- **Comprehensive Test Suite**: 100+ tests covering all components
+- **Test Categories**: Core, schedulers, scoring, output, metrics
+- **Test Data**: Common test data and fixtures
+- **Validation Testing**: All constraint and scoring functions tested
 
 ## License
 

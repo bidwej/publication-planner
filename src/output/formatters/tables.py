@@ -8,6 +8,7 @@ import json
 import csv
 from src.core.models import Config, SubmissionType, ScheduleSummary
 from .dates import format_date_display, format_relative_time, format_duration_days
+from core.constants import DAYS_PER_MONTH
 
 def save_schedule_json(schedule: Dict[str, str], output_dir: str, filename: str = "schedule.json") -> str:
     """Save schedule as JSON file."""
@@ -66,7 +67,7 @@ def format_schedule_table(schedule: Dict[str, date], config: Config) -> List[Dic
             end_date = start_date
             duration_days = 0
         else:
-            duration_days = sub.draft_window_months * 30 if sub.draft_window_months > 0 else config.min_paper_lead_time_days
+            duration_days = sub.draft_window_months * DAYS_PER_MONTH if sub.draft_window_months > 0 else config.min_paper_lead_time_days
             end_date = start_date + timedelta(days=duration_days)
         
         # Get conference info
@@ -182,7 +183,7 @@ def format_deadline_table(schedule: Dict[str, date], config: Config) -> List[Dic
                 if sub.kind == SubmissionType.ABSTRACT:
                     end_date = start_date
                 else:
-                    duration_days = sub.draft_window_months * 30 if sub.draft_window_months > 0 else config.min_paper_lead_time_days
+                    duration_days = sub.draft_window_months * DAYS_PER_MONTH if sub.draft_window_months > 0 else config.min_paper_lead_time_days
                     end_date = start_date + timedelta(days=duration_days)
                 
                 # Determine status

@@ -6,6 +6,7 @@ from typing import List
 from .greedy import GreedyScheduler
 from .base import BaseScheduler
 from core.models import SchedulerStrategy
+from core.constants import SCHEDULER_BASE_PRIORITY
 
 
 @BaseScheduler.register_strategy(SchedulerStrategy.STOCHASTIC)
@@ -23,7 +24,7 @@ class StochasticGreedyScheduler(GreedyScheduler):
             s = self.submissions[sid]
             weights = self.config.priority_weights or {}
             
-            base_priority = 0.0
+            base_priority = SCHEDULER_BASE_PRIORITY
             if s.kind.value == "PAPER":
                 base_priority = weights.get("engineering_paper" if s.engineering else "medical_paper", 1.0)
             elif s.kind.value == "ABSTRACT":
