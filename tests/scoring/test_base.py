@@ -4,11 +4,11 @@ import pytest
 from datetime import date, timedelta
 from unittest.mock import Mock, patch
 
-from src.scoring.base import (
+from scoring.base import (
     BaseScorer,
-    calculate_base_score,
-    validate_schedule,
-    get_score_components
+    PenaltyScorer,
+    QualityScorer,
+    EfficiencyScorer
 )
 from core.models import Config, Submission, Conference
 

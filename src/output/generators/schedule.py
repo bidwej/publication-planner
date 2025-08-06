@@ -4,12 +4,12 @@ from __future__ import annotations
 from typing import Dict, List
 from datetime import date, timedelta, datetime
 import os
-from ...core.models import Config, ScheduleSummary, ScheduleMetrics, SubmissionType
-from ...scoring.penalty import calculate_penalty_score
-from ...scoring.quality import calculate_quality_score
-from ...scoring.efficiency import calculate_efficiency_score
-from ...core.constraints import validate_deadline_compliance, validate_resource_constraints
-from ..formatters.tables import save_schedule_json, save_table_csv, save_metrics_json
+from core.models import Config, ScheduleSummary, ScheduleMetrics, SubmissionType
+from scoring.penalty import calculate_penalty_score
+from scoring.quality import calculate_quality_score
+from scoring.efficiency import calculate_efficiency_score
+from core.constraints import validate_deadline_compliance, validate_resource_constraints
+from output.formatters.tables import save_schedule_json, save_table_csv, save_metrics_json
 
 def create_output_directory(base_dir: str = "output") -> str:
     """Create a timestamped output directory."""

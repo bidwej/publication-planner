@@ -5,7 +5,7 @@ from datetime import date, timedelta
 from unittest.mock import Mock, patch, MagicMock
 
 from core.models import Submission, Config, SubmissionType
-from schedulers.backtracking import BacktrackingScheduler
+from schedulers.backtracking import BacktrackingGreedyScheduler as BacktrackingScheduler
 
 
 class TestBacktrackingScheduler:

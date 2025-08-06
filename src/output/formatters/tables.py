@@ -6,7 +6,7 @@ from datetime import date, timedelta
 import os
 import json
 import csv
-from ...core.models import Config, SubmissionType, ScheduleSummary
+from core.models import Config, SubmissionType, ScheduleSummary
 from .dates import format_date_display, format_relative_time, format_duration_days
 
 def save_schedule_json(schedule: Dict[str, str], output_dir: str, filename: str = "schedule.json") -> str:
