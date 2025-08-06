@@ -18,6 +18,13 @@ from core.models import SchedulerStrategy
 from core.constraints import validate_schedule_comprehensive
 from schedulers.base import BaseScheduler
 # Import all schedulers to ensure they're registered
+from schedulers.greedy import GreedyScheduler
+from schedulers.stochastic import StochasticGreedyScheduler
+from schedulers.lookahead import LookaheadGreedyScheduler
+from schedulers.backtracking import BacktrackingGreedyScheduler
+from schedulers.random import RandomScheduler
+from schedulers.heuristic import HeuristicScheduler
+from schedulers.optimal import OptimalScheduler
 from output.console import print_schedule_summary, print_metrics_summary
 from scoring.penalty import calculate_penalty_score
 from scoring.quality import calculate_quality_score

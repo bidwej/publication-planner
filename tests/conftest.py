@@ -2,6 +2,8 @@
 
 import pytest
 import os
+import json
+import tempfile
 from datetime import date
 
 from src.core.models import (
@@ -46,7 +48,19 @@ def create_mock_config(submissions, conferences):
         submissions=submissions,
         conferences=conferences,
         blackout_dates=[],
-        scheduling_options={"enable_early_abstract_scheduling": False}
+        scheduling_options={"enable_early_abstract_scheduling": False},
+        priority_weights={
+            "engineering_paper": 2.0,
+            "medical_paper": 1.0,
+            "mod": 1.5,
+            "abstract": 0.5
+        },
+        penalty_costs={"default_mod_penalty_per_day": 1000},
+        data_files={
+            "conferences": "conferences.json",
+            "mods": "mods.json",
+            "papers": "papers.json"
+        }
     )
     return config
 
@@ -55,6 +69,88 @@ def create_mock_config(submissions, conferences):
 def test_data_dir():
     """Fixture to provide test data directory."""
     return os.path.join(os.path.dirname(__file__), "common", "data")
+
+
+@pytest.fixture
+def test_config_path(tmp_path):
+    """Fixture to provide a temporary config file for testing."""
+    config_data = {
+        "min_abstract_lead_time_days": 30,
+        "min_paper_lead_time_days": 90,
+        "max_concurrent_submissions": 3,
+        "default_paper_lead_time_months": 3,
+        "data_files": {
+            "conferences": "conferences.json",
+            "mods": "mods.json",
+            "papers": "papers.json"
+        },
+        "priority_weights": {
+            "engineering_paper": 2.0,
+            "medical_paper": 1.0,
+            "mod": 1.5,
+            "abstract": 0.5
+        },
+        "penalty_costs": {
+            "default_mod_penalty_per_day": 1000
+        },
+        "scheduling_options": {
+            "enable_blackout_periods": False,
+            "enable_early_abstract_scheduling": False
+        }
+    }
+    
+    config_file = tmp_path / "test_config.json"
+    with open(config_file, 'w') as f:
+        json.dump(config_data, f)
+    
+    # Create the referenced data files
+    conferences_data = [
+        {
+            "name": "ICML",
+            "conference_type": "ENGINEERING",
+            "recurrence": "annual",
+            "abstract_deadline": "2024-05-01",
+            "full_paper_deadline": "2024-06-01"
+        }
+    ]
+    
+    mods_data = [
+        {
+            "id": "mod1",
+            "title": "Test Mod 1",
+            "conference_id": "ICML",
+            "deadline": "2024-05-01",
+            "draft_window_months": 1,
+            "est_data_ready": "2024-01-01"
+        }
+    ]
+    
+    papers_data = [
+        {
+            "id": "paper1",
+            "title": "Test Paper 1",
+            "conference_id": "ICML",
+            "deadline": "2024-06-01",
+            "draft_window_months": 3,
+            "mod_dependencies": [],
+            "parent_papers": []
+        }
+    ]
+    
+    # Write the data files
+    conferences_file = tmp_path / "conferences.json"
+    with open(conferences_file, 'w') as f:
+        json.dump(conferences_data, f)
+    
+    mods_file = tmp_path / "mods.json"
+    with open(mods_file, 'w') as f:
+        json.dump(mods_data, f)
+    
+    papers_file = tmp_path / "papers.json"
+    with open(papers_file, 'w') as f:
+        json.dump(papers_data, f)
+    
+    return str(config_file)
 
 
 @pytest.fixture
@@ -82,9 +178,47 @@ def sample_config():
 
 
 @pytest.fixture
+def config(sample_config):
+    """Alias for sample_config to match test expectations."""
+    return sample_config
+
+
+@pytest.fixture
 def empty_config():
     """Fixture to provide an empty config for testing."""
     return create_mock_config([], [])
+
+
+@pytest.fixture
+def minimal_config():
+    """Fixture to provide a minimal config for testing."""
+    # Create minimal submissions
+    submission1 = create_mock_submission(
+        "test-pap", "Test Paper", SubmissionType.PAPER, "conf1"
+    )
+    
+    # Create minimal conference
+    conference1 = create_mock_conference(
+        "conf1", "Test Conference", 
+        {SubmissionType.PAPER: date(2024, 6, 1)}
+    )
+    
+    return create_mock_config([submission1], [conference1])
+
+
+@pytest.fixture
+def empty_schedule():
+    """Fixture to provide an empty schedule for testing."""
+    return {}
+
+
+@pytest.fixture
+def sample_schedule():
+    """Fixture to provide a sample schedule for testing."""
+    return {
+        "paper1": date(2024, 5, 1),
+        "paper2": date(2024, 7, 1)
+    }
 
 
 @pytest.fixture
