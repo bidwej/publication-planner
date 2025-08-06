@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 from typing import Dict
-from datetime import date, timedelta
-from core.models import Config, SubmissionType, EfficiencyMetrics, TimelineMetrics
+from datetime import date
+from core.models import Config, EfficiencyMetrics, TimelineMetrics
 from core.constraints import _calculate_daily_load
 
 def calculate_efficiency_score(schedule: Dict[str, date], config: Config) -> float:
@@ -34,7 +34,7 @@ def calculate_efficiency_score(schedule: Dict[str, date], config: Config) -> flo
     
     return min(100.0, max(0.0, efficiency_score))
 
-def calculate_resource_efficiency(schedule: Dict[str, date], config: Config) -> EfficiencyMetrics:
+def calculate_efficiency_resource(schedule: Dict[str, date], config: Config) -> EfficiencyMetrics:
     """Calculate detailed resource efficiency metrics."""
     if not schedule:
         return EfficiencyMetrics(
@@ -75,7 +75,7 @@ def calculate_resource_efficiency(schedule: Dict[str, date], config: Config) -> 
         efficiency_score=efficiency_score
     )
 
-def calculate_timeline_efficiency(schedule: Dict[str, date], config: Config) -> TimelineMetrics:
+def calculate_efficiency_timeline(schedule: Dict[str, date], config: Config) -> TimelineMetrics:
     """Calculate timeline efficiency metrics."""
     if not schedule:
         return TimelineMetrics(

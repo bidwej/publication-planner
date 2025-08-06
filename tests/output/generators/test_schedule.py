@@ -1,7 +1,6 @@
 """Tests for output generators schedule module."""
 
-import pytest
-from datetime import date, timedelta
+from datetime import date
 from unittest.mock import Mock, patch
 import os
 

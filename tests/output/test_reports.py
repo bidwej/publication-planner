@@ -2,7 +2,7 @@
 
 import pytest
 from datetime import date
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 from output.reports import (
     generate_schedule_report,
     calculate_overall_score

@@ -1,10 +1,9 @@
 """Tests for the optimal scheduler."""
 
-import pytest
-from datetime import date, timedelta
-from unittest.mock import Mock, patch, MagicMock
+from datetime import date
+from unittest.mock import Mock
 
-from core.models import Submission, Config, SubmissionType
+from core.models import Submission, Config
 from schedulers.optimal import OptimalScheduler
 
 

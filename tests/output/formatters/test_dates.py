@@ -1,8 +1,6 @@
 """Tests for the formatters dates module."""
 
-import pytest
 from datetime import date, datetime, timedelta
-from unittest.mock import Mock
 
 from output.formatters.dates import (
     format_date_display, format_relative_time, format_duration_days,

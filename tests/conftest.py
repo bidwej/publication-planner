@@ -2,10 +2,8 @@
 
 import pytest
 import os
-from datetime import date, timedelta
-from typing import Dict, List
+from datetime import date
 
-from core.config import load_config
 from core.models import (
     Submission, SubmissionType, Config, Conference, ConferenceType, ConferenceRecurrence
 )

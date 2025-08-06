@@ -1,11 +1,10 @@
 """Abstract base scheduler with shared utilities and strategy pattern."""
 
 from __future__ import annotations
-from typing import Dict, List, Set, Type
+from typing import Dict, List, Type
 from datetime import date, timedelta
 from abc import ABC, abstractmethod
-from core.models import Config, Submission, Conference, SubmissionType, SchedulerStrategy
-from core.dates import is_working_day
+from core.models import Config, Submission, SubmissionType, SchedulerStrategy
 from core.constraints import validate_deadline_compliance_single, validate_dependencies_satisfied, validate_venue_compatibility
 
 
@@ -47,7 +46,6 @@ class BaseScheduler(ABC):
         Dict[str, date]
             Mapping of submission_id to start_date
         """
-        pass
     
     # Shared utility methods
     def _topological_order(self) -> List[str]:
@@ -71,7 +69,6 @@ class BaseScheduler(ABC):
     
     def _auto_link_abstract_paper(self):
         """Auto-link abstracts to papers if not already linked."""
-        pass
     
     def _validate_venue_compatibility(self):
         """Validate that submissions are compatible with their venues."""

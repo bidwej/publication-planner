@@ -1,7 +1,6 @@
 """Tests for constraint validation."""
 
-import pytest
-from datetime import date, timedelta
+from datetime import date
 from core.config import load_config
 from core.constraints import (
     validate_deadline_compliance,

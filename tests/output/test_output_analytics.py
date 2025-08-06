@@ -1,13 +1,10 @@
 """Tests for output analytics module."""
 
-import pytest
-from datetime import date, timedelta
-from typing import Dict
+from datetime import date
 from output.analytics import (
     analyze_schedule_completeness, analyze_schedule_distribution,
     analyze_submission_types, analyze_timeline, analyze_resources
 )
-from core.models import Config, Submission, Conference, SubmissionType
 
 
 class TestAnalyzeScheduleCompleteness:

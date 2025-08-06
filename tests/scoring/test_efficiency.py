@@ -1,11 +1,8 @@
 """Tests for efficiency scoring."""
 
-import pytest
-from datetime import date, timedelta
-from unittest.mock import Mock, patch
+from datetime import date
 
 from scoring.efficiency import calculate_efficiency_score
-from core.models import Config, Submission, Conference, SubmissionType
 
 
 class TestCalculateEfficiencyScore:

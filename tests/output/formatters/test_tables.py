@@ -1,8 +1,7 @@
 """Tests for output formatters tables module."""
 
-import pytest
-from datetime import date, timedelta
-from unittest.mock import Mock, patch
+from datetime import date
+from unittest.mock import Mock
 
 from output.formatters.tables import (
     format_schedule_table,

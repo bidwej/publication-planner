@@ -2,9 +2,8 @@
 
 import pytest
 from datetime import date
-from typing import Dict
 from schedulers.greedy import GreedyScheduler
-from core.models import Config, SchedulerStrategy, Submission, Conference, ConferenceType, ConferenceRecurrence, SubmissionType
+from core.models import Config, Submission, Conference, ConferenceType, ConferenceRecurrence, SubmissionType
 
 
 class TestScheduler:

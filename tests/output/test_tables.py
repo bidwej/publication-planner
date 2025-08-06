@@ -1,10 +1,7 @@
 """Tests for output tables module."""
 
-import pytest
-from datetime import date, timedelta
-from typing import Dict, List
-from output.tables import generate_simple_monthly_table, generate_monthly_table, generate_schedule_summary_table, generate_deadline_table
-from core.models import Config, Submission, Conference, SubmissionType
+from datetime import date
+from output.tables import generate_simple_monthly_table, generate_schedule_summary_table, generate_deadline_table
 
 
 class TestGenerateSimpleMonthlyTable:

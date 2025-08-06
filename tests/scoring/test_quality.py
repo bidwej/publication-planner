@@ -1,11 +1,8 @@
 """Tests for quality scoring."""
 
-import pytest
-from datetime import date, timedelta
-from unittest.mock import Mock, patch
+from datetime import date
 
-from scoring.quality import calculate_quality_score, calculate_schedule_robustness, calculate_schedule_balance
-from core.models import Config, Submission, Conference, SubmissionType
+from scoring.quality import calculate_quality_score, calculate_quality_robustness, calculate_quality_balance
 
 
 class TestCalculateQualityScore:
@@ -90,37 +87,37 @@ class TestQualityFunctions:
             "test-mod": date(2025, 1, 15)
         }
         
-        robustness = calculate_schedule_robustness(schedule, config)
+        robustness = calculate_quality_robustness(schedule, config)
         assert isinstance(robustness, float)
         assert 0 <= robustness <= 100
     
-    def test_calculate_schedule_balance(self, config):
-        """Test schedule balance calculation."""
+    def test_calculate_quality_balance(self, config):
+        """Test quality balance calculation."""
         schedule = {
             "test-pap": date(2025, 1, 1),
             "test-mod": date(2025, 1, 15)
         }
         
-        balance = calculate_schedule_balance(schedule, config)
+        balance = calculate_quality_balance(schedule, config)
         assert isinstance(balance, float)
         assert 0 <= balance <= 100
     
     def test_robustness_with_empty_schedule(self, config):
         """Test robustness calculation with empty schedule."""
         schedule = {}
-        robustness = calculate_schedule_robustness(schedule, config)
+        robustness = calculate_quality_robustness(schedule, config)
         assert robustness == 0.0
     
     def test_balance_with_empty_schedule(self, config):
         """Test balance calculation with empty schedule."""
         schedule = {}
-        balance = calculate_schedule_balance(schedule, config)
+        balance = calculate_quality_balance(schedule, config)
         assert balance == 0.0
     
     def test_robustness_with_single_submission(self, config):
         """Test robustness calculation with single submission."""
         schedule = {"test-pap": date(2025, 1, 1)}
-        robustness = calculate_schedule_robustness(schedule, config)
+        robustness = calculate_quality_robustness(schedule, config)
         assert robustness == 100.0  # Single submission is always robust
     
     def test_balance_with_well_distributed_schedule(self, config):
@@ -132,6 +129,6 @@ class TestQualityFunctions:
             "sep-pap": date(2025, 9, 1)
         }
         
-        balance = calculate_schedule_balance(schedule, config)
+        balance = calculate_quality_balance(schedule, config)
         assert isinstance(balance, float)
         assert 0 <= balance <= 100

@@ -1,7 +1,7 @@
 """Constraint validation for schedules."""
 
 from __future__ import annotations
-from typing import Dict, Any, List
+from typing import Dict, Any
 from datetime import date, timedelta
 from .models import Config, Submission, SubmissionType, ConferenceType, DeadlineValidation, DependencyValidation, ResourceValidation, DeadlineViolation, DependencyViolation, ResourceViolation, ConstraintValidationResult
 from .dates import is_working_day

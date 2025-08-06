@@ -36,7 +36,7 @@ def calculate_quality_score(schedule: Dict[str, date], config: Config) -> float:
     
     return min(100.0, max(0.0, quality_score))
 
-def calculate_schedule_robustness(schedule: Dict[str, date], config: Config) -> float:
+def calculate_quality_robustness(schedule: Dict[str, date], config: Config) -> float:
     """Calculate how robust the schedule is to disruptions."""
     if not schedule:
         return 0.0
@@ -78,7 +78,7 @@ def calculate_schedule_robustness(schedule: Dict[str, date], config: Config) -> 
     
     return max(0.0, robustness_score)
 
-def calculate_schedule_balance(schedule: Dict[str, date], config: Config) -> float:
+def calculate_quality_balance(schedule: Dict[str, date], config: Config) -> float:
     """Calculate how well balanced the schedule is."""
     if not schedule:
         return 0.0
@@ -103,13 +103,16 @@ def calculate_schedule_balance(schedule: Dict[str, date], config: Config) -> flo
     if not daily_work:
         return 0.0
     
-    # Calculate variance in daily workload
-    workloads = list(daily_work.values())
-    avg_workload = sum(workloads) / len(workloads)
+    # Calculate balance score based on work distribution
+    work_values = list(daily_work.values())
+    avg_work = sum(work_values) / len(work_values)
+    max_work = max(work_values)
     
-    variance = sum((w - avg_workload) ** 2 for w in workloads) / len(workloads)
+    # Balance score (lower variance is better)
+    if avg_work == 0:
+        return 100.0
     
-    # Balance score (lower variance = better balance)
-    balance_score = max(0, 100 - variance * 10)  # Scale variance to 0-100
+    variance = sum((w - avg_work) ** 2 for w in work_values) / len(work_values)
+    balance_score = max(0.0, 100.0 - (variance / avg_work) * 10)
     
-    return min(100.0, max(0.0, balance_score)) 
+    return min(100.0, balance_score) 

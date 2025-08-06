@@ -1,11 +1,8 @@
 """Tests for penalty scoring."""
 
-import pytest
-from datetime import date, timedelta
-from unittest.mock import Mock, patch
+from datetime import date
 
 from scoring.penalty import calculate_penalty_score
-from core.models import Config, Submission, Conference, SubmissionType
 
 
 class TestCalculatePenaltyScore:

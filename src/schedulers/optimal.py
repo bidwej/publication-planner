@@ -1,7 +1,7 @@
 """Optimal scheduler implementation using MILP optimization."""
 
 from __future__ import annotations
-from typing import Dict, List, Optional, Any
+from typing import Dict, Optional, Any
 from datetime import date, timedelta
 from .base import BaseScheduler
 from core.models import SchedulerStrategy

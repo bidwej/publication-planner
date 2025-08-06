@@ -1,10 +1,10 @@
 """Tests for the main planner module."""
 
 import pytest
-from datetime import date, timedelta
-from unittest.mock import Mock, patch, MagicMock
+from datetime import date
+from unittest.mock import Mock, patch
 
-from core.models import Config, Submission, SubmissionType
+from core.models import Config
 from planner import Planner
 
 

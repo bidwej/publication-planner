@@ -6,7 +6,6 @@ This script loads configuration data and generates a schedule using the schedule
 """
 
 import sys
-import json
 from datetime import date
 from typing import Dict
 from pathlib import Path
@@ -19,15 +18,6 @@ from core.models import SchedulerStrategy
 from core.constraints import validate_schedule_comprehensive
 from schedulers.base import BaseScheduler
 # Import all schedulers to ensure they're registered
-import schedulers.greedy
-import schedulers.stochastic
-import schedulers.lookahead
-import schedulers.backtracking
-import schedulers.random
-import schedulers.heuristic
-import schedulers.optimal
-from output.tables import generate_simple_monthly_table, generate_schedule_summary_table
-from output.analytics import analyze_schedule_distribution, analyze_submission_types, analyze_timeline, analyze_resources
 from output.console import print_schedule_summary, print_metrics_summary
 from scoring.penalty import calculate_penalty_score
 from scoring.quality import calculate_quality_score

@@ -1,14 +1,10 @@
 """Main planner module for the Endoscope AI project."""
 
-import sys
-import os
 import json
 from pathlib import Path
 from typing import Dict, Optional, Any, List
 from datetime import date
 
-# Add the src directory to the path
-sys.path.insert(0, str(Path(__file__).parent))
 
 from core.config import load_config
 from core.models import Config, SchedulerStrategy
@@ -94,108 +90,152 @@ def generate_and_save_output(schedule: Dict[str, date], config: Config, output_d
 
 
 class Planner:
-    """Simple facade for the paper planning system."""
+    """Main planner for the paper scheduling system."""
     
     def __init__(self, config_path: str):
+        """
+        Initialize the planner with configuration.
+        
+        Parameters
+        ----------
+        config_path : str
+            Path to the configuration file
+        """
+        self.config_path = Path(config_path)
+        self.config = self._load_config()
+        self._validate_config()
+    
+    def _load_config(self) -> Config:
+        """Load and validate the configuration."""
+        if not self.config_path.exists():
+            raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
+        
         try:
-            # Load the raw config for backward compatibility
-            with open(config_path, "r", encoding="utf-8") as f:
-                self.config = json.load(f)
-
-            # Add missing config values
-            self.config.setdefault("default_paper_lead_time_months", 3)
-            self.config.setdefault("max_concurrent_papers", 2)
-
-            # Load the new Config structure
-            self.cfg: Config = load_config(config_path)
-
-            # Load mods and papers for backward compatibility
-            config_dir = os.path.dirname(os.path.abspath(config_path))
-            
-            # Load mods
-            mods_path = os.path.join(config_dir, self.config["data_files"]["mods"])
-            if not os.path.exists(mods_path):
-                raise FileNotFoundError(f"Mods file not found: {mods_path}")
-            with open(mods_path, "r", encoding="utf-8") as f:
-                self.mods = json.load(f)
-            
-            # Load papers
-            papers_path = os.path.join(config_dir, self.config["data_files"]["papers"])
-            if not os.path.exists(papers_path):
-                raise FileNotFoundError(f"Papers file not found: {papers_path}")
-            with open(papers_path, "r", encoding="utf-8") as f:
-                self.papers = json.load(f)
-
-            # Load conferences for backward compatibility
-            conferences_path = os.path.join(config_dir, self.config["data_files"]["conferences"])
-            if not os.path.exists(conferences_path):
-                raise FileNotFoundError(f"Conferences file not found: {conferences_path}")
-            with open(conferences_path, "r", encoding="utf-8") as f:
-                self.config["conferences"] = json.load(f)
-
-            # Create papers dict for easy access by ID
-            self.papers_dict = {p["id"]: p for p in self.papers}
-            
-        except FileNotFoundError as e:
-            raise FileNotFoundError(f"Configuration file error: {e}")
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON in configuration file: {e}")
+            return load_config(str(self.config_path))
         except Exception as e:
-            raise RuntimeError(f"Failed to initialize planner: {e}")
-
-    def validate_config(self):
-        """Validate the configuration."""
-        pass  # no-op for backward compatibility
-
-    def schedule(self, strategy: SchedulerStrategy = SchedulerStrategy.GREEDY) -> tuple[Dict[Any, Any], Dict[Any, Any]]:
-        """Generate a schedule using the specified strategy."""
-        try:
-            # Create scheduler using the base scheduler
-            scheduler = BaseScheduler(self.cfg)
-
-            # Generate schedule
-            full_schedule = scheduler.schedule()
+            raise RuntimeError(f"Failed to load configuration: {e}")
+    
+    def _validate_config(self) -> None:
+        """Validate the loaded configuration."""
+        if not self.config.submissions:
+            raise ValueError("No submissions found in configuration")
+        
+        if not self.config.conferences:
+            raise ValueError("No conferences found in configuration")
+        
+        # Validate that all submissions have valid conference references
+        conference_ids = {conf.id for conf in self.config.conferences}
+        for submission in self.config.submissions:
+            if submission.conference_id and submission.conference_id not in conference_ids:
+                raise ValueError(f"Submission {submission.id} references unknown conference {submission.conference_id}")
+    
+    def schedule(self, strategy: SchedulerStrategy = SchedulerStrategy.GREEDY) -> Dict[str, date]:
+        """
+        Generate a schedule using the specified strategy.
+        
+        Parameters
+        ----------
+        strategy : SchedulerStrategy
+            The scheduling strategy to use
             
-            if not full_schedule:
+        Returns
+        -------
+        Dict[str, date]
+            Mapping of submission_id to start_date
+            
+        Raises
+        ------
+        RuntimeError
+            If schedule generation fails
+        """
+        try:
+            # Create scheduler using the strategy pattern
+            scheduler = BaseScheduler.create_scheduler(strategy, self.config)
+            
+            # Generate schedule
+            schedule = scheduler.schedule()
+            
+            if not schedule:
                 raise RuntimeError("Failed to generate schedule - no submissions scheduled")
             
-            # Convert to backward-compatible format
-            mod_sched, paper_sched = {}, {}
+            # Validate the generated schedule
+            validation_result = validate_schedule_comprehensive(schedule, self.config)
+            if not validation_result["summary"]["is_feasible"]:
+                print("Warning: Generated schedule has constraint violations:")
+                constraint_result = validation_result["constraints"]
+                if "violations" in constraint_result:
+                    for violation in constraint_result["violations"]:
+                        print(f"  - {violation.get('description', 'Unknown violation')}")
             
-            # Find the earliest date to use as base for month offsets
-            all_dates = list(full_schedule.values())
-            if all_dates:
-                base_date = min(all_dates)
-            else:
-                base_date = date(2025, 1, 1)  # fallback
-
-            for sid, dt in full_schedule.items():
-                # Convert date to month offset from base date
-                month_offset = (dt.year - base_date.year) * 12 + (dt.month - base_date.month)
-                
-                if sid.endswith("-wrk"):
-                    # mod##-wrk → integer key
-                    mod_id = sid.replace("-wrk", "")
-                    mod_sched[int(mod_id)] = month_offset
-                elif sid.endswith("-pap"):
-                    # pid-pap → pid key
-                    paper_sched[sid.replace("-pap", "")] = month_offset
-
-            return mod_sched, paper_sched
+            return schedule
             
         except ValueError as e:
-            raise ValueError(f"Schedule generation failed: {e}")
-        except RuntimeError as e:
             raise RuntimeError(f"Schedule generation failed: {e}")
         except Exception as e:
             raise RuntimeError(f"Unexpected error during schedule generation: {e}")
-
-    def greedy_schedule(self) -> tuple[Dict[Any, int], Dict[Any, int]]:
-        """Legacy method for backward compatibility."""
-        return self.schedule(SchedulerStrategy.GREEDY)
-
-
-
+    
+    def validate_schedule(self, schedule: Dict[str, date]) -> bool:
+        """
+        Validate a schedule against all constraints.
+        
+        Parameters
+        ----------
+        schedule : Dict[str, date]
+            The schedule to validate
+            
+        Returns
+        -------
+        bool
+            True if schedule is valid, False otherwise
+        """
+        validation_result = validate_schedule_comprehensive(schedule, self.config)
+        return validation_result["summary"]["is_feasible"]
+    
+    def get_schedule_metrics(self, schedule: Dict[str, date]) -> Dict[str, Any]:
+        """
+        Get comprehensive metrics for a schedule.
+        
+        Parameters
+        ----------
+        schedule : Dict[str, date]
+            The schedule to analyze
+            
+        Returns
+        -------
+        Dict[str, Any]
+            Dictionary containing various schedule metrics
+        """
+        from scoring.penalty import calculate_penalty_score
+        from scoring.quality import calculate_quality_score
+        from scoring.efficiency import calculate_efficiency_score
+        
+        # Calculate scores
+        penalty_breakdown = calculate_penalty_score(schedule, self.config)
+        quality_score = calculate_quality_score(schedule, self.config)
+        efficiency_score = calculate_efficiency_score(schedule, self.config)
+        
+        # Calculate basic metrics
+        total_submissions = len(schedule)
+        if schedule:
+            start_date = min(schedule.values())
+            end_date = max(schedule.values())
+            duration_days = (end_date - start_date).days
+        else:
+            duration_days = 0
+        
+        return {
+            "total_submissions": total_submissions,
+            "duration_days": duration_days,
+            "penalty_score": penalty_breakdown.total_penalty,
+            "quality_score": quality_score,
+            "efficiency_score": efficiency_score,
+            "penalty_breakdown": {
+                "deadline_penalties": penalty_breakdown.deadline_penalties,
+                "dependency_penalties": penalty_breakdown.dependency_penalties,
+                "resource_penalties": penalty_breakdown.resource_penalties
+            }
+        }
+    
     def generate_monthly_table(self) -> List[Dict[str, Any]]:
-        """Generate monthly table for backward compatibility."""
-        return generate_simple_monthly_table(self.cfg)
+        """Generate monthly table for the current configuration."""
+        return generate_simple_monthly_table(self.config)
