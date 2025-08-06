@@ -28,8 +28,11 @@ class TestLoadConfig:
     
     def test_load_config_file_not_found(self):
         """Test loading a non-existent config file."""
-        with pytest.raises(FileNotFoundError):
-            load_config("nonexistent_config.json")
+        # Now returns default config instead of raising FileNotFoundError
+        config = load_config("nonexistent_config.json")
+        assert isinstance(config, Config)
+        assert len(config.submissions) > 0
+        assert len(config.conferences) > 0
     
     def test_config_has_required_attributes(self, config):
         """Test that config has all required attributes."""
@@ -282,6 +285,52 @@ class TestConfigIntegration:
         # Check that all submissions are in the dict
         for submission in config.submissions:
             assert submission.id in config.submissions_dict
+    
+    def test_default_config_creation(self):
+        """Test that default configuration can be created."""
+        config = Config.create_default()
+        
+        # Check basic structure
+        assert isinstance(config, Config)
+        assert len(config.submissions) > 0
+        assert len(config.conferences) > 0
+        
+        # Check required fields
+        assert config.min_abstract_lead_time_days > 0
+        assert config.min_paper_lead_time_days > 0
+        assert config.max_concurrent_submissions > 0
+        
+        # Check default values
+        assert config.default_paper_lead_time_months == 3
+        assert config.penalty_costs is not None
+        assert config.priority_weights is not None
+        assert config.scheduling_options is not None
+        
+        # Check validation passes
+        errors = config.validate()
+        assert len(errors) == 0, f"Default config validation failed: {errors}"
+    
+    def test_load_config_with_nonexistent_file(self):
+        """Test that load_config uses default when file doesn't exist."""
+        config = load_config("nonexistent_config.json")
+        
+        # Should return a valid default config
+        assert isinstance(config, Config)
+        assert len(config.submissions) > 0
+        assert len(config.conferences) > 0
+        
+        # Should have sample data
+        sample_submissions = ["mod1-wrk", "paper1-pap", "mod2-wrk", "paper2-pap"]
+        sample_conferences = ["ICRA2025", "MICCAI2025"]
+        
+        submission_ids = [s.id for s in config.submissions]
+        conference_ids = [c.id for c in config.conferences]
+        
+        for sub_id in sample_submissions:
+            assert sub_id in submission_ids, f"Sample submission {sub_id} not found"
+        
+        for conf_id in sample_conferences:
+            assert conf_id in conference_ids, f"Sample conference {conf_id} not found"
     
     def test_config_with_blackout_periods_disabled(self, test_data_dir):
         """Test config loading with blackout periods disabled."""

@@ -9,6 +9,14 @@ from core.config import load_config
 from core.models import Config, SchedulerStrategy, ValidationResult, ScoringResult, ScheduleResult, ScheduleSummary, ScheduleMetrics
 from core.constants import PERFECT_COMPLIANCE_RATE
 from schedulers.base import BaseScheduler
+# Import all schedulers to register them
+from schedulers.greedy import GreedyScheduler
+from schedulers.stochastic import StochasticGreedyScheduler
+from schedulers.lookahead import LookaheadGreedyScheduler
+from schedulers.backtracking import BacktrackingGreedyScheduler
+from schedulers.random import RandomScheduler
+from schedulers.heuristic import HeuristicScheduler
+from schedulers.optimal import OptimalScheduler
 from core.constraints import validate_schedule_comprehensive
 from scoring.penalty import calculate_penalty_score
 from scoring.quality import calculate_quality_score
@@ -35,7 +43,9 @@ class Planner:
     def _load_config(self) -> Config:
         """Load and validate the configuration."""
         if not self.config_path.exists():
-            raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
+            print(f"Configuration file not found: {self.config_path}")
+            print("Using default configuration with sample data...")
+            return Config.create_default()
         
         try:
             return load_config(str(self.config_path))

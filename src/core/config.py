@@ -14,7 +14,9 @@ def load_config(config_path: str) -> Config:
     """Load the master config and all child JSON files."""
     try:
         if not os.path.exists(config_path):
-            raise FileNotFoundError(f"Config file not found: {config_path}")
+            print(f"Config file not found: {config_path}")
+            print("Using default configuration with sample data...")
+            return Config.create_default()
             
         with open(config_path, "r", encoding="utf-8") as f:
             raw_cfg = json.load(f)

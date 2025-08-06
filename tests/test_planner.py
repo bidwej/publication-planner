@@ -86,17 +86,23 @@ class TestPlanner:
 
     def test_validate_config_empty_submissions(self):
         """Test config validation with empty submissions."""
-        # This test would require mocking the config loading
-        # For now, we'll test that invalid config raises an error
-        with pytest.raises((FileNotFoundError, RuntimeError, ValueError)):
-            Planner("nonexistent_config.json")
+        # Now uses default config instead of raising error
+        planner = Planner("nonexistent_config.json")
+        # Default config should have valid submissions
+        assert len(planner.config.submissions) > 0
+        # Validation should pass
+        errors = planner.config.validate()
+        assert len(errors) == 0
 
     def test_validate_config_empty_conferences(self):
         """Test config validation with empty conferences."""
-        # This test would require mocking the config loading
-        # For now, we'll test that invalid config raises an error
-        with pytest.raises((FileNotFoundError, RuntimeError, ValueError)):
-            Planner("nonexistent_config.json")
+        # Now uses default config instead of raising error
+        planner = Planner("nonexistent_config.json")
+        # Default config should have valid conferences
+        assert len(planner.config.conferences) > 0
+        # Validation should pass
+        errors = planner.config.validate()
+        assert len(errors) == 0
 
     def test_schedule_method(self):
         """Test the schedule method."""
@@ -236,8 +242,12 @@ class TestPlanner:
 
     def test_error_handling_invalid_config(self):
         """Test error handling with invalid config."""
-        with pytest.raises((FileNotFoundError, RuntimeError, ValueError)):
-            Planner("nonexistent_config.json")
+        # Now uses default config instead of raising error
+        planner = Planner("nonexistent_config.json")
+        # Should have a valid default config
+        assert planner.config is not None
+        assert len(planner.config.submissions) > 0
+        assert len(planner.config.conferences) > 0
 
     def test_error_handling_scheduler_failure(self):
         """Test error handling when scheduler fails."""
@@ -296,3 +306,38 @@ class TestPlanner:
             assert hasattr(planner, 'generate_monthly_table')
         finally:
             os.unlink(config_path)
+
+    def test_planner_with_default_config(self):
+        """Test that planner works with default configuration."""
+        # Create planner with non-existent config file (should use defaults)
+        planner = Planner("nonexistent_config.json")
+        
+        # Should have a valid config
+        assert planner.config is not None
+        assert len(planner.config.submissions) > 0
+        assert len(planner.config.conferences) > 0
+        
+        # Should be able to generate a schedule
+        schedule = planner.schedule()
+        assert schedule is not None
+        assert len(schedule) > 0
+        
+        # Should be able to validate the schedule
+        is_valid = planner.validate_schedule(schedule)
+        assert isinstance(is_valid, bool)
+    
+    def test_planner_with_default_config_different_strategies(self):
+        """Test that planner works with different strategies using default config."""
+        planner = Planner("nonexistent_config.json")
+        
+        # Test different strategies
+        strategies = [
+            SchedulerStrategy.GREEDY,
+            SchedulerStrategy.RANDOM,
+            SchedulerStrategy.HEURISTIC
+        ]
+        
+        for strategy in strategies:
+            schedule = planner.schedule(strategy)
+            assert schedule is not None
+            assert len(schedule) > 0

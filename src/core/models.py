@@ -156,6 +156,117 @@ class Config:
     blackout_dates: Optional[List[date]] = None
     data_files: Optional[Dict[str, str]] = None
     
+    @classmethod
+    def create_default(cls) -> 'Config':
+        """Create a default configuration with sample data."""
+        from datetime import date, timedelta
+        
+        # Create sample conferences
+        sample_conferences = [
+            Conference(
+                id="ICRA2025",
+                name="IEEE International Conference on Robotics and Automation 2025",
+                conf_type=ConferenceType.ENGINEERING,
+                recurrence=ConferenceRecurrence.ANNUAL,
+                deadlines={
+                    SubmissionType.ABSTRACT: date(2025, 1, 15),
+                    SubmissionType.PAPER: date(2025, 2, 15)
+                }
+            ),
+            Conference(
+                id="MICCAI2025",
+                name="Medical Image Computing and Computer Assisted Intervention 2025",
+                conf_type=ConferenceType.MEDICAL,
+                recurrence=ConferenceRecurrence.ANNUAL,
+                deadlines={
+                    SubmissionType.ABSTRACT: date(2025, 3, 1),
+                    SubmissionType.PAPER: date(2025, 4, 1)
+                }
+            )
+        ]
+        
+        # Create sample submissions
+        sample_submissions = [
+            Submission(
+                id="mod1-wrk",
+                title="Endoscope Navigation Module",
+                kind=SubmissionType.ABSTRACT,
+                conference_id="ICRA2025",
+                depends_on=[],
+                draft_window_months=0,
+                engineering=True
+            ),
+            Submission(
+                id="paper1-pap",
+                title="AI-Powered Endoscope Control System",
+                kind=SubmissionType.PAPER,
+                conference_id="ICRA2025",
+                depends_on=["mod1-wrk"],
+                draft_window_months=3,
+                engineering=True
+            ),
+            Submission(
+                id="mod2-wrk",
+                title="Medical Image Analysis Module",
+                kind=SubmissionType.ABSTRACT,
+                conference_id="MICCAI2025",
+                depends_on=[],
+                draft_window_months=0,
+                engineering=False
+            ),
+            Submission(
+                id="paper2-pap",
+                title="Deep Learning for Endoscope Guidance",
+                kind=SubmissionType.PAPER,
+                conference_id="MICCAI2025",
+                depends_on=["mod2-wrk"],
+                draft_window_months=3,
+                engineering=False
+            )
+        ]
+        
+        # Default penalty costs
+        default_penalty_costs = {
+            "default_mod_penalty_per_day": 1000.0,
+            "default_paper_penalty_per_day": 2000.0
+        }
+        
+        # Default priority weights
+        default_priority_weights = {
+            "engineering_paper": 2.0,
+            "medical_paper": 1.0,
+            "mod": 1.5,
+            "abstract": 0.5
+        }
+        
+        # Default scheduling options
+        default_scheduling_options = {
+            "enable_blackout_periods": False,
+            "enable_early_abstract_scheduling": False,
+            "enable_working_days_only": False,
+            "enable_priority_weighting": True,
+            "enable_dependency_tracking": True,
+            "enable_concurrency_control": True
+        }
+        
+        return cls(
+            submissions=sample_submissions,
+            conferences=sample_conferences,
+            min_abstract_lead_time_days=30,
+            min_paper_lead_time_days=90,
+            max_concurrent_submissions=3,
+            default_paper_lead_time_months=3,
+            penalty_costs=default_penalty_costs,
+            priority_weights=default_priority_weights,
+            scheduling_options=default_scheduling_options,
+            blackout_dates=[],
+            data_files={
+                "conferences": "conferences.json",
+                "papers": "papers.json",
+                "mods": "mods.json"
+            }
+        )
+    
     def validate(self) -> List[str]:
         """Validate configuration and return list of errors."""
         errors = []
@@ -450,3 +561,152 @@ class ConstraintValidationResult:
     dependencies: DependencyValidation
     resources: ResourceValidation
     is_valid: bool 
+
+@dataclass
+class ScheduleState:
+    """Complete state of a schedule for serialization."""
+    schedule: Dict[str, date]
+    config: Config
+    strategy: SchedulerStrategy
+    metadata: Dict[str, Any]
+    timestamp: str
+    version: str = "1.0"
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "schedule": {k: v.isoformat() for k, v in self.schedule.items()},
+            "config": self._config_to_dict(),
+            "strategy": self.strategy.value,
+            "metadata": self.metadata,
+            "timestamp": self.timestamp,
+            "version": self.version
+        }
+    
+    def _config_to_dict(self) -> Dict[str, Any]:
+        """Convert config to dictionary."""
+        return {
+            "min_abstract_lead_time_days": self.config.min_abstract_lead_time_days,
+            "min_paper_lead_time_days": self.config.min_paper_lead_time_days,
+            "max_concurrent_submissions": self.config.max_concurrent_submissions,
+            "default_paper_lead_time_months": self.config.default_paper_lead_time_months,
+            "penalty_costs": self.config.penalty_costs,
+            "priority_weights": self.config.priority_weights,
+            "scheduling_options": self.config.scheduling_options,
+            "blackout_dates": [d.isoformat() for d in (self.config.blackout_dates or [])],
+            "data_files": self.config.data_files
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'ScheduleState':
+        """Create from dictionary."""
+        from datetime import datetime
+        
+        # Parse schedule dates
+        schedule = {k: datetime.fromisoformat(v).date() for k, v in data["schedule"].items()}
+        
+        # Reconstruct config (simplified - would need full reconstruction in practice)
+        config_dict = data["config"]
+        config = Config(
+            submissions=[],  # Would need to reconstruct from data files
+            conferences=[],  # Would need to reconstruct from data files
+            min_abstract_lead_time_days=config_dict["min_abstract_lead_time_days"],
+            min_paper_lead_time_days=config_dict["min_paper_lead_time_days"],
+            max_concurrent_submissions=config_dict["max_concurrent_submissions"],
+            default_paper_lead_time_months=config_dict["default_paper_lead_time_months"],
+            penalty_costs=config_dict["penalty_costs"],
+            priority_weights=config_dict["priority_weights"],
+            scheduling_options=config_dict["scheduling_options"],
+            blackout_dates=[datetime.fromisoformat(d).date() for d in config_dict["blackout_dates"]],
+            data_files=config_dict["data_files"]
+        )
+        
+        return cls(
+            schedule=schedule,
+            config=config,
+            strategy=SchedulerStrategy(data["strategy"]),
+            metadata=data["metadata"],
+            timestamp=data["timestamp"],
+            version=data.get("version", "1.0")
+        )
+
+@dataclass
+class WebAppState:
+    """State for the web application."""
+    current_schedule: Optional[ScheduleState] = None
+    available_strategies: List[SchedulerStrategy] = None
+    config_path: str = "config.json"
+    saved_schedules: List[Dict[str, Any]] = None
+    
+    def __post_init__(self):
+        if self.available_strategies is None:
+            self.available_strategies = list(SchedulerStrategy)
+        if self.saved_schedules is None:
+            self.saved_schedules = []
+    
+    def save_schedule(self, schedule_state: ScheduleState, filename: str) -> bool:
+        """Save schedule to file."""
+        try:
+            import json
+            import os
+            from pathlib import Path
+            
+            # Create saved_schedules directory if it doesn't exist
+            save_dir = Path("app/data/saved_schedules")
+            save_dir.mkdir(parents=True, exist_ok=True)
+            
+            filepath = save_dir / f"{filename}.json"
+            with open(filepath, 'w') as f:
+                json.dump(schedule_state.to_dict(), f, indent=2)
+            
+            return True
+        except Exception as e:
+            print(f"Error saving schedule: {e}")
+            return False
+    
+    def load_schedule(self, filename: str) -> Optional[ScheduleState]:
+        """Load schedule from file."""
+        try:
+            import json
+            from pathlib import Path
+            
+            filepath = Path("app/data/saved_schedules") / f"{filename}.json"
+            if not filepath.exists():
+                return None
+            
+            with open(filepath, 'r') as f:
+                data = json.load(f)
+            
+            return ScheduleState.from_dict(data)
+        except Exception as e:
+            print(f"Error loading schedule: {e}")
+            return None
+    
+    def list_saved_schedules(self) -> List[Dict[str, Any]]:
+        """List all saved schedules."""
+        try:
+            from pathlib import Path
+            import json
+            
+            save_dir = Path("app/data/saved_schedules")
+            if not save_dir.exists():
+                return []
+            
+            schedules = []
+            for filepath in save_dir.glob("*.json"):
+                try:
+                    with open(filepath, 'r') as f:
+                        data = json.load(f)
+                    schedules.append({
+                        "filename": filepath.stem,
+                        "timestamp": data.get("timestamp", ""),
+                        "strategy": data.get("strategy", ""),
+                        "submission_count": len(data.get("schedule", {}))
+                    })
+                except Exception:
+                    continue
+            
+            return sorted(schedules, key=lambda x: x["timestamp"], reverse=True)
+        except Exception as e:
+            print(f"Error listing saved schedules: {e}")
+            return [] 
