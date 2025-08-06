@@ -1,72 +1,117 @@
-"""Calculate efficiency metrics for schedules."""
+"""Efficiency scoring functions."""
 
-from __future__ import annotations
-from typing import Dict
-from datetime import date
+from typing import Dict, List
+from datetime import date, timedelta
+from collections import defaultdict
+
 from core.models import Config, EfficiencyMetrics, TimelineMetrics
-from core.constraints import _calculate_daily_load
+from core.constants import (
+    MAX_SCORE, MIN_SCORE, PERCENTAGE_MULTIPLIER, OPTIMAL_UTILIZATION_RATE,
+    UTILIZATION_DEVIATION_PENALTY, TIMELINE_EFFICIENCY_SHORT_PENALTY,
+    TIMELINE_EFFICIENCY_LONG_PENALTY, IDEAL_DAYS_PER_SUBMISSION
+)
+
 
 def calculate_efficiency_score(schedule: Dict[str, date], config: Config) -> float:
-    """Calculate efficiency score based on resource utilization and timeline."""
+    """
+    Calculate efficiency score based on resource utilization and timeline.
+    
+    Parameters
+    ----------
+    schedule : Dict[str, date]
+        Mapping of submission_id to start_date
+    config : Config
+        Configuration object
+        
+    Returns
+    -------
+    float
+        Efficiency score (0-100)
+    """
     if not schedule:
-        return 0.0
+        return MIN_SCORE
     
-    # Calculate resource utilization using constraints logic
-    daily_load = _calculate_daily_load(schedule, config)
-    max_concurrent = config.max_concurrent_submissions
+    # Calculate resource efficiency
+    resource_metrics = calculate_efficiency_resource(schedule, config)
     
-    if not daily_load:
-        return 0.0
+    # Calculate timeline efficiency
+    timeline_metrics = calculate_efficiency_timeline(schedule, config)
     
-    # Calculate efficiency metrics
-    total_load = sum(daily_load.values())
-    total_capacity = len(daily_load) * max_concurrent
-    utilization_rate = (total_load / total_capacity * 100) if total_capacity > 0 else 0.0
+    # Combine scores (weighted average)
+    resource_weight = 0.6
+    timeline_weight = 0.4
     
-    # Timeline efficiency (shorter is better, but with minimum threshold)
-    dates = list(schedule.values())
-    duration_days = (max(dates) - min(dates)).days if dates else 0
-    min_duration = len(schedule) * 30  # Minimum reasonable duration
-    timeline_efficiency = max(0, 100 - (duration_days - min_duration) / min_duration * 100) if min_duration > 0 else 100
+    efficiency_score = (
+        resource_metrics.efficiency_score * resource_weight +
+        timeline_metrics.timeline_efficiency * timeline_weight
+    )
     
-    # Combined efficiency score
-    efficiency_score = (utilization_rate * 0.6 + timeline_efficiency * 0.4)
-    
-    return min(100.0, max(0.0, efficiency_score))
+    return max(MIN_SCORE, min(MAX_SCORE, efficiency_score))
+
 
 def calculate_efficiency_resource(schedule: Dict[str, date], config: Config) -> EfficiencyMetrics:
-    """Calculate detailed resource efficiency metrics."""
+    """
+    Calculate detailed resource efficiency metrics.
+    
+    Parameters
+    ----------
+    schedule : Dict[str, date]
+        Mapping of submission_id to start_date
+    config : Config
+        Configuration object
+        
+    Returns
+    -------
+    EfficiencyMetrics
+        Resource efficiency metrics
+    """
     if not schedule:
         return EfficiencyMetrics(
-            utilization_rate=0.0,
+            utilization_rate=MIN_SCORE,
             peak_utilization=0,
-            avg_utilization=0.0,
-            efficiency_score=0.0
+            avg_utilization=MIN_SCORE,
+            efficiency_score=MIN_SCORE
         )
     
-    # Calculate daily workload using constraints logic
-    daily_load = _calculate_daily_load(schedule, config)
-    max_concurrent = config.max_concurrent_submissions
+    # Calculate daily load
+    daily_load = defaultdict(int)
+    submissions_dict = config.submissions_dict
+    
+    for submission_id, start_date in schedule.items():
+        submission = submissions_dict.get(submission_id)
+        if not submission:
+            continue
+            
+        # Calculate duration and add to daily load
+        duration_days = submission.get_duration_days(config)
+        for i in range(duration_days):
+            current_date = start_date + timedelta(days=i)
+            daily_load[current_date] += 1
     
     if not daily_load:
         return EfficiencyMetrics(
-            utilization_rate=0.0,
+            utilization_rate=MIN_SCORE,
             peak_utilization=0,
-            avg_utilization=0.0,
-            efficiency_score=0.0
+            avg_utilization=MIN_SCORE,
+            efficiency_score=MIN_SCORE
         )
     
     # Calculate metrics
-    total_load = sum(daily_load.values())
-    total_capacity = len(daily_load) * max_concurrent
-    utilization_rate = (total_load / total_capacity * 100) if total_capacity > 0 else 0.0
     peak_utilization = max(daily_load.values())
-    avg_utilization = total_load / len(daily_load) if daily_load else 0
+    avg_utilization = sum(daily_load.values()) / len(daily_load)
+    max_concurrent = config.max_concurrent_submissions
     
-    # Efficiency score (penalize over-utilization and under-utilization)
-    target_utilization = 80.0  # Target 80% utilization
-    utilization_penalty = abs(utilization_rate - target_utilization) / target_utilization * 100
-    efficiency_score = max(0, 100 - utilization_penalty)
+    # Calculate utilization rate
+    utilization_rate = (avg_utilization / max_concurrent) * PERCENTAGE_MULTIPLIER if max_concurrent > 0 else MIN_SCORE
+    
+    # Calculate efficiency score (penalize both under-utilization and over-utilization)
+    if max_concurrent > 0:
+        # Optimal utilization is around 80% of max capacity
+        optimal_utilization = max_concurrent * OPTIMAL_UTILIZATION_RATE
+        utilization_deviation = abs(avg_utilization - optimal_utilization) / optimal_utilization
+        efficiency_score = max(MIN_SCORE, MAX_SCORE - (utilization_deviation * UTILIZATION_DEVIATION_PENALTY))
+    else:
+        efficiency_score = MIN_SCORE
     
     return EfficiencyMetrics(
         utilization_rate=utilization_rate,
@@ -75,28 +120,57 @@ def calculate_efficiency_resource(schedule: Dict[str, date], config: Config) -> 
         efficiency_score=efficiency_score
     )
 
+
 def calculate_efficiency_timeline(schedule: Dict[str, date], config: Config) -> TimelineMetrics:
-    """Calculate timeline efficiency metrics."""
+    """
+    Calculate timeline efficiency metrics.
+    
+    Parameters
+    ----------
+    schedule : Dict[str, date]
+        Mapping of submission_id to start_date
+    config : Config
+        Configuration object
+        
+    Returns
+    -------
+    TimelineMetrics
+        Timeline efficiency metrics
+    """
     if not schedule:
         return TimelineMetrics(
             duration_days=0,
-            avg_daily_load=0.0,
-            timeline_efficiency=0.0
+            avg_daily_load=MIN_SCORE,
+            timeline_efficiency=MIN_SCORE
         )
     
-    # Calculate timeline metrics
-    dates = list(schedule.values())
-    duration_days = (max(dates) - min(dates)).days if dates else 0
+    # Calculate timeline span
+    start_date = min(schedule.values())
+    end_date = max(schedule.values())
+    duration_days = (end_date - start_date).days + 1
     
-    # Calculate daily workload using constraints logic
-    daily_load = _calculate_daily_load(schedule, config)
-    
-    avg_daily_load = sum(daily_load.values()) / len(daily_load) if daily_load else 0
-    
-    # Timeline efficiency (optimal duration vs actual)
+    # Calculate average daily load
     total_submissions = len(schedule)
-    optimal_duration = total_submissions * 30  # Assume 30 days per submission
-    timeline_efficiency = max(0, 100 - abs(duration_days - optimal_duration) / optimal_duration * 100) if optimal_duration > 0 else 100
+    avg_daily_load = total_submissions / duration_days if duration_days > 0 else MIN_SCORE
+    
+    # Calculate timeline efficiency (penalize very long or very short timelines)
+    total_submissions_count = len(config.submissions)
+    if total_submissions_count > 0:
+        # Ideal timeline should be proportional to number of submissions
+        ideal_duration = total_submissions_count * IDEAL_DAYS_PER_SUBMISSION  # Assume 30 days per submission
+        duration_ratio = duration_days / ideal_duration if ideal_duration > 0 else 1.0
+        
+        # Efficiency decreases as we deviate from ideal duration
+        if duration_ratio <= 1.0:
+            # Shorter than ideal is better than longer
+            timeline_efficiency = MAX_SCORE * (1.0 - (1.0 - duration_ratio) * TIMELINE_EFFICIENCY_SHORT_PENALTY)
+        else:
+            # Longer than ideal gets penalized more
+            timeline_efficiency = MAX_SCORE * (1.0 - (duration_ratio - 1.0) * TIMELINE_EFFICIENCY_LONG_PENALTY)
+        
+        timeline_efficiency = max(MIN_SCORE, min(MAX_SCORE, timeline_efficiency))
+    else:
+        timeline_efficiency = MIN_SCORE
     
     return TimelineMetrics(
         duration_days=duration_days,

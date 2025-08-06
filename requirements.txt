@@ -3,7 +3,9 @@
 
 # Visualization and plotting
 matplotlib>=3.7.0
-# Note: seaborn and plotly are not currently used
+plotly>=5.15.0
+dash>=2.14.0
+# Note: seaborn is not currently used
 
 # Data handling and utilities
 python-dateutil>=2.8.0

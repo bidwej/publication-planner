@@ -1,15 +1,20 @@
-"""Calculate quality scores for schedules."""
+"""Quality scoring functions."""
 
-from __future__ import annotations
-from typing import Dict
+from typing import Dict, List
 from datetime import date, timedelta
+from collections import defaultdict
+
 from core.models import Config, SubmissionType
 from core.constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
+from core.constants import (
+    MAX_SCORE, MIN_SCORE, ROBUSTNESS_SCALE_FACTOR, BALANCE_VARIANCE_FACTOR,
+    SINGLE_SUBMISSION_ROBUSTNESS, SINGLE_SUBMISSION_BALANCE
+)
 
 def calculate_quality_score(schedule: Dict[str, date], config: Config) -> float:
     """Calculate overall quality score (0-100) based on constraint compliance."""
     if not schedule:
-        return 0.0
+        return MIN_SCORE
     
     # Get constraint validations (quality is based on how well constraints are satisfied)
     deadline_validation = validate_deadline_compliance(schedule, config)
@@ -19,7 +24,7 @@ def calculate_quality_score(schedule: Dict[str, date], config: Config) -> float:
     # Calculate component scores from constraint compliance
     deadline_score = deadline_validation.compliance_rate
     dependency_score = dependency_validation.satisfaction_rate
-    resource_score = 100.0 if resource_validation.is_valid else 50.0
+    resource_score = MAX_SCORE if resource_validation.is_valid else 50.0
     
     # Weighted average based on constraint importance
     weights = {
@@ -34,19 +39,19 @@ def calculate_quality_score(schedule: Dict[str, date], config: Config) -> float:
         resource_score * weights["resource"]
     )
     
-    return min(100.0, max(0.0, quality_score))
+    return min(MAX_SCORE, max(MIN_SCORE, quality_score))
 
 def calculate_quality_robustness(schedule: Dict[str, date], config: Config) -> float:
     """Calculate how robust the schedule is to disruptions."""
     if not schedule:
-        return 0.0
+        return MIN_SCORE
     
     # Calculate slack time (buffer between submissions)
     total_slack = 0
     total_submissions = len(schedule)
     
     if total_submissions < 2:
-        return 100.0  # Single submission is always robust
+        return SINGLE_SUBMISSION_ROBUSTNESS  # Single submission is always robust
     
     # Sort submissions by start date
     sorted_submissions = sorted(schedule.items(), key=lambda x: x[1])
@@ -74,14 +79,14 @@ def calculate_quality_robustness(schedule: Dict[str, date], config: Config) -> f
     
     # Robustness score based on average slack
     avg_slack = total_slack / (total_submissions - 1) if total_submissions > 1 else 0
-    robustness_score = min(100.0, avg_slack * 10)  # Scale slack to 0-100
+    robustness_score = min(MAX_SCORE, avg_slack * ROBUSTNESS_SCALE_FACTOR)  # Scale slack to 0-100
     
-    return max(0.0, robustness_score)
+    return max(MIN_SCORE, robustness_score)
 
 def calculate_quality_balance(schedule: Dict[str, date], config: Config) -> float:
     """Calculate how well balanced the schedule is."""
     if not schedule:
-        return 0.0
+        return MIN_SCORE
     
     # Calculate work distribution over time
     daily_work = {}
@@ -101,7 +106,7 @@ def calculate_quality_balance(schedule: Dict[str, date], config: Config) -> floa
             daily_work[day] = daily_work.get(day, 0) + 1
     
     if not daily_work:
-        return 0.0
+        return MIN_SCORE
     
     # Calculate balance score based on work distribution
     work_values = list(daily_work.values())
@@ -110,9 +115,9 @@ def calculate_quality_balance(schedule: Dict[str, date], config: Config) -> floa
     
     # Balance score (lower variance is better)
     if avg_work == 0:
-        return 100.0
+        return SINGLE_SUBMISSION_BALANCE
     
     variance = sum((w - avg_work) ** 2 for w in work_values) / len(work_values)
-    balance_score = max(0.0, 100.0 - (variance / avg_work) * 10)
+    balance_score = max(MIN_SCORE, MAX_SCORE - (variance / avg_work) * BALANCE_VARIANCE_FACTOR)
     
-    return min(100.0, balance_score) 
+    return min(MAX_SCORE, balance_score) 

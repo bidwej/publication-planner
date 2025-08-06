@@ -5,6 +5,10 @@ from typing import Dict, Any
 from datetime import date, timedelta
 from .models import Config, Submission, SubmissionType, ConferenceType, DeadlineValidation, DependencyValidation, ResourceValidation, DeadlineViolation, DependencyViolation, ResourceViolation, ConstraintValidationResult
 from .dates import is_working_day
+from .constants import (
+    PERFECT_COMPLIANCE_RATE, ZERO_COMPLIANCE_RATE, PERCENTAGE_MULTIPLIER,
+    DEFAULT_ABSTRACT_ADVANCE_DAYS, DAYS_PER_MONTH, DEFAULT_POSTER_DURATION_DAYS
+)
 
 
 def validate_deadline_compliance(schedule: Dict[str, date], config: Config) -> DeadlineValidation:
@@ -14,7 +18,7 @@ def validate_deadline_compliance(schedule: Dict[str, date], config: Config) -> D
             is_valid=True,
             violations=[],
             summary="No submissions to validate",
-            compliance_rate=100.0,
+            compliance_rate=PERFECT_COMPLIANCE_RATE,
             total_submissions=0,
             compliant_submissions=0
         )
@@ -59,7 +63,7 @@ def validate_deadline_compliance(schedule: Dict[str, date], config: Config) -> D
                 days_late=days_late
             ))
     
-    compliance_rate = (compliant_submissions / total_submissions * 100) if total_submissions > 0 else 100.0
+    compliance_rate = (compliant_submissions / total_submissions * PERCENTAGE_MULTIPLIER) if total_submissions > 0 else PERFECT_COMPLIANCE_RATE
     is_valid = len(violations) == 0
     
     return DeadlineValidation(
@@ -78,7 +82,7 @@ def validate_dependency_satisfaction(schedule: Dict[str, date], config: Config) 
             is_valid=True,
             violations=[],
             summary="No dependencies to validate",
-            satisfaction_rate=100.0,
+            satisfaction_rate=PERFECT_COMPLIANCE_RATE,
             total_dependencies=0,
             satisfied_dependencies=0
         )
@@ -136,7 +140,7 @@ def validate_dependency_satisfaction(schedule: Dict[str, date], config: Config) 
             else:
                 satisfied_dependencies += 1
     
-    satisfaction_rate = (satisfied_dependencies / total_dependencies * 100) if total_dependencies > 0 else 100.0
+    satisfaction_rate = (satisfied_dependencies / total_dependencies * PERCENTAGE_MULTIPLIER) if total_dependencies > 0 else PERFECT_COMPLIANCE_RATE
     is_valid = len(violations) == 0
     
     return DependencyValidation(
@@ -266,7 +270,7 @@ def validate_scheduling_options(schedule: Dict[str, date], config: Config) -> Di
     
     # Check early abstract scheduling
     if config.scheduling_options.get("enable_early_abstract_scheduling", False):
-        abstract_advance = config.scheduling_options.get("abstract_advance_days", 30)
+        abstract_advance = config.scheduling_options.get("abstract_advance_days", DEFAULT_ABSTRACT_ADVANCE_DAYS)
         abstracts = [sid for sid, sub in config.submissions_dict.items() 
                     if sub.kind == SubmissionType.ABSTRACT]
         
@@ -669,13 +673,13 @@ def _get_submission_duration_days(sub: Submission, config: Config) -> int:
     elif sub.kind == SubmissionType.POSTER:
         # Posters typically have shorter duration than papers
         if sub.draft_window_months > 0:
-            return sub.draft_window_months * 30
+            return sub.draft_window_months * DAYS_PER_MONTH
         else:
-            return 30  # Default 1 month for posters
+            return DEFAULT_POSTER_DURATION_DAYS  # Default 1 month for posters
     else:  # SubmissionType.PAPER
         # Use draft_window_months if available, otherwise fall back to config
         if sub.draft_window_months > 0:
-            return sub.draft_window_months * 30
+            return sub.draft_window_months * DAYS_PER_MONTH
         else:
             return config.min_paper_lead_time_days
 
