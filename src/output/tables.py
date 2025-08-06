@@ -68,168 +68,33 @@ def generate_monthly_table(
     return rows
 
 
-def generate_simple_monthly_table(config: Dict[str, Any]) -> List[Dict[str, Any]]:
+def generate_simple_monthly_table(config: Config) -> List[Dict[str, Any]]:
     """Generate monthly table for testing - simplified version."""
     rows = []
     
     # Get all conferences from config
-    conferences = config.get("conferences", [])
+    conferences = config.conferences
     
     # Generate rows for each conference deadline
     for conf in conferences:
-        if "abstract_deadline" in conf and conf["abstract_deadline"]:
-            deadline_str = conf["abstract_deadline"]
-            if isinstance(deadline_str, str):
-                deadline = datetime.fromisoformat(deadline_str.split("T")[0])
-            else:
-                deadline = deadline_str
-            rows.append({
-                "Month": f"{deadline.year}-{deadline.month:02d}",
-                "Deadlines": f"{conf['name']} Abstract",
-                "Active Papers": ""
-            })
-        
-        if "full_paper_deadline" in conf and conf["full_paper_deadline"]:
-            deadline_str = conf["full_paper_deadline"]
-            if isinstance(deadline_str, str):
-                deadline = datetime.fromisoformat(deadline_str.split("T")[0])
-            else:
-                deadline = deadline_str
-            rows.append({
-                "Month": f"{deadline.year}-{deadline.month:02d}",
-                "Deadlines": f"{conf['name']} Full Paper",
-                "Active Papers": ""
-            })
+        if hasattr(conf, 'deadlines') and conf.deadlines:
+            for submission_type, deadline in conf.deadlines.items():
+                if deadline:
+                    rows.append({
+                        "Month": f"{deadline.year}-{deadline.month:02d}",
+                        "Deadlines": f"{conf.name} {submission_type.value}",
+                        "Active Papers": ""
+                    })
     
     return rows
 
+# Legacy wrapper functions - these now delegate to the new formatters
 def generate_schedule_summary_table(schedule: Dict[str, date], config: Config) -> List[Dict[str, str]]:
     """Generate schedule summary table (legacy function - use output_manager instead)."""
     from .formatters.tables import format_schedule_table
     return format_schedule_table(schedule, config)
-    """Generate a summary table of the schedule."""
-    if not schedule:
-        return []
-    
-    if not hasattr(config, 'submissions_dict'):
-        raise ValueError("Config must have submissions_dict attribute")
-    
-    rows = []
-    for sid, start_date in schedule.items():
-        sub = config.submissions_dict.get(sid)
-        if not sub:
-            print(f"Warning: Submission {sid} not found in config")
-            continue
-        
-        # Calculate end date
-        if sub.kind == SubmissionType.PAPER:
-            duration = config.min_paper_lead_time_days
-            end_date = start_date + relativedelta(days=duration)
-        else:
-            end_date = start_date
-        
-        # Get conference info
-        conf_name = "Internal"
-        if sub.conference_id and sub.conference_id in config.conferences_dict:
-            conf = config.conferences_dict[sub.conference_id]
-            conf_name = conf.id
-        
-        # Calculate relative time information
-        today = datetime.now().date()
-        days_until_start = (start_date - today).days
-        weeks_until_start = days_until_start // 7 if days_until_start > 0 else 0
-        months_until_start = (start_date.year - today.year) * 12 + (start_date.month - today.month)
-        
-        # Format relative time
-        if days_until_start < 0:
-            relative_time = f"Started {abs(days_until_start)} days ago"
-        elif days_until_start == 0:
-            relative_time = "Today"
-        elif days_until_start < 7:
-            relative_time = f"In {days_until_start} days"
-        elif weeks_until_start < 4:
-            relative_time = f"In {weeks_until_start} weeks"
-        else:
-            relative_time = f"In {months_until_start} months"
-        
-        rows.append({
-            "ID": sid,
-            "Title": sub.title[:50] + "..." if len(sub.title) > 50 else sub.title,
-            "Type": sub.kind.value,
-            "Conference": conf_name,
-            "Start Date": start_date.strftime("%B %d, %Y"),  # e.g., "January 15, 2025"
-            "End Date": end_date.strftime("%B %d, %Y"),
-            "Duration": f"{(end_date - start_date).days + 1} days",
-            "Relative Time": relative_time
-        })
-    
-    return rows
 
 def generate_deadline_table(schedule: Dict[str, date], config: Config) -> List[Dict[str, str]]:
     """Generate deadline table (legacy function - use output_manager instead)."""
     from .formatters.tables import format_deadline_table
-    return format_deadline_table(schedule, config)
-    """Generate a table showing deadline information."""
-    if not schedule:
-        return []
-    
-    if not hasattr(config, 'submissions_dict'):
-        raise ValueError("Config must have submissions_dict attribute")
-    
-    rows = []
-    for sid, start_date in schedule.items():
-        sub = config.submissions_dict.get(sid)
-        if not sub:
-            print(f"Warning: Submission {sid} not found in config")
-            continue
-        
-        if not sub.conference_id or sub.conference_id not in config.conferences_dict:
-            continue
-        
-        conf = config.conferences_dict[sub.conference_id]
-        if sub.kind not in conf.deadlines:
-            continue
-        
-        deadline = conf.deadlines[sub.kind]
-        
-        # Calculate end date
-        if sub.kind == SubmissionType.PAPER:
-            duration = config.min_paper_lead_time_days
-            end_date = start_date + relativedelta(days=duration)
-        else:
-            end_date = start_date
-        
-        # Calculate margin
-        margin_days = (deadline - end_date).days
-        margin_status = "On Time" if margin_days >= 0 else "Late"
-        
-        # Calculate relative deadline information
-        today = datetime.now().date()
-        days_until_deadline = (deadline - today).days
-        weeks_until_deadline = days_until_deadline // 7 if days_until_deadline > 0 else 0
-        
-        # Format relative deadline
-        if days_until_deadline < 0:
-            relative_deadline = f"{abs(days_until_deadline)} days ago"
-        elif days_until_deadline == 0:
-            relative_deadline = "Today"
-        elif days_until_deadline < 7:
-            relative_deadline = f"In {days_until_deadline} days"
-        elif weeks_until_deadline < 4:
-            relative_deadline = f"In {weeks_until_deadline} weeks"
-        else:
-            months_until_deadline = (deadline.year - today.year) * 12 + (deadline.month - today.month)
-            relative_deadline = f"In {months_until_deadline} months"
-        
-        rows.append({
-            "Submission": sid,
-            "Title": sub.title[:40] + "..." if len(sub.title) > 40 else sub.title,
-            "Conference": conf.id,
-            "Deadline": deadline.strftime("%B %d, %Y"),
-            "End Date": end_date.strftime("%B %d, %Y"),
-            "Margin": f"{margin_days} days",
-            "Status": margin_status,
-            "Relative Deadline": relative_deadline
-        })
-    
-    return rows 
+    return format_deadline_table(schedule, config) 

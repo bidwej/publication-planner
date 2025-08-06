@@ -90,8 +90,10 @@ def analyze_submission_types(schedule: Dict[str, date], config: Config) -> Submi
         )
     
     type_counts = {}
+    sub_map = {s.id: s for s in config.submissions}
+    
     for sid, start_date in schedule.items():
-        sub = config.submissions_dict.get(sid)
+        sub = sub_map.get(sid)
         if not sub:
             continue
         
@@ -99,16 +101,16 @@ def analyze_submission_types(schedule: Dict[str, date], config: Config) -> Submi
         type_counts[sub_type] = type_counts.get(sub_type, 0) + 1
     
     # Calculate percentages
-    total_scheduled = len(schedule)
+    total = sum(type_counts.values())
     type_percentages = {
-        sub_type: (count / total_scheduled * 100) if total_scheduled > 0 else 0.0
+        sub_type: (count / total * 100) if total > 0 else 0.0
         for sub_type, count in type_counts.items()
     }
     
     return SubmissionTypeAnalysis(
         type_counts=type_counts,
         type_percentages=type_percentages,
-        summary=f"Submission types: {', '.join(f'{k}: {v}' for k, v in type_counts.items())}"
+        summary=f"Distribution across {len(type_counts)} submission types"
     )
 
 def analyze_timeline(schedule: Dict[str, date], config: Config) -> TimelineAnalysis:
@@ -118,69 +120,97 @@ def analyze_timeline(schedule: Dict[str, date], config: Config) -> TimelineAnaly
             start_date=None,
             end_date=None,
             duration_days=0,
-            avg_submissions_per_month=0.0,
+            avg_daily_load=0.0,
+            peak_daily_load=0,
             summary="No submissions to analyze"
         )
     
-    dates = list(schedule.values())
-    start_date = min(dates)
-    end_date = max(dates)
-    duration_days = (end_date - start_date).days
+    # Calculate timeline metrics
+    start_date = min(schedule.values())
+    end_date = max(schedule.values())
+    duration_days = (end_date - start_date).days + 1
     
-    # Calculate average submissions per month
-    months_span = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month) + 1
-    avg_per_month = len(schedule) / months_span if months_span > 0 else 0.0
+    # Calculate daily load
+    daily_load = {}
+    sub_map = {s.id: s for s in config.submissions}
+    
+    for sid, start_date in schedule.items():
+        sub = sub_map.get(sid)
+        if not sub:
+            continue
+        
+        # Calculate duration
+        if sub.kind == SubmissionType.ABSTRACT:
+            duration = 0
+        else:
+            duration = sub.draft_window_months * 30 if sub.draft_window_months > 0 else config.min_paper_lead_time_days
+        
+        # Add load for each day
+        for i in range(duration + 1):
+            day = start_date + timedelta(days=i)
+            daily_load[day] = daily_load.get(day, 0) + 1
+    
+    avg_daily_load = sum(daily_load.values()) / len(daily_load) if daily_load else 0.0
+    peak_daily_load = max(daily_load.values()) if daily_load else 0
     
     return TimelineAnalysis(
         start_date=start_date,
         end_date=end_date,
         duration_days=duration_days,
-        avg_submissions_per_month=avg_per_month,
-        summary=f"Timeline: {duration_days} days, {avg_per_month:.1f} submissions/month"
+        avg_daily_load=avg_daily_load,
+        peak_daily_load=peak_daily_load,
+        summary=f"Timeline spans {duration_days} days with peak load of {peak_daily_load} submissions"
     )
 
 def analyze_resources(schedule: Dict[str, date], config: Config) -> ResourceAnalysis:
     """Analyze resource utilization patterns."""
     if not schedule:
         return ResourceAnalysis(
-            peak_load=0,
-            avg_load=0.0,
-            utilization_pattern={},
+            max_concurrent=0,
+            avg_concurrent=0.0,
+            utilization_rate=0.0,
+            overload_days=0,
             summary="No submissions to analyze"
         )
     
+    # Calculate daily utilization
     daily_load = {}
-    max_concurrent = config.max_concurrent_submissions
+    sub_map = {s.id: s for s in config.submissions}
     
-    # Calculate daily workload
     for sid, start_date in schedule.items():
-        sub = config.submissions_dict.get(sid)
+        sub = sub_map.get(sid)
         if not sub:
             continue
         
-        if sub.kind == SubmissionType.PAPER:
-            duration = config.min_paper_lead_time_days
-        else:
+        # Calculate duration
+        if sub.kind == SubmissionType.ABSTRACT:
             duration = 0
+        else:
+            duration = sub.draft_window_months * 30 if sub.draft_window_months > 0 else config.min_paper_lead_time_days
         
+        # Add load for each day
         for i in range(duration + 1):
             day = start_date + timedelta(days=i)
             daily_load[day] = daily_load.get(day, 0) + 1
     
     if not daily_load:
         return ResourceAnalysis(
-            peak_load=0,
-            avg_load=0.0,
-            utilization_pattern={},
-            summary="No workload to analyze"
+            max_concurrent=0,
+            avg_concurrent=0.0,
+            utilization_rate=0.0,
+            overload_days=0,
+            summary="No active days in schedule"
         )
     
-    peak_load = max(daily_load.values())
-    avg_load = sum(daily_load.values()) / len(daily_load)
+    max_concurrent = max(daily_load.values())
+    avg_concurrent = sum(daily_load.values()) / len(daily_load)
+    utilization_rate = max_concurrent / config.max_concurrent_submissions if config.max_concurrent_submissions > 0 else 0.0
+    overload_days = sum(1 for load in daily_load.values() if load > config.max_concurrent_submissions)
     
     return ResourceAnalysis(
-        peak_load=peak_load,
-        avg_load=avg_load,
-        utilization_pattern=daily_load,
-        summary=f"Resource usage: peak {peak_load}, avg {avg_load:.1f} submissions/day"
+        max_concurrent=max_concurrent,
+        avg_concurrent=avg_concurrent,
+        utilization_rate=utilization_rate,
+        overload_days=overload_days,
+        summary=f"Peak utilization: {utilization_rate:.1%} with {overload_days} overload days"
     ) 

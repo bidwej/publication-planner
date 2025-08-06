@@ -101,27 +101,31 @@ def plot_schedule(
         and config.blackout_dates
     ):
         for blackout_date in config.blackout_dates:
-            if min_date <= blackout_date <= max_date:
-                ax.axvline(
-                    x=(blackout_date - min_date).days,
-                    color="red",
-                    alpha=0.3,
-                    linestyle="--",
-                )
+            ax.axvline(
+                x=(blackout_date - min_date).days,
+                color="red",
+                linestyle="--",
+                alpha=0.5,
+                label="Blackout" if blackout_date == config.blackout_dates[0] else None,
+            )
 
+    # Formatting
+    ax.set_xlabel("Days from start")
+    ax.set_ylabel("Submissions")
+    ax.set_title("Schedule Gantt Chart")
     ax.set_yticks(y_positions)
     ax.set_yticklabels(y_labels)
-    ax.set_xlabel("Days from start")
-    ax.set_title("Schedule Gantt Chart")
     ax.grid(True, alpha=0.3)
+    ax.legend()
 
-    # Add legend
-    handles, labels = ax.get_legend_handles_labels()
-    by_label = dict(zip(labels, handles))
-    ax.legend(by_label.values(), by_label.keys(), loc="upper right")
+    # Format x-axis as dates
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
+    ax.xaxis.set_major_locator(mdates.MonthLocator())
+    plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
 
     if save_path:
         plt.savefig(save_path, bbox_inches="tight", dpi=300)
+        plt.close()
     else:
         plt.show()
 
@@ -129,86 +133,75 @@ def plot_schedule(
 def _get_priority_color(sub: Submission, config: Optional[Config]) -> str:
     """Get color based on submission priority."""
     if not config or not config.priority_weights:
-        return "blue"
-    
+        return "lightblue"
+
     weights = config.priority_weights
-    if sub.kind == SubmissionType.PAPER:
-        if sub.engineering:
-            priority = weights.get("engineering_paper", 2.0)
-        else:
-            priority = weights.get("medical_paper", 1.0)
-    elif sub.kind == SubmissionType.ABSTRACT:
-        priority = weights.get("abstract", 0.5)
-    else:
-        priority = weights.get("mod", 1.5)
+    priority = weights.get(sub.id, 1.0)
     
-    if priority >= 2.0:
+    if priority >= 0.8:
         return "red"
-    elif priority >= 1.5:
+    elif priority >= 0.6:
         return "orange"
-    elif priority >= 1.0:
+    elif priority >= 0.4:
         return "yellow"
     else:
-        return "green"
+        return "lightblue"
 
 
 def _get_label(sub: Submission, idx: int) -> Optional[str]:
     """Get label for legend."""
-    if idx == 0:
-        return f"{sub.kind.value} ({'Engineering' if sub.engineering else 'Medical'})"
-    return None
+    return f"{sub.kind.value}" if idx == 0 else None
 
 
 def plot_utilization_chart(schedule: Dict[str, date], config: Config, save_path: Optional[str] = None) -> None:
     """Plot resource utilization over time."""
     if not schedule:
         return
-    
+
     # Calculate daily utilization
     daily_load = {}
+    sub_map = {s.id: s for s in config.submissions}
+    
     for sid, start_date in schedule.items():
-        sub = config.submissions_dict.get(sid)
+        sub = sub_map.get(sid)
         if not sub:
             continue
         
-        if sub.kind == SubmissionType.PAPER:
-            duration = config.min_paper_lead_time_days
-        else:
+        duration = config.min_paper_lead_time_days
+        if sub.kind == SubmissionType.ABSTRACT:
             duration = 0
         
         # Add load for each day
         for i in range(duration + 1):
             day = start_date + timedelta(days=i)
             daily_load[day] = daily_load.get(day, 0) + 1
-    
+
     if not daily_load:
         return
-    
-    # Convert to lists for plotting
+
     dates = sorted(daily_load.keys())
     loads = [daily_load[date] for date in dates]
     utilizations = [load / config.max_concurrent_submissions for load in loads]
+
+    fig, ax = plt.subplots(figsize=(12, 6))  # type: ignore
+    ax.plot(dates, utilizations, marker="o", linewidth=2, markersize=4)
+    ax.axhline(y=1.0, color="red", linestyle="--", alpha=0.7, label="Capacity")
+    ax.fill_between(dates, utilizations, alpha=0.3)
     
-    fig, ax = plt.subplots(figsize=(12, 6))
-    
-    ax.plot(dates, utilizations, 'b-', linewidth=2, alpha=0.7)
-    ax.fill_between(dates, utilizations, alpha=0.3, color='blue')
-    
-    # Add threshold lines
-    ax.axhline(y=1.0, color='red', linestyle='--', alpha=0.7, label='Max Capacity')
-    ax.axhline(y=0.8, color='orange', linestyle='--', alpha=0.7, label='80% Capacity')
-    
-    ax.set_xlabel('Date')
-    ax.set_ylabel('Resource Utilization')
-    ax.set_title('Resource Utilization Over Time')
-    ax.legend()
+    ax.set_xlabel("Date")
+    ax.set_ylabel("Utilization")
+    ax.set_title("Resource Utilization Over Time")
     ax.grid(True, alpha=0.3)
+    ax.legend()
     
-    # Rotate x-axis labels
-    plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
-    
+    # Format x-axis
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
+    ax.xaxis.set_major_locator(mdates.WeekLocator())
+    plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
+
     if save_path:
         plt.savefig(save_path, bbox_inches="tight", dpi=300)
+        plt.close()
     else:
         plt.show()
 
@@ -217,18 +210,15 @@ def plot_deadline_compliance(schedule: Dict[str, date], config: Config, save_pat
     """Plot deadline compliance information."""
     if not schedule:
         return
-    
-    # Calculate deadline information
-    deadlines = []
-    margins = []
-    labels = []
+
+    # Calculate deadline compliance
+    on_time = []
+    late = []
+    sub_map = {s.id: s for s in config.submissions}
     
     for sid, start_date in schedule.items():
-        sub = config.submissions_dict.get(sid)
-        if not sub:
-            continue
-        
-        if not sub.conference_id or sub.conference_id not in config.conferences_dict:
+        sub = sub_map.get(sid)
+        if not sub or not sub.conference_id or sub.conference_id not in config.conferences_dict:
             continue
         
         conf = config.conferences_dict[sub.conference_id]
@@ -236,50 +226,45 @@ def plot_deadline_compliance(schedule: Dict[str, date], config: Config, save_pat
             continue
         
         deadline = conf.deadlines[sub.kind]
+        duration = config.min_paper_lead_time_days
+        if sub.kind == SubmissionType.ABSTRACT:
+            duration = 0
         
-        # Calculate end date
-        if sub.kind == SubmissionType.PAPER:
-            duration = config.min_paper_lead_time_days
-            end_date = start_date + timedelta(days=duration)
+        end_date = start_date + timedelta(days=duration)
+        
+        if end_date <= deadline:
+            on_time.append(sub.title)
         else:
-            end_date = start_date
-        
-        margin = (deadline - end_date).days
-        
-        deadlines.append(deadline)
-        margins.append(margin)
-        labels.append(f"{sid}\n{sub.title[:20]}...")
+            days_late = (end_date - deadline).days
+            late.append((sub.title, days_late))
+
+    # Create visualization
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))  # type: ignore
     
-    if not deadlines:
-        return
+    # Pie chart of compliance
+    labels = ["On Time", "Late"]
+    sizes = [len(on_time), len(late)]
+    colors = ["lightgreen", "lightcoral"]
     
-    fig, ax = plt.subplots(figsize=(12, 8))
+    if sum(sizes) > 0:
+        ax1.pie(sizes, labels=labels, colors=colors, autopct="%1.1f%%", startangle=90)
+        ax1.set_title("Deadline Compliance")
     
-    # Color code by margin
-    colors = ['red' if m < 0 else 'green' if m > 30 else 'orange' for m in margins]
+    # Bar chart of days late
+    if late:
+        titles, days = zip(*late)
+        ax2.bar(range(len(titles)), days, color="lightcoral")
+        ax2.set_xlabel("Submissions")
+        ax2.set_ylabel("Days Late")
+        ax2.set_title("Days Late for Each Submission")
+        ax2.set_xticks(range(len(titles)))
+        ax2.set_xticklabels([t[:20] + "..." if len(t) > 20 else t for t in titles], rotation=45)
+        ax2.grid(True, alpha=0.3)
     
-    bars = ax.barh(range(len(deadlines)), margins, color=colors, alpha=0.7)
-    
-    # Add deadline lines
-    for i, deadline in enumerate(deadlines):
-        ax.axvline(x=0, color='black', linestyle='-', alpha=0.5)
-    
-    ax.set_yticks(range(len(deadlines)))
-    ax.set_yticklabels(labels)
-    ax.set_xlabel('Margin (days) - Negative = Late')
-    ax.set_title('Deadline Compliance')
-    ax.grid(True, alpha=0.3)
-    
-    # Add legend
-    from matplotlib.patches import Patch
-    legend_elements = [
-        Patch(facecolor='green', alpha=0.7, label='On Time (>30 days)'),
-        Patch(facecolor='orange', alpha=0.7, label='Close (<30 days)'),
-        Patch(facecolor='red', alpha=0.7, label='Late')
-    ]
-    ax.legend(handles=legend_elements, loc='lower right')
+    plt.tight_layout()
     
     if save_path:
         plt.savefig(save_path, bbox_inches="tight", dpi=300)
+        plt.close()
     else:
         plt.show() 

@@ -112,9 +112,7 @@ class Planner:
         """Legacy method for backward compatibility."""
         return self.schedule(SchedulerStrategy.GREEDY)
 
-    def concurrent_schedule(self) -> tuple[Dict[Any, int], Dict[Any, int]]:
-        """Legacy method for backward compatibility."""
-        return self.schedule(SchedulerStrategy.GREEDY)
+
 
     def generate_monthly_table(self) -> List[Dict[str, Any]]:
         """Generate monthly table for backward compatibility."""

@@ -113,11 +113,11 @@ class DependencyViolation(ConstraintViolation):
 @dataclass
 class ResourceViolation(ConstraintViolation):
     """A resource constraint violation."""
+    severity: str = "medium"  # Re-declare to maintain order
     date: date
     load: int
     limit: int
     excess: int
-    severity: str = "medium"  # Re-declare to maintain order
 
 @dataclass
 class ConstraintValidation:
@@ -223,3 +223,46 @@ class ResourceAnalysis:
     utilization_pattern: Dict[date, int]
     summary: str
     metadata: Optional[Dict[str, Any]] = None 
+
+# ===== OUTPUT DATA MODELS =====
+
+@dataclass
+class ScheduleSummary:
+    """Summary metrics for a schedule."""
+    total_submissions: int
+    schedule_span: int
+    start_date: Optional[date]
+    end_date: Optional[date]
+    penalty_score: float
+    quality_score: float
+    efficiency_score: float
+    deadline_compliance: float
+    resource_utilization: float
+
+@dataclass
+class ScheduleMetrics:
+    """Detailed metrics for a schedule."""
+    makespan: int
+    avg_utilization: float
+    peak_utilization: int
+    total_penalty: float
+    compliance_rate: float
+    quality_score: float
+
+@dataclass
+class CompleteOutput:
+    """Complete output data for a schedule."""
+    schedule: Dict[str, date]
+    summary_metrics: ScheduleSummary
+    detailed_metrics: ScheduleMetrics
+    schedule_table: List[Dict[str, str]]
+    metrics_table: List[Dict[str, str]]
+    deadline_table: List[Dict[str, str]]
+
+@dataclass
+class ConstraintValidationResult:
+    """Result of all constraint validations."""
+    deadlines: DeadlineValidation
+    dependencies: DependencyValidation
+    resources: ResourceValidation
+    is_valid: bool 

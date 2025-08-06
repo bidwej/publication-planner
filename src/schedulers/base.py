@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Dict, Type
+from typing import Dict, Type, Union
 from ..core.models import Config, Submission, SchedulerStrategy
 from datetime import date, timedelta
 
@@ -29,20 +29,6 @@ class BaseScheduler(ABC):
         """
         pass
     
-    def validate_schedule(self, schedule: Dict[str, date]) -> bool:
-        """Validate that a schedule meets all constraints."""
-        # This method is deprecated. Use constraints module instead.
-        # Import here to avoid circular imports
-        from ..core.constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
-        
-        deadline_validation = validate_deadline_compliance(schedule, self.config)
-        dependency_validation = validate_dependency_satisfaction(schedule, self.config)
-        resource_validation = validate_resource_constraints(schedule, self.config)
-        
-        return (deadline_validation.is_valid and 
-                dependency_validation.is_valid and 
-                resource_validation.is_valid)
-    
     @classmethod
     def register_strategy(cls, strategy: SchedulerStrategy):
         """Decorator to register a scheduler class with a strategy."""
@@ -52,8 +38,15 @@ class BaseScheduler(ABC):
         return decorator
     
     @classmethod
-    def create_scheduler(cls, strategy: SchedulerStrategy, config: Config) -> 'BaseScheduler':
+    def create_scheduler(cls, strategy: Union[SchedulerStrategy, str], config: Config) -> 'BaseScheduler':
         """Create a scheduler instance for the given strategy."""
+        # Convert string to enum if needed
+        if isinstance(strategy, str):
+            try:
+                strategy = SchedulerStrategy(strategy)
+            except ValueError:
+                raise ValueError(f"Unknown strategy: {strategy}")
+        
         if strategy not in cls._strategies:
             raise ValueError(f"Unknown strategy: {strategy}")
         

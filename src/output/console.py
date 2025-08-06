@@ -17,8 +17,9 @@ def print_schedule_summary(schedule: Dict[str, date], config: Config) -> None:
     # Count by type
     abstracts = 0
     papers = 0
+    sub_map = {s.id: s for s in config.submissions}
     for sid in schedule:
-        sub = config.submissions_dict.get(sid)
+        sub = sub_map.get(sid)
         if sub:
             if sub.kind.value == "ABSTRACT":
                 abstracts += 1
@@ -39,9 +40,10 @@ def print_deadline_status(schedule: Dict[str, date], config: Config) -> None:
     on_time = 0
     late = 0
     total = 0
+    sub_map = {s.id: s for s in config.submissions}
     
     for sid, start_date in schedule.items():
-        sub = config.submissions_dict.get(sid)
+        sub = sub_map.get(sid)
         if not sub or not sub.conference_id or sub.conference_id not in config.conferences_dict:
             continue
         
@@ -82,8 +84,10 @@ def print_utilization_summary(schedule: Dict[str, date], config: Config) -> None
     
     # Calculate daily utilization
     daily_load = {}
+    sub_map = {s.id: s for s in config.submissions}
+    
     for sid, start_date in schedule.items():
-        sub = config.submissions_dict.get(sid)
+        sub = sub_map.get(sid)
         if not sub:
             continue
         
@@ -118,26 +122,22 @@ def print_metrics_summary(schedule: Dict[str, date], config: Config) -> None:
     
     print(f"\n=== Metrics Summary ===")
     
-    # Import metrics functions
-    from metrics.makespan import calculate_makespan
-    from metrics.utilization import calculate_resource_utilization
-    from metrics.penalties import calculate_penalty_costs
-    from metrics.deadlines import calculate_deadline_compliance
-    from metrics.quality import calculate_schedule_quality_score
+    # Import scoring functions
+    from ..scoring.penalty import calculate_penalty_score
+    from ..scoring.quality import calculate_quality_score
+    from ..scoring.efficiency import calculate_efficiency_score
+    from ..core.constraints import validate_deadline_compliance
     
     # Calculate metrics
-    makespan = calculate_makespan(schedule, config)
-    utilization = calculate_resource_utilization(schedule, config)
-    penalties = calculate_penalty_costs(schedule, config)
-    compliance = calculate_deadline_compliance(schedule, config)
-    quality_score = calculate_schedule_quality_score(schedule, config)
+    penalty_breakdown = calculate_penalty_score(schedule, config)
+    quality_score = calculate_quality_score(schedule, config)
+    efficiency_score = calculate_efficiency_score(schedule, config)
+    deadline_validation = validate_deadline_compliance(schedule, config)
     
-    print(f"Makespan: {makespan} days")
-    print(f"Average utilization: {utilization['avg_utilization']:.1%}")
-    print(f"Max utilization: {utilization['max_utilization']:.1%}")
-    print(f"Total penalties: ${penalties['total_penalty']:.2f}")
-    print(f"Deadline compliance: {compliance['compliance_rate']:.1f}%")
+    print(f"Penalty score: ${penalty_breakdown.total_penalty:.2f}")
     print(f"Quality score: {quality_score:.3f}")
+    print(f"Efficiency score: {efficiency_score:.3f}")
+    print(f"Deadline compliance: {deadline_validation.compliance_rate:.1f}%")
     print()
 
 def format_table(data: List[Dict[str, Any]], title: str = "") -> str:

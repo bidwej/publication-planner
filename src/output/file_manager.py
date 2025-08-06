@@ -6,6 +6,7 @@ import json
 import csv
 from typing import Dict, List, Any
 from datetime import datetime
+from ...core.models import ScheduleSummary
 
 def create_output_directory(base_dir: str = "output") -> str:
     """Create a timestamped output directory."""
@@ -33,7 +34,7 @@ def save_table_csv(table_data: List[Dict[str, str]], output_dir: str, filename: 
         writer.writerows(table_data)
     return filepath
 
-def save_metrics_json(metrics: Dict[str, Any], output_dir: str, filename: str = "metrics.json") -> str:
+def save_metrics_json(metrics: ScheduleSummary, output_dir: str, filename: str = "metrics.json") -> str:
     """Save metrics as JSON file."""
     filepath = os.path.join(output_dir, filename)
     with open(filepath, 'w') as f:
@@ -45,7 +46,7 @@ def save_all_outputs(
     schedule_table: List[Dict[str, str]],
     metrics_table: List[Dict[str, str]],
     deadline_table: List[Dict[str, str]],
-    metrics: Dict[str, Any],
+    metrics: ScheduleSummary,
     output_dir: str
 ) -> Dict[str, str]:
     """Save all output files and return file paths."""

@@ -127,13 +127,4 @@ def _calculate_resource_penalties(schedule: Dict[str, date], config: Config) -> 
     
     return total_penalty
 
-# Legacy function for backward compatibility
-def calculate_penalties(schedule: Dict[str, date], config: Config) -> Dict[str, float]:
-    """Legacy function - use calculate_penalty_score instead."""
-    penalty_breakdown = calculate_penalty_score(schedule, config)
-    return {
-        "total_penalty": penalty_breakdown.total_penalty,
-        "deadline_penalties": penalty_breakdown.deadline_penalties,
-        "dependency_penalties": penalty_breakdown.dependency_penalties,
-        "resource_penalties": penalty_breakdown.resource_penalties
-    } 
+ 

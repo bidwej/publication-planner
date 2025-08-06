@@ -5,7 +5,7 @@ from typing import Dict, Any
 from datetime import date
 from ..core.models import Config
 from ..core.constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
-from scoring import calculate_penalty_score
+from ..scoring.penalty import calculate_penalty_score
 from .analytics import analyze_timeline, analyze_resources
 
 def generate_schedule_report(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
@@ -86,42 +86,38 @@ def generate_schedule_report(schedule: Dict[str, date], config: Config) -> Dict[
             "start_date": timeline.start_date,
             "end_date": timeline.end_date,
             "duration_days": timeline.duration_days,
-            "avg_submissions_per_month": timeline.avg_submissions_per_month,
+            "avg_daily_load": timeline.avg_daily_load,
+            "peak_daily_load": timeline.peak_daily_load,
             "summary": timeline.summary
         },
         "resources": {
-            "peak_load": resources.peak_load,
-            "avg_load": resources.avg_load,
-            "utilization_pattern": resources.utilization_pattern,
+            "max_concurrent": resources.max_concurrent,
+            "avg_concurrent": resources.avg_concurrent,
+            "utilization_rate": resources.utilization_rate,
+            "overload_days": resources.overload_days,
             "summary": resources.summary
         }
     }
 
 def calculate_overall_score(deadline_validation, dependency_validation, 
                           resource_validation, penalty_breakdown) -> float:
-    """Calculate overall schedule score (0-100)."""
-    # Base score from constraint compliance
-    deadline_score = deadline_validation.compliance_rate
-    dependency_score = dependency_validation.satisfaction_rate
-    resource_score = 100.0 if resource_validation.is_valid else 50.0
+    """Calculate an overall score for the schedule."""
+    # Base score starts at 100
+    score = 100.0
     
-    # Penalty adjustment
-    max_penalty = 10000.0
-    penalty_score = max(0, 100 - (penalty_breakdown.total_penalty / max_penalty * 100))
+    # Deduct for violations
+    score -= len(deadline_validation.violations) * 10
+    score -= len(dependency_validation.violations) * 15
+    score -= len(resource_validation.violations) * 20
     
-    # Weighted average
-    weights = {
-        "deadline": 0.4,
-        "dependency": 0.3,
-        "resource": 0.2,
-        "penalty": 0.1
-    }
+    # Deduct for penalty costs (normalized)
+    penalty_factor = min(penalty_breakdown.total_penalty / 1000.0, 50.0)  # Cap at 50 points
+    score -= penalty_factor
     
-    overall_score = (
-        deadline_score * weights["deadline"] +
-        dependency_score * weights["dependency"] +
-        resource_score * weights["resource"] +
-        penalty_score * weights["penalty"]
-    )
+    # Bonus for high compliance rates
+    if deadline_validation.compliance_rate > 95:
+        score += 5
+    if dependency_validation.satisfaction_rate > 95:
+        score += 5
     
-    return min(100.0, max(0.0, overall_score)) 
+    return max(score, 0.0)  # Don't go below 0 

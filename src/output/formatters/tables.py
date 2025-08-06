@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import Dict, List, Any, Optional
 from datetime import date, timedelta
-from ...core.models import Config, Submission, SubmissionType
+from ...core.models import Config, Submission, SubmissionType, ScheduleSummary
 from .dates import format_date_display, format_month_year, format_relative_time, format_duration_days
 
 def format_schedule_table(schedule: Dict[str, date], config: Config) -> List[Dict[str, str]]:
@@ -54,58 +54,58 @@ def format_schedule_table(schedule: Dict[str, date], config: Config) -> List[Dic
     
     return rows
 
-def format_metrics_table(metrics: Dict[str, Any]) -> List[Dict[str, str]]:
+def format_metrics_table(metrics: ScheduleSummary) -> List[Dict[str, str]]:
     """Format metrics as a table for display."""
     rows = []
     
     # Schedule metrics
     rows.append({
         "Metric": "Total Submissions",
-        "Value": str(metrics.get("total_submissions", 0)),
+        "Value": str(metrics.total_submissions),
         "Description": "Number of scheduled submissions"
     })
     
     rows.append({
         "Metric": "Schedule Span",
-        "Value": format_duration_days(metrics.get("schedule_span", 0)),
+        "Value": format_duration_days(metrics.schedule_span),
         "Description": "Total duration of the schedule"
     })
     
     rows.append({
         "Metric": "Makespan",
-        "Value": format_duration_days(metrics.get("makespan", 0)),
+        "Value": format_duration_days(metrics.makespan if hasattr(metrics, 'makespan') else 0),
         "Description": "Time from first to last submission"
     })
     
     # Quality metrics
     rows.append({
         "Metric": "Penalty Score",
-        "Value": f"${metrics.get('penalty_score', 0.0):.2f}",
+        "Value": f"${metrics.penalty_score:.2f}",
         "Description": "Total penalty cost for violations"
     })
     
     rows.append({
         "Metric": "Quality Score",
-        "Value": f"{metrics.get('quality_score', 0.0):.3f}",
+        "Value": f"{metrics.quality_score:.3f}",
         "Description": "Overall schedule quality (0-1)"
     })
     
     rows.append({
         "Metric": "Efficiency Score",
-        "Value": f"{metrics.get('efficiency_score', 0.0):.3f}",
+        "Value": f"{metrics.efficiency_score:.3f}",
         "Description": "Resource utilization efficiency"
     })
     
     # Compliance metrics
     rows.append({
         "Metric": "Deadline Compliance",
-        "Value": f"{metrics.get('compliance_rate', 100.0):.1f}%",
+        "Value": f"{metrics.deadline_compliance:.1f}%",
         "Description": "Percentage of deadlines met"
     })
     
     rows.append({
         "Metric": "Resource Utilization",
-        "Value": f"{metrics.get('resource_utilization', 0.0):.1%}",
+        "Value": f"{metrics.resource_utilization:.1%}",
         "Description": "Average resource utilization"
     })
     

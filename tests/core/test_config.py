@@ -5,8 +5,8 @@ import tempfile
 import json
 import os
 from datetime import date
-from src.config import load_config, _load_conferences, _load_submissions, _load_blackout_dates
-from src.models import Config, SubmissionType, ConferenceType
+from src.core.config import load_config, _load_conferences, _load_submissions, _load_blackout_dates
+from src.core.models import Config, SubmissionType, ConferenceType
 
 
 class TestLoadConfig:

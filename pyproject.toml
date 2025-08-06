@@ -19,7 +19,9 @@ disable = [
   "no-name-in-module",
   "import-error",
   "missing-final-newline",   # ignore C0304
-  "trailing-whitespace"      # ignore C0303
+  "trailing-whitespace",     # ignore C0303
+  "attribute-defined-outside-init",  # ignore W0201 - allows inherited attributes
+  "protected-access"         # ignore W0212 - allows access to protected methods
 ]
 
 
@@ -29,6 +31,10 @@ generated-members = [
   "cv2.*",
   "cv2.aruco.*"
 ]
+
+# Better handling of inherited methods
+ignored-modules = []
+ignored-classes = []
 
 [tool.pylint.format]
 max-line-length = 250
@@ -49,6 +55,15 @@ analysis.extraPaths = ["src"]
 
 # have Pyright/Pylance use library code for types
 analysis.useLibraryCodeForTypes = true
+
+# Better inheritance handling
+analysis.autoImportCompletions = true
+analysis.typeCheckingMode = "basic"
+analysis.autoSearchPaths = true
+
+# Ignore specific inheritance-related errors
+reportUnknownMemberType = false
+reportUnknownVariableType = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

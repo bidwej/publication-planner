@@ -8,8 +8,8 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
-from core.config import load_config
-from src.models import Config, Submission, Conference
+from src.core.config import load_config
+from src.core.models import Config, Submission, Conference
 from schedulers.greedy import GreedyScheduler
 from schedulers.stochastic import StochasticGreedyScheduler
 from schedulers.lookahead import LookaheadGreedyScheduler
@@ -79,7 +79,7 @@ def all_schedulers(greedy_scheduler, stochastic_scheduler, lookahead_scheduler, 
 @pytest.fixture
 def sample_submission():
     """Provide a sample submission for testing."""
-    from src.models import Submission, SubmissionType
+    from src.core.models import Submission, SubmissionType
     from datetime import date
     
     return Submission(

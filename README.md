@@ -533,12 +533,14 @@ class BaseScheduler(ABC):
         """Generate a schedule for all submissions."""
         pass
     
-    def validate_schedule(self, schedule: Dict[str, date]) -> bool:
-        """Validate that a schedule meets all constraints."""
+    @classmethod
+    def register_strategy(cls, strategy: SchedulerStrategy):
+        """Decorator to register a scheduler class with a strategy."""
         pass
     
-    def get_schedule_metrics(self, schedule: Dict[str, date]) -> Dict[str, float]:
-        """Calculate metrics for a given schedule."""
+    @classmethod
+    def create_scheduler(cls, strategy: SchedulerStrategy, config: Config) -> 'BaseScheduler':
+        """Create a scheduler instance for the given strategy."""
         pass
 ```
 
@@ -549,6 +551,7 @@ class BaseScheduler(ABC):
 validate_deadline_compliance(schedule: Dict[str, date], config: Config) -> DeadlineValidation
 validate_dependency_satisfaction(schedule: Dict[str, date], config: Config) -> DependencyValidation
 validate_resource_constraints(schedule: Dict[str, date], config: Config) -> ResourceValidation
+validate_all_constraints(schedule: Dict[str, date], config: Config) -> ConstraintValidationResult
 ```
 
 ### Scoring Functions

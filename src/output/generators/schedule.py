@@ -2,27 +2,27 @@
 
 from __future__ import annotations
 from typing import Dict, List, Any
-from datetime import date, datetime
-from ...core.models import Config, Submission
+from datetime import date, timedelta
+from ...core.models import Config, Submission, ScheduleSummary, ScheduleMetrics, SubmissionType
 from ...scoring.penalty import calculate_penalty_score
 from ...scoring.quality import calculate_quality_score
 from ...scoring.efficiency import calculate_efficiency_score
 from ...core.constraints import validate_deadline_compliance, validate_resource_constraints
 
-def generate_schedule_summary(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+def generate_schedule_summary(schedule: Dict[str, date], config: Config) -> ScheduleSummary:
     """Generate a comprehensive schedule summary."""
     if not schedule:
-        return {
-            "total_submissions": 0,
-            "schedule_span": 0,
-            "start_date": None,
-            "end_date": None,
-            "penalty_score": 0.0,
-            "quality_score": 0.0,
-            "efficiency_score": 0.0,
-            "deadline_compliance": 100.0,
-            "resource_utilization": 0.0
-        }
+        return ScheduleSummary(
+            total_submissions=0,
+            schedule_span=0,
+            start_date=None,
+            end_date=None,
+            penalty_score=0.0,
+            quality_score=0.0,
+            efficiency_score=0.0,
+            deadline_compliance=100.0,
+            resource_utilization=0.0
+        )
     
     # Basic schedule metrics
     start_date = min(schedule.values())
@@ -38,29 +38,29 @@ def generate_schedule_summary(schedule: Dict[str, date], config: Config) -> Dict
     deadline_validation = validate_deadline_compliance(schedule, config)
     resource_validation = validate_resource_constraints(schedule, config)
     
-    return {
-        "total_submissions": len(schedule),
-        "schedule_span": schedule_span,
-        "start_date": start_date,
-        "end_date": end_date,
-        "penalty_score": penalty.total_penalty,
-        "quality_score": quality,
-        "efficiency_score": efficiency,
-        "deadline_compliance": deadline_validation.compliance_rate,
-        "resource_utilization": resource_validation.max_observed / resource_validation.max_concurrent if resource_validation.max_concurrent > 0 else 0.0
-    }
+    return ScheduleSummary(
+        total_submissions=len(schedule),
+        schedule_span=schedule_span,
+        start_date=start_date,
+        end_date=end_date,
+        penalty_score=penalty.total_penalty,
+        quality_score=quality,
+        efficiency_score=efficiency,
+        deadline_compliance=deadline_validation.compliance_rate,
+        resource_utilization=resource_validation.max_observed / resource_validation.max_concurrent if resource_validation.max_concurrent > 0 else 0.0
+    )
 
-def generate_schedule_metrics(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+def generate_schedule_metrics(schedule: Dict[str, date], config: Config) -> ScheduleMetrics:
     """Generate detailed metrics for the schedule."""
     if not schedule:
-        return {
-            "makespan": 0,
-            "avg_utilization": 0.0,
-            "peak_utilization": 0,
-            "total_penalty": 0.0,
-            "compliance_rate": 100.0,
-            "quality_score": 0.0
-        }
+        return ScheduleMetrics(
+            makespan=0,
+            avg_utilization=0.0,
+            peak_utilization=0,
+            total_penalty=0.0,
+            compliance_rate=100.0,
+            quality_score=0.0
+        )
     
     # Calculate makespan
     start_date = min(schedule.values())
@@ -69,20 +69,22 @@ def generate_schedule_metrics(schedule: Dict[str, date], config: Config) -> Dict
     
     # Calculate utilization
     daily_load = {}
+    sub_map = {s.id: s for s in config.submissions}
+    
     for sid, start_date in schedule.items():
-        sub = config.submissions_dict.get(sid)
+        sub = sub_map.get(sid)
         if not sub:
             continue
         
         # Calculate duration
-        if sub.kind.value == "ABSTRACT":
+        if sub.kind == SubmissionType.ABSTRACT:
             duration_days = 0
         else:
             duration_days = sub.draft_window_months * 30 if sub.draft_window_months > 0 else config.min_paper_lead_time_days
         
         # Add workload for each day
         for i in range(duration_days + 1):
-            day = start_date + datetime.timedelta(days=i)
+            day = start_date + timedelta(days=i)
             daily_load[day] = daily_load.get(day, 0) + 1
     
     avg_utilization = sum(daily_load.values()) / len(daily_load) if daily_load else 0.0
@@ -93,11 +95,11 @@ def generate_schedule_metrics(schedule: Dict[str, date], config: Config) -> Dict
     deadline_validation = validate_deadline_compliance(schedule, config)
     quality = calculate_quality_score(schedule, config)
     
-    return {
-        "makespan": makespan,
-        "avg_utilization": avg_utilization,
-        "peak_utilization": peak_utilization,
-        "total_penalty": penalty.total_penalty,
-        "compliance_rate": deadline_validation.compliance_rate,
-        "quality_score": quality
-    } 
+    return ScheduleMetrics(
+        makespan=makespan,
+        avg_utilization=avg_utilization,
+        peak_utilization=peak_utilization,
+        total_penalty=penalty.total_penalty,
+        compliance_rate=deadline_validation.compliance_rate,
+        quality_score=quality
+    ) 
