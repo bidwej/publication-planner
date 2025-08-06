@@ -38,3 +38,5 @@ wheels/
 .env
 test_output/*
 comparison_results.json
+chart_debug.html
+chart_inspection.png

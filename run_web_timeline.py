@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """
-Entry point for the Paper Planner web application.
-
-Run this script to start the Dash web server.
+Simple runner for the Paper Planner Timeline application.
 """
 
 import sys
@@ -16,19 +14,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'app'))
 
 if __name__ == "__main__":
     try:
-        from app.main import app
+        # Import and run the main module with timeline mode
+        from app.main import main
         
-        print("🚀 Starting Paper Planner Web Application...")
-        print("📊 Dashboard will be available at: http://127.0.0.1:8050")
-        print("🔄 Press Ctrl+C to stop the server")
-        print("-" * 50)
+        # Set sys.argv to specify timeline mode
+        sys.argv = ['main.py', '--mode', 'timeline']
         
-        # Run the app
-        app.run(
-            debug=False,
-            host='127.0.0.1',
-            port=8050
-        )
+        main()
         
     except ImportError as e:
         print(f"❌ Error importing modules: {e}")
