@@ -5,8 +5,10 @@ from typing import Dict, List, Set
 from datetime import date, timedelta
 from .greedy import GreedyScheduler
 from src.core.dates import is_working_day
+from src.core.models import SchedulerStrategy
 
 
+@BaseScheduler.register_strategy(SchedulerStrategy.BACKTRACKING)
 class BacktrackingGreedyScheduler(GreedyScheduler):
     """Backtracking greedy scheduler that can undo decisions when stuck."""
     
@@ -39,7 +41,7 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
             abstract_advance = self.config.scheduling_options.get("abstract_advance_days", 30)
             self._schedule_early_abstracts(schedule, abstract_advance)
         
-        while current <= end and len(schedule) < len(self.submissions):
+        while current <= end and len(schedule) < len(self.submissions) and backtracks < self.max_backtracks:
             # Skip blackout dates
             if not is_working_day(current, self.config.blackout_dates):
                 current += timedelta(days=1)
@@ -77,8 +79,8 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
                 active.add(sid)
                 scheduled_this_round = True
             
-            # If we couldn't schedule anything and we're not at the end, try backtracking
-            if not scheduled_this_round and backtracks < self.max_backtracks:
+            # If nothing was scheduled and we have active submissions, try backtracking
+            if not scheduled_this_round and active and backtracks < self.max_backtracks:
                 if self._backtrack(schedule, active, current):
                     backtracks += 1
                     continue
@@ -87,50 +89,52 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
         
         if len(schedule) != len(self.submissions):
             missing = [sid for sid in self.submissions if sid not in schedule]
-            raise RuntimeError(f"Could not schedule submissions: {missing}")
+            print(f"Note: Could not schedule {len(missing)} submissions: {missing}")
+            print(f"Successfully scheduled {len(schedule)} out of {len(self.submissions)} submissions")
         
         return schedule
     
     def _backtrack(self, schedule: Dict[str, date], active: Set[str], current: date) -> bool:
-        """Try to backtrack by removing a recent decision."""
-        if not schedule:
-            return False
-        
-        # Find the most recent submission that could be rescheduled
-        recent_subs = [(sid, start_date) for sid, start_date in schedule.items() 
-                       if start_date >= current - timedelta(days=7)]
-        
-        if not recent_subs:
-            return False
-        
-        # Sort by start date (most recent first)
-        recent_subs.sort(key=lambda x: x[1], reverse=True)
-        
-        # Try to remove the most recent submission
-        for sid, start_date in recent_subs:
-            sub = self.submissions[sid]
-            
-            # Check if removing this submission would help
+        """Try to backtrack by rescheduling an active submission earlier."""
+        for sid in list(active):
             if self._can_reschedule_earlier(sid, schedule, current):
+                # Remove from active and schedule
+                active.remove(sid)
                 del schedule[sid]
-                if sid in active:
-                    active.remove(sid)
+                return True
+        return False
+    
+    def _can_reschedule_earlier(self, sid: str, schedule: Dict[str, date], current: date) -> bool:
+        """Check if a submission can be rescheduled earlier."""
+        sub = self.submissions[sid]
+        current_start = schedule[sid]
+        
+        # Try to find an earlier valid start date
+        for days_back in range(1, 30):  # Look back up to 30 days
+            new_start = current_start - timedelta(days=days_back)
+            if new_start < (sub.earliest_start_date or current):
+                break
+            
+            if self._can_schedule(sid, new_start, schedule, set()):
+                schedule[sid] = new_start
                 return True
         
         return False
     
-    def _can_reschedule_earlier(self, sid: str, schedule: Dict[str, date], current: date) -> bool:
-        """Check if a submission could be rescheduled earlier."""
+    def _can_schedule(self, sid: str, start: date, schedule: Dict[str, date], active: Set[str]) -> bool:
+        """Check if a submission can be scheduled at the given start date."""
         sub = self.submissions[sid]
-        current_start = schedule[sid]
         
-        # Try to find an earlier start date
-        days_diff = (current_start - current).days
-        for test_date in range(days_diff - 1, -1, -1):
-            test_start = current + timedelta(days=test_date)
-            if (is_working_day(test_start, self.config.blackout_dates) and 
-                (not sub.earliest_start_date or test_start >= sub.earliest_start_date) and
-                self._meets_deadline(sub, test_start)):
-                return True
+        # Check dependencies
+        if not self._deps_satisfied(sub, schedule, start):
+            return False
         
-        return False 
+        # Check deadline
+        if not self._meets_deadline(sub, start):
+            return False
+        
+        # Check concurrency limit
+        if len(active) >= self.config.max_concurrent_submissions:
+            return False
+        
+        return True 

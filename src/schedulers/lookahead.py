@@ -4,9 +4,10 @@ from __future__ import annotations
 from typing import List
 from datetime import timedelta, date
 from .greedy import GreedyScheduler
-from src.core.models import Submission
+from src.core.models import Submission, SchedulerStrategy
 
 
+@BaseScheduler.register_strategy(SchedulerStrategy.LOOKAHEAD)
 class LookaheadGreedyScheduler(GreedyScheduler):
     """Lookahead greedy scheduler that considers future implications of decisions."""
     

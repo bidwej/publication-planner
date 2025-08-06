@@ -156,10 +156,6 @@ def _load_submissions(
     submissions: List[Submission] = []
     conf_map = {c.id: c for c in conferences}
     conf_type_map = {c.id: c.conf_type for c in conferences}
-    conf_family_map = {}
-    for c in conferences:
-        # Build a mapping from family/type to conference IDs
-        conf_family_map.setdefault(str(c.conf_type), []).append(c.id)
 
     # Load mods as abstracts
     for mod in mods:
@@ -167,11 +163,11 @@ def _load_submissions(
         if not mod_id:
             continue
         conf_id = mod.get("conference_id")
-        # If not set, try to map by family
-        if not conf_id and mod.get("conference_families"):
-            for fam in mod["conference_families"]:
-                if fam in conf_family_map:
-                    conf_id = conf_family_map[fam][0]  # Pick the first match
+        # If not set, try to map by candidate conferences
+        if not conf_id and mod.get("candidate_conferences"):
+            for conf in mod["candidate_conferences"]:
+                if conf in conf_map:  # Check if this specific conference exists
+                    conf_id = conf
                     break
         # Set engineering flag based on conference type if not set
         engineering = mod.get("engineering")
@@ -206,11 +202,11 @@ def _load_submissions(
         for parent_id in paper.get("parent_papers", []):
             parent_deps.append(f"{parent_id}-pap")
         conf_id = paper.get("conference_id")
-        # If not set, try to map by family
-        if not conf_id and paper.get("conference_families"):
-            for fam in paper["conference_families"]:
-                if fam in conf_family_map:
-                    conf_id = conf_family_map[fam][0]  # Pick the first match
+        # If not set, try to map by candidate conferences
+        if not conf_id and paper.get("candidate_conferences"):
+            for conf in paper["candidate_conferences"]:
+                if conf in conf_map:  # Check if this specific conference exists
+                    conf_id = conf
                     break
         # Set engineering flag based on conference type if not set
         engineering = paper.get("engineering")

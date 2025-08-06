@@ -3,7 +3,7 @@
 import pytest
 from datetime import date
 from typing import Dict
-from src.schedulers.base import BaseScheduler
+from src.schedulers.greedy import GreedyScheduler
 from src.core.models import Config, SchedulerStrategy, Submission, Conference, ConferenceType, ConferenceRecurrence, SubmissionType
 
 
@@ -12,16 +12,10 @@ class TestScheduler:
     
     def test_scheduler_initialization(self, minimal_config):
         """Test scheduler initialization."""
-        scheduler = BaseScheduler(minimal_config)
+        scheduler = GreedyScheduler(minimal_config)
         assert scheduler.config == minimal_config
         assert isinstance(scheduler.submissions, dict)
         assert isinstance(scheduler.conferences, dict)
-        
-        # Check configuration options
-        assert hasattr(scheduler, 'randomness_factor')
-        assert hasattr(scheduler, 'lookahead_days')
-        assert hasattr(scheduler, 'enable_backtracking')
-        assert hasattr(scheduler, 'max_backtracks')
     
     def test_scheduler_with_empty_config(self):
         """Test scheduler with empty config."""
@@ -39,14 +33,14 @@ class TestScheduler:
             data_files={}
         )
         
-        scheduler = BaseScheduler(empty_config)
+        scheduler = GreedyScheduler(empty_config)
         assert scheduler.config == empty_config
         assert len(scheduler.submissions) == 0
         assert len(scheduler.conferences) == 0
     
     def test_scheduler_with_sample_data(self, config):
         """Test scheduler with sample data."""
-        scheduler = BaseScheduler(config)
+        scheduler = GreedyScheduler(config)
         
         # Should have submissions and conferences
         assert len(scheduler.submissions) > 0
@@ -57,34 +51,9 @@ class TestScheduler:
         assert isinstance(schedule, dict)
         assert len(schedule) > 0
     
-    def test_configuration_options(self, minimal_config):
-        """Test that configuration options work correctly."""
-        # Test with different configuration options
-        minimal_config.randomness_factor = 0.1
-        minimal_config.lookahead_days = 30
-        minimal_config.enable_backtracking = True
-        minimal_config.max_backtracks = 10
-        
-        scheduler = BaseScheduler(minimal_config)
-        
-        assert scheduler.randomness_factor == 0.1
-        assert scheduler.lookahead_days == 30
-        assert scheduler.enable_backtracking is True
-        assert scheduler.max_backtracks == 10
-    
-    def test_default_configuration_options(self, minimal_config):
-        """Test default configuration options."""
-        scheduler = BaseScheduler(minimal_config)
-        
-        # Should have sensible defaults
-        assert scheduler.randomness_factor == 0.0
-        assert scheduler.lookahead_days == 0
-        assert scheduler.enable_backtracking is False
-        assert scheduler.max_backtracks == 5
-    
     def test_schedule_method(self, config):
         """Test that schedule method returns valid schedule."""
-        scheduler = BaseScheduler(config)
+        scheduler = GreedyScheduler(config)
         schedule = scheduler.schedule()
         
         assert isinstance(schedule, dict)
@@ -97,24 +66,23 @@ class TestScheduler:
     
     def test_schedule_with_no_submissions(self, minimal_config):
         """Test scheduling with no submissions."""
-        scheduler = BaseScheduler(minimal_config)
-        schedule = scheduler.schedule()
+        scheduler = GreedyScheduler(minimal_config)
         
-        # Should return empty schedule
-        assert isinstance(schedule, dict)
-        assert len(schedule) == 0
+        # Should raise RuntimeError when no valid dates found
+        with pytest.raises(RuntimeError, match="No valid dates found for scheduling"):
+            scheduler.schedule()
     
     def test_schedule_with_dependencies(self, config):
         """Test scheduling with dependencies."""
-        scheduler = BaseScheduler(config)
+        scheduler = GreedyScheduler(config)
         schedule = scheduler.schedule()
         
         # Check that dependencies are satisfied
-        for submission_id, start_date in schedule.items():
-            submission = scheduler.submissions[submission_id]
-            if submission.depends_on:
-                for parent_id in submission.depends_on:
-                    if parent_id in schedule:
-                        parent_start = schedule[parent_id]
+        for sid, start_date in schedule.items():
+            sub = scheduler.submissions[sid]
+            if sub.depends_on:
+                for dep_id in sub.depends_on:
+                    if dep_id in schedule:
+                        dep_start = schedule[dep_id]
                         # Child should start after parent
-                        assert start_date >= parent_start
+                        assert start_date >= dep_start

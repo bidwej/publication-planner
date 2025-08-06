@@ -360,11 +360,11 @@ class TestConferenceMappingAndEngineering:
                 deadlines={}
             )
         ]
-        # Paper with conference_families
+        # Paper with candidate conferences
         paper = {
             "id": "J1",
             "title": "Test Paper",
-            "conference_families": ["ENGINEERING"],
+            "candidate_conferences": ["ICML"],
             "draft_window_months": 4
         }
         papers_path = tmp_path / "papers.json"
@@ -397,7 +397,7 @@ class TestConferenceMappingAndEngineering:
         paper = {
             "id": "J2",
             "title": "Engineering Paper",
-            "conference_families": ["ENGINEERING"]
+            "candidate_conferences": ["ICML"]
             # No engineering flag set
         }
         papers_path = tmp_path / "papers.json"

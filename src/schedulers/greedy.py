@@ -5,8 +5,10 @@ from typing import Dict, List, Set
 from datetime import date, timedelta
 from .base import BaseScheduler
 from src.core.dates import is_working_day
+from src.core.models import SchedulerStrategy
 
 
+@BaseScheduler.register_strategy(SchedulerStrategy.GREEDY)
 class GreedyScheduler(BaseScheduler):
     """Greedy scheduler that schedules submissions as early as possible based on priority."""
     

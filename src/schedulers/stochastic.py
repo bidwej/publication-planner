@@ -4,8 +4,10 @@ from __future__ import annotations
 import random
 from typing import List
 from .greedy import GreedyScheduler
+from src.core.models import SchedulerStrategy
 
 
+@BaseScheduler.register_strategy(SchedulerStrategy.STOCHASTIC)
 class StochasticGreedyScheduler(GreedyScheduler):
     """Stochastic greedy scheduler that adds randomness to priority selection."""
     

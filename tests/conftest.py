@@ -9,7 +9,7 @@ from src.core.config import load_config
 from src.core.models import (
     Submission, SubmissionType, Config, Conference, ConferenceType, ConferenceRecurrence
 )
-from src.schedulers.base import BaseScheduler
+from src.schedulers.greedy import GreedyScheduler
 
 
 @pytest.fixture(scope="session")
@@ -33,14 +33,14 @@ def config(test_config_path):
 @pytest.fixture(scope="session")
 def sample_schedule(config):
     """Generate a sample schedule for testing."""
-    scheduler = BaseScheduler(config)
+    scheduler = GreedyScheduler(config)
     return scheduler.schedule()
 
 
 @pytest.fixture
 def scheduler(config):
     """Provide a scheduler instance."""
-    return BaseScheduler(config)
+    return GreedyScheduler(config)
 
 
 @pytest.fixture
@@ -85,19 +85,10 @@ def empty_schedule():
 
 @pytest.fixture
 def minimal_config():
-    """Provide a minimal config for testing edge cases."""
-    
+    """Provide a minimal configuration for testing."""
     return Config(
         submissions=[],
-        conferences=[
-            Conference(
-                id="ICML",
-                name="ICML",
-                conf_type=ConferenceType.ENGINEERING,
-                recurrence=ConferenceRecurrence.ANNUAL,
-                deadlines={}
-            )
-        ],
+        conferences=[],
         min_abstract_lead_time_days=0,
         min_paper_lead_time_days=60,
         max_concurrent_submissions=1,
@@ -105,6 +96,87 @@ def minimal_config():
         penalty_costs={},
         priority_weights={},
         scheduling_options={},
+        blackout_dates=[],
+        data_files={}
+    )
+
+
+@pytest.fixture
+def config():
+    """Provide a full configuration for testing."""
+    # Create test conferences
+    conferences = [
+        Conference(
+            id="ICML",
+            name="ICML",
+            conf_type=ConferenceType.ENGINEERING,
+            recurrence=ConferenceRecurrence.ANNUAL,
+            deadlines={
+                SubmissionType.ABSTRACT: date(2025, 1, 15),
+                SubmissionType.PAPER: date(2025, 1, 30)
+            }
+        ),
+        Conference(
+            id="MICCAI",
+            name="MICCAI",
+            conf_type=ConferenceType.MEDICAL,
+            recurrence=ConferenceRecurrence.ANNUAL,
+            deadlines={
+                SubmissionType.ABSTRACT: date(2025, 2, 15),
+                SubmissionType.PAPER: date(2025, 3, 1)
+            }
+        )
+    ]
+    
+    # Create test submissions
+    submissions = [
+        Submission(
+            id="J1-pap",
+            title="Test Paper",
+            kind=SubmissionType.PAPER,
+            conference_id="ICML",
+            depends_on=[],
+            draft_window_months=4,
+            lead_time_from_parents=0,
+            penalty_cost_per_day=500,
+            engineering=True,
+            earliest_start_date=date(2025, 1, 1)
+        ),
+        Submission(
+            id="J2-pap",
+            title="Medical Paper",
+            kind=SubmissionType.PAPER,
+            conference_id="MICCAI",
+            depends_on=["J1-pap"],
+            draft_window_months=3,
+            lead_time_from_parents=2,
+            penalty_cost_per_day=300,
+            engineering=False,
+            earliest_start_date=date(2025, 2, 1)
+        )
+    ]
+    
+    return Config(
+        submissions=submissions,
+        conferences=conferences,
+        min_abstract_lead_time_days=30,
+        min_paper_lead_time_days=60,
+        max_concurrent_submissions=2,
+        default_paper_lead_time_months=3,
+        penalty_costs={
+            "default_mod_penalty_per_day": 1000,
+            "default_paper_penalty_per_day": 500
+        },
+        priority_weights={
+            "engineering_paper": 2.0,
+            "medical_paper": 1.0,
+            "mod": 1.5,
+            "abstract": 0.5
+        },
+        scheduling_options={
+            "enable_early_abstract_scheduling": True,
+            "abstract_advance_days": 30
+        },
         blackout_dates=[],
         data_files={}
     )
