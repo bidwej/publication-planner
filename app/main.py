@@ -3,7 +3,7 @@ Main Dash application for the Paper Planner web interface.
 """
 
 import dash
-from dash import html, dcc, Input, Output, State, callback_context
+from dash import html, dcc, Input, Output, State, callback_context, exceptions
 import plotly.graph_objects as go
 from datetime import date, datetime
 import json
@@ -63,10 +63,7 @@ def create_app_layout():
         # Store components for data persistence
         dcc.Store(id='schedule-store', storage_type='memory'),
         dcc.Store(id='config-store', storage_type='memory'),
-        dcc.Store(id='app-state-store', storage_type='memory'),
-        
-        # Interval for auto-refresh
-        dcc.Interval(id='interval-component', interval=30*1000, n_intervals=0)
+        dcc.Store(id='app-state-store', storage_type='memory')
     ], className="app-wrapper")
 
 # Set the layout
@@ -80,16 +77,18 @@ app.layout = create_app_layout()
      Output('violations-table-container', 'children'),
      Output('summary-metrics', 'children')],
     [Input('generate-schedule-btn', 'n_clicks'),
-     Input('load-schedule-btn', 'n_clicks'),
-     Input('strategy-selector', 'value')],
-    [State('schedule-store', 'data'),
+     Input('load-schedule-btn', 'n_clicks')],
+    [State('strategy-selector', 'value'),
+     State('schedule-store', 'data'),
      State('config-store', 'data')]
 )
 def update_schedule(n_generate, n_load, strategy, schedule_data, config_data):
     """Update schedule display based on user actions."""
     ctx = callback_context
+    
+    # Prevent callback from running on initial page load
     if not ctx.triggered:
-        return _create_default_figures()
+        raise exceptions.PreventUpdate
     
     trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
     
@@ -98,7 +97,7 @@ def update_schedule(n_generate, n_load, strategy, schedule_data, config_data):
     elif trigger_id == 'load-schedule-btn':
         return _load_saved_schedule()
     else:
-        return _create_default_figures()
+        raise exceptions.PreventUpdate
 
 def _generate_new_schedule(strategy: str) -> tuple:
     """Generate a new schedule using the selected strategy."""

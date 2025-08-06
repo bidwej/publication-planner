@@ -24,6 +24,94 @@ The Paper Planner is designed to help researchers and teams efficiently schedule
 - Live chart updates
 - Responsive design
 
+## Installation & Setup
+
+### Prerequisites
+- Python 3.8 or higher
+- Virtual environment (recommended)
+
+### Installation Steps
+
+1. **Clone the repository:**
+   ```bash
+   git clone <repository-url>
+   cd Paper-Planner
+   ```
+
+2. **Create and activate a virtual environment:**
+   ```bash
+   # Windows
+   python -m venv .venv
+   .venv\Scripts\Activate.ps1
+   
+   # macOS/Linux
+   python -m venv .venv
+   source .venv/bin/activate
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+### Running the Application
+
+#### Web Dashboard (Recommended)
+```bash
+python run_web_app.py
+```
+- **URL**: http://127.0.0.1:8050
+- **Features**: Interactive charts, real-time updates, strategy selection
+- **Debug Mode**: Enabled by default for development
+
+#### Command Line Interface
+```bash
+python generate_schedule.py
+```
+- **Output**: Console-based schedule generation
+- **Export**: JSON and CSV files
+- **Configuration**: Uses `config.json` in root directory
+
+### Configuration
+- **Main Config**: `config.json` in root directory
+- **Custom Penalties**: Adjustable via config file
+- **Business Rules**: All constraints configurable
+- **Output Settings**: Configurable export formats
+
+### Troubleshooting
+
+#### Common Issues
+
+**ModuleNotFoundError: No module named 'dash'**
+```bash
+pip install -r requirements.txt
+```
+
+**Virtual Environment Not Activated**
+```bash
+# Windows
+.venv\Scripts\Activate.ps1
+
+# macOS/Linux
+source .venv/bin/activate
+```
+
+**Port Already in Use**
+- The webapp runs on port 8050 by default
+- If port is busy, modify `run_web_app.py` to use a different port
+- Or kill the process using the port: `netstat -ano | findstr :8050`
+
+**PowerShell Execution Policy**
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+#### Development Tips
+- **Debug Mode**: Always enabled in development
+- **Hot Reload**: Changes to Python files auto-reload the server
+- **Error Logging**: Check console output for detailed error messages
+- **Browser Console**: Use F12 for client-side debugging
+
 ## Core Concepts
 
 ### Submission Types
