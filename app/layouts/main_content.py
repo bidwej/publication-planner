@@ -89,7 +89,7 @@ def create_main_content():
                         html.Button([
                             html.I(className="fas fa-download"),
                             " Export CSV"
-                        ], id="export-schedule-btn", className="btn btn-secondary btn-small")
+                        ], id="table-export-btn", className="btn btn-secondary btn-small")
                     ], className="table-actions")
                 ], className="table-header"),
                 

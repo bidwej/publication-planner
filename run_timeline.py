@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """
-Entry point for the Paper Planner web application.
-
-Run this script to start the Dash web server.
+Simple runner for the Paper Planner Timeline application.
 """
 
 import sys
@@ -16,10 +14,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'app'))
 
 if __name__ == "__main__":
     try:
-        from app.main import app
+        from app.main_simple import app
         
-        print("🚀 Starting Paper Planner Web Application...")
-        print("📊 Dashboard will be available at: http://127.0.0.1:8050")
+        print("🚀 Starting Paper Planner Timeline...")
+        print("📊 Timeline will be available at: http://127.0.0.1:8050")
         print("🔄 Press Ctrl+C to stop the server")
         print("-" * 50)
         

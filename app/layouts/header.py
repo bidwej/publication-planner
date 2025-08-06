@@ -27,11 +27,11 @@ def create_header():
             html.Button([
                 html.I(className="fas fa-save"),
                 " Save"
-            ], id="save-schedule-btn", className="btn btn-primary"),
+            ], id="header-save-btn", className="btn btn-primary"),
             html.Button([
                 html.I(className="fas fa-download"),
                 " Load"
-            ], id="load-schedule-btn", className="btn btn-secondary"),
+            ], id="header-load-btn", className="btn btn-secondary"),
             html.Button([
                 html.I(className="fas fa-cog")
             ], className="btn btn-icon", title="Settings")

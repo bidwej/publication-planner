@@ -20,7 +20,7 @@ def create_gantt_chart(schedule: Dict[str, date], config: Config) -> go.Figure:
     for data in gantt_data:
         fig.add_trace(go.Bar(
             x=[data['duration']],
-            y=[data['id']],
+            y=[data['title']],  # Use title instead of ID
             orientation='h',
             name=data['title'],
             text=data['hover_text'],
@@ -33,8 +33,13 @@ def create_gantt_chart(schedule: Dict[str, date], config: Config) -> go.Figure:
     # Update layout with cleaner configuration
     fig.update_layout(
         title={'text': 'Schedule Timeline', 'x': 0.5, 'xanchor': 'center'},
-        xaxis=dict(title='Timeline (Days)', showgrid=True, gridcolor='lightgray'),
-        yaxis=dict(title='Submissions', showgrid=False),
+        xaxis=dict(
+            title='Timeline (Weeks)', 
+            showgrid=True, 
+            gridcolor='lightgray',
+            tickmode='array',
+            tickvals=list(range(0, max([d['start_days'] + d['duration'] for d in gantt_data]) + 1, 7))
+        yaxis=dict(title='Papers & Submissions', showgrid=False),
         barmode='overlay',
         height=600,
         showlegend=False,
@@ -146,13 +151,13 @@ def _add_dependency_arrows(fig: go.Figure, schedule: Dict[str, date], config: Co
                     
                     fig.add_annotation(
                         x=dep_end_days,
-                        y=dep_id,
+                        y=dep_submission.title,  # Use title instead of ID
                         xref="x",
                         yref="y",
                         axref="x",
                         ayref="y",
                         ax=current_start_days,
-                        ay=submission_id,
+                        ay=submission.title,  # Use title instead of ID
                         arrowhead=2,
                         arrowsize=1,
                         arrowwidth=2,

@@ -30,12 +30,12 @@ from schedulers.heuristic import HeuristicScheduler
 from schedulers.optimal import OptimalScheduler
 
 # Import app components
-from layouts.header import create_header
-from layouts.sidebar import create_sidebar
-from layouts.main_content import create_main_content
-from components.charts.gantt_chart import create_gantt_chart
-from components.charts.metrics_chart import create_metrics_chart
-from components.tables.schedule_table import create_schedule_table, create_violations_table
+from app.layouts.header import create_header
+from app.layouts.sidebar import create_sidebar
+from app.layouts.main_content import create_main_content
+from app.components.charts.gantt_chart import create_gantt_chart
+from app.components.charts.metrics_chart import create_metrics_chart
+from app.components.tables.schedule_table import create_schedule_table, create_violations_table
 
 # Initialize the Dash app
 app = dash.Dash(
@@ -61,9 +61,7 @@ def create_app_layout():
         ], className="app-container"),
         
         # Store components for data persistence
-        dcc.Store(id='schedule-store', storage_type='memory'),
-        dcc.Store(id='config-store', storage_type='memory'),
-        dcc.Store(id='app-state-store', storage_type='memory')
+        dcc.Store(id='schedule-store', storage_type='memory')
     ], className="app-wrapper")
 
 # Set the layout
@@ -78,23 +76,22 @@ app.layout = create_app_layout()
      Output('summary-metrics', 'children')],
     [Input('generate-schedule-btn', 'n_clicks'),
      Input('load-schedule-btn', 'n_clicks')],
-    [State('strategy-selector', 'value'),
-     State('schedule-store', 'data'),
-     State('config-store', 'data')]
+    [State('strategy-selector', 'value')]
 )
-def update_schedule(n_generate, n_load, strategy, schedule_data, config_data):
+def update_schedule(n_generate, n_load, strategy):
     """Update schedule display based on user actions."""
     ctx = callback_context
     
-    # Prevent callback from running on initial page load
+    # Only run callback if a button was actually clicked
     if not ctx.triggered:
         raise exceptions.PreventUpdate
     
     trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
     
-    if trigger_id == 'generate-schedule-btn':
+    # Check if buttons were actually clicked (not just initialized)
+    if trigger_id == 'generate-schedule-btn' and n_generate and n_generate > 0:
         return _generate_new_schedule(strategy)
-    elif trigger_id == 'load-schedule-btn':
+    elif trigger_id == 'load-schedule-btn' and n_load and n_load > 0:
         return _load_saved_schedule()
     else:
         raise exceptions.PreventUpdate
@@ -168,4 +165,4 @@ def _create_summary_metrics(validation_result: Dict[str, Any]) -> html.Div:
     ], className="metrics-grid")
 
 if __name__ == '__main__':
-    app.run_server(debug=True, host='0.0.0.0', port=8050)
+    app.run_server(debug=False, host='127.0.0.1', port=8050)
