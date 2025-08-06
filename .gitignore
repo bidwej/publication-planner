@@ -37,3 +37,4 @@ wheels/
 *.pyc
 .env
 test_output/*
+comparison_results.json

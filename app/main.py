@@ -111,17 +111,20 @@ def update_schedule(n_generate, n_load, strategy, schedule_data, config_data):
         return create_default_figures()
 
 @app.callback(
-    Output('save-load-modal', 'is_open'),
+    Output('save-load-modal', 'className'),
     [Input('save-schedule-btn', 'n_clicks'),
      Input('load-schedule-btn', 'n_clicks'),
      Input('close-modal-btn', 'n_clicks')],
-    [State('save-load-modal', 'is_open')]
+    [State('save-load-modal', 'className')]
 )
-def toggle_modal(n_save, n_load, n_close, is_open):
-    """Toggle the save/load modal."""
+def toggle_modal(n_save, n_load, n_close, current_class):
+    """Toggle the save/load modal visibility."""
     if n_save or n_load or n_close:
-        return not is_open
-    return is_open
+        if 'modal-open' in current_class:
+            return current_class.replace('modal-open', 'modal-closed')
+        else:
+            return current_class.replace('modal-closed', 'modal-open')
+    return current_class
 
 @app.callback(
     Output('saved-schedules-list', 'options'),
@@ -214,4 +217,4 @@ def create_summary_metrics(validation_result: Dict[str, Any]) -> html.Div:
     ])
 
 if __name__ == '__main__':
-    app.run_server(debug=True, host='127.0.0.1', port=8050)
+    app.run(debug=True, host='127.0.0.1', port=8050)

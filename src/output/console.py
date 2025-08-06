@@ -1,10 +1,15 @@
 """Console output formatting for schedules."""
 
 from __future__ import annotations
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from datetime import date, timedelta
-from core.models import Config
+from core.models import Config, SchedulerStrategy
 from core.constants import MAX_TITLE_LENGTH
+from core.constraints import validate_schedule_comprehensive
+from scoring.penalty import calculate_penalty_score
+from scoring.quality import calculate_quality_score
+from scoring.efficiency import calculate_efficiency_score
+
 
 def print_schedule_summary(schedule: Dict[str, date], config: Config) -> None:
     """Print a summary of the schedule to console."""
@@ -17,20 +22,18 @@ def print_schedule_summary(schedule: Dict[str, date], config: Config) -> None:
     print(f"Date range: {min(schedule.values())} to {max(schedule.values())}")
     
     # Count by type
-    abstracts = 0
-    papers = 0
+    abstracts = papers = 0
     sub_map = {s.id: s for s in config.submissions}
     for sid in schedule:
         sub = sub_map.get(sid)
         if sub:
-            if sub.kind.value == "abstract":
-                abstracts += 1
-            else:
-                papers += 1
+            abstracts += sub.kind.value == "abstract"
+            papers += sub.kind.value == "paper"
     
     print(f"Abstracts: {abstracts}")
     print(f"Papers: {papers}")
     print()
+
 
 def print_deadline_status(schedule: Dict[str, date], config: Config) -> None:
     """Print deadline status information."""
@@ -39,9 +42,7 @@ def print_deadline_status(schedule: Dict[str, date], config: Config) -> None:
     
     print(f"\n=== Deadline Status ===")
     
-    on_time = 0
-    late = 0
-    total = 0
+    on_time = late = total = 0
     sub_map = {s.id: s for s in config.submissions}
     
     for sid, start_date in schedule.items():
@@ -57,11 +58,8 @@ def print_deadline_status(schedule: Dict[str, date], config: Config) -> None:
         deadline = conf.deadlines[sub.kind]
         
         # Calculate end date
-        if sub.kind.value == "PAPER":
-            duration = config.min_paper_lead_time_days
-            end_date = start_date + timedelta(days=duration)
-        else:
-            end_date = start_date
+        duration = config.min_paper_lead_time_days if sub.kind.value == "PAPER" else 0
+        end_date = start_date + timedelta(days=duration)
         
         if end_date <= deadline:
             on_time += 1
@@ -76,6 +74,7 @@ def print_deadline_status(schedule: Dict[str, date], config: Config) -> None:
     else:
         print("No submissions with deadlines found")
     print()
+
 
 def print_utilization_summary(schedule: Dict[str, date], config: Config) -> None:
     """Print resource utilization summary."""
@@ -93,10 +92,7 @@ def print_utilization_summary(schedule: Dict[str, date], config: Config) -> None
         if not sub:
             continue
         
-        if sub.kind.value == "PAPER":
-            duration = config.min_paper_lead_time_days
-        else:
-            duration = 0
+        duration = config.min_paper_lead_time_days if sub.kind.value == "PAPER" else 0
         
         # Add load for each day
         for i in range(duration + 1):
@@ -117,6 +113,7 @@ def print_utilization_summary(schedule: Dict[str, date], config: Config) -> None
     print(f"Average utilization: {avg_utilization:.1%}")
     print()
 
+
 def print_metrics_summary(schedule: Dict[str, date], config: Config) -> None:
     """Print a comprehensive metrics summary."""
     print(f"\n=== Metrics Summary ===")
@@ -126,10 +123,6 @@ def print_metrics_summary(schedule: Dict[str, date], config: Config) -> None:
         print()
         return
     
-    # Import scoring functions
-    from scoring.penalty import calculate_penalty_score
-    from scoring.quality import calculate_quality_score
-    from scoring.efficiency import calculate_efficiency_score
     from core.constraints import validate_deadline_compliance
     
     # Calculate metrics
@@ -144,12 +137,87 @@ def print_metrics_summary(schedule: Dict[str, date], config: Config) -> None:
     print(f"Deadline compliance: {deadline_validation.compliance_rate:.1f}%")
     print()
 
+
+def print_schedule_analysis(schedule: Dict[str, date], config: Config, strategy_name: str = "Unknown") -> None:
+    """Print comprehensive schedule analysis."""
+    if not schedule:
+        print(f"No schedule generated for {strategy_name}")
+        return
+    
+    print(f"\n{'='*60}")
+    print(f"SCHEDULE ANALYSIS: {strategy_name.upper()}")
+    print(f"{'='*60}")
+    
+    # Print basic summary
+    print_schedule_summary(schedule, config)
+    
+    # Comprehensive validation using all constraints, scoring, and analytics
+    validation_result = validate_schedule_comprehensive(schedule, config)
+    
+    print(f"Comprehensive Schedule Analysis:")
+    print(f"  Feasibility: {'✓' if validation_result['overall_valid'] else '✗'}")
+    print(f"  Completion: {validation_result['completion_rate']:.1f}%")
+    print(f"  Duration: {validation_result['duration_days']} days")
+    print(f"  Peak Load: {validation_result['peak_load']} submissions")
+    print(f"  Quality Score: {validation_result['quality_score']:.1f}/100")
+    print(f"  Efficiency Score: {validation_result['efficiency_score']:.1f}/100")
+    print(f"  Total Penalty: ${validation_result['total_penalty']:.2f}")
+    print(f"  Total Violations: {validation_result['summary']['total_violations']}")
+    
+    # Print detailed metrics
+    print_metrics_summary(schedule, config)
+
+
+def print_strategy_comparison(results: Dict[str, Dict[str, date]], config: Config, output_file: Optional[str] = None) -> None:
+    """Print comparison of different scheduling strategies."""
+    print(f"\n{'='*60}")
+    print("COMPARISON SUMMARY")
+    print(f"{'='*60}")
+    
+    comparison_data = []
+    
+    for strategy_name, schedule in results.items():
+        penalty = calculate_penalty_score(schedule, config)
+        quality = calculate_quality_score(schedule, config)
+        efficiency = calculate_efficiency_score(schedule, config)
+        
+        print(f"\n{strategy_name}:")
+        print(f"  Penalty: ${penalty.total_penalty:.2f}")
+        print(f"  Quality: {quality:.3f}")
+        print(f"  Efficiency: {efficiency:.3f}")
+        print(f"  Submissions: {len(schedule)}")
+        
+        comparison_data.append({
+            'strategy': strategy_name,
+            'penalty': penalty.total_penalty,
+            'quality': quality,
+            'efficiency': efficiency,
+            'submissions': len(schedule)
+        })
+    
+    # Save comparison results if output file specified
+    if output_file:
+        try:
+            import json
+            with open(output_file, 'w') as f:
+                json.dump(comparison_data, f, indent=2)
+            print(f"\nComparison results saved to: {output_file}")
+        except Exception as e:
+            print(f"Error saving comparison results: {e}")
+
+
+def print_available_strategies() -> None:
+    """Print all available scheduling strategies."""
+    print("Available scheduling strategies:")
+    for strategy in SchedulerStrategy:
+        print(f"  - {strategy.value}")
+    print("\nUse --strategy <name> to specify a strategy.")
+
+
 def format_table(data: List[Dict[str, Any]], title: str = "") -> str:
     """Format data as a table string."""
     if not data:
-        if title:
-            return title + "\n"
-        return ""
+        return title + "\n" if title else ""
     
     # Get all column names
     columns = list(data[0].keys())
@@ -164,13 +232,11 @@ def format_table(data: List[Dict[str, Any]], title: str = "") -> str:
     # Build table
     lines = []
     if title:
-        lines.append(title)
-        lines.append("")
+        lines.extend([title, ""])
     
     # Header
     header = " | ".join(col.ljust(widths[col]) for col in columns)
-    lines.append(header)
-    lines.append("-" * len(header))
+    lines.extend([header, "-" * len(header)])
     
     # Rows
     for row in data:

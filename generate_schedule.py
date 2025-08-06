@@ -6,8 +6,9 @@ This script loads configuration data and generates a schedule using the schedule
 """
 
 import sys
+import argparse
 from datetime import date
-from typing import Dict
+from typing import Dict, Optional
 from pathlib import Path
 
 # Add the src directory to the path
@@ -15,7 +16,6 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from core.config import load_config
 from core.models import SchedulerStrategy
-from core.constraints import validate_schedule_comprehensive
 from schedulers.base import BaseScheduler
 # Import all schedulers to ensure they're registered
 from schedulers.greedy import GreedyScheduler
@@ -25,164 +25,96 @@ from schedulers.backtracking import BacktrackingGreedyScheduler
 from schedulers.random import RandomScheduler
 from schedulers.heuristic import HeuristicScheduler
 from schedulers.optimal import OptimalScheduler
-from output.console import print_schedule_summary, print_metrics_summary
-from scoring.penalty import calculate_penalty_score
-from scoring.quality import calculate_quality_score
-from scoring.efficiency import calculate_efficiency_score
+from output.console import print_schedule_analysis, print_strategy_comparison, print_available_strategies
 
 
-def analyze_schedule(schedule: Dict[str, date], config, strategy_name: str = "Unknown") -> None:
-    """Analyze a schedule and print results."""
-    if not schedule:
-        print(f"No schedule generated for {strategy_name}")
-        return
-    
-    print(f"\n{'='*60}")
-    print(f"SCHEDULE ANALYSIS: {strategy_name.upper()}")
-    print(f"{'='*60}")
-    
-    # Print basic summary
-    print_schedule_summary(schedule, config)
-    
-    # Comprehensive validation using all constraints, scoring, and analytics
-    validation_result = validate_schedule_comprehensive(schedule, config)
-    
-    print(f"Comprehensive Schedule Analysis:")
-    print(f"  Feasibility: {'✓' if validation_result['overall_valid'] else '✗'}")
-    print(f"  Completion: {validation_result['completion_rate']:.1f}%")
-    print(f"  Duration: {validation_result['duration_days']} days")
-    print(f"  Peak Load: {validation_result['peak_load']} submissions")
-    print(f"  Quality Score: {validation_result['quality_score']:.1f}/100")
-    print(f"  Efficiency Score: {validation_result['efficiency_score']:.1f}/100")
-    print(f"  Total Penalty: ${validation_result['total_penalty']:.2f}")
-    print(f"  Total Violations: {validation_result['summary']['total_violations']}")
-    
-    # Print detailed metrics
-    print_metrics_summary(schedule, config)
-    
-    # Generate and save output
+def generate_schedule(config, strategy: SchedulerStrategy, verbose: bool = True) -> Dict[str, date]:
+    """Generate a schedule for the given strategy."""
     try:
-        output_data = generate_and_save_output(schedule, config)
-        print(f"Output saved successfully for {strategy_name}")
-    except Exception as e:
-        print(f"Error saving output for {strategy_name}: {e}")
-
-
-def interactive_mode(config) -> None:
-    """Run interactive mode for schedule generation."""
-    print("\n" + "="*60)
-    print("INTERACTIVE SCHEDULE GENERATOR")
-    print("="*60)
-    
-    strategies = list(SchedulerStrategy)
-    
-    while True:
-        print(f"\nAvailable strategies:")
-        for i, strategy in enumerate(strategies, 1):
-            print(f"  {i}. {strategy.value}")
-        print(f"  {len(strategies) + 1}. Compare all strategies")
-        print(f"  {len(strategies) + 2}. Exit")
-        
-        try:
-            choice = input(f"\nSelect strategy (1-{len(strategies) + 2}): ").strip()
-            
-            if choice == str(len(strategies) + 2):
-                print("Goodbye!")
-                break
-            elif choice == str(len(strategies) + 1):
-                compare_strategies(config)
-            elif choice.isdigit() and 1 <= int(choice) <= len(strategies):
-                strategy = strategies[int(choice) - 1]
-                generate_and_analyze_schedule(config, strategy)
-            else:
-                print("Invalid choice. Please try again.")
-                
-        except KeyboardInterrupt:
-            print("\nGoodbye!")
-            break
-        except Exception as e:
-            print(f"Error: {e}")
-
-
-def compare_strategies(config) -> None:
-    """Compare all available scheduling strategies."""
-    print(f"\n{'='*60}")
-    print("COMPARING ALL STRATEGIES")
-    print(f"{'='*60}")
-    
-    results = {}
-    
-    for strategy in SchedulerStrategy:
-        print(f"\nGenerating schedule with {strategy.value}...")
-        try:
-            schedule = generate_and_analyze_schedule(config, strategy, verbose=False)
-            if schedule:
-                results[strategy.value] = schedule
-        except Exception as e:
-            print(f"Error with {strategy.value}: {e}")
-    
-    if results:
-        print(f"\n{'='*60}")
-        print("COMPARISON SUMMARY")
-        print(f"{'='*60}")
-        
-        for strategy_name, schedule in results.items():
-            penalty = calculate_penalty_score(schedule, config)
-            quality = calculate_quality_score(schedule, config)
-            efficiency = calculate_efficiency_score(schedule, config)
-            
-            print(f"\n{strategy_name}:")
-            print(f"  Penalty: ${penalty.total_penalty:.2f}")
-            print(f"  Quality: {quality:.3f}")
-            print(f"  Efficiency: {efficiency:.3f}")
-            print(f"  Submissions: {len(schedule)}")
-
-
-def generate_and_save_output(schedule: Dict[str, date], config) -> Dict[str, str]:
-    """Generate and save output files."""
-    # Simple implementation - just return empty dict for now
-    return {}
-
-def generate_and_analyze_schedule(config, strategy: SchedulerStrategy, verbose: bool = True) -> Dict[str, date]:
-    """Generate and analyze a schedule for the given strategy."""
-    try:
-        # Create scheduler using the factory method
         scheduler = BaseScheduler.create_scheduler(strategy, config)
-        
-        # Generate schedule
         schedule = scheduler.schedule()
         
         if verbose:
-            analyze_schedule(schedule, config, strategy.value)
+            print_schedule_analysis(schedule, config, strategy.value)
         
         return schedule
-        
     except Exception as e:
         if verbose:
             print(f"Error generating schedule with {strategy.value}: {e}")
         return {}
 
 
+def compare_all_strategies(config, output_file: Optional[str] = None) -> None:
+    """Compare all available scheduling strategies."""
+    print(f"\n{'='*60}")
+    print("COMPARING ALL STRATEGIES")
+    print(f"{'='*60}")
+    
+    results = {}
+    for strategy in SchedulerStrategy:
+        print(f"\nGenerating schedule with {strategy.value}...")
+        schedule = generate_schedule(config, strategy, verbose=False)
+        if schedule:
+            results[strategy.value] = schedule
+    
+    if results:
+        print_strategy_comparison(results, config, output_file)
+
+
+def create_parser() -> argparse.ArgumentParser:
+    """Create the command line argument parser."""
+    parser = argparse.ArgumentParser(
+        description="Generate a schedule for the Endoscope AI project",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  %(prog)s --strategy greedy
+  %(prog)s --strategy stochastic --config custom_config.json
+  %(prog)s --compare --output comparison.json
+  %(prog)s --list-strategies
+        """
+    )
+    
+    parser.add_argument('--strategy', '-s', type=str, help='Scheduling strategy to use')
+    parser.add_argument('--config', '-c', type=str, default='data/config.json', help='Path to configuration file')
+    parser.add_argument('--compare', '-C', action='store_true', help='Compare all available strategies')
+    parser.add_argument('--output', '-o', type=str, help='Output file for comparison results')
+    parser.add_argument('--list-strategies', '-l', action='store_true', help='List all available strategies')
+    parser.add_argument('--quiet', '-q', action='store_true', help='Suppress verbose output')
+    
+    return parser
+
+
 def main():
     """Main entry point."""
+    parser = create_parser()
+    args = parser.parse_args()
+    
+    # Handle list strategies
+    if args.list_strategies:
+        print_available_strategies()
+        return
+    
+    # Validate arguments
+    if not args.strategy and not args.compare:
+        parser.error("Either --strategy or --compare must be specified. Use --list-strategies to see available options.")
+    
+    if args.strategy and args.compare:
+        parser.error("Cannot use both --strategy and --compare. Choose one.")
+    
     try:
-        # Load configuration
-        config_path = "data/config.json"  # Default config path
-        config = load_config(config_path)
+        config = load_config(args.config)
         
-        if len(sys.argv) > 1:
-            # Command line mode
-            strategy_name = sys.argv[1].lower()  # Convert to lowercase
+        if args.compare:
+            compare_all_strategies(config, args.output)
+        else:
             try:
-                strategy = SchedulerStrategy(strategy_name)
-                generate_and_analyze_schedule(config, strategy)
+                strategy = SchedulerStrategy(args.strategy.lower())
+                generate_schedule(config, strategy, verbose=not args.quiet)
             except ValueError:
-                print(f"Unknown strategy: {strategy_name}")
+                print(f"Unknown strategy: {args.strategy}")
                 print(f"Available strategies: {[s.value for s in SchedulerStrategy]}")
                 sys.exit(1)
-        else:
-            # Interactive mode
-            interactive_mode(config)
             
     except FileNotFoundError as e:
         print(f"Configuration file not found: {e}")
