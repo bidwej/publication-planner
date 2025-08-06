@@ -1,33 +1,29 @@
 #!/usr/bin/env python3
 """
-Simple runner for the Paper Planner Timeline application.
+Runner script for the Paper Planner Timeline.
+This runs the timeline-only view with Gantt chart.
 """
 
 import sys
 import os
 
-# Add the src directory to the Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+# Add the project root to Python path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# Add the app directory to the Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'app'))
-
-if __name__ == "__main__":
-    try:
-        # Import and run the main module with timeline mode
-        from app.main import main
+try:
+    from app.main import main
+    
+    if __name__ == "__main__":
+        # Set up arguments for timeline mode
+        sys.argv = ['main.py', '--mode', 'timeline', '--debug', 'False']
         
-        # Set sys.argv to specify timeline mode
-        sys.argv = ['main.py', '--mode', 'timeline']
-        
+        # Run the main function
         main()
         
-    except ImportError as e:
-        print(f"❌ Error importing modules: {e}")
-        print("💡 Make sure all dependencies are installed:")
-        print("   pip install -r requirements.txt")
-        sys.exit(1)
-        
-    except Exception as e:
-        print(f"❌ Error starting application: {e}")
-        sys.exit(1)
+except ImportError as e:
+    print(f"❌ Error importing timeline app: {e}")
+    print("💡 Make sure you're in the project root directory")
+    sys.exit(1)
+except Exception as e:
+    print(f"❌ Error starting timeline: {e}")
+    sys.exit(1)

@@ -11,20 +11,14 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 try:
-    from app.main import app
+    from app.main import main
     
     if __name__ == "__main__":
-        print("🚀 Starting Paper Planner Dashboard...")
-        print("📊 Dashboard will be available at: http://127.0.0.1:8050")
-        print("🔄 Press Ctrl+C to stop the server")
-        print("-" * 50)
+        # Set up arguments for dashboard mode
+        sys.argv = ['main.py', '--mode', 'dashboard', '--debug', 'False']
         
-        # Run the app
-        app.run(
-            debug=False,
-            host='127.0.0.1',
-            port=8050
-        )
+        # Run the main function
+        main()
         
 except ImportError as e:
     print(f"❌ Error importing dashboard app: {e}")

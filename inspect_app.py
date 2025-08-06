@@ -63,9 +63,9 @@ async def inspect_app():
                 annotations = await page.query_selector_all('.annotation')
                 print(f"🏹 Found {len(annotations)} annotations")
                 
-                # Check for shapes (blackout periods)
-                shapes = await page.query_selector_all('.shape')
-                print(f"🔲 Found {len(shapes)} shapes (blackout periods)")
+                # Check for shapes (blackout periods) - improved detection
+                shapes = await page.query_selector_all('.shape-group')
+                print(f"🔲 Found {len(shapes)} shape groups (blackout periods)")
                 
                 # Check for vertical lines (deadlines, holidays)
                 vlines = await page.query_selector_all('.vline')
@@ -97,25 +97,41 @@ async def inspect_app():
                     text = await label.text_content()
                     print(f"  {i+1}. '{text}'")
             
-            # Check for blackout periods specifically
+            # Check for blackout periods specifically - improved detection
             print("\n🔲 BLACKOUT PERIODS:")
             
-            # Look for gray rectangles (blackout periods)
-            gray_rectangles = await page.query_selector_all('rect[fill*="128, 128, 128"]')
-            print(f"🔲 Gray rectangles (blackout periods): {len(gray_rectangles)}")
+            # Look for gray rectangles in shape groups
+            shape_groups = await page.query_selector_all('.shape-group')
+            gray_shapes = 0
+            for shape_group in shape_groups:
+                paths = await shape_group.query_selector_all('path')
+                for path in paths:
+                    style = await path.get_attribute('style')
+                    if style and 'rgb(128, 128, 128)' in style:
+                        gray_shapes += 1
+            print(f"🔲 Gray shapes (blackout periods): {gray_shapes}")
             
-            # Look for any rectangles with gray fill
-            all_rectangles = await page.query_selector_all('rect')
-            gray_count = 0
-            for rect in all_rectangles:
-                fill = await rect.get_attribute('fill')
-                if fill and ('gray' in fill.lower() or '128' in fill):
-                    gray_count += 1
-            print(f"🔲 Total gray-filled rectangles: {gray_count}")
+            # Look for any paths with gray fill
+            all_paths = await page.query_selector_all('path')
+            gray_paths = 0
+            for path in all_paths:
+                style = await path.get_attribute('style')
+                if style and ('rgb(128, 128, 128)' in style or '128, 128, 128' in style):
+                    gray_paths += 1
+            print(f"🔲 Total gray-filled paths: {gray_paths}")
             
             # Check for holiday lines
             holiday_lines = await page.query_selector_all('line[stroke-dasharray]')
             print(f"🎉 Holiday lines (dashed): {len(holiday_lines)}")
+            
+            # Check for any lines with red color (holidays)
+            all_lines = await page.query_selector_all('line')
+            red_lines = 0
+            for line in all_lines:
+                style = await line.get_attribute('style')
+                if style and 'rgb(255, 0, 0)' in style:
+                    red_lines += 1
+            print(f"🎉 Red lines (holidays): {red_lines}")
             
             # Take a screenshot for debugging
             await page.screenshot(path='chart_inspection.png', full_page=True)
