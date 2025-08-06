@@ -157,21 +157,19 @@ def analyze_timeline(schedule: Dict[str, date], config: Config) -> TimelineAnaly
         start_date=start_date,
         end_date=end_date,
         duration_days=duration_days,
-        avg_daily_load=avg_daily_load,
-        peak_daily_load=peak_daily_load,
+        avg_submissions_per_month=avg_daily_load * 30,  # Convert daily to monthly
         summary=f"Timeline spans {duration_days} days with peak load of {peak_daily_load} submissions"
     )
 
 def analyze_resources(schedule: Dict[str, date], config: Config) -> ResourceAnalysis:
     """Analyze resource utilization patterns."""
     if not schedule:
-        return ResourceAnalysis(
-            max_concurrent=0,
-            avg_concurrent=0.0,
-            utilization_rate=0.0,
-            overload_days=0,
-            summary="No submissions to analyze"
-        )
+            return ResourceAnalysis(
+        peak_load=0,
+        avg_load=0.0,
+        utilization_pattern={},
+        summary="No submissions to analyze"
+    )
     
     # Calculate daily utilization
     daily_load = {}
@@ -195,22 +193,18 @@ def analyze_resources(schedule: Dict[str, date], config: Config) -> ResourceAnal
     
     if not daily_load:
         return ResourceAnalysis(
-            max_concurrent=0,
-            avg_concurrent=0.0,
-            utilization_rate=0.0,
-            overload_days=0,
+            peak_load=0,
+            avg_load=0.0,
+            utilization_pattern={},
             summary="No active days in schedule"
         )
     
-    max_concurrent = max(daily_load.values())
-    avg_concurrent = sum(daily_load.values()) / len(daily_load)
-    utilization_rate = max_concurrent / config.max_concurrent_submissions if config.max_concurrent_submissions > 0 else 0.0
-    overload_days = sum(1 for load in daily_load.values() if load > config.max_concurrent_submissions)
+    peak_load = max(daily_load.values())
+    avg_load = sum(daily_load.values()) / len(daily_load)
     
     return ResourceAnalysis(
-        max_concurrent=max_concurrent,
-        avg_concurrent=avg_concurrent,
-        utilization_rate=utilization_rate,
-        overload_days=overload_days,
-        summary=f"Peak utilization: {utilization_rate:.1%} with {overload_days} overload days"
+        peak_load=peak_load,
+        avg_load=avg_load,
+        utilization_pattern=daily_load,
+        summary=f"Peak load: {peak_load}, Avg: {avg_load:.1f}"
     ) 

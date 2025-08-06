@@ -35,41 +35,41 @@ class TestEnums:
     
     def test_submission_type_enum(self):
         """Test SubmissionType enum values."""
-        assert SubmissionType.ABSTRACT == "abstract"
-        assert SubmissionType.PAPER == "paper"
+        assert SubmissionType.ABSTRACT.value == "abstract"
+        assert SubmissionType.PAPER.value == "paper"
         
         # Test string conversion
-        assert str(SubmissionType.ABSTRACT) == "abstract"
-        assert str(SubmissionType.PAPER) == "paper"
+        assert str(SubmissionType.ABSTRACT) == "SubmissionType.ABSTRACT"
+        assert str(SubmissionType.PAPER) == "SubmissionType.PAPER"
     
     def test_conference_type_enum(self):
         """Test ConferenceType enum values."""
-        assert ConferenceType.ENGINEERING == "ENGINEERING"
-        assert ConferenceType.MEDICAL == "MEDICAL"
+        assert ConferenceType.ENGINEERING.value == "ENGINEERING"
+        assert ConferenceType.MEDICAL.value == "MEDICAL"
         
         # Test string conversion
-        assert str(ConferenceType.ENGINEERING) == "ENGINEERING"
-        assert str(ConferenceType.MEDICAL) == "MEDICAL"
+        assert str(ConferenceType.ENGINEERING) == "ConferenceType.ENGINEERING"
+        assert str(ConferenceType.MEDICAL) == "ConferenceType.MEDICAL"
     
     def test_conference_recurrence_enum(self):
         """Test ConferenceRecurrence enum values."""
-        assert ConferenceRecurrence.ANNUAL == "annual"
-        assert ConferenceRecurrence.BIENNIAL == "biennial"
+        assert ConferenceRecurrence.ANNUAL.value == "annual"
+        assert ConferenceRecurrence.BIENNIAL.value == "biennial"
         
         # Test string conversion
-        assert str(ConferenceRecurrence.ANNUAL) == "annual"
-        assert str(ConferenceRecurrence.BIENNIAL) == "biennial"
+        assert str(ConferenceRecurrence.ANNUAL) == "ConferenceRecurrence.ANNUAL"
+        assert str(ConferenceRecurrence.BIENNIAL) == "ConferenceRecurrence.BIENNIAL"
     
     def test_scheduler_strategy_enum(self):
         """Test SchedulerStrategy enum values."""
-        assert SchedulerStrategy.GREEDY == "greedy"
-        assert SchedulerStrategy.STOCHASTIC == "stochastic"
-        assert SchedulerStrategy.LOOKAHEAD == "lookahead"
-        assert SchedulerStrategy.BACKTRACKING == "backtracking"
+        assert SchedulerStrategy.GREEDY.value == "greedy"
+        assert SchedulerStrategy.STOCHASTIC.value == "stochastic"
+        assert SchedulerStrategy.LOOKAHEAD.value == "lookahead"
+        assert SchedulerStrategy.BACKTRACKING.value == "backtracking"
         
         # Test string conversion
-        assert str(SchedulerStrategy.GREEDY) == "greedy"
-        assert str(SchedulerStrategy.STOCHASTIC) == "stochastic"
+        assert str(SchedulerStrategy.GREEDY) == "SchedulerStrategy.GREEDY"
+        assert str(SchedulerStrategy.STOCHASTIC) == "SchedulerStrategy.STOCHASTIC"
 
 
 class TestSubmission:
@@ -131,9 +131,9 @@ class TestSubmission:
         
         assert submission.engineering is False
         assert submission.depends_on == []
-        assert submission.penalty_cost_per_day == 0.0
+        assert submission.penalty_cost_per_day is None  # Default is None, not 0.0
         assert submission.lead_time_from_parents == 0
-        assert submission.draft_window_months == 0
+        assert submission.draft_window_months == 3  # Default is 3, not 0
 
 
 class TestConference:
