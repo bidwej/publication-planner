@@ -103,7 +103,12 @@ def _load_blackout_dates(path: Path) -> List[date]:
         with open(path, "r", encoding="utf-8") as f:
             raw = json.load(f)
         blackout_dates = []
-        # Add federal holidays
+        
+        # Add recurring holidays if available
+        if "recurring_holidays" in raw:
+            blackout_dates.extend(_load_recurring_holidays(raw["recurring_holidays"]))
+        
+        # Add federal holidays from year-specific data (fallback)
         for year_key in ["federal_holidays_2025", "federal_holidays_2026"]:
             if year_key in raw:
                 for date_str in raw[year_key]:
@@ -111,6 +116,7 @@ def _load_blackout_dates(path: Path) -> List[date]:
                         blackout_dates.append(parse_date(date_str).date())
                     except (ValueError, TypeError):
                         continue
+        
         # Add custom blackout periods
         if "custom_blackout_periods" in raw:
             for period in raw["custom_blackout_periods"]:
@@ -123,10 +129,28 @@ def _load_blackout_dates(path: Path) -> List[date]:
                         current += relativedelta(days=1)
                 except (ValueError, TypeError):
                     continue
+        
         return blackout_dates
     except Exception as e:
         print(f"Warning: Could not load blackout dates: {e}")
         return []
+
+def _load_recurring_holidays(recurring_holidays: List[Dict]) -> List[date]:
+    """Load recurring holidays and generate dates for the next few years."""
+    blackout_dates = []
+    current_year = date.today().year
+    
+    # Generate dates for current year and next 2 years
+    for year in range(current_year, current_year + 3):
+        for holiday in recurring_holidays:
+            try:
+                holiday_date = date(year, holiday['month'], holiday['day'])
+                blackout_dates.append(holiday_date)
+            except ValueError:
+                # Skip invalid dates (like Feb 29 in non-leap years)
+                continue
+    
+    return blackout_dates
 
 def _load_conferences(path: Path) -> List[Conference]:
     with open(path, "r", encoding="utf-8") as f:

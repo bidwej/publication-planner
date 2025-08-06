@@ -6,7 +6,14 @@ import plotly.graph_objects as go
 from datetime import date, timedelta
 from typing import Dict, List, Optional
 import json
+import sys
+import os
+
+# Add the src directory to the path for imports
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'src'))
+
 from core.models import Config, Submission, SubmissionType
+from .gantt_formatter import GanttFormatter
 
 class GanttChartBuilder:
     """Builder class for creating Gantt charts with proper separation of concerns."""
@@ -17,6 +24,9 @@ class GanttChartBuilder:
         self.min_date = min(schedule.values()) if schedule else date.today()
         self.max_date = max(schedule.values()) + timedelta(days=90) if schedule else date.today()
         self.fig = go.Figure()
+        
+        # Initialize Gantt formatter
+        self.gantt_formatter = GanttFormatter(self.min_date, self.max_date)
     
     def build(self) -> go.Figure:
         """Build the complete Gantt chart."""
@@ -25,7 +35,6 @@ class GanttChartBuilder:
         
         self._add_main_bars()
         self._add_blackout_periods()
-        self._add_holiday_lines()
         self._add_dependency_arrows()
         self._configure_layout()
         
@@ -46,9 +55,10 @@ class GanttChartBuilder:
         ))
     
     def _add_blackout_periods(self):
-        """Add blackout period backgrounds."""
+        """Add blackout period backgrounds including weekends, holidays, and custom periods."""
         blackout_data = self._load_blackout_data()
         
+        # Add custom blackout periods
         for period in blackout_data.get('custom_blackout_periods', []):
             start_date = date.fromisoformat(period['start'])
             end_date = date.fromisoformat(period['end'])
@@ -64,48 +74,80 @@ class GanttChartBuilder:
                     y0=0,
                     y1=1,
                     yref="paper",
-                    fillcolor="rgba(128, 128, 128, 0.4)",
+                    fillcolor="rgba(128, 128, 128, 0.3)",
                     line=dict(width=0),
                     layer="below"
                 )
-    
-    def _add_holiday_lines(self):
-        """Add federal holiday vertical lines."""
-        blackout_data = self._load_blackout_data()
         
-        holiday_x = []
-        holiday_y = []
-        holiday_text = []
+        # Add weekends (recurring)
+        if blackout_data.get('weekends', {}).get('enabled', False):
+            self._add_weekend_periods()
+        
+        # Add federal holidays (recurring)
+        self._add_holiday_periods(blackout_data)
+    
+    def _add_weekend_periods(self):
+        """Add weekend periods as recurring shaded rectangles."""
+        current_date = self.min_date
+        while current_date <= self.max_date:
+            # Check if it's Saturday or Sunday
+            if current_date.weekday() in [5, 6]:  # Saturday=5, Sunday=6
+                # Create a 1-day shaded rectangle for this weekend day
+                day_offset = (current_date - self.min_date).days
+                
+                self.fig.add_shape(
+                    type="rect",
+                    x0=day_offset,
+                    x1=day_offset + 1,
+                    y0=0,
+                    y1=1,
+                    yref="paper",
+                    fillcolor="rgba(200, 200, 200, 0.2)",
+                    line=dict(width=0),
+                    layer="below"
+                )
+            
+            current_date += timedelta(days=1)
+    
+    def _add_holiday_periods(self, blackout_data):
+        """Add federal holiday periods as recurring shaded rectangles."""
+        # Get all unique holiday dates (without year)
+        holiday_dates = set()
         
         for year in ['2025', '2026']:
             holidays = blackout_data.get(f'federal_holidays_{year}', [])
             for holiday_str in holidays:
                 holiday_date = date.fromisoformat(holiday_str)
-                if self.min_date <= holiday_date <= self.max_date:
-                    holiday_days = (holiday_date - self.min_date).days
-                    
-                    holiday_x.append(holiday_days)
-                    holiday_y.append(0.5)  # Middle of chart
-                    holiday_text.append(f"Holiday: {holiday_date.strftime('%Y-%m-%d')}")
+                # Store as month-day for recurring pattern
+                holiday_dates.add((holiday_date.month, holiday_date.day))
         
-        if holiday_x:
-            # Add holiday lines as scatter trace
-            self.fig.add_trace(go.Scatter(
-                x=holiday_x,
-                y=holiday_y,
-                mode='markers+text',
-                marker=dict(
-                    symbol='line-ns',
-                    size=20,
-                    color='red',
-                    line=dict(color='red', width=3)
-                ),
-                text=holiday_text,
-                textposition='top center',
-                name='Federal Holidays',
-                showlegend=False,
-                hoverinfo='text'
-            ))
+        # Add holiday rectangles for each year in the timeline
+        start_year = self.min_date.year
+        end_year = self.max_date.year
+        
+        for year in range(start_year, end_year + 1):
+            for month, day in holiday_dates:
+                try:
+                    holiday_date = date(year, month, day)
+                    if self.min_date <= holiday_date <= self.max_date:
+                        day_offset = (holiday_date - self.min_date).days
+                        
+                        self.fig.add_shape(
+                            type="rect",
+                            x0=day_offset,
+                            x1=day_offset + 1,
+                            y0=0,
+                            y1=1,
+                            yref="paper",
+                            fillcolor="rgba(255, 0, 0, 0.2)",
+                            line=dict(width=0),
+                            layer="below"
+                        )
+                except ValueError:
+                    # Skip invalid dates (like Feb 29 in non-leap years)
+                    continue
+    
+
     
     def _add_dependency_arrows(self):
         """Add dependency arrows between submissions."""
@@ -144,31 +186,13 @@ class GanttChartBuilder:
                         )
     
     def _configure_layout(self):
-        """Configure the chart layout and axes."""
-        timeline_days = (self.max_date - self.min_date).days
-        timeline_weeks = timeline_days // 7 + 1
-        
-        # Create weekly tick marks with actual dates
-        weekly_ticks = []
-        weekly_labels = []
-        
-        for week in range(0, timeline_weeks + 1, 4):  # Show every 4 weeks
-            week_start = self.min_date + timedelta(days=week * 7)
-            weekly_ticks.append(week * 7)
-            # Use proper line break for Plotly
-            weekly_labels.append(f"Week {week}<br>{week_start.strftime('%Y-%m-%d')}")
+        """Configure the chart layout and axes using Gantt formatter."""
+        axis_config = self.gantt_formatter.get_axis_config()
+        margin_config = self.gantt_formatter.get_margin_config()
         
         self.fig.update_layout(
             title={'text': 'Schedule Timeline', 'x': 0.5, 'xanchor': 'center'},
-            xaxis=dict(
-                title='Timeline (Weeks)', 
-                showgrid=True, 
-                gridcolor='lightgray',
-                tickmode='array',
-                tickvals=weekly_ticks,
-                ticktext=weekly_labels,
-                range=[0, timeline_days]
-            ),
+            xaxis=axis_config,
             yaxis=dict(title='Papers & Submissions', showgrid=False),
             barmode='overlay',
             height=600,
@@ -176,7 +200,7 @@ class GanttChartBuilder:
             hovermode='closest',
             plot_bgcolor='white',
             paper_bgcolor='white',
-            margin=dict(l=50, r=50, t=80, b=50)
+            margin=margin_config
         )
     
     def _prepare_submission_data(self) -> Dict[str, List]:
@@ -284,6 +308,31 @@ def create_gantt_chart(schedule: Dict[str, date], config: Config) -> go.Figure:
     """Create an interactive Gantt chart for the schedule."""
     builder = GanttChartBuilder(schedule, config)
     return builder.build()
+
+def generate_gantt_png(schedule: Dict[str, date], config: Config, filename: str = "chart_current.png") -> str:
+    """Generate a PNG file of the Gantt chart with the specified filename."""
+    try:
+        fig = create_gantt_chart(schedule, config)
+        
+        # For Plotly, we need to use write_image with proper settings
+        # This requires kaleido or orca to be installed
+        fig.write_image(
+            filename, 
+            width=1200, 
+            height=600, 
+            scale=2,
+            format='png'
+        )
+        
+        print(f"✅ Gantt chart saved as {filename}")
+        return filename
+    except ImportError as e:
+        print(f"❌ Missing dependency for PNG generation: {e}")
+        print("💡 Install kaleido: pip install kaleido")
+        return ""
+    except Exception as e:
+        print(f"❌ Error generating PNG: {e}")
+        return ""
 
 def _prepare_gantt_data(schedule: Dict[str, date], config: Config) -> Dict[str, List]:
     """Prepare data for Gantt chart visualization."""
