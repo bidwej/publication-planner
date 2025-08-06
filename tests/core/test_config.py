@@ -338,7 +338,6 @@ class TestEnums:
         from models import ConferenceType
         assert ConferenceType.MEDICAL.value == "MEDICAL"
         assert ConferenceType.ENGINEERING.value == "ENGINEERING"
-        assert ConferenceType.GENERAL.value == "GENERAL"
 
     def test_conference_recurrence_enum(self):
         from models import ConferenceRecurrence

@@ -41,7 +41,6 @@ class ConferenceType(str, Enum):
     """Types of conferences."""
     MEDICAL = "MEDICAL"
     ENGINEERING = "ENGINEERING"
-    GENERAL = "GENERAL"
 
 class ConferenceRecurrence(str, Enum):
     """Conference recurrence patterns."""

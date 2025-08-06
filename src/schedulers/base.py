@@ -3,7 +3,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Dict, Type, Union
-from core.models import Config, Submission, SchedulerStrategy
+from src.core.models import Config, Submission, SchedulerStrategy
 from datetime import date, timedelta
 
 class BaseScheduler(ABC):
