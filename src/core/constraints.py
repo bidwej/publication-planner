@@ -5,7 +5,7 @@ from typing import Dict, Any
 from datetime import date, timedelta
 from .models import Config, Submission, SubmissionType, ConferenceType, DeadlineValidation, DependencyValidation, ResourceValidation, DeadlineViolation, DependencyViolation, ResourceViolation, ConstraintValidationResult
 from .dates import is_working_day
-from core.constants import PERFECT_COMPLIANCE_RATE, ZERO_COMPLIANCE_RATE, PERCENTAGE_MULTIPLIER, DAYS_PER_MONTH, DEFAULT_ABSTRACT_ADVANCE_DAYS, DEFAULT_POSTER_DURATION_DAYS
+from core.constants import PERFECT_COMPLIANCE_RATE, PERCENTAGE_MULTIPLIER, DAYS_PER_MONTH, DEFAULT_ABSTRACT_ADVANCE_DAYS, DEFAULT_POSTER_DURATION_DAYS
 
 
 def validate_deadline_compliance(schedule: Dict[str, date], config: Config) -> DeadlineValidation:
@@ -242,7 +242,7 @@ def validate_blackout_dates(schedule: Dict[str, date], config: Config) -> Dict[s
         else:
             compliant_submissions += 1
     
-            compliance_rate = (compliant_submissions / total_submissions * PERCENTAGE_MULTIPLIER) if total_submissions > 0 else PERFECT_COMPLIANCE_RATE
+    compliance_rate = (compliant_submissions / total_submissions * PERCENTAGE_MULTIPLIER) if total_submissions > 0 else PERFECT_COMPLIANCE_RATE
     is_valid = len(violations) == 0
     
     return {
@@ -390,7 +390,7 @@ def validate_conference_compatibility(schedule: Dict[str, date], config: Config)
             # Compatible assignment
             compatible_submissions += 1
     
-            compatibility_rate = (compatible_submissions / total_submissions * PERCENTAGE_MULTIPLIER) if total_submissions > 0 else PERFECT_COMPLIANCE_RATE
+    compatibility_rate = (compatible_submissions / total_submissions * PERCENTAGE_MULTIPLIER) if total_submissions > 0 else PERFECT_COMPLIANCE_RATE
     is_valid = len(violations) == 0
     
     return {
@@ -465,7 +465,7 @@ def validate_soft_block_model(schedule: Dict[str, date], config: Config) -> Dict
                 "months_deviation": months_diff
             })
     
-            compliance_rate = (compliant_mods / total_mods * PERCENTAGE_MULTIPLIER) if total_mods > 0 else PERFECT_COMPLIANCE_RATE
+    compliance_rate = (compliant_mods / total_mods * PERCENTAGE_MULTIPLIER) if total_mods > 0 else PERFECT_COMPLIANCE_RATE
     is_valid = len(violations) == 0
     
     return {
@@ -633,7 +633,7 @@ def validate_paper_lead_time_months(schedule: Dict[str, date], config: Config) -
         else:
             compliant_papers += 1
     
-            compliance_rate = (compliant_papers / total_papers * PERCENTAGE_MULTIPLIER) if total_papers > 0 else PERFECT_COMPLIANCE_RATE
+    compliance_rate = (compliant_papers / total_papers * PERCENTAGE_MULTIPLIER) if total_papers > 0 else PERFECT_COMPLIANCE_RATE
     is_valid = len(violations) == 0
     
     return {

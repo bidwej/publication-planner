@@ -5,7 +5,7 @@ from typing import Dict
 from datetime import date
 from core.models import Config, ScheduleAnalysis, ScheduleDistribution, SubmissionTypeAnalysis, TimelineAnalysis, ResourceAnalysis
 from core.constraints import _calculate_daily_load
-from core.constants import ANALYTICS_MONTHLY_CONVERSION_FACTOR
+from core.constants import ANALYTICS_MONTHLY_CONVERSION_FACTOR, PERCENTAGE_MULTIPLIER, ANALYTICS_DEFAULT_COMPLETION_RATE
 
 def analyze_schedule_completeness(schedule: Dict[str, date], config: Config) -> ScheduleAnalysis:
     """Analyze how complete the schedule is."""
@@ -20,7 +20,7 @@ def analyze_schedule_completeness(schedule: Dict[str, date], config: Config) -> 
     
     total_submissions = len(config.submissions)
     scheduled_count = len(schedule)
-    completion_rate = (scheduled_count / total_submissions * 100) if total_submissions > 0 else 0.0
+    completion_rate = (scheduled_count / total_submissions * PERCENTAGE_MULTIPLIER) if total_submissions > 0 else ANALYTICS_DEFAULT_COMPLETION_RATE
     
     # Find missing submissions
     scheduled_ids = set(schedule.keys())
@@ -105,7 +105,7 @@ def analyze_submission_types(schedule: Dict[str, date], config: Config) -> Submi
     # Calculate percentages
     total = sum(type_counts.values())
     type_percentages = {
-        sub_type: (count / total * 100) if total > 0 else 0.0
+        sub_type: (count / total * PERCENTAGE_MULTIPLIER) if total > 0 else ANALYTICS_DEFAULT_COMPLETION_RATE
         for sub_type, count in type_counts.items()
     }
     

@@ -6,7 +6,7 @@ from datetime import date, timedelta
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from core.models import Submission, SubmissionType, Config
-from core.constants import DEFAULT_PLOT_EXTENSION_DAYS, DEFAULT_DPI, MIN_PLOT_HEIGHT, DEFAULT_MIN_PAPER_LEAD_TIME_DAYS
+from core.constants import DEFAULT_PLOT_EXTENSION_DAYS, DEFAULT_DPI, DEFAULT_MIN_PAPER_LEAD_TIME_DAYS
 
 
 def plot_schedule(

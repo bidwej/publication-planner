@@ -6,14 +6,15 @@ from typing import List
 from .greedy import GreedyScheduler
 from .base import BaseScheduler
 from core.models import SchedulerStrategy
-from core.constants import SCHEDULER_BASE_PRIORITY
+from core.constants import SCHEDULER_RANDOMNESS_FACTOR
+
 
 
 @BaseScheduler.register_strategy(SchedulerStrategy.STOCHASTIC)
 class StochasticGreedyScheduler(GreedyScheduler):
     """Stochastic greedy scheduler that adds randomness to priority selection."""
     
-    def __init__(self, config, randomness_factor: float = 0.1):
+    def __init__(self, config, randomness_factor: float = SCHEDULER_RANDOMNESS_FACTOR):
         """Initialize scheduler with config and randomness factor."""
         super().__init__(config)
         self.randomness_factor = randomness_factor
@@ -24,7 +25,7 @@ class StochasticGreedyScheduler(GreedyScheduler):
             s = self.submissions[sid]
             weights = self.config.priority_weights or {}
             
-            base_priority = SCHEDULER_BASE_PRIORITY
+            base_priority = 0.0
             if s.kind.value == "PAPER":
                 base_priority = weights.get("engineering_paper" if s.engineering else "medical_paper", 1.0)
             elif s.kind.value == "ABSTRACT":

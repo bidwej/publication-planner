@@ -6,7 +6,7 @@ from datetime import date, timedelta
 from .base import BaseScheduler
 from core.dates import is_working_day
 from core.models import SchedulerStrategy
-from core.constants import DEFAULT_ABSTRACT_ADVANCE_DAYS, SCHEDULER_BASE_PRIORITY
+from core.constants import DEFAULT_ABSTRACT_ADVANCE_DAYS
 
 
 @BaseScheduler.register_strategy(SchedulerStrategy.GREEDY)
@@ -95,7 +95,7 @@ class GreedyScheduler(BaseScheduler):
             s = self.submissions[sid]
             weights = self.config.priority_weights or {}
             
-            base_priority = SCHEDULER_BASE_PRIORITY
+            base_priority = 0.0
             if s.kind.value == "PAPER":
                 base_priority = weights.get("engineering_paper" if s.engineering else "medical_paper", 1.0)
             elif s.kind.value == "ABSTRACT":

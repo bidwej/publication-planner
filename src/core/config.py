@@ -7,6 +7,7 @@ from typing import Dict, List
 from datetime import date
 from .models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
 from .dates import parse_date_safe
+
 from dateutil.relativedelta import relativedelta
 
 def load_config(config_path: str) -> Config:

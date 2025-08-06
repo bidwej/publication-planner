@@ -7,7 +7,10 @@ from core.models import Config
 from core.constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
 from scoring.penalty import calculate_penalty_score
 from .analytics import analyze_timeline, analyze_resources
-from core.constants import REPORT_MAX_SCORE, REPORT_MIN_SCORE, REPORT_SCORE_INCREMENT, PENALTY_NORMALIZATION_FACTOR, MAX_PENALTY_FACTOR
+from core.constants import (
+    REPORT_MAX_SCORE, REPORT_MIN_SCORE, PENALTY_NORMALIZATION_FACTOR, MAX_PENALTY_FACTOR,
+    REPORT_DEADLINE_VIOLATION_PENALTY, REPORT_DEPENDENCY_VIOLATION_PENALTY, REPORT_RESOURCE_VIOLATION_PENALTY
+)
 
 def generate_schedule_report(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
     """Generate a comprehensive schedule report for presentation."""
@@ -110,9 +113,9 @@ def calculate_overall_score(deadline_validation, dependency_validation,
     score = 1.0
     
     # Deduct for violations (normalized)
-    score -= len(deadline_validation.violations) * 0.1
-    score -= len(dependency_validation.violations) * 0.15
-    score -= len(resource_validation.violations) * 0.2
+    score -= len(deadline_validation.violations) * REPORT_DEADLINE_VIOLATION_PENALTY
+    score -= len(dependency_validation.violations) * REPORT_DEPENDENCY_VIOLATION_PENALTY
+    score -= len(resource_validation.violations) * REPORT_RESOURCE_VIOLATION_PENALTY
     
     # Deduct for penalty costs (normalized)
     penalty_factor = min(penalty_breakdown.total_penalty / PENALTY_NORMALIZATION_FACTOR, MAX_PENALTY_FACTOR)  # Cap at MAX_PENALTY_FACTOR

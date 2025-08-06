@@ -7,7 +7,7 @@ from datetime import date
 
 from core.config import load_config
 from core.models import Config, SchedulerStrategy, ValidationResult, ScoringResult, ScheduleResult, ScheduleSummary, ScheduleMetrics
-from core.constants import PERFECT_COMPLIANCE_RATE, ZERO_COMPLIANCE_RATE
+from core.constants import PERFECT_COMPLIANCE_RATE
 from schedulers.base import BaseScheduler
 from core.constraints import validate_schedule_comprehensive
 from scoring.penalty import calculate_penalty_score
@@ -218,7 +218,7 @@ class Planner:
             penalty_score=penalty_breakdown.total_penalty,
             quality_score=quality_score,
             efficiency_score=efficiency_score,
-            deadline_compliance=PERFECT_COMPLIANCE_RATE if validation_result.is_valid else ZERO_COMPLIANCE_RATE,
+            deadline_compliance=PERFECT_COMPLIANCE_RATE if validation_result.is_valid else 0.0,
             resource_utilization=efficiency_metrics.utilization_rate
         )
         
@@ -228,7 +228,7 @@ class Planner:
             avg_utilization=efficiency_metrics.avg_utilization,
             peak_utilization=efficiency_metrics.peak_utilization,
             total_penalty=penalty_breakdown.total_penalty,
-            compliance_rate=PERFECT_COMPLIANCE_RATE if validation_result.is_valid else ZERO_COMPLIANCE_RATE,
+            compliance_rate=PERFECT_COMPLIANCE_RATE if validation_result.is_valid else 0.0,
             quality_score=quality_score
         )
         

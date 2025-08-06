@@ -8,7 +8,8 @@ from core.models import Config, EfficiencyMetrics, TimelineMetrics
 from core.constants import (
     MAX_SCORE, MIN_SCORE, PERCENTAGE_MULTIPLIER, OPTIMAL_UTILIZATION_RATE,
     UTILIZATION_DEVIATION_PENALTY, TIMELINE_EFFICIENCY_SHORT_PENALTY,
-    TIMELINE_EFFICIENCY_LONG_PENALTY, IDEAL_DAYS_PER_SUBMISSION
+    TIMELINE_EFFICIENCY_LONG_PENALTY, IDEAL_DAYS_PER_SUBMISSION,
+    SCORING_EFFICIENCY_RESOURCE_WEIGHT, SCORING_EFFICIENCY_TIMELINE_WEIGHT
 )
 
 
@@ -38,8 +39,8 @@ def calculate_efficiency_score(schedule: Dict[str, date], config: Config) -> flo
     timeline_metrics = calculate_efficiency_timeline(schedule, config)
     
     # Combine scores (weighted average)
-    resource_weight = 0.6
-    timeline_weight = 0.4
+    resource_weight = SCORING_EFFICIENCY_RESOURCE_WEIGHT
+    timeline_weight = SCORING_EFFICIENCY_TIMELINE_WEIGHT
     
     efficiency_score = (
         resource_metrics.efficiency_score * resource_weight +
