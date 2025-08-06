@@ -3,7 +3,8 @@
     "files.exclude": {
       "**/.pytest_cache": true,
       "**/__pycache__": true,
-      "**/third_party/*": true
+      "**/third_party/*": true,
+      "**/.venv/*": true
     },
     "python.analysis.extraPaths": [
       "./src"
@@ -16,10 +17,6 @@
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
-    "python.testing.autoTestDiscoverOnSaveEnabled": true,
-  
-    // Cursor extension settings
-    "cursor.confirmOnExecute": false,
-    "cursor.autoExecute": true
+    "python.testing.autoTestDiscoverOnSaveEnabled": true
   }
   

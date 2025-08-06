@@ -2,14 +2,14 @@
 
 import pytest
 import os
-import sys
 from pathlib import Path
+from datetime import date
 
-# Add src to path for imports
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
-
-from src.core.config import load_config
-from src.core.models import Config, Submission, Conference
+from core.config import load_config
+from core.models import (
+    Config, Submission, Conference, ConferenceType, 
+    ConferenceRecurrence, SubmissionType
+)
 from schedulers.greedy import GreedyScheduler
 from schedulers.stochastic import StochasticGreedyScheduler
 from schedulers.lookahead import LookaheadGreedyScheduler
@@ -79,9 +79,6 @@ def all_schedulers(greedy_scheduler, stochastic_scheduler, lookahead_scheduler, 
 @pytest.fixture
 def sample_submission():
     """Provide a sample submission for testing."""
-    from src.core.models import Submission, SubmissionType
-    from datetime import date
-    
     return Submission(
         id="test-pap",
         kind=SubmissionType.PAPER,
@@ -99,7 +96,7 @@ def sample_submission():
 @pytest.fixture
 def sample_conference():
     """Provide a sample conference for testing."""
-    from src.models import Conference, ConferenceType, ConferenceRecurrence
+    from core.models import Conference, ConferenceType, ConferenceRecurrence, SubmissionType
     from datetime import date
     
     return Conference(
@@ -123,7 +120,7 @@ def empty_schedule():
 @pytest.fixture
 def minimal_config():
     """Provide a minimal config for testing edge cases."""
-    from src.models import Config, Submission, Conference, ConferenceType, ConferenceRecurrence
+    from core.models import Config, Submission, Conference, ConferenceType, ConferenceRecurrence
     from datetime import date
     
     return Config(
