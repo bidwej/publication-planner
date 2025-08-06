@@ -4,9 +4,9 @@ from __future__ import annotations
 from typing import Dict, List, Set, Type
 from datetime import date, timedelta
 from abc import ABC, abstractmethod
-from src.core.models import Config, Submission, Conference, SubmissionType, SchedulerStrategy
-from src.core.dates import is_working_day
-from src.core.constraints import validate_deadline_compliance_single, validate_dependencies_satisfied, validate_venue_compatibility
+from core.models import Config, Submission, Conference, SubmissionType, SchedulerStrategy
+from core.dates import is_working_day
+from core.constraints import validate_deadline_compliance_single, validate_dependencies_satisfied, validate_venue_compatibility
 
 
 class BaseScheduler(ABC):

@@ -195,6 +195,14 @@ def validate_resource_constraints(schedule: Dict[str, date], config: Config) -> 
 
 def validate_blackout_dates(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
     """Validate that no submissions are scheduled on blackout dates."""
+    # Check if blackout periods are enabled
+    if config.scheduling_options and not config.scheduling_options.get("enable_blackout_periods", True):
+        return {
+            "is_valid": True,
+            "violations": [],
+            "summary": "Blackout periods disabled"
+        }
+    
     if not config.blackout_dates:
         return {
             "is_valid": True,
@@ -286,8 +294,53 @@ def validate_scheduling_options(schedule: Dict[str, date], config: Config) -> Di
     # Check conference response time
     if config.scheduling_options.get("conference_response_time_days"):
         response_time = config.scheduling_options["conference_response_time_days"]
-        # This would need more complex logic to validate response times
-        # For now, just note that it's configured
+        # Validate that submissions have enough time for conference response
+        for sid, start_date in schedule.items():
+            sub = config.submissions_dict.get(sid)
+            if not sub or sub.kind != SubmissionType.PAPER:
+                continue
+            
+            if not sub.conference_id or sub.conference_id not in config.conferences_dict:
+                continue
+            
+            conf = config.conferences_dict[sub.conference_id]
+            if SubmissionType.PAPER not in conf.deadlines:
+                continue
+            
+            deadline = conf.deadlines[SubmissionType.PAPER]
+            end_date = _get_submission_end_date(start_date, sub, config)
+            response_deadline = deadline + timedelta(days=response_time)
+            
+            if end_date > response_deadline:
+                violations.append({
+                    "submission_id": sid,
+                    "description": f"Paper {sid} may not meet conference response time ({response_time} days)",
+                    "severity": "medium"
+                })
+    
+    # Check working days only
+    if config.scheduling_options.get("enable_working_days_only", False):
+        for sid, start_date in schedule.items():
+            if not is_working_day(start_date, config.blackout_dates):
+                violations.append({
+                    "submission_id": sid,
+                    "description": f"Submission {sid} scheduled on non-working day {start_date}",
+                    "severity": "low"
+                })
+    
+    # Check priority weighting
+    if config.scheduling_options.get("enable_priority_weighting", False):
+        # This is validated in validate_priority_weighting function
+        pass
+    
+    # Check dependency tracking
+    if config.scheduling_options.get("enable_dependency_tracking", False):
+        # This is validated in validate_dependency_satisfaction function
+        pass
+    
+    # Check concurrency control
+    if config.scheduling_options.get("enable_concurrency_control", False):
+        # This is validated in validate_resource_constraints function
         pass
     
     is_valid = len(violations) == 0
@@ -714,7 +767,7 @@ def validate_deadline_compliance_single(start_date: date, sub: Submission, confi
 
 
 def validate_deadline_with_lookahead(sub: Submission, start: date, config: Config, 
-                                   conferences: Dict[str, any], lookahead_days: int = 0) -> bool:
+                                   conferences: Dict[str, Any], lookahead_days: int = 0) -> bool:
     """Validate if starting on this date meets the deadline with optional lookahead buffer."""
     # Use the unified deadline checking logic
     base_compliance = validate_deadline_compliance_single(start, sub, config)
@@ -756,7 +809,7 @@ def validate_dependencies_satisfied(sub: Submission, schedule: Dict[str, date],
     return True
 
 
-def validate_venue_compatibility(submissions: Dict[str, Submission], conferences: Dict[str, any]) -> None:
+def validate_venue_compatibility(submissions: Dict[str, Submission], conferences: Dict[str, Any]) -> None:
     """Validate that submissions are compatible with their venues."""
     for sid, submission in submissions.items():
         if submission.conference_id and submission.conference_id not in conferences:

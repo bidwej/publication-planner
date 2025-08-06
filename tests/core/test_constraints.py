@@ -2,8 +2,8 @@
 
 import pytest
 from datetime import date, timedelta
-from src.core.config import load_config
-from src.core.constraints import (
+from core.config import load_config
+from core.constraints import (
     validate_deadline_compliance,
     validate_dependency_satisfaction,
     validate_resource_constraints,
@@ -381,11 +381,10 @@ class TestBlackoutDates:
         """Test submissions not on blackout dates."""
         config = load_config("tests/common/data/config.json")
         
-        # Create schedule avoiding blackout dates (use dates that are definitely not holidays)
-        # Papers have duration, so need to be far from any holidays
+        # Create schedule avoiding blackout dates (use mods with shorter duration)
         schedule = {
-            "J1-pap": date(2025, 4, 15),  # Tuesday (far from holidays)
-            "J2-pap": date(2025, 4, 16),  # Wednesday (far from holidays)
+            "1-wrk": date(2025, 4, 15),  # Mod with shorter duration
+            "2-wrk": date(2025, 4, 16),  # Mod with shorter duration
         }
         
         result = validate_blackout_dates(schedule, config)

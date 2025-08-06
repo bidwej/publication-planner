@@ -1,5 +1,6 @@
 """Console output formatting for schedules."""
 
+from __future__ import annotations
 from typing import Dict, Any, List
 from datetime import date, timedelta
 from core.models import Config
@@ -21,7 +22,7 @@ def print_schedule_summary(schedule: Dict[str, date], config: Config) -> None:
     for sid in schedule:
         sub = sub_map.get(sid)
         if sub:
-            if sub.kind.value == "ABSTRACT":
+            if sub.kind.value == "abstract":
                 abstracts += 1
             else:
                 papers += 1
@@ -117,10 +118,12 @@ def print_utilization_summary(schedule: Dict[str, date], config: Config) -> None
 
 def print_metrics_summary(schedule: Dict[str, date], config: Config) -> None:
     """Print a comprehensive metrics summary."""
-    if not schedule:
-        return
-    
     print(f"\n=== Metrics Summary ===")
+    
+    if not schedule:
+        print("No schedule to analyze.")
+        print()
+        return
     
     # Import scoring functions
     from scoring.penalty import calculate_penalty_score
@@ -143,6 +146,8 @@ def print_metrics_summary(schedule: Dict[str, date], config: Config) -> None:
 def format_table(data: List[Dict[str, Any]], title: str = "") -> str:
     """Format data as a table string."""
     if not data:
+        if title:
+            return title + "\n"
         return ""
     
     # Get all column names

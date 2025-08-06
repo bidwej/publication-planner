@@ -3,8 +3,8 @@
 import pytest
 from datetime import date, timedelta
 from typing import Dict
-from src.scoring.efficiency import calculate_efficiency_score
-from src.core.models import Config, Submission, Conference, SubmissionType
+from scoring.efficiency import calculate_efficiency_score
+from core.models import Config, Submission, Conference, SubmissionType
 
 
 class TestCalculateEfficiencyScore:

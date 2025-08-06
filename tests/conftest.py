@@ -5,11 +5,11 @@ import os
 from datetime import date, timedelta
 from typing import Dict, List
 
-from src.core.config import load_config
-from src.core.models import (
+from core.config import load_config
+from core.models import (
     Submission, SubmissionType, Config, Conference, ConferenceType, ConferenceRecurrence
 )
-from src.schedulers.greedy import GreedyScheduler
+from schedulers.greedy import GreedyScheduler
 
 
 @pytest.fixture(scope="session")
@@ -46,7 +46,7 @@ def config():
             recurrence=ConferenceRecurrence.ANNUAL,
             deadlines={
                 SubmissionType.ABSTRACT: date(2025, 2, 15),
-                SubmissionType.PAPER: date(2025, 3, 1)
+                SubmissionType.PAPER: date(2025, 4, 1)  # Extended deadline
             }
         )
     ]
@@ -72,7 +72,7 @@ def config():
             conference_id="MICCAI",
             depends_on=["J1-pap"],
             draft_window_months=3,
-            lead_time_from_parents=2,
+            lead_time_from_parents=1,  # Reduced from 2 to 1 month
             penalty_cost_per_day=300,
             engineering=False,
             earliest_start_date=date(2024, 12, 1)  # Early enough to meet deadline

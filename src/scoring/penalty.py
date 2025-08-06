@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import Dict
 from datetime import date, timedelta
-from core.models import Config, SubmissionType, PenaltyBreakdown
+from core.models import Config, SubmissionType, PenaltyBreakdown, ConferenceType
 
 def calculate_penalty_score(schedule: Dict[str, date], config: Config) -> PenaltyBreakdown:
     """Calculate total penalty score for the schedule."""
@@ -18,8 +18,10 @@ def calculate_penalty_score(schedule: Dict[str, date], config: Config) -> Penalt
     deadline_penalties = _calculate_deadline_penalties(schedule, config)
     dependency_penalties = _calculate_dependency_penalties(schedule, config)
     resource_penalties = _calculate_resource_penalties(schedule, config)
+    conference_penalties = _calculate_conference_compatibility_penalties(schedule, config)
+    slack_penalties = _calculate_slack_cost_penalties(schedule, config)
     
-    total_penalty = deadline_penalties + dependency_penalties + resource_penalties
+    total_penalty = deadline_penalties + dependency_penalties + resource_penalties + conference_penalties + slack_penalties
     
     return PenaltyBreakdown(
         total_penalty=total_penalty,
@@ -124,6 +126,80 @@ def _calculate_resource_penalties(schedule: Dict[str, date], config: Config) -> 
             excess = load - max_concurrent
             penalty_per_excess = (config.penalty_costs or {}).get("resource_violation_penalty", 200.0)
             total_penalty += excess * penalty_per_excess
+    
+    return total_penalty
+
+def _calculate_conference_compatibility_penalties(schedule: Dict[str, date], config: Config) -> float:
+    """Calculate penalties for conference compatibility violations based on README matrix."""
+    total_penalty = 0.0
+    
+    for sid, start_date in schedule.items():
+        sub = config.submissions_dict.get(sid)
+        if not sub or sub.kind != SubmissionType.PAPER:
+            continue
+        
+        if not sub.conference_id or sub.conference_id not in config.conferences_dict:
+            continue
+        
+        conf = config.conferences_dict[sub.conference_id]
+        
+        # Check engineering paper to clinical/ENT abstract-only venue
+        if sub.engineering and conf.conf_type == ConferenceType.MEDICAL:
+            # Check if it's abstract-only venue
+            if conf.deadlines and SubmissionType.PAPER not in conf.deadlines:
+                total_penalty += 3000  # Loss of technical audience
+        
+        # Check clinical paper to engineering venue
+        elif not sub.engineering and conf.conf_type == ConferenceType.ENGINEERING:
+            total_penalty += 1500  # Audience mis-match
+        
+        # Check full-paper capable to abstract-only venue
+        elif conf.deadlines and SubmissionType.PAPER in conf.deadlines and SubmissionType.PAPER not in conf.deadlines:
+            total_penalty += 2000  # Reduces publication depth
+    
+    return total_penalty
+
+def _calculate_slack_cost_penalties(schedule: Dict[str, date], config: Config) -> float:
+    """Calculate SlackCost penalties as per README formula."""
+    total_penalty = 0.0
+    
+    for sid, start_date in schedule.items():
+        sub = config.submissions_dict.get(sid)
+        if not sub or sub.kind != SubmissionType.PAPER:
+            continue
+        
+        # Calculate P_j (monthly slip penalty)
+        if sid in ["J19", "J20"]:
+            P_j = 3000  # Special case for J19-J20
+        else:
+            P_j = 1000  # Default monthly slip penalty
+        
+        # Calculate Y_j (full-year deferral penalty)
+        if sid in ["J19", "J20"]:
+            Y_j = 10000  # Special case for J19-J20
+        else:
+            Y_j = 5000  # Default full-year deferral penalty
+        
+        A_j = 3000  # Missed abstract-only window penalty
+        
+        # Calculate slack cost components
+        if sub.earliest_start_date:
+            # P_j(S_j - S_j,earliest) - monthly slip penalty
+            months_delay = max(0, (start_date.year - sub.earliest_start_date.year) * 12 + 
+                             (start_date.month - sub.earliest_start_date.month))
+            slip_penalty = P_j * months_delay
+            
+            # Y_j(1_year-deferred) - full-year deferral penalty
+            if months_delay >= 12:
+                deferral_penalty = Y_j
+            else:
+                deferral_penalty = 0
+            
+            # A_j(1_abstract-miss) - missed abstract penalty
+            # This would need more complex logic to determine if abstract was missed
+            abstract_penalty = 0  # Placeholder
+            
+            total_penalty += slip_penalty + deferral_penalty + abstract_penalty
     
     return total_penalty
 

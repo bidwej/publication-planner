@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Dict, List, Optional, Any
 from datetime import date, timedelta
 from .base import BaseScheduler
-from src.core.models import SchedulerStrategy
+from core.models import SchedulerStrategy
 
 try:
     import pulp

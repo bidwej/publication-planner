@@ -1,13 +1,51 @@
 """Schedule-specific output generation."""
 
 from __future__ import annotations
-from typing import Dict
-from datetime import date, timedelta
+from typing import Dict, List
+from datetime import date, timedelta, datetime
+import os
 from ...core.models import Config, ScheduleSummary, ScheduleMetrics, SubmissionType
 from ...scoring.penalty import calculate_penalty_score
 from ...scoring.quality import calculate_quality_score
 from ...scoring.efficiency import calculate_efficiency_score
 from ...core.constraints import validate_deadline_compliance, validate_resource_constraints
+from ..formatters.tables import save_schedule_json, save_table_csv, save_metrics_json
+
+def create_output_directory(base_dir: str = "output") -> str:
+    """Create a timestamped output directory."""
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    output_dir = os.path.join(base_dir, f"output_{timestamp}")
+    os.makedirs(output_dir, exist_ok=True)
+    return output_dir
+
+def save_all_outputs(
+    schedule: Dict[str, str],
+    schedule_table: List[Dict[str, str]],
+    metrics_table: List[Dict[str, str]],
+    deadline_table: List[Dict[str, str]],
+    metrics: ScheduleSummary,
+    output_dir: str
+) -> Dict[str, str]:
+    """Save all output files and return file paths."""
+    saved_files = {}
+    
+    # Save schedule JSON
+    saved_files["schedule"] = save_schedule_json(schedule, output_dir)
+    
+    # Save tables as CSV
+    if schedule_table:
+        saved_files["schedule_table"] = save_table_csv(schedule_table, output_dir, "schedule_table.csv")
+    
+    if metrics_table:
+        saved_files["metrics_table"] = save_table_csv(metrics_table, output_dir, "metrics_table.csv")
+    
+    if deadline_table:
+        saved_files["deadline_table"] = save_table_csv(deadline_table, output_dir, "deadline_table.csv")
+    
+    # Save metrics JSON
+    saved_files["metrics"] = save_metrics_json(metrics, output_dir)
+    
+    return saved_files
 
 def generate_schedule_summary(schedule: Dict[str, date], config: Config) -> ScheduleSummary:
     """Generate a comprehensive schedule summary."""

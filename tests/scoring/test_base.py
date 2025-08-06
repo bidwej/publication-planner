@@ -3,10 +3,10 @@
 import pytest
 from datetime import date
 from typing import Dict
-from src.scoring.base import (
+from scoring.base import (
     BaseScorer, PenaltyScorer, QualityScorer, EfficiencyScorer
 )
-from src.core.models import Config, Submission, Conference
+from core.models import Config, Submission, Conference
 
 
 class TestBaseScorer:

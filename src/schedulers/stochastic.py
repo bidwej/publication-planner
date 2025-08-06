@@ -5,7 +5,7 @@ import random
 from typing import List
 from .greedy import GreedyScheduler
 from .base import BaseScheduler
-from src.core.models import SchedulerStrategy
+from core.models import SchedulerStrategy
 
 
 @BaseScheduler.register_strategy(SchedulerStrategy.STOCHASTIC)

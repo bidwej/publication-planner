@@ -147,12 +147,12 @@ def analyze_timeline(schedule: Dict[str, date], config: Config) -> TimelineAnaly
 def analyze_resources(schedule: Dict[str, date], config: Config) -> ResourceAnalysis:
     """Analyze resource utilization patterns."""
     if not schedule:
-            return ResourceAnalysis(
-        peak_load=0,
-        avg_load=0.0,
-        utilization_pattern={},
-        summary="No submissions to analyze"
-    )
+        return ResourceAnalysis(
+            peak_load=0,
+            avg_load=0.0,
+            utilization_pattern={},
+            summary="No submissions to analyze"
+        )
     
     # Calculate daily utilization using constraints logic
     daily_load = _calculate_daily_load(schedule, config)

@@ -3,8 +3,8 @@
 import pytest
 from datetime import date, timedelta
 from typing import Dict, List
-from src.output.tables import generate_simple_monthly_table, generate_monthly_table, generate_schedule_summary_table, generate_deadline_table
-from src.core.models import Config, Submission, Conference, SubmissionType
+from output.tables import generate_simple_monthly_table, generate_monthly_table, generate_schedule_summary_table, generate_deadline_table
+from core.models import Config, Submission, Conference, SubmissionType
 
 
 class TestGenerateSimpleMonthlyTable:

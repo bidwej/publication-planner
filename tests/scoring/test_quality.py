@@ -3,8 +3,8 @@
 import pytest
 from datetime import date, timedelta
 from typing import Dict
-from src.scoring.quality import calculate_quality_score, calculate_schedule_robustness, calculate_schedule_balance
-from src.core.models import Config, Submission, Conference, SubmissionType
+from scoring.quality import calculate_quality_score, calculate_schedule_robustness, calculate_schedule_balance
+from core.models import Config, Submission, Conference, SubmissionType
 
 
 class TestCalculateQualityScore:

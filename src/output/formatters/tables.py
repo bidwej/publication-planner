@@ -3,8 +3,50 @@
 from __future__ import annotations
 from typing import Dict, List
 from datetime import date, timedelta
+import os
+import json
+import csv
 from ...core.models import Config, SubmissionType, ScheduleSummary
 from .dates import format_date_display, format_relative_time, format_duration_days
+
+def save_schedule_json(schedule: Dict[str, str], output_dir: str, filename: str = "schedule.json") -> str:
+    """Save schedule as JSON file."""
+    filepath = os.path.join(output_dir, filename)
+    with open(filepath, 'w') as f:
+        json.dump(schedule, f, default=str, indent=2)
+    return filepath
+
+def save_table_csv(table_data: List[Dict[str, str]], output_dir: str, filename: str) -> str:
+    """Save table data as CSV file."""
+    if not table_data:
+        return ""
+    
+    filepath = os.path.join(output_dir, filename)
+    with open(filepath, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=table_data[0].keys())
+        writer.writeheader()
+        writer.writerows(table_data)
+    return filepath
+
+def save_metrics_json(metrics: ScheduleSummary, output_dir: str, filename: str = "metrics.json") -> str:
+    """Save metrics as JSON file."""
+    filepath = os.path.join(output_dir, filename)
+    with open(filepath, 'w') as f:
+        json.dump(metrics, f, default=str, indent=2)
+    return filepath
+
+def get_output_summary(saved_files: Dict[str, str]) -> str:
+    """Generate a summary of saved output files."""
+    if not saved_files:
+        return "No files were saved."
+    
+    summary = "Output files saved:\n"
+    for file_type, filepath in saved_files.items():
+        if filepath:
+            filename = os.path.basename(filepath)
+            summary += f"  - {filename}\n"
+    
+    return summary
 
 def format_schedule_table(schedule: Dict[str, date], config: Config) -> List[Dict[str, str]]:
     """Format schedule as a table for display."""

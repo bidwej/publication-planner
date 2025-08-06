@@ -5,8 +5,8 @@ from typing import Dict, List, Set
 from datetime import date, timedelta
 from .greedy import GreedyScheduler
 from .base import BaseScheduler
-from src.core.dates import is_working_day
-from src.core.models import SchedulerStrategy
+from core.dates import is_working_day
+from core.models import SchedulerStrategy
 
 
 @BaseScheduler.register_strategy(SchedulerStrategy.BACKTRACKING)

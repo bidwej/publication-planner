@@ -59,7 +59,7 @@ These schedulers inherit from `GreedyScheduler` and add specific enhancements:
 ## Usage Examples
 
 ```python
-from src.schedulers import (
+from schedulers import (
     GreedyScheduler,
     HeuristicScheduler,
     HeuristicStrategy,

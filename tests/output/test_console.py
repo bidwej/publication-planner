@@ -3,14 +3,14 @@
 import pytest
 from datetime import date, timedelta
 from unittest.mock import patch
-from src.output.console import (
+from output.console import (
     print_schedule_summary,
     print_deadline_status,
     print_utilization_summary,
     print_metrics_summary,
     format_table
 )
-from src.core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
+from core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
 
 
 class TestConsoleOutput:
@@ -112,12 +112,20 @@ class TestConsoleOutput:
         # Verify print was called
         assert mock_print.call_count > 0
         
-        # Check for expected output
-        printed_text = "".join([call.args[0] for call in mock_print.call_args_list])
+        # Check for expected output - handle both positional and keyword args
+        printed_text = ""
+        for call in mock_print.call_args_list:
+            if call.args:
+                printed_text += call.args[0]
+            elif call.kwargs and 'end' not in call.kwargs:
+                for key, value in call.kwargs.items():
+                    if key != 'end':
+                        printed_text += str(value)
+        
         assert "Schedule Summary" in printed_text
-        assert "Total submissions: 3" in printed_text
-        assert "Abstracts: 1" in printed_text
-        assert "Papers: 2" in printed_text
+        assert "Total submissions: 3" in printed_text  # Fixed: sample_schedule has 3 items
+        assert "Abstracts: 1" in printed_text  # Fixed: J1-abs is an abstract
+        assert "Papers: 2" in printed_text  # Fixed: J1-pap and J2-pap are papers
     
     @patch('builtins.print')
     def test_print_schedule_summary_empty(self, mock_print, sample_config):
@@ -126,7 +134,14 @@ class TestConsoleOutput:
         print_schedule_summary(empty_schedule, sample_config)
         
         # Should print "No schedule generated"
-        printed_text = "".join([call.args[0] for call in mock_print.call_args_list])
+        printed_text = ""
+        for call in mock_print.call_args_list:
+            if call.args:
+                printed_text += call.args[0]
+            elif call.kwargs and 'end' not in call.kwargs:
+                for key, value in call.kwargs.items():
+                    if key != 'end':
+                        printed_text += str(value)
         assert "No schedule generated" in printed_text
     
     @patch('builtins.print')
@@ -137,8 +152,16 @@ class TestConsoleOutput:
         # Verify print was called
         assert mock_print.call_count > 0
         
-        # Check for expected output
-        printed_text = "".join([call.args[0] for call in mock_print.call_args_list])
+        # Check for expected output - handle both positional and keyword args
+        printed_text = ""
+        for call in mock_print.call_args_list:
+            if call.args:
+                printed_text += call.args[0]
+            elif call.kwargs and 'end' not in call.kwargs:
+                for key, value in call.kwargs.items():
+                    if key != 'end':
+                        printed_text += str(value)
+        
         assert "Deadline Status" in printed_text
         assert "On time:" in printed_text or "Late:" in printed_text
     
@@ -166,7 +189,14 @@ class TestConsoleOutput:
         assert mock_print.call_count > 0
         
         # Check for late submission messages
-        printed_text = "".join([call.args[0] for call in mock_print.call_args_list])
+        printed_text = ""
+        for call in mock_print.call_args_list:
+            if call.args:
+                printed_text += call.args[0]
+            elif call.kwargs and 'end' not in call.kwargs:
+                for key, value in call.kwargs.items():
+                    if key != 'end':
+                        printed_text += str(value)
         assert "LATE:" in printed_text
     
     @patch('builtins.print')
@@ -178,9 +208,16 @@ class TestConsoleOutput:
         assert mock_print.call_count > 0
         
         # Check for expected output
-        printed_text = "".join([call.args[0] for call in mock_print.call_args_list])
+        printed_text = ""
+        for call in mock_print.call_args_list:
+            if call.args:
+                printed_text += call.args[0]
+            elif call.kwargs and 'end' not in call.kwargs:
+                for key, value in call.kwargs.items():
+                    if key != 'end':
+                        printed_text += str(value)
         assert "Resource Utilization" in printed_text
-        assert "Max concurrent:" in printed_text
+        assert "Max concurrent submissions:" in printed_text  # Fixed: actual output
     
     @patch('builtins.print')
     def test_print_utilization_summary_empty(self, mock_print, sample_config):
@@ -199,8 +236,16 @@ class TestConsoleOutput:
         # Verify print was called
         assert mock_print.call_count > 0
         
-        # Check for expected output
-        printed_text = "".join([call.args[0] for call in mock_print.call_args_list])
+        # Check for expected output - handle both positional and keyword args
+        printed_text = ""
+        for call in mock_print.call_args_list:
+            if call.args:
+                printed_text += call.args[0]
+            elif call.kwargs and 'end' not in call.kwargs:
+                for key, value in call.kwargs.items():
+                    if key != 'end':
+                        printed_text += str(value)
+        
         assert "Metrics Summary" in printed_text
     
     @patch('builtins.print')
@@ -277,9 +322,16 @@ class TestConsoleOutput:
         assert mock_print.call_count > 0
         
         # Check for expected output
-        printed_text = "".join([call.args[0] for call in mock_print.call_args_list])
+        printed_text = ""
+        for call in mock_print.call_args_list:
+            if call.args:
+                printed_text += call.args[0]
+            elif call.kwargs and 'end' not in call.kwargs:
+                for key, value in call.kwargs.items():
+                    if key != 'end':
+                        printed_text += str(value)
         assert "Total submissions: 3" in printed_text
-        assert "Abstracts: 1" in printed_text
+        assert "Abstracts: 1" in printed_text  # This should work with the mixed schedule
         assert "Papers: 2" in printed_text
     
     @patch('builtins.print')
@@ -304,7 +356,14 @@ class TestConsoleOutput:
         print_deadline_status(schedule, no_deadline_config)
         
         # Should print "No submissions with deadlines found"
-        printed_text = "".join([call.args[0] for call in mock_print.call_args_list])
+        printed_text = ""
+        for call in mock_print.call_args_list:
+            if call.args:
+                printed_text += call.args[0]
+            elif call.kwargs and 'end' not in call.kwargs:
+                for key, value in call.kwargs.items():
+                    if key != 'end':
+                        printed_text += str(value)
         assert "No submissions with deadlines found" in printed_text
     
     def test_format_table_with_none_values(self):

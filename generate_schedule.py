@@ -8,15 +8,30 @@ This script loads configuration data and generates a schedule using the schedule
 import sys
 import json
 from datetime import date
+from typing import Dict
 from pathlib import Path
 
 # Add the src directory to the path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from src.core.config import load_config
-from src.schedulers.base import BaseScheduler
-from src.output.tables import generate_simple_monthly_table, generate_schedule_summary_table
-from src.output.analytics import analyze_schedule_distribution, analyze_submission_types, analyze_timeline, analyze_resources
+from core.config import load_config
+from core.models import SchedulerStrategy
+from core.constraints import validate_schedule_comprehensive
+from schedulers.base import BaseScheduler
+# Import all schedulers to ensure they're registered
+import schedulers.greedy
+import schedulers.stochastic
+import schedulers.lookahead
+import schedulers.backtracking
+import schedulers.random
+import schedulers.heuristic
+import schedulers.optimal
+from output.tables import generate_simple_monthly_table, generate_schedule_summary_table
+from output.analytics import analyze_schedule_distribution, analyze_submission_types, analyze_timeline, analyze_resources
+from output.console import print_schedule_summary, print_metrics_summary
+from scoring.penalty import calculate_penalty_score
+from scoring.quality import calculate_quality_score
+from scoring.efficiency import calculate_efficiency_score
 
 
 def analyze_schedule(schedule: Dict[str, date], config, strategy_name: str = "Unknown") -> None:
@@ -126,11 +141,16 @@ def compare_strategies(config) -> None:
             print(f"  Submissions: {len(schedule)}")
 
 
+def generate_and_save_output(schedule: Dict[str, date], config) -> Dict[str, str]:
+    """Generate and save output files."""
+    # Simple implementation - just return empty dict for now
+    return {}
+
 def generate_and_analyze_schedule(config, strategy: SchedulerStrategy, verbose: bool = True) -> Dict[str, date]:
     """Generate and analyze a schedule for the given strategy."""
     try:
-        # Create scheduler
-        scheduler = Scheduler(config)
+        # Create scheduler using the factory method
+        scheduler = BaseScheduler.create_scheduler(strategy, config)
         
         # Generate schedule
         schedule = scheduler.schedule()
@@ -150,11 +170,12 @@ def main():
     """Main entry point."""
     try:
         # Load configuration
-        config = load_config()
+        config_path = "data/config.json"  # Default config path
+        config = load_config(config_path)
         
         if len(sys.argv) > 1:
             # Command line mode
-            strategy_name = sys.argv[1].upper()
+            strategy_name = sys.argv[1].lower()  # Convert to lowercase
             try:
                 strategy = SchedulerStrategy(strategy_name)
                 generate_and_analyze_schedule(config, strategy)
