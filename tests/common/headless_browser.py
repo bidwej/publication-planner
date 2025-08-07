@@ -705,13 +705,60 @@ async def capture_timeline_screenshots(
         logger.error(f"Failed to create output directory {output_dir}: {e}")
         return False
     
-    # Capture timeline screenshot - simplified without waiting for specific selector
-    success = await capture_web_page_screenshot(
-        url=base_url,
-        output_path=str(output_path / "web_timeline.png"),
-        script_path=script_path,
-        port=port,
-        extra_wait=3000
-    )
+    # Start server if not running
+    if not is_server_running(base_url):
+        process = start_web_server(script_path, port)
+        if not process:
+            logger.error("[ERROR] Failed to start timeline server")
+            return False
+    else:
+        process = None
+        logger.info("[OK] Timeline server is already running!")
     
-    return success
+    try:
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            page = await browser.new_page()
+            
+            # Navigate to the timeline app
+            await page.goto(base_url)
+            await page.wait_for_load_state('networkidle')
+            await page.wait_for_timeout(2000)  # Wait for page to fully load
+            
+            # Click the generate button to create the timeline
+            try:
+                generate_btn = await page.wait_for_selector('#generate-btn', timeout=5000)
+                if generate_btn:
+                    await generate_btn.click()
+                    logger.info("[OK] Clicked generate button")
+                    await page.wait_for_timeout(3000)  # Wait for chart to generate
+                else:
+                    logger.warning("[WARNING] Generate button not found")
+            except Exception as e:
+                logger.warning(f"[WARNING] Could not click generate button: {e}")
+            
+            # Take screenshot
+            screenshot_path = output_path / "web_timeline.png"
+            await page.screenshot(path=str(screenshot_path), full_page=True)
+            logger.info(f"[OK] Saved timeline screenshot to {screenshot_path}")
+            
+            await browser.close()
+            return True
+            
+    except Exception as e:
+        logger.error(f"[ERROR] Error capturing timeline screenshot: {e}")
+        return False
+        
+    finally:
+        # Stop server if we started it
+        if process:
+            logger.info("[STOP] Stopping timeline server")
+            try:
+                process.terminate()
+                process.wait(timeout=5)
+                logger.info("[OK] Timeline server stopped.")
+            except subprocess.TimeoutExpired:
+                logger.warning("[WARNING] Timeline server didn't stop gracefully, forcing kill")
+                process.kill()
+            except Exception as e:
+                logger.warning(f"[WARNING] Error stopping timeline server: {e}")

@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 def run_dashboard():
     """Run the dashboard normally."""
     try:
-        from main import main
+        from app.main import main
         
         # Set up arguments for dashboard mode
         sys.argv = ['main.py', '--mode', 'dashboard']
@@ -50,7 +50,7 @@ def run_timeline():
         
         # Check if we can import the main module
         try:
-            from main import main as app_main
+            from app.main import main as app_main
             logger.info("[OK] Successfully imported app.main")
         except ImportError as e:
             logger.error(f"[ERROR] Error importing timeline app: {e}")

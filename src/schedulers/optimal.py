@@ -3,15 +3,9 @@
 from __future__ import annotations
 from typing import Dict, Optional, Any
 from datetime import date, timedelta
-from schedulers.base import BaseScheduler
-from core.models import SchedulerStrategy
-
-try:
-    import pulp
-    PULP_AVAILABLE = True
-except ImportError:
-    PULP_AVAILABLE = False
-    print("Warning: PuLP not available. Install with: pip install pulp")
+from src.schedulers.base import BaseScheduler
+from src.core.models import SchedulerStrategy
+import pulp
 
 
 @BaseScheduler.register_strategy(SchedulerStrategy.OPTIMAL)
@@ -22,9 +16,6 @@ class OptimalScheduler(BaseScheduler):
         """Initialize scheduler with config and optimization objective."""
         super().__init__(config)
         self.optimization_objective = optimization_objective
-        
-        if not PULP_AVAILABLE:
-            raise ImportError("PuLP is required for optimal scheduling. Install with: pip install pulp")
     
     def schedule(self) -> Dict[str, date]:
         """
@@ -35,12 +26,6 @@ class OptimalScheduler(BaseScheduler):
         Dict[str, date]
             Mapping of submission_id to start_date
         """
-        if not PULP_AVAILABLE:
-            # Fall back to greedy if PuLP not available
-            from schedulers.greedy import GreedyScheduler
-            greedy_scheduler = GreedyScheduler(self.config)
-            return greedy_scheduler.schedule()
-        
         self._auto_link_abstract_paper()
         self._validate_venue_compatibility()
         
@@ -50,7 +35,7 @@ class OptimalScheduler(BaseScheduler):
         
         if solution is None:
             # If MILP fails, fall back to greedy
-            from schedulers.greedy import GreedyScheduler
+            from src.schedulers.greedy import GreedyScheduler
             greedy_scheduler = GreedyScheduler(self.config)
             return greedy_scheduler.schedule()
         
@@ -58,9 +43,6 @@ class OptimalScheduler(BaseScheduler):
     
     def _setup_milp_model(self) -> Optional[Any]:
         """Set up the MILP model for optimization."""
-        if not PULP_AVAILABLE:
-            return None
-            
         # Create optimization problem
         if self.optimization_objective == "minimize_makespan":
             prob = pulp.LpProblem("Academic_Scheduling", pulp.LpMinimize)
@@ -97,9 +79,6 @@ class OptimalScheduler(BaseScheduler):
     
     def _add_dependency_constraints(self, prob: Any, start_vars: Dict[str, Any]) -> None:
         """Add dependency constraints to the MILP model."""
-        if not PULP_AVAILABLE:
-            return
-            
         for sid, submission in self.submissions.items():
             if submission.depends_on:
                 for dep_id in submission.depends_on:
@@ -110,9 +89,6 @@ class OptimalScheduler(BaseScheduler):
     
     def _add_deadline_constraints(self, prob: Any, start_vars: Dict[str, Any]) -> None:
         """Add deadline constraints to the MILP model."""
-        if not PULP_AVAILABLE:
-            return
-            
         for sid, submission in self.submissions.items():
             if submission.conference_id and submission.conference_id in self.conferences:
                 conf = self.conferences[submission.conference_id]
@@ -127,26 +103,41 @@ class OptimalScheduler(BaseScheduler):
     
     def _add_concurrency_constraints(self, prob: Any, start_vars: Dict[str, Any]) -> None:
         """Add concurrency constraints to the MILP model."""
-        # For each time period, ensure no more than max_concurrent_submissions are active
-        # This is a simplified version - in practice, you'd need to discretize time
         max_concurrent = self.config.max_concurrent_submissions
         
-        # Create binary variables for each submission being active at each time
-        # This is a simplified approach - in practice, you'd need more sophisticated modeling
-        pass  # Simplified for now
+        # Create binary variables for each submission being active at each time period
+        # For simplicity, we'll use a time discretization approach
+        time_horizon = 365  # One year horizon
+        active_vars = {}
+        
+        for sid in self.submissions:
+            active_vars[sid] = {}
+            for t in range(time_horizon):
+                active_vars[sid][t] = pulp.LpVariable(f"active_{sid}_{t}", cat='Binary')
+        
+        # Constraints: submission is active during its duration
+        for sid, submission in self.submissions.items():
+            duration = submission.get_duration_days(self.config)
+            for t in range(time_horizon):
+                # If submission starts at time t, it's active for duration days
+                for d in range(duration):
+                    if t + d < time_horizon:
+                        prob += active_vars[sid][t + d] >= start_vars[sid] - t - 1 + duration
+                        prob += active_vars[sid][t + d] <= start_vars[sid] - t + duration
+        
+        # Constraint: at most max_concurrent submissions active at any time
+        for t in range(time_horizon):
+            prob += pulp.lpSum(active_vars[sid][t] for sid in self.submissions) <= max_concurrent
     
     def _add_makespan_constraints(self, prob: Any, start_vars: Dict[str, Any], makespan: Any) -> None:
         """Add makespan constraints to the MILP model."""
-        if not PULP_AVAILABLE:
-            return
-            
         for sid, submission in self.submissions.items():
             duration = submission.get_duration_days(self.config)
             prob += makespan >= start_vars[sid] + duration
     
     def _solve_milp_model(self, model: Optional[Any]) -> Optional[Any]:
         """Solve the MILP model and extract the solution."""
-        if not PULP_AVAILABLE or model is None:
+        if model is None:
             return None
             
         try:

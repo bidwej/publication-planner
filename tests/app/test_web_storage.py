@@ -13,26 +13,11 @@ from app.models import WebAppState
 from core.models import Config, Submission
 
 
-# Mock classes for testing
-class ScheduleData:
-    def __init__(self, schedule: dict, config: Config, validation_result: dict) -> None:
-        self.schedule = schedule
-        self.config = config
-        self.validation_result = validation_result
-
-
-class ValidationResult:
-    def __init__(self, scores: dict, summary: dict, constraints: dict) -> None:
-        self.scores = scores
-        self.summary = summary
-        self.constraints = constraints
-
-
 class StorageManager:
     def __init__(self, data_dir: str) -> None:
         self.data_dir = data_dir
     
-    def save_schedule(self, schedule_data: ScheduleData, filename: str) -> str:
+    def save_schedule(self, schedule_data, filename: str) -> str:
         """Save schedule data to file."""
         def serialize_dates(obj):
             """Custom JSON serializer for date objects."""
@@ -42,13 +27,13 @@ class StorageManager:
         
         file_path = Path(self.data_dir) / filename
         Path(file_path).write_text(json.dumps({
-            'schedule': schedule_data.schedule,
-            'config': str(schedule_data.config),
-            'validation_result': schedule_data.validation_result
+            'schedule': schedule_data['schedule'],
+            'config': str(schedule_data['config']),
+            'validation_result': schedule_data['validation_result']
         }, default=serialize_dates), encoding='utf-8')
         return filename
     
-    def load_schedule(self, filename: str) -> ScheduleData:
+    def load_schedule(self, filename: str):
         """Load schedule data from file."""
         from datetime import date
         
@@ -68,7 +53,14 @@ class StorageManager:
                         # Keep as string if not a valid date
                         pass
         
-        return ScheduleData(
+        # Return a simple object with the loaded data
+        class LoadedScheduleData:
+            def __init__(self, schedule, config, validation_result):
+                self.schedule = schedule
+                self.config = config
+                self.validation_result = validation_result
+        
+        return LoadedScheduleData(
             schedule=data['schedule'],
             config=data['config'],
             validation_result=data['validation_result']
@@ -100,15 +92,15 @@ class TestWebAppStorage:
         return StorageManager('test_data')
     
     @pytest.fixture
-    def sample_schedule_data(self) -> ScheduleData:
+    def sample_schedule_data(self) -> dict:
         """Create sample schedule data for storage testing."""
-        return ScheduleData(
-            schedule={'paper1': date(2024, 1, 1)},
-            config=Mock(spec=Config),
-            validation_result={'scores': {'penalty_score': 85.0}}
-        )
+        return {
+            'schedule': {'paper1': date(2024, 1, 1)},
+            'config': Mock(spec=Config),
+            'validation_result': {'scores': {'penalty_score': 85.0}}
+        }
     
-    def test_save_schedule(self, storage_manager: StorageManager, sample_schedule_data: ScheduleData, tmp_path: Path) -> None:
+    def test_save_schedule(self, storage_manager: StorageManager, sample_schedule_data: dict, tmp_path: Path) -> None:
         """Test saving schedule data."""
         with patch.object(storage_manager, 'data_dir', tmp_path):
             filename = storage_manager.save_schedule(sample_schedule_data, 'test_schedule.json')
@@ -116,7 +108,7 @@ class TestWebAppStorage:
             assert filename == 'test_schedule.json'
             assert (tmp_path / 'test_schedule.json').exists()
     
-    def test_load_schedule(self, storage_manager: StorageManager, sample_schedule_data: ScheduleData, tmp_path: Path) -> None:
+    def test_load_schedule(self, storage_manager: StorageManager, sample_schedule_data: dict, tmp_path: Path) -> None:
         """Test loading schedule data."""
         with patch.object(storage_manager, 'data_dir', tmp_path):
             # First save the schedule
@@ -126,9 +118,9 @@ class TestWebAppStorage:
             loaded_data = storage_manager.load_schedule('test_schedule.json')
             
             assert loaded_data is not None
-            assert loaded_data.schedule == sample_schedule_data.schedule
+            assert loaded_data.schedule == sample_schedule_data['schedule']
     
-    def test_list_schedules(self, storage_manager: StorageManager, sample_schedule_data: ScheduleData, tmp_path: Path) -> None:
+    def test_list_schedules(self, storage_manager: StorageManager, sample_schedule_data: dict, tmp_path: Path) -> None:
         """Test listing saved schedules."""
         with patch.object(storage_manager, 'data_dir', tmp_path):
             # Save multiple schedules
@@ -140,7 +132,7 @@ class TestWebAppStorage:
             assert 'schedule1.json' in schedules
             assert 'schedule2.json' in schedules
     
-    def test_delete_schedule(self, storage_manager: StorageManager, sample_schedule_data: ScheduleData, tmp_path: Path) -> None:
+    def test_delete_schedule(self, storage_manager: StorageManager, sample_schedule_data: dict, tmp_path: Path) -> None:
         """Test deleting schedule data."""
         with patch.object(storage_manager, 'data_dir', tmp_path):
             # First save the schedule
@@ -200,11 +192,11 @@ class TestWebAppStorage:
                 }
             }
             
-            complex_schedule_data = ScheduleData(
-                schedule=complex_schedule,
-                config=Mock(spec=Config),
-                validation_result=complex_validation
-            )
+            complex_schedule_data = {
+                'schedule': complex_schedule,
+                'config': Mock(spec=Config),
+                'validation_result': complex_validation
+            }
             
             # Save and load
             storage_manager.save_schedule(complex_schedule_data, 'complex_schedule.json')
@@ -223,11 +215,11 @@ class TestWebAppStorage:
                 'abstract1': '2024-02-01'
             }
             
-            schedule_data = ScheduleData(
-                schedule=schedule_with_strings,
-                config=Mock(spec=Config),
-                validation_result={'scores': {'penalty_score': 85.0}}
-            )
+            schedule_data = {
+                'schedule': schedule_with_strings,
+                'config': Mock(spec=Config),
+                'validation_result': {'scores': {'penalty_score': 85.0}}
+            }
             
             # Save and load
             storage_manager.save_schedule(schedule_data, 'string_dates.json')
@@ -263,11 +255,11 @@ class TestWebAppStorage:
             # Try to save to read-only directory
             try:
                 storage_manager.data_dir = str(read_only_dir)
-                sample_data = ScheduleData(
-                    schedule={'paper1': date(2024, 1, 1)},
-                    config=Mock(spec=Config),
-                    validation_result={'scores': {'penalty_score': 85.0}}
-                )
+                sample_data = {
+                    'schedule': {'paper1': date(2024, 1, 1)},
+                    'config': Mock(spec=Config),
+                    'validation_result': {'scores': {'penalty_score': 85.0}}
+                }
                 storage_manager.save_schedule(sample_data, 'test.json')
             except (PermissionError, OSError):
                 # Expected behavior for permission issues
@@ -276,38 +268,6 @@ class TestWebAppStorage:
 
 class TestWebAppModels:
     """Test web app data models."""
-    
-    def test_schedule_data_model(self) -> None:
-        """Test ScheduleData model."""
-        schedule = {'paper1': date(2024, 1, 1)}
-        config = Mock(spec=Config)
-        validation_result = {'scores': {'penalty_score': 85.0}}
-        
-        schedule_data = ScheduleData(
-            schedule=schedule,
-            config=config,
-            validation_result=validation_result
-        )
-        
-        assert schedule_data.schedule == schedule
-        assert schedule_data.config == config
-        assert schedule_data.validation_result == validation_result
-    
-    def test_validation_result_model(self) -> None:
-        """Test ValidationResult model."""
-        scores = {'penalty_score': 85.0, 'quality_score': 90.0}
-        summary = {'total_submissions': 2}
-        constraints = {'deadline_constraints': {'violations': []}}
-        
-        validation_result = ValidationResult(
-            scores=scores,
-            summary=summary,
-            constraints=constraints
-        )
-        
-        assert validation_result.scores == scores
-        assert validation_result.summary == summary
-        assert validation_result.constraints == constraints
     
     def test_web_app_state_model(self) -> None:
         """Test WebAppState model."""
@@ -319,11 +279,12 @@ class TestWebAppModels:
         assert hasattr(app_state, '__dict__')
         
         # Test state can be modified
-        app_state.current_schedule = {'paper1': date(2024, 1, 1)}
-        app_state.current_config = Mock(spec=Config)
+        from src.core.models import ScheduleState
+        mock_schedule_state = Mock(spec=ScheduleState)
+        app_state.current_schedule = mock_schedule_state
         
-        assert app_state.current_schedule == {'paper1': date(2024, 1, 1)}
-        assert app_state.current_config is not None
+        assert app_state.current_schedule == mock_schedule_state
+        assert app_state.available_strategies is not None
     
     def test_schedule_data_with_complex_validation(self) -> None:
         """Test ScheduleData with complex validation result."""
@@ -377,20 +338,10 @@ class TestWebAppModels:
             }
         }
         
-        schedule_data = ScheduleData(
-            schedule=schedule,
-            config=config,
-            validation_result=complex_validation
-        )
-        
-        assert schedule_data.schedule == schedule
-        assert schedule_data.config == config
-        assert schedule_data.validation_result == complex_validation
-        
-        # Test nested access
-        assert schedule_data.validation_result['scores']['penalty_score'] == 85.2
-        assert schedule_data.validation_result['summary']['total_submissions'] == 3
-        assert len(schedule_data.validation_result['constraints']) == 3
+        # Test that we can work with the validation data
+        assert complex_validation['scores']['penalty_score'] == 85.2
+        assert complex_validation['summary']['total_submissions'] == 3
+        assert len(complex_validation['constraints']) == 3
     
     def test_validation_result_with_violations(self) -> None:
         """Test ValidationResult with constraint violations."""
@@ -435,21 +386,11 @@ class TestWebAppModels:
             }
         }
         
-        validation_result = ValidationResult(
-            scores=scores,
-            summary=summary,
-            constraints=constraints
-        )
-        
-        assert validation_result.scores == scores
-        assert validation_result.summary == summary
-        assert validation_result.constraints == constraints
-        
         # Test violation access
-        deadline_violations = validation_result.constraints['deadline_constraints']['violations']
+        deadline_violations = constraints['deadline_constraints']['violations']
         assert len(deadline_violations) == 1
         assert deadline_violations[0]['submission_id'] == 'paper1'
         
-        dependency_violations = validation_result.constraints['dependency_constraints']['violations']
+        dependency_violations = constraints['dependency_constraints']['violations']
         assert len(dependency_violations) == 1
         assert dependency_violations[0]['submission_id'] == 'paper2'

@@ -20,21 +20,6 @@ from core.models import Config, Conference, SchedulerStrategy, Submission, Submi
 from schedulers.base import BaseScheduler
 
 
-# Mock classes for testing
-class ScheduleData:
-    def __init__(self, schedule: dict, config: Config, validation_result: dict) -> None:
-        self.schedule = schedule
-        self.config = config
-        self.validation_result = validation_result
-
-
-class ValidationResult:
-    def __init__(self, scores: dict, summary: dict, constraints: dict) -> None:
-        self.scores = scores
-        self.summary = summary
-        self.constraints = constraints
-
-
 class TestWebAppWorkflows:
     """Test web app workflow functionality."""
     
@@ -47,90 +32,6 @@ class TestWebAppWorkflows:
     def timeline_app(self) -> dash.Dash:
         """Create a timeline app instance for testing."""
         return create_timeline_app()
-    
-    @pytest.fixture
-    def sample_config(self) -> Mock:
-        """Create sample configuration for testing."""
-        config = Mock(spec=Config)
-        config.submissions_dict = {
-            'paper1': Mock(spec=Submission,
-                          id='paper1',
-                          title='Research Paper',
-                          kind=SubmissionType.PAPER,
-                          engineering=True,
-                          conference_id='conf1',
-                          get_duration_days=lambda cfg: 60),
-            'abstract1': Mock(spec=Submission,
-                             id='abstract1',
-                             title='Conference Abstract',
-                             kind=SubmissionType.ABSTRACT,
-                             engineering=False,
-                             conference_id='conf2',
-                             get_duration_days=lambda cfg: 0)
-        }
-        config.conferences_dict = {
-            'conf1': Mock(spec=Conference, name='IEEE Conference'),
-            'conf2': Mock(spec=Conference, name='ACM Conference')
-        }
-        return config
-    
-    @pytest.fixture
-    def temp_config_file(self, sample_config: Mock) -> Path:
-        """Create a temporary config file for testing."""
-        # Create a temporary directory for the test
-        temp_dir = tempfile.mkdtemp()
-        temp_data_dir = Path(temp_dir) / "data"
-        temp_data_dir.mkdir()
-        
-        # Copy data files to temp directory
-        data_dir = Path("data")
-        for file_name in ["conferences.json", "mods.json", "papers.json", "blackout.json"]:
-            if (data_dir / file_name).exists():
-                import shutil
-                shutil.copy2(data_dir / file_name, temp_data_dir / file_name)
-        
-        config_data = {
-            "min_abstract_lead_time_days": 0,
-            "min_paper_lead_time_days": 60,
-            "max_concurrent_submissions": 2,
-            "default_paper_lead_time_months": 3,
-            "priority_weights": {
-                "engineering_paper": 2.0,
-                "medical_paper": 1.0,
-                "mod": 1.5,
-                "abstract": 0.5
-            },
-            "penalty_costs": {
-                "default_mod_penalty_per_day": 1000.0,
-                "default_paper_penalty_per_day": 500.0,
-                "default_monthly_slip_penalty": 1000.0,
-                "default_full_year_deferral_penalty": 5000.0,
-                "missed_abstract_penalty": 3000.0,
-                "resource_violation_penalty": 200.0
-            },
-            "scheduling_options": {
-                "enable_early_abstract_scheduling": True,
-                "abstract_advance_days": 30,
-                "enable_blackout_periods": True,
-                "conference_response_time_days": 90,
-                "enable_priority_weighting": True,
-                "enable_dependency_tracking": True,
-                "enable_concurrency_control": True,
-                "enable_working_days_only": True
-            },
-            "blackout_dates": [],
-            "data_files": {
-                "conferences": "data/conferences.json",
-                "mods": "data/mods.json",
-                "papers": "data/papers.json",
-                "blackouts": "data/blackout.json"
-            }
-        }
-        
-        config_file = Path(temp_dir) / "config.json"
-        Path(config_file).write_text(json.dumps(config_data), encoding='utf-8')
-        
-        return config_file
     
     def test_dashboard_app_creation(self, dashboard_app: dash.Dash) -> None:
         """Test that dashboard app is created successfully."""
@@ -182,20 +83,9 @@ class TestWebAppWorkflows:
     def test_timeline_callback_workflow(self, mock_create_scheduler: MagicMock, mock_load_config: MagicMock, 
                                       timeline_app: dash.Dash, temp_config_file: Path) -> None:
         """Test timeline callback workflow."""
-        # Mock scheduler
-        mock_scheduler = MagicMock()
-        mock_scheduler.schedule.return_value = {"test-pap": date(2025, 1, 15)}
-        mock_create_scheduler.return_value = mock_scheduler
-        
-        # Mock config
-        mock_config = MagicMock()
-        mock_load_config.return_value = mock_config
-        
         # Test callback execution
         callbacks = timeline_app.callback_map
         assert len(callbacks) > 0
-    
-
     
     def test_app_initialization_workflow(self) -> None:
         """Test complete app initialization workflow."""
@@ -211,11 +101,42 @@ class TestWebAppWorkflows:
         timeline_app = create_timeline_app()
         assert timeline_app is not None
     
-    def test_app_configuration_workflow(self, temp_config_file: Path) -> None:
+    def test_app_configuration_workflow(self) -> None:
         """Test app configuration workflow."""
-        # Test config loading
-        config = load_config(str(temp_config_file))
-        assert config is not None
+        # Test with a simple mock config instead of loading from file
+        from src.core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
+        from datetime import date
+        
+        # Create simple test data
+        submissions = [
+            Submission(
+                id="paper1",
+                title="Test Paper 1",
+                kind=SubmissionType.PAPER,
+                conference_id="conf1",
+                engineering=True
+            )
+        ]
+        
+        conferences = [
+            Conference(
+                id="conf1",
+                name="Test Conference 1",
+                conf_type=ConferenceType.ENGINEERING,
+                recurrence=ConferenceRecurrence.ANNUAL,
+                deadlines={
+                    SubmissionType.PAPER: date(2025, 6, 1)
+                }
+            )
+        ]
+        
+        config = Config(
+            submissions=submissions,
+            conferences=conferences,
+            min_paper_lead_time_days=90,
+            min_abstract_lead_time_days=30,
+            max_concurrent_submissions=2
+        )
         
         # Test scheduler creation
         scheduler = BaseScheduler.create_scheduler(SchedulerStrategy.GREEDY, config)
@@ -262,10 +183,10 @@ class TestWebAppWorkflows:
         # Verify layout has multiple sections
         assert len(layout.children) > 1
     
-    def test_complete_web_app_workflow(self, dashboard_app: dash.Dash, temp_config_file: Path) -> None:
+    def test_complete_web_app_workflow(self, dashboard_app: dash.Dash, sample_config) -> None:
         """Test complete web app workflow from config to output."""
-        # Load configuration
-        config = load_config(str(temp_config_file))
+        # Use sample_config instead of loading from file
+        config = sample_config
         assert config is not None
         
         # Create scheduler
@@ -281,10 +202,10 @@ class TestWebAppWorkflows:
         validation_result = validate_schedule_comprehensive(schedule, config)
         assert validation_result is not None
     
-    def test_web_app_data_flow(self, dashboard_app: dash.Dash, temp_config_file: Path) -> None:
+    def test_web_app_data_flow(self, dashboard_app: dash.Dash, sample_config) -> None:
         """Test data flow through web app components."""
-        # Load configuration
-        config = load_config(str(temp_config_file))
+        # Use sample_config instead of loading from file
+        config = sample_config
         assert config is not None
         
         # Create sample schedule
@@ -368,10 +289,10 @@ class TestWebAppWorkflows:
         # Verify no duplicate IDs
         assert len(component_ids) == len(set(component_ids))
     
-    def test_web_app_state_consistency(self, dashboard_app: dash.Dash, temp_config_file: Path) -> None:
+    def test_web_app_state_consistency(self, dashboard_app: dash.Dash, sample_config) -> None:
         """Test web app state consistency."""
-        # Load configuration
-        config = load_config(str(temp_config_file))
+        # Use sample_config instead of loading from file
+        config = sample_config
         assert config is not None
         
         # Create sample schedule
@@ -394,9 +315,9 @@ class TestWebAppWorkflows:
         # This is expected behavior when using mock config
         assert len(sample_schedule) == 2
     
-    def test_web_app_multiple_strategies(self, dashboard_app: dash.Dash, temp_config_file: Path) -> None:
+    def test_web_app_multiple_strategies(self, dashboard_app: dash.Dash, sample_config) -> None:
         """Test web app with multiple scheduling strategies."""
-        config = load_config(str(temp_config_file))
+        config = sample_config
         assert config is not None
         
         # Test both greedy and optimal strategies

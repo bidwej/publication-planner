@@ -4,10 +4,10 @@ from __future__ import annotations
 import random
 from typing import Dict, List, Set, Optional
 from datetime import date, timedelta
-from schedulers.base import BaseScheduler
-from core.constraints import is_working_day
-from core.models import SchedulerStrategy
-from core.constants import DEFAULT_ABSTRACT_ADVANCE_DAYS
+from src.schedulers.base import BaseScheduler
+from src.core.constraints import is_working_day
+from src.core.models import SchedulerStrategy
+from src.core.constants import DEFAULT_ABSTRACT_ADVANCE_DAYS
 
 
 @BaseScheduler.register_strategy(SchedulerStrategy.RANDOM)

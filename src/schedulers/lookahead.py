@@ -3,10 +3,10 @@
 from __future__ import annotations
 from typing import List
 from datetime import timedelta, date
-from schedulers.greedy import GreedyScheduler
-from schedulers.base import BaseScheduler
-from core.models import Submission, SchedulerStrategy
-from core.constants import DEFAULT_LOOKAHEAD_DAYS, SCHEDULER_LOOKAHEAD_BONUS_INCREMENT
+from src.schedulers.greedy import GreedyScheduler
+from src.schedulers.base import BaseScheduler
+from src.core.models import Submission, SchedulerStrategy
+from src.core.constants import DEFAULT_LOOKAHEAD_DAYS, SCHEDULER_LOOKAHEAD_BONUS_INCREMENT
 
 
 @BaseScheduler.register_strategy(SchedulerStrategy.LOOKAHEAD)

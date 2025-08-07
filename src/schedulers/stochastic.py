@@ -3,10 +3,10 @@
 from __future__ import annotations
 import random
 from typing import List
-from schedulers.greedy import GreedyScheduler
-from schedulers.base import BaseScheduler
-from core.models import SchedulerStrategy
-from core.constants import SCHEDULER_RANDOMNESS_FACTOR
+from src.schedulers.greedy import GreedyScheduler
+from src.schedulers.base import BaseScheduler
+from src.core.models import SchedulerStrategy
+from src.core.constants import SCHEDULER_RANDOMNESS_FACTOR
 
 
 

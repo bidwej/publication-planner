@@ -3,10 +3,10 @@
 from __future__ import annotations
 from typing import Dict, List, Set
 from datetime import date, timedelta
-from schedulers.base import BaseScheduler
-from core.constraints import is_working_day
-from core.models import SchedulerStrategy
-from core.constants import DEFAULT_ABSTRACT_ADVANCE_DAYS
+from src.schedulers.base import BaseScheduler
+from src.core.constraints import is_working_day
+from src.core.models import SchedulerStrategy
+from src.core.constants import DEFAULT_ABSTRACT_ADVANCE_DAYS
 
 
 @BaseScheduler.register_strategy(SchedulerStrategy.GREEDY)
