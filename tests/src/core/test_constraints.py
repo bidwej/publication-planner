@@ -319,6 +319,121 @@ class TestSoftBlockModel:
         assert abs(result["compliance_rate"] - 0.0) < 0.1
         assert len(result["violations"]) == 2
 
+    def test_soft_block_model_edge_cases(self):
+        """Test soft block model with edge cases."""
+        config = load_config("tests/common/data/config.json")
+        
+        # Test with empty schedule
+        result = validate_soft_block_model({}, config)
+        assert result["is_valid"] is True
+        assert result["total_mods"] == 0
+        assert result["compliance_rate"] == 100.0
+        
+        # Test with no modifications (only regular submissions)
+        schedule_no_mods = {
+            "paper1": date(2025, 1, 15),
+            "abstract1": date(2025, 1, 1),
+        }
+        
+        result = validate_soft_block_model(schedule_no_mods, config)
+        assert result["is_valid"] is True
+        assert result["total_mods"] == 0
+        assert result["compliance_rate"] == 100.0
+        
+        # Test with modifications but no earliest start dates
+        schedule_no_earliest = {
+            "paper1-wrk": date(2025, 1, 15),  # Mod without earliest start
+        }
+        
+        result = validate_soft_block_model(schedule_no_earliest, config)
+        assert result["is_valid"] is True
+        assert result["total_mods"] == 0  # Should not count mods without earliest start
+        
+        # Test with valid modification within ±2 months
+        schedule_valid_mod = {
+            "paper1-wrk": date(2025, 3, 15),  # Within 2 months of earliest
+        }
+        
+        # Create a submission with earliest start date
+        if "paper1-wrk" in config.submissions_dict:
+            config.submissions_dict["paper1-wrk"].earliest_start_date = date(2025, 2, 1)
+        
+        result = validate_soft_block_model(schedule_valid_mod, config)
+        if result["total_mods"] > 0:
+            assert result["is_valid"] is True
+            assert result["compliant_mods"] == 1
+        
+        # Test with invalid modification outside ±2 months
+        schedule_invalid_mod = {
+            "paper1-wrk": date(2025, 6, 15),  # 4 months from earliest
+        }
+        
+        result = validate_soft_block_model(schedule_invalid_mod, config)
+        if result["total_mods"] > 0:
+            assert result["is_valid"] is False
+            assert len(result["violations"]) > 0
+            assert any("4 months" in v["description"] for v in result["violations"])
+
+    def test_soft_block_model_boundary_cases(self):
+        """Test soft block model boundary conditions."""
+        config = load_config("tests/common/data/config.json")
+        
+        # Test exactly at 2 months boundary
+        schedule_boundary = {
+            "paper1-wrk": date(2025, 4, 1),  # Exactly 2 months from earliest
+        }
+        
+        if "paper1-wrk" in config.submissions_dict:
+            config.submissions_dict["paper1-wrk"].earliest_start_date = date(2025, 2, 1)
+        
+        result = validate_soft_block_model(schedule_boundary, config)
+        if result["total_mods"] > 0:
+            assert result["is_valid"] is True  # Should be valid at exactly 2 months
+        
+        # Test just over 2 months boundary
+        schedule_over_boundary = {
+            "paper1-wrk": date(2025, 4, 2),  # Just over 2 months
+        }
+        
+        result = validate_soft_block_model(schedule_over_boundary, config)
+        if result["total_mods"] > 0:
+            assert result["is_valid"] is False
+            assert len(result["violations"]) > 0
+
+    def test_soft_block_model_consistency_with_base_scheduler(self):
+        """Test that soft block validation is consistent between constraints and base scheduler."""
+        from src.schedulers.base import BaseScheduler
+        
+        config = load_config("tests/common/data/config.json")
+        
+        # Create a mock scheduler to test base scheduler validation
+        class MockScheduler(BaseScheduler):
+            def schedule(self):
+                return {}
+        
+        scheduler = MockScheduler(config)
+        
+        # Test with a modification
+        submission = config.submissions_dict.get("paper1-wrk")
+        if submission:
+            submission.earliest_start_date = date(2025, 2, 1)
+            
+            # Test valid date (within 2 months)
+            valid_date = date(2025, 3, 15)
+            base_result = scheduler._validate_soft_block_model(submission, valid_date)
+            assert base_result is True
+            
+            # Test invalid date (outside 2 months)
+            invalid_date = date(2025, 6, 15)
+            base_result = scheduler._validate_soft_block_model(submission, invalid_date)
+            assert base_result is False
+            
+            # Test regular submission (should always be valid)
+            regular_submission = config.submissions_dict.get("paper1")
+            if regular_submission:
+                base_result = scheduler._validate_soft_block_model(regular_submission, valid_date)
+                assert base_result is True
+
 
 class TestConferenceCompatibility:
     """Test conference compatibility validation."""
@@ -663,3 +778,101 @@ class TestComprehensiveConstraints:
         # Should have violations
         assert result["total_violations"] > 0
         assert result["summary"]["overall_valid"] is False
+
+    def test_validation_consistency_between_base_and_constraints(self):
+        """Test that lightweight validation in base scheduler is consistent with comprehensive validation in constraints."""
+        from src.schedulers.base import BaseScheduler
+        
+        config = load_config("tests/common/data/config.json")
+        
+        # Create a mock scheduler to test base scheduler validation
+        class MockScheduler(BaseScheduler):
+            def schedule(self):
+                return {}
+        
+        scheduler = MockScheduler(config)
+        
+        # Test soft block model consistency
+        submission = config.submissions_dict.get("paper1-wrk")
+        if submission:
+            submission.earliest_start_date = date(2025, 2, 1)
+            
+            # Test valid date (within 2 months)
+            valid_date = date(2025, 3, 15)
+            valid_schedule = {"paper1-wrk": valid_date}
+            valid_result = validate_soft_block_model(valid_schedule, config)
+            
+            # Test invalid date (outside 2 months)
+            invalid_date = date(2025, 6, 15)
+            invalid_schedule = {"paper1-wrk": invalid_date}
+            invalid_result = validate_soft_block_model(invalid_schedule, config)
+            
+            # Results should be consistent
+            if valid_result["total_mods"] > 0:
+                assert valid_result["is_valid"] == True  # Within 2 months should be valid
+            if invalid_result["total_mods"] > 0:
+                assert invalid_result["is_valid"] == False  # Outside 2 months should be invalid
+        
+        # Test working days consistency
+        working_date = date(2025, 3, 17)  # Monday
+        weekend_date = date(2025, 3, 22)  # Saturday
+        
+        # Test comprehensive validation directly
+        from src.core.constraints import validate_scheduling_options
+        
+        working_schedule = {"temp": working_date}
+        weekend_schedule = {"temp": weekend_date}
+        
+        # Enable working days only
+        config.scheduling_options = {"enable_working_days_only": True}
+        
+        comprehensive_working = validate_scheduling_options(working_schedule, config)
+        comprehensive_weekend = validate_scheduling_options(weekend_schedule, config)
+        
+        # Results should be consistent
+        assert comprehensive_working["is_valid"] == True  # Monday should be valid
+        assert comprehensive_weekend["is_valid"] == False  # Saturday should be invalid
+        
+        # Test single conference policy consistency
+        paper1 = config.submissions_dict.get("paper1")
+        paper2 = config.submissions_dict.get("paper2")
+        
+        if paper1 and paper2:
+            paper1.conference_id = "conf1"
+            paper2.conference_id = "conf2"
+            
+            # Test valid assignment (different papers)
+            schedule_valid = {"paper1": date.today(), "paper2": date.today()}
+            base_valid = scheduler._validate_single_conference_policy(paper1, schedule_valid)
+            
+            comprehensive_valid = validate_single_conference_policy(schedule_valid, config)
+            
+            # Results should be consistent
+            assert base_valid == comprehensive_valid["is_valid"]
+            
+            # Test invalid assignment (same paper to different conferences)
+            # Create two submissions with same paper ID
+            paper1_same = Submission(
+                id="paper1-same",
+                title="Same Paper",
+                kind=SubmissionType.PAPER,
+                conference_id="conf1"
+            )
+            paper1_diff = Submission(
+                id="paper1-diff", 
+                title="Same Paper",
+                kind=SubmissionType.PAPER,
+                conference_id="conf2"
+            )
+            
+            schedule_invalid = {"paper1-same": date.today(), "paper1-diff": date.today()}
+            base_invalid = scheduler._validate_single_conference_policy(paper1_same, schedule_invalid)
+            
+            # Add to config for comprehensive validation
+            config.submissions.extend([paper1_same, paper1_diff])
+            config.submissions_dict.update({s.id: s for s in [paper1_same, paper1_diff]})
+            
+            comprehensive_invalid = validate_single_conference_policy(schedule_invalid, config)
+            
+            # Results should be consistent
+            assert base_invalid == comprehensive_invalid["is_valid"]

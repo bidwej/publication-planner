@@ -1164,4 +1164,86 @@ def validate_schedule_comprehensive(schedule: Dict[str, date], config: Config) -
             "duration_days": analytics["duration_days"],
             "peak_load": analytics["peak_load"]
         }
-    } 
+    }
+
+
+def validate_single_submission_constraints(submission: Submission, start_date: date, schedule: Dict[str, date], config: Config) -> bool:
+    """
+    Validate all constraints for a single submission at a given start date.
+    
+    Parameters
+    ----------
+    submission : Submission
+        The submission to validate
+    start_date : date
+        The proposed start date
+    schedule : Dict[str, date]
+        Current schedule (may be empty for first submission)
+    config : Config
+        Configuration object
+        
+    Returns
+    -------
+    bool
+        True if all constraints are satisfied, False otherwise
+    """
+    # Create a temporary schedule with this submission
+    temp_schedule = schedule.copy()
+    temp_schedule[submission.id] = start_date
+    
+    # Basic deadline check
+    if not validate_deadline_compliance_single(start_date, submission, config):
+        return False
+    
+    # Dependencies check
+    if not validate_dependencies_satisfied(submission, schedule, config.submissions_dict, config, start_date):
+        return False
+    
+    # Advanced constraints - call comprehensive validation functions
+    # Soft block model validation
+    soft_block_result = validate_soft_block_model(temp_schedule, config)
+    if not soft_block_result.get("is_valid", True):
+        return False
+    
+    # Working days validation
+    working_days_result = validate_scheduling_options(temp_schedule, config)
+    if not working_days_result.get("is_valid", True):
+        return False
+    
+    # Single conference policy validation
+    single_conf_result = validate_single_conference_policy(temp_schedule, config)
+    if not single_conf_result.get("is_valid", True):
+        return False
+    
+    # Blackout dates validation
+    blackout_result = validate_blackout_dates(temp_schedule, config)
+    if not blackout_result.get("is_valid", True):
+        return False
+    
+    # Conference compatibility validation
+    conf_compat_result = validate_conference_compatibility(temp_schedule, config)
+    if not conf_compat_result.get("is_valid", True):
+        return False
+    
+    # Conference submission compatibility validation
+    conf_sub_compat_result = validate_conference_submission_compatibility(temp_schedule, config)
+    if not conf_sub_compat_result.get("is_valid", True):
+        return False
+    
+    # Abstract-paper dependencies validation
+    abstract_paper_result = validate_abstract_paper_dependencies(temp_schedule, config)
+    if not abstract_paper_result.get("is_valid", True):
+        return False
+    
+    # Paper lead time months validation
+    lead_time_result = validate_paper_lead_time_months(temp_schedule, config)
+    if not lead_time_result.get("is_valid", True):
+        return False
+    
+    # Direct conference compatibility check
+    if submission.conference_id and submission.conference_id in config.conferences_dict:
+        conf = config.conferences_dict[submission.conference_id]
+        if not conf.accepts_submission_type(submission.kind):
+            return False
+    
+    return True 

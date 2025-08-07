@@ -30,7 +30,8 @@ class RandomScheduler(BaseScheduler):
             Mapping of submission_id to start_date
         """
         self._auto_link_abstract_paper()
-        self._validate_venue_compatibility()
+        from src.core.constraints import validate_venue_compatibility
+        validate_venue_compatibility(self.submissions, self.conferences)
         topo = self._topological_order()
         
         # Global time window - use robust date calculation
@@ -42,7 +43,7 @@ class RandomScheduler(BaseScheduler):
         # Early abstract scheduling if enabled
         if (self.config.scheduling_options and 
             self.config.scheduling_options.get("enable_early_abstract_scheduling", False)):
-            abstract_advance = self.config.scheduling_options.get("abstract_advance_days", SCHEDULING_CONSTANTS.default_abstract_advance_days)
+            abstract_advance = self.config.scheduling_options.get("abstract_advance_days", SCHEDULING_CONSTANTS.abstract_advance_days)
             self._schedule_early_abstracts(schedule, abstract_advance)
         
         while current <= end and len(schedule) < len(self.submissions):

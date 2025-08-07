@@ -385,14 +385,20 @@ class Config:
         # Validate abstract-paper dependencies
         errors.extend(self._validate_abstract_paper_dependencies())
         
+        # Validate circular dependencies
+        errors.extend(self._validate_circular_dependencies())
+        
+        # Validate missing dependencies
+        errors.extend(self._validate_missing_dependencies())
+
         return errors
-    
+
     def _validate_abstract_paper_dependencies(self) -> List[str]:
         """Validate that papers have required abstract dependencies."""
         errors = []
         submission_dict = {sub.id: sub for sub in self.submissions}
         conference_dict = {conf.id: conf for conf in self.conferences}
-        
+
         for submission in self.submissions:
             if submission.kind == SubmissionType.PAPER and submission.conference_id:
                 conference = conference_dict.get(submission.conference_id)
@@ -406,6 +412,51 @@ class Config:
                         abstract = submission_dict[abstract_id]
                         if abstract_id not in (submission.depends_on or []):
                             errors.append(f"Paper {submission.id} must depend on its abstract {abstract_id}")
+
+        return errors
+
+    def _validate_circular_dependencies(self) -> List[str]:
+        """Validate that there are no circular dependencies."""
+        errors = []
+        submission_dict = {sub.id: sub for sub in self.submissions}
+        
+        def has_circular_dependency(sub_id: str, visited: set, path: list) -> bool:
+            """Check for circular dependencies using DFS."""
+            if sub_id in visited:
+                return sub_id in path
+            
+            visited.add(sub_id)
+            path.append(sub_id)
+            
+            submission = submission_dict.get(sub_id)
+            if not submission or not submission.depends_on:
+                path.pop()
+                return False
+            
+            for dep_id in submission.depends_on:
+                if has_circular_dependency(dep_id, visited, path):
+                    return True
+            
+            path.pop()
+            return False
+        
+        # Check each submission for circular dependencies
+        for submission in self.submissions:
+            if has_circular_dependency(submission.id, set(), []):
+                errors.append(f"Circular dependency detected involving submission {submission.id}")
+        
+        return errors
+
+    def _validate_missing_dependencies(self) -> List[str]:
+        """Validate that all dependencies exist."""
+        errors = []
+        submission_ids = {sub.id for sub in self.submissions}
+        
+        for submission in self.submissions:
+            if submission.depends_on:
+                for dep_id in submission.depends_on:
+                    if dep_id not in submission_ids:
+                        errors.append(f"Submission {submission.id} depends on non-existent submission {dep_id}")
         
         return errors
     

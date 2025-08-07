@@ -8,7 +8,7 @@ from src.core.models import (
     Config, Submission, SubmissionType, SchedulerStrategy, Conference,
     generate_abstract_id, create_abstract_submission, ensure_abstract_paper_dependency
 )
-from src.core.constraints import validate_deadline_compliance_single, validate_dependencies_satisfied, validate_venue_compatibility, is_working_day
+from src.core.constraints import validate_deadline_compliance_single, validate_dependencies_satisfied, is_working_day
 
 
 class BaseScheduler(ABC):
@@ -70,93 +70,14 @@ class BaseScheduler(ABC):
         """Check if starting on this date meets the deadline."""
         return validate_deadline_compliance_single(start, sub, self.config)
     
-    def _validate_soft_block_model(self, sub: Submission, start: date) -> bool:
-        """Validate soft block model (PCCP) - submissions within ±2 months of earliest start."""
-        if not sub.earliest_start_date:
-            return True
-        
-        # Only apply to modifications (PCCP model)
-        if not sub.id.endswith("-wrk"):
-            return True
-        
-        months_diff = abs((start.year - sub.earliest_start_date.year) * 12 + 
-                         (start.month - sub.earliest_start_date.month))
-        return months_diff <= 2
-    
-    def _validate_working_days_only(self, start: date) -> bool:
-        """Validate working days only constraint."""
-        if not self.config.scheduling_options or not self.config.scheduling_options.get("enable_working_days_only", False):
-            return True
-        
-        return is_working_day(start, self.config.blackout_dates)
-    
-    def _validate_conference_response_time(self, sub: Submission, start: date) -> bool:
-        """Validate conference response time buffer."""
-        if not self.config.scheduling_options or "conference_response_time_days" not in self.config.scheduling_options:
-            return True
-        
-        if not sub.conference_id or sub.conference_id not in self.conferences:
-            return True
-        
-        conf = self.conferences[sub.conference_id]
-        if sub.kind not in conf.deadlines:
-            return True
-        
-        deadline = conf.deadlines[sub.kind]
-        end_date = sub.get_end_date(start, self.config)
-        response_time = self.config.scheduling_options["conference_response_time_days"]
-        response_deadline = deadline + timedelta(days=response_time)
-        
-        return end_date <= response_deadline
-    
-    def _validate_single_conference_policy(self, sub: Submission, schedule: Dict[str, date]) -> bool:
-        """Validate single conference policy - one venue per paper per annual cycle."""
-        if sub.kind != SubmissionType.PAPER or not sub.conference_id:
-            return True
-        
-        # Group by paper ID (remove -pap suffix)
-        paper_id = sub.id.replace("-pap", "")
-        
-        # Check if this paper is already assigned to a different conference
-        for scheduled_id, _ in schedule.items():
-            scheduled_sub = self.submissions.get(scheduled_id)
-            if (scheduled_sub and 
-                scheduled_sub.kind == SubmissionType.PAPER and
-                scheduled_sub.id.replace("-pap", "") == paper_id and
-                scheduled_sub.conference_id != sub.conference_id):
-                return False
-        
-        return True
+    # VALIDATION METHODS - Call comprehensive validation from constraints.py
+    # These methods provide fast boolean validation during scheduling by calling
+    # the comprehensive validation functions from constraints.py
     
     def _validate_all_constraints(self, sub: Submission, start: date, schedule: Dict[str, date]) -> bool:
         """Validate all constraints for a submission at a given start date."""
-        # Basic constraints
-        if not self._meets_deadline(sub, start):
-            return False
-        
-        if not self._deps_satisfied(sub, schedule, start):
-            return False
-        
-        # Advanced constraints
-        if not self._validate_soft_block_model(sub, start):
-            return False
-        
-        if not self._validate_working_days_only(start):
-            return False
-        
-        if not self._validate_conference_response_time(sub, start):
-            return False
-        
-        if not self._validate_single_conference_policy(sub, schedule):
-            return False
-        
-        # Conference compatibility
-        if sub.conference_id and sub.conference_id in self.conferences:
-            conf = self.conferences[sub.conference_id]
-            if not conf.accepts_submission_type(sub.kind):
-                return False
-        
-        return True
+        from src.core.constraints import validate_single_submission_constraints
+        return validate_single_submission_constraints(sub, start, schedule, self.config)
     
     def _auto_link_abstract_paper(self):
         """Auto-link abstracts to papers and create missing abstract submissions."""
@@ -167,7 +88,8 @@ class BaseScheduler(ABC):
         papers_needing_abstracts = []
         
         # Find papers that need abstract submissions
-        for submission_id, submission in submissions_dict.items():
+        papers_to_process = list(submissions_dict.items())
+        for submission_id, submission in papers_to_process:
             if (submission.kind == SubmissionType.PAPER and 
                 submission.conference_id and 
                 submission.conference_id in conferences_dict):
@@ -283,10 +205,7 @@ class BaseScheduler(ABC):
         
         return True
     
-    def _validate_venue_compatibility(self):
-        """Validate that submissions are compatible with their venues."""
-        validate_venue_compatibility(self.submissions, self.conferences)
-    
+
     def _calculate_earliest_start_date(self, submission: Submission) -> date:
         """Calculate the earliest start date for a submission based on dependencies and constraints."""
         # If explicitly set, use it

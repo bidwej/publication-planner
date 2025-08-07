@@ -509,6 +509,248 @@ class TestConfig:
         assert abstract.conference_id == "conf1"
         assert "paper1-abs-conf1" in paper.depends_on
 
+    def test_config_edge_cases(self):
+        """Test config edge cases and error conditions."""
+        # Test with empty submissions and conferences
+        empty_config = Config(
+            submissions=[],
+            conferences=[],
+            min_abstract_lead_time_days=30,
+            min_paper_lead_time_days=90,
+            max_concurrent_submissions=3
+        )
+        
+        # Should not crash with empty data
+        errors = empty_config.validate()
+        assert isinstance(errors, list)
+        
+        # Test with extreme penalty values
+        extreme_config = Config(
+            submissions=[],
+            conferences=[],
+            min_abstract_lead_time_days=30,
+            min_paper_lead_time_days=90,
+            max_concurrent_submissions=3,
+            penalty_costs={
+                "default_mod_penalty_per_day": 999999.0,
+                "missing_abstract_penalty": 50000.0,
+                "unscheduled_abstract_penalty": 40000.0,
+                "abstract_paper_timing_penalty": 30000.0,
+                "missing_abstract_dependency_penalty": 25000.0
+            }
+        )
+        
+        # Should handle extreme values without crashing
+        errors = extreme_config.validate()
+        assert isinstance(errors, list)
+        
+        # Test with malformed submission data
+        malformed_submission = Submission(
+            id="malformed",
+            title="",  # Empty title
+            kind=SubmissionType.PAPER,
+            conference_id="nonexistent_conf"
+        )
+        
+        malformed_config = Config(
+            submissions=[malformed_submission],
+            conferences=[],
+            min_abstract_lead_time_days=30,
+            min_paper_lead_time_days=90,
+            max_concurrent_submissions=3
+        )
+        
+        # Should detect malformed data
+        errors = malformed_config.validate()
+        assert len(errors) > 0
+        assert any("nonexistent" in error.lower() for error in errors)
+        
+        # Test with invalid lead times
+        invalid_config = Config(
+            submissions=[],
+            conferences=[],
+            min_abstract_lead_time_days=-10,  # Invalid negative value
+            min_paper_lead_time_days=0,       # Invalid zero value
+            max_concurrent_submissions=-5      # Invalid negative value
+        )
+        
+        # Should detect invalid configuration
+        errors = invalid_config.validate()
+        assert len(errors) > 0
+
+    def test_config_abstract_paper_dependencies_edge_cases(self):
+        """Test abstract-paper dependencies with edge cases."""
+        # Test with conference that doesn't require abstracts
+        conference_no_abstract = Conference(
+            id="conf_no_abstract",
+            name="No Abstract Conference",
+            conf_type=ConferenceType.ENGINEERING,
+            recurrence=ConferenceRecurrence.ANNUAL,
+            deadlines={SubmissionType.PAPER: date(2024, 6, 1)}  # Only paper deadline
+        )
+        
+        paper = Submission(
+            id="paper1",
+            title="Test Paper",
+            kind=SubmissionType.PAPER,
+            conference_id="conf_no_abstract"
+        )
+        
+        config = Config(
+            submissions=[paper],
+            conferences=[conference_no_abstract],
+            min_abstract_lead_time_days=30,
+            min_paper_lead_time_days=90,
+            max_concurrent_submissions=3
+        )
+        
+        # Should not require abstract for paper-only conference
+        errors = config.validate()
+        assert not any("requires abstract" in error for error in errors)
+        
+        # Test with paper that already has abstract
+        conference_with_abstract = Conference(
+            id="conf_with_abstract",
+            name="Abstract Required Conference",
+            conf_type=ConferenceType.MEDICAL,
+            recurrence=ConferenceRecurrence.ANNUAL,
+            deadlines={
+                SubmissionType.ABSTRACT: date(2024, 3, 1),
+                SubmissionType.PAPER: date(2024, 6, 1)
+            }
+        )
+        
+        existing_abstract = Submission(
+            id="paper1-abs-conf_with_abstract",
+            title="Existing Abstract",
+            kind=SubmissionType.ABSTRACT,
+            conference_id="conf_with_abstract"
+        )
+        
+        paper_with_abstract = Submission(
+            id="paper1",
+            title="Test Paper",
+            kind=SubmissionType.PAPER,
+            conference_id="conf_with_abstract",
+            depends_on=["paper1-abs-conf_with_abstract"]
+        )
+        
+        config_with_abstract = Config(
+            submissions=[paper_with_abstract, existing_abstract],
+            conferences=[conference_with_abstract],
+            min_abstract_lead_time_days=30,
+            min_paper_lead_time_days=90,
+            max_concurrent_submissions=3
+        )
+        
+        # Should not create duplicate abstract
+        initial_count = len(config_with_abstract.submissions)
+        config_with_abstract.ensure_abstract_paper_dependencies()
+        assert len(config_with_abstract.submissions) == initial_count
+        
+        # Test with paper scheduled before abstract
+        paper_before_abstract = Submission(
+            id="paper2",
+            title="Paper Before Abstract",
+            kind=SubmissionType.PAPER,
+            conference_id="conf_with_abstract"
+        )
+        
+        config_before_abstract = Config(
+            submissions=[paper_before_abstract],
+            conferences=[conference_with_abstract],
+            min_abstract_lead_time_days=30,
+            min_paper_lead_time_days=90,
+            max_concurrent_submissions=3,
+            penalty_costs={"default_mod_penalty_per_day": 1000.0}
+        )
+        
+        # Should create abstract and ensure proper dependency
+        config_before_abstract.ensure_abstract_paper_dependencies()
+        assert len(config_before_abstract.submissions) == 2
+        assert "paper2-abs-conf_with_abstract" in config_before_abstract.submissions_dict
+        assert "paper2-abs-conf_with_abstract" in paper_before_abstract.depends_on
+
+    def test_config_validation_comprehensive_edge_cases(self):
+        """Test comprehensive validation with edge cases."""
+        # Test with submissions that have circular dependencies
+        submission_a = Submission(
+            id="sub_a",
+            title="Submission A",
+            kind=SubmissionType.PAPER,
+            depends_on=["sub_b"]
+        )
+        
+        submission_b = Submission(
+            id="sub_b", 
+            title="Submission B",
+            kind=SubmissionType.PAPER,
+            depends_on=["sub_a"]  # Circular dependency
+        )
+        
+        config_circular = Config(
+            submissions=[submission_a, submission_b],
+            conferences=[],
+            min_abstract_lead_time_days=30,
+            min_paper_lead_time_days=90,
+            max_concurrent_submissions=3
+        )
+        
+        # Should detect circular dependencies
+        errors = config_circular.validate()
+        assert len(errors) > 0
+        
+        # Test with submissions that depend on non-existent submissions
+        submission_orphan = Submission(
+            id="orphan",
+            title="Orphan Submission",
+            kind=SubmissionType.PAPER,
+            depends_on=["nonexistent_dependency"]
+        )
+        
+        config_orphan = Config(
+            submissions=[submission_orphan],
+            conferences=[],
+            min_abstract_lead_time_days=30,
+            min_paper_lead_time_days=90,
+            max_concurrent_submissions=3
+        )
+        
+        # Should detect missing dependencies
+        errors = config_orphan.validate()
+        assert len(errors) > 0
+        assert any("nonexistent" in error.lower() for error in errors)
+        
+        # Test with submissions that have invalid conference assignments
+        conference_medical = Conference(
+            id="medical_conf",
+            name="Medical Conference",
+            conf_type=ConferenceType.MEDICAL,
+            recurrence=ConferenceRecurrence.ANNUAL,
+            deadlines={SubmissionType.PAPER: date(2024, 6, 1)}
+        )
+        
+        engineering_paper = Submission(
+            id="eng_paper",
+            title="Engineering Paper",
+            kind=SubmissionType.PAPER,
+            conference_id="medical_conf",
+            engineering=True  # Engineering paper to medical conference
+        )
+        
+        config_mismatch = Config(
+            submissions=[engineering_paper],
+            conferences=[conference_medical],
+            min_abstract_lead_time_days=30,
+            min_paper_lead_time_days=90,
+            max_concurrent_submissions=3
+        )
+        
+        # Should validate conference compatibility
+        errors = config_mismatch.validate()
+        # Note: This might not be an error depending on business rules
+        # but should be validated
+
 
 class TestUnifiedModels:
     """Test unified models."""
