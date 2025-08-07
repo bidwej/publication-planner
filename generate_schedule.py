@@ -11,8 +11,8 @@ from datetime import date
 from pathlib import Path
 
 # Add the src directory to the path
-import sys
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+import os
+os.environ['PYTHONPATH'] = str(Path(__file__).parent / "src") + os.pathsep + os.environ.get('PYTHONPATH', '')
 
 # Import after adding src to path - pylint: disable=wrong-import-position
 from core.config import load_config

@@ -21,6 +21,7 @@ class GreedyScheduler(BaseScheduler):
         
         # Get submissions in priority order
         submissions = self._topological_order()
+        print(f"DEBUG: Found {len(submissions)} submissions to schedule")
         
         # Initialize schedule
         schedule = {}
@@ -28,14 +29,18 @@ class GreedyScheduler(BaseScheduler):
         # Schedule each submission
         for submission_id in submissions:
             submission = self.config.submissions_dict[submission_id]
+            print(f"DEBUG: Scheduling {submission_id} ({submission.kind.value})")
             
             # Find earliest valid start date
             start_date = self._find_earliest_valid_start(submission, schedule)
+            print(f"DEBUG: Found start date for {submission_id}: {start_date}")
             
             if start_date:
                 schedule[submission_id] = start_date
+                print(f"DEBUG: Scheduled {submission_id} for {start_date}")
             else:
                 # If we can't schedule this submission, skip it
+                print(f"DEBUG: Could not schedule {submission_id}")
                 continue
         
         return schedule
@@ -51,8 +56,10 @@ class GreedyScheduler(BaseScheduler):
                 base_priority = weights.get("engineering_paper" if s.engineering else "medical_paper", 1.0)
             elif s.kind.value == "ABSTRACT":
                 base_priority = weights.get("abstract", 0.5)
+            elif s.kind.value == "POSTER":
+                base_priority = weights.get("poster", 0.8)
             else:
-                base_priority = weights.get("mod", 1.5)
+                base_priority = weights.get("other", 1.0)
             
             return base_priority
         
@@ -63,6 +70,7 @@ class GreedyScheduler(BaseScheduler):
      
         # Start with today
         current_date = date.today()
+        print(f"DEBUG: Starting with current_date: {current_date}")
         
         # Check dependencies
         if submission.depends_on:
@@ -70,10 +78,12 @@ class GreedyScheduler(BaseScheduler):
                 if dep_id in schedule:
                     dep_end = self._get_end_date(schedule[dep_id], self.config.submissions_dict[dep_id])
                     current_date = max(current_date, dep_end)
+                    print(f"DEBUG: After dependency {dep_id}, current_date: {current_date}")
         
         # Check earliest start date constraint
         if submission.earliest_start_date:
             current_date = max(current_date, submission.earliest_start_date)
+            print(f"DEBUG: After earliest_start_date, current_date: {current_date}")
         
         # Check deadline constraint
         if submission.conference_id:
@@ -82,12 +92,15 @@ class GreedyScheduler(BaseScheduler):
                 deadline = conf.deadlines[submission.kind]
                 duration = submission.get_duration_days(self.config)
                 latest_start = deadline - timedelta(days=duration)
+                print(f"DEBUG: Deadline: {deadline}, duration: {duration}, latest_start: {latest_start}")
                 if current_date > latest_start:
+                    print(f"DEBUG: Current date {current_date} > latest_start {latest_start}, returning None")
                     return None  # Can't meet deadline
-                current_date = min(current_date, latest_start)
+                print(f"DEBUG: Deadline constraint satisfied")
         
         # Check resource constraints
         max_concurrent = self.config.max_concurrent_submissions
+        print(f"DEBUG: Checking resource constraints, max_concurrent: {max_concurrent}")
         while current_date <= date.today() + timedelta(days=365):  # Reasonable limit
             # Count active submissions on this date
             active_count = 0
@@ -97,9 +110,12 @@ class GreedyScheduler(BaseScheduler):
                 if start_date <= current_date <= end_date:
                     active_count += 1
             
+            print(f"DEBUG: Date {current_date}, active_count: {active_count}")
             if active_count < max_concurrent:
+                print(f"DEBUG: Found valid date: {current_date}")
                 return current_date
             
             current_date += timedelta(days=1)
         
+        print(f"DEBUG: Could not find valid start date within 365 days")
         return None  # Could not find valid start date 

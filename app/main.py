@@ -7,7 +7,6 @@ import dash
 from dash import html, dcc, Input, Output, State, callback_context, exceptions
 from typing import Any, Dict
 import argparse
-import sys
 
 # Import core functionality
 from src.core.config import load_config

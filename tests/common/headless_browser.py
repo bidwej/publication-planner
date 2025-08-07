@@ -5,16 +5,18 @@ Headless browser test functions for capturing web app screenshots.
 import subprocess
 import time
 import requests
-import sys
 import os
 import socket
 import logging
+import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
 from playwright.async_api import Page, TimeoutError as PlaywrightTimeoutError, async_playwright
 
 # Add project root to path for imports
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+import os
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+os.environ['PYTHONPATH'] = project_root + os.pathsep + os.environ.get('PYTHONPATH', '')
 
 class ConfigurationError(Exception):
     """Raised when configuration validation fails."""

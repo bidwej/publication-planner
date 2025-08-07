@@ -1,13 +1,9 @@
 """Integration tests for scheduler functionality."""
 
 import pytest
-import sys
 import subprocess
 from pathlib import Path
 from datetime import date
-
-# Add root directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 from core.models import SchedulerStrategy
 

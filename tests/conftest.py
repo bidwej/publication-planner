@@ -58,12 +58,17 @@ def create_mock_config(submissions: list, conferences: list, **kwargs):
     # Import here to avoid circular imports
     from core.models import Config
     
+    # Extract specific parameters to avoid duplicates
+    min_abstract_lead_time_days = kwargs.pop('min_abstract_lead_time_days', 30)
+    min_paper_lead_time_days = kwargs.pop('min_paper_lead_time_days', 90)
+    max_concurrent_submissions = kwargs.pop('max_concurrent_submissions', 3)
+    
     return Config(
         submissions=submissions,
         conferences=conferences,
-        min_abstract_lead_time_days=kwargs.get('min_abstract_lead_time_days', 30),
-        min_paper_lead_time_days=kwargs.get('min_paper_lead_time_days', 90),
-        max_concurrent_submissions=kwargs.get('max_concurrent_submissions', 3),
+        min_abstract_lead_time_days=min_abstract_lead_time_days,
+        min_paper_lead_time_days=min_paper_lead_time_days,
+        max_concurrent_submissions=max_concurrent_submissions,
         **kwargs
     )
 

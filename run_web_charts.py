@@ -10,8 +10,8 @@ import logging
 from pathlib import Path
 
 # Add the project root to Python path
-import sys
-sys.path.append(str(Path(__file__).parent))
+import os
+os.environ['PYTHONPATH'] = str(Path(__file__).parent) + os.pathsep + os.environ.get('PYTHONPATH', '')
 
 # Configure logging for better debugging
 logging.basicConfig(

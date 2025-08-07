@@ -3,14 +3,15 @@
 import pytest
 import socket
 import os
-import sys
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
 # Add project root to path for imports
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+import os
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+os.environ['PYTHONPATH'] = project_root + os.pathsep + os.environ.get('PYTHONPATH', '')
 
 from tests.common.headless_browser import (
     validate_script_path,

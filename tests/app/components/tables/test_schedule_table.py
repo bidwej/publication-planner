@@ -5,11 +5,12 @@ Tests for schedule table component.
 import pytest
 from datetime import date
 from unittest.mock import Mock
-import sys
 import os
 
 # Add the src directory to the path for imports
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'src'))
+import os
+src_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'src')
+os.environ['PYTHONPATH'] = src_path + os.pathsep + os.environ.get('PYTHONPATH', '')
 
 from components.tables.schedule_table import (
     create_schedule_table,
