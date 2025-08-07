@@ -19,7 +19,7 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler('web_charts_server.log')
+        logging.FileHandler('web_charts_server.log', encoding='utf-8')
     ]
 )
 logger = logging.getLogger(__name__)
@@ -36,45 +36,45 @@ def run_dashboard():
         main()
         
     except ImportError as e:
-        print(f"❌ Error importing dashboard app: {e}")
-        print("💡 Make sure you're in the project root directory")
+        print(f"[ERROR] Error importing dashboard app: {e}")
+        print("[TIP] Make sure you're in the project root directory")
         sys.exit(1)
     except Exception as e:
-        print(f"❌ Error starting dashboard: {e}")
+        print(f"[ERROR] Error starting dashboard: {e}")
         sys.exit(1)
 
 def run_timeline():
     """Run the timeline normally."""
     try:
-        logger.info("🚀 Starting Paper Planner Timeline Server...")
+        logger.info("[START] Starting Paper Planner Timeline Server...")
         
         # Check if we can import the main module
         try:
             from app.main import main as app_main
-            logger.info("✅ Successfully imported app.main")
+            logger.info("[OK] Successfully imported app.main")
         except ImportError as e:
-            logger.error(f"❌ Error importing timeline app: {e}")
-            logger.error("💡 Make sure you're in the project root directory")
-            logger.error("💡 Check that all dependencies are installed")
+            logger.error(f"[ERROR] Error importing timeline app: {e}")
+            logger.error("[TIP] Make sure you're in the project root directory")
+            logger.error("[TIP] Check that all dependencies are installed")
             sys.exit(1)
         
         # Set up arguments for timeline mode
         sys.argv = ['main.py', '--mode', 'timeline', '--port', '8051']
         
-        logger.info("📊 Starting timeline mode on port 8051")
-        logger.info("🌐 Timeline will be available at: http://127.0.0.1:8051")
-        logger.info("🔄 Press Ctrl+C to stop the server")
+        logger.info("[CHART] Starting timeline mode on port 8051")
+        logger.info("[WEB] Timeline will be available at: http://127.0.0.1:8051")
+        logger.info("[REFRESH] Press Ctrl+C to stop the server")
         logger.info("-" * 50)
         
         # Run the main function
         app_main()
         
     except KeyboardInterrupt:
-        logger.info("🛑 Timeline server stopped by user")
+        logger.info("[STOP] Timeline server stopped by user")
         sys.exit(0)
     except Exception as e:
-        logger.error(f"❌ Error starting timeline: {e}")
-        logger.error("💡 Check the logs for more details")
+        logger.error(f"[ERROR] Error starting timeline: {e}")
+        logger.error("[TIP] Check the logs for more details")
         sys.exit(1)
 
 async def capture_dashboard_screenshots():
@@ -82,20 +82,20 @@ async def capture_dashboard_screenshots():
     try:
         from tests.common.headless_browser import capture_all_scheduler_options
         
-        print("📊 Capturing dashboard screenshots...")
+        print("[CHART] Capturing dashboard screenshots...")
         results = await capture_all_scheduler_options()
         
-        print("\n📈 Results:")
+        print("\n[SCATTER] Results:")
         for scheduler, success in results.items():
-            status = "✅" if success else "❌"
+            status = "[OK]" if success else "[ERROR]"
             print(f"  {status} {scheduler}")
         
         success_count = sum(results.values())
         total_count = len(results)
-        print(f"\n📊 Overall: {success_count}/{total_count} schedulers captured")
+        print(f"\n[CHART] Overall: {success_count}/{total_count} schedulers captured")
         
     except Exception as e:
-        print(f"❌ Error capturing screenshots: {e}")
+        print(f"[ERROR] Error capturing screenshots: {e}")
         sys.exit(1)
 
 async def capture_timeline_screenshot():
@@ -103,16 +103,16 @@ async def capture_timeline_screenshot():
     try:
         from tests.common.headless_browser import capture_timeline_screenshots
         
-        print("📅 Capturing timeline screenshot...")
+        print("[TIMELINE] Capturing timeline screenshot...")
         success = await capture_timeline_screenshots()
         
         if success:
-            print("✅ Timeline screenshot captured successfully!")
+            print("[OK] Timeline screenshot captured successfully!")
         else:
-            print("❌ Timeline screenshot capture failed!")
+            print("[ERROR] Timeline screenshot capture failed!")
             
     except Exception as e:
-        print(f"❌ Error capturing timeline screenshot: {e}")
+        print(f"[ERROR] Error capturing timeline screenshot: {e}")
         sys.exit(1)
 
 def main():
@@ -133,7 +133,7 @@ def main():
     args = parser.parse_args()
     
     if args.capture:
-        print(f"🚀 Capturing {args.mode} screenshots...")
+        print(f"[START] Capturing {args.mode} screenshots...")
         if args.mode == 'dashboard':
             asyncio.run(capture_dashboard_screenshots())
         else:

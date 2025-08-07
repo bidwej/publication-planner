@@ -275,10 +275,10 @@ def validate_configuration(
         return results
         
     except ConfigurationError as e:
-        print(f"❌ Configuration validation failed: {e}")
+        print(f"[ERROR] Configuration validation failed: {e}")
         raise
     except Exception as e:
-        print(f"❌ Unexpected error during validation: {e}")
+        print(f"[ERROR] Unexpected error during validation: {e}")
         raise ConfigurationError(f"Validation error: {e}")
 
 # Configure logging
@@ -286,8 +286,8 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler('headless_browser.log')
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('headless_browser.log', encoding='utf-8')
     ]
 )
 logger = logging.getLogger(__name__)
@@ -318,7 +318,7 @@ def is_server_running(url: str, timeout: int = 2) -> bool:
 
 def start_web_server(script_path: str, port: int, max_wait: int = 10) -> Optional[subprocess.Popen]:
     """Start a web server using the given script and wait for it to be ready."""
-    logger.info(f"🚀 Starting web server on port {port}...")
+    logger.info(f"[START] Starting web server on port {port}...")
     
     if not os.path.exists(script_path):
         error_msg = f"Script not found: {script_path}"
@@ -331,12 +331,12 @@ def start_web_server(script_path: str, port: int, max_wait: int = 10) -> Optiona
         ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
         # Wait for server to start
-        logger.info(f"⏳ Waiting for server to start...")
+        logger.info(f"[WAIT] Waiting for server to start...")
         url = f"http://127.0.0.1:{port}"
         
         for i in range(max_wait):
             if is_server_running(url):
-                logger.info(f"✅ Server is running at {url}!")
+                logger.info(f"[OK] Server is running at {url}!")
                 return process
             time.sleep(1)
             logger.info(f"   Waiting... ({i+1}/{max_wait})")
@@ -413,7 +413,7 @@ async def capture_web_page_screenshot(
             try:
                 process = start_web_server(script_path, port)
             except ServerStartupError as e:
-                logger.error(f"❌ Failed to start server: {e}")
+                logger.error(f"[ERROR] Failed to start server: {e}")
                 logger.info(f"Please run manually: python {script_path}")
                 return False
         elif not server_was_running:
@@ -421,7 +421,7 @@ async def capture_web_page_screenshot(
             logger.error(error_msg)
             return False
         else:
-            logger.info(f"✅ Server is already running at {url}!")
+            logger.info(f"[OK] Server is already running at {url}!")
         
         async with async_playwright() as p:
             # Launch browser with options
@@ -434,12 +434,12 @@ async def capture_web_page_screenshot(
             
             page = await browser.new_page()
             
-            logger.info(f"🔍 Capturing screenshot from {url}...")
+            logger.info(f"[SEARCH] Capturing screenshot from {url}...")
             
             try:
                 # Navigate to the page
                 await page.goto(url, timeout=30000)  # 30 second timeout
-                logger.info("✅ Loaded page")
+                logger.info("[OK] Loaded page")
                 
                 # Wait for page to load
                 await page.wait_for_load_state('networkidle', timeout=30000)
@@ -448,11 +448,11 @@ async def capture_web_page_screenshot(
                 if wait_for_selector:
                     try:
                         await page.wait_for_selector(wait_for_selector, timeout=wait_timeout)
-                        logger.info(f"✅ Found selector: {wait_for_selector}")
+                        logger.info(f"[OK] Found selector: {wait_for_selector}")
                     except PlaywrightTimeoutError:
-                        logger.warning(f"⚠️  Selector {wait_for_selector} not found within timeout")
+                        logger.warning(f"[WARNING]  Selector {wait_for_selector} not found within timeout")
                     except Exception as e:
-                        logger.warning(f"⚠️  Error waiting for selector {wait_for_selector}: {e}")
+                        logger.warning(f"[WARNING]  Error waiting for selector {wait_for_selector}: {e}")
                 
                 # Extra wait for dynamic content
                 if extra_wait > 0:
@@ -460,19 +460,19 @@ async def capture_web_page_screenshot(
                 
                 # Take screenshot
                 await page.screenshot(path=output_path, full_page=full_page)
-                logger.info(f"📸 Screenshot saved as '{output_path}'")
+                logger.info(f"[SCREENSHOT] Screenshot saved as '{output_path}'")
                 
                 # Inspect chart elements (optional)
                 await _inspect_chart_elements(page)
                 
-                logger.info("✅ Screenshot capture complete!")
+                logger.info("[OK] Screenshot capture complete!")
                 return True
                 
             except PlaywrightTimeoutError as e:
-                logger.error(f"❌ Timeout error capturing screenshot: {e}")
+                logger.error(f"[ERROR] Timeout error capturing screenshot: {e}")
                 return False
             except Exception as e:
-                logger.error(f"❌ Error capturing screenshot: {e}")
+                logger.error(f"[ERROR] Error capturing screenshot: {e}")
                 return False
             
             finally:
@@ -482,56 +482,56 @@ async def capture_web_page_screenshot(
                     logger.warning(f"Error closing browser: {e}")
     
     except Exception as e:
-        logger.error(f"❌ Unexpected error in capture_web_page_screenshot: {e}")
+        logger.error(f"[ERROR] Unexpected error in capture_web_page_screenshot: {e}")
         return False
     
     finally:
         # Stop the server process if we started it
         if process:
-            logger.info("🛑 Stopping server...")
+            logger.info("[STOP] Stopping server...")
             try:
                 process.terminate()
                 process.wait(timeout=5)
-                logger.info("✅ Server stopped.")
+                logger.info("[OK] Server stopped.")
             except subprocess.TimeoutExpired:
-                logger.warning("⚠️  Server didn't stop gracefully, forcing kill")
+                logger.warning("[WARNING]  Server didn't stop gracefully, forcing kill")
                 process.kill()
             except Exception as e:
-                logger.warning(f"⚠️  Error stopping server: {e}")
+                logger.warning(f"[WARNING]  Error stopping server: {e}")
 
 async def _inspect_chart_elements(page: Page) -> None:
     """Inspect chart elements and print statistics."""
-    logger.info("\n📊 INSPECTING CHART ELEMENTS:")
+    logger.info("\n[CHART] INSPECTING CHART ELEMENTS:")
     
     try:
         # Check for shapes (blackout periods)
         shapes = await page.query_selector_all('.shape-group')
-        logger.info(f"🔲 Shape groups (blackout periods): {len(shapes)}")
+        logger.info(f"[SHAPE] Shape groups (blackout periods): {len(shapes)}")
         
         # Check for vlines (holiday lines)
         vlines = await page.query_selector_all('.vline')
-        logger.info(f"📏 Vertical lines (holidays): {len(vlines)}")
+        logger.info(f"[LINE] Vertical lines (holidays): {len(vlines)}")
         
         # Check for bars
         bars = await page.query_selector_all('.trace.bars')
-        logger.info(f"📊 Bar traces: {len(bars)}")
+        logger.info(f"[CHART] Bar traces: {len(bars)}")
         
         # Check for scatter plots
         scatter = await page.query_selector_all('.trace.scatter')
-        logger.info(f"📈 Scatter traces: {len(scatter)}")
+        logger.info(f"[SCATTER] Scatter traces: {len(scatter)}")
         
     except Exception as e:
-        logger.warning(f"⚠️  Error inspecting elements: {e}")
+        logger.warning(f"[WARNING]  Error inspecting elements: {e}")
 
 async def _debug_dropdown_elements(page: Page, selector: str) -> None:
     """Debug dropdown elements to understand their structure."""
-    print(f"\n🔍 DEBUGGING DROPDOWN: {selector}")
+    print(f"\n[SEARCH] DEBUGGING DROPDOWN: {selector}")
     
     try:
         # Check if dropdown exists
         dropdown = await page.query_selector(selector)
         if dropdown:
-            print(f"✅ Dropdown found: {selector}")
+            print(f"[OK] Dropdown found: {selector}")
             
             # Get dropdown attributes
             attributes = await dropdown.get_attribute('class')
@@ -539,17 +539,17 @@ async def _debug_dropdown_elements(page: Page, selector: str) -> None:
             
             # Look for dropdown options
             options = await page.query_selector_all(f'{selector} .Select-option')
-            print(f"📝 Found {len(options)} dropdown options")
+            print(f"[TEXT] Found {len(options)} dropdown options")
             
             for i, option in enumerate(options):
                 text = await option.text_content()
                 print(f"   Option {i+1}: {text}")
                 
         else:
-            print(f"❌ Dropdown not found: {selector}")
+            print(f"[ERROR] Dropdown not found: {selector}")
             
     except Exception as e:
-        print(f"⚠️  Error debugging dropdown: {e}")
+        print(f"[WARNING]  Error debugging dropdown: {e}")
 
 async def capture_fallback_screenshot(
     page: Page,
@@ -570,7 +570,7 @@ async def capture_fallback_screenshot(
         True if fallback screenshot was captured, False otherwise
     """
     try:
-        print(f"🔄 Attempting fallback screenshot for {scheduler_name}...")
+        print(f"[REFRESH] Attempting fallback screenshot for {scheduler_name}...")
         
         # Take screenshot of current state
         fallback_path = output_path / f"chart_{scheduler_name}_fallback.png"
@@ -584,23 +584,23 @@ async def capture_fallback_screenshot(
             f.write(f"Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
             f.write(f"Fallback screenshot: {fallback_path.name}\n")
         
-        print(f"✅ Fallback screenshot saved: {fallback_path.name}")
-        print(f"📝 Error details saved: {error_path.name}")
+        print(f"[OK] Fallback screenshot saved: {fallback_path.name}")
+        print(f"[TEXT] Error details saved: {error_path.name}")
         
         return True
         
     except Exception as e:
-        print(f"❌ Fallback screenshot failed for {scheduler_name}: {e}")
+        print(f"[ERROR] Fallback screenshot failed for {scheduler_name}: {e}")
         return False
 
 async def capture_all_scheduler_options(
     base_url: str = "http://127.0.0.1:8050",
-    output_dir: str = "web_charts",
+    output_dir: str = ".",
     script_path: str = "run_web_charts.py",
     port: int = 8050
 ) -> Dict[str, bool]:
     """
-    Capture screenshots for all scheduler options available in the web app.
+    Capture a simple screenshot of the dashboard.
     
     Args:
         base_url: Base URL of the web app
@@ -609,7 +609,7 @@ async def capture_all_scheduler_options(
         port: Port number for server
     
     Returns:
-        Dictionary mapping scheduler names to success status
+        Dictionary with success status
     """
     
     # Validate configuration before proceeding
@@ -621,25 +621,14 @@ async def capture_all_scheduler_options(
             output_dir=output_dir,
             check_connectivity=False  # Don't check connectivity if server isn't running yet
         )
-        logger.info("✅ Configuration validation passed")
+        logger.info("[OK] Configuration validation passed")
     except ConfigurationError as e:
-        logger.error(f"❌ Configuration validation failed: {e}")
+        logger.error(f"[ERROR] Configuration validation failed: {e}")
         return {}
     
     # Create output directory
     output_path = Path(output_dir)
     output_path.mkdir(exist_ok=True)
-    
-    # Define scheduler options (based on main.py)
-    schedulers = [
-        "greedy",
-        "stochastic",
-        "lookahead", 
-        "backtracking",
-        "random",
-        "heuristic",
-        "optimal"
-    ]
     
     results = {}
     
@@ -647,11 +636,11 @@ async def capture_all_scheduler_options(
     if not is_server_running(base_url):
         process = start_web_server(script_path, port)
         if not process:
-            print("❌ Failed to start server")
-            return {scheduler: False for scheduler in schedulers}
+            print("[ERROR] Failed to start server")
+            return {"dashboard": False}
     else:
         process = None
-        print("✅ Server is already running!")
+        print("[OK] Server is already running!")
     
     try:
         async with async_playwright() as p:
@@ -661,92 +650,21 @@ async def capture_all_scheduler_options(
             # Navigate to the app
             await page.goto(base_url)
             await page.wait_for_load_state('networkidle')
+            await page.wait_for_timeout(3000)  # Wait for page to fully load
             
-            for scheduler in schedulers:
-                try:
-                    print(f"\n🔄 Capturing {scheduler} scheduler...")
-                    
-                    # Select the scheduler strategy using Dash dropdown interaction
-                    # First, click on the dropdown to open it
-                    await page.click('#strategy-selector')
-                    await page.wait_for_timeout(500)
-                    
-                    # Try multiple selectors for the dropdown option
-                    option_selectors = [
-                        f'[data-value="{scheduler}"]',
-                        f'[value="{scheduler}"]',
-                        f'text="{scheduler}"',
-                        f'text="{scheduler.capitalize()}"',
-                        f'[role="option"][data-value="{scheduler}"]',
-                        f'[role="option"][value="{scheduler}"]'
-                    ]
-                    
-                    option_selected = False
-                    for selector in option_selectors:
-                        try:
-                            await page.click(selector)
-                            option_selected = True
-                            break
-                        except:
-                            continue
-                    
-                    if not option_selected:
-                        # Fallback: try to find by text content
-                        options = await page.query_selector_all('.Select-option')
-                        for option in options:
-                            text = await option.text_content()
-                            if text and scheduler.lower() in text.lower():
-                                await option.click()
-                                option_selected = True
-                                break
-                    
-                    if not option_selected:
-                        error_msg = f"Could not select option for scheduler: {scheduler}"
-                        print(f"❌ {error_msg}")
-                        
-                        # Capture fallback screenshot
-                        fallback_success = await capture_fallback_screenshot(
-                            page=page,
-                            output_path=output_path,
-                            scheduler_name=scheduler,
-                            error_message=error_msg
-                        )
-                        
-                        results[scheduler] = fallback_success
-                        continue
-                    
-                    await page.wait_for_timeout(1000)
-                    
-                    # Click generate button
-                    await page.click('#generate-schedule-btn')
-                    await page.wait_for_timeout(3000)  # Wait for chart generation
-                    
-                    # Take screenshot
-                    screenshot_path = output_path / f"chart_{scheduler}.png"
-                    await page.screenshot(path=str(screenshot_path), full_page=True)
-                    print(f"✅ Saved {scheduler} screenshot")
-                    
-                    results[scheduler] = True
-                    
-                except Exception as e:
-                    print(f"❌ Error capturing {scheduler}: {e}")
-                    
-                    # Capture fallback screenshot on any error
-                    fallback_success = await capture_fallback_screenshot(
-                        page=page,
-                        output_path=output_path,
-                        scheduler_name=scheduler,
-                        error_message=str(e)
-                    )
-                    
-                    results[scheduler] = fallback_success
+            # Take simple screenshot
+            screenshot_path = output_path / "web_dashboard.png"
+            await page.screenshot(path=str(screenshot_path), full_page=True)
+            print(f"[OK] Saved dashboard screenshot")
+            
+            results["dashboard"] = True
             
             await browser.close()
     
     finally:
         # Stop server if we started it
         if process:
-            print("🛑 Stopping server...")
+            print("[STOP] Stopping server...")
             process.terminate()
             process.wait()
     
@@ -754,7 +672,7 @@ async def capture_all_scheduler_options(
 
 async def capture_timeline_screenshots(
     base_url: str = "http://127.0.0.1:8051",
-    output_dir: str = "timeline_charts",
+    output_dir: str = ".",
     script_path: str = "run_web_charts.py",
     port: int = 8051
 ) -> bool:
@@ -780,9 +698,9 @@ async def capture_timeline_screenshots(
             output_dir=output_dir,
             check_connectivity=False  # Don't check connectivity if server isn't running yet
         )
-        logger.info("✅ Configuration validation passed")
+        logger.info("[OK] Configuration validation passed")
     except ConfigurationError as e:
-        logger.error(f"❌ Configuration validation failed: {e}")
+        logger.error(f"[ERROR] Configuration validation failed: {e}")
         return False
     
     # Create output directory
@@ -793,13 +711,12 @@ async def capture_timeline_screenshots(
         logger.error(f"Failed to create output directory {output_dir}: {e}")
         return False
     
-    # Capture timeline screenshot
+    # Capture timeline screenshot - simplified without waiting for specific selector
     success = await capture_web_page_screenshot(
         url=base_url,
-        output_path=str(output_path / "chart_timeline.png"),
+        output_path=str(output_path / "web_timeline.png"),
         script_path=script_path,
         port=port,
-        wait_for_selector="#generate-btn",
         extra_wait=3000
     )
     
