@@ -245,12 +245,25 @@ def main():
     print("🔄 Press Ctrl+C to stop the server")
     print("-" * 50)
     
-    # Run the app
-    app.run(
-        debug=args.debug,
-        host=args.host,
-        port=args.port
-    )
+    # Run the app with improved timeout handling
+    try:
+        app.run(
+            debug=args.debug,
+            host=args.host,
+            port=args.port,
+            threaded=True,  # Enable threading for better performance
+            use_reloader=False  # Disable reloader to avoid issues
+        )
+    except OSError as e:
+        if "Address already in use" in str(e):
+            print(f"❌ Port {args.port} is already in use. Please stop the existing server or use a different port.")
+            sys.exit(1)
+        else:
+            print(f"❌ Server error: {e}")
+            sys.exit(1)
+    except Exception as e:
+        print(f"❌ Unexpected error starting server: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
