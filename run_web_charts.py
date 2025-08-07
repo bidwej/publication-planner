@@ -46,7 +46,7 @@ def run_dashboard():
 def run_timeline():
     """Run the timeline normally."""
     try:
-        logger.info("[START] Starting Paper Planner Timeline Server...")
+        logger.info("[START] Starting Paper Planner Timeline Server")
         
         # Check if we can import the main module
         try:
@@ -82,7 +82,7 @@ async def capture_dashboard_screenshots():
     try:
         from tests.common.headless_browser import capture_all_scheduler_options
         
-        print("[CHART] Capturing dashboard screenshots...")
+        print("[CHART] Capturing dashboard screenshots")
         results = await capture_all_scheduler_options()
         
         print("\n[SCATTER] Results:")
@@ -103,7 +103,7 @@ async def capture_timeline_screenshot():
     try:
         from tests.common.headless_browser import capture_timeline_screenshots
         
-        print("[TIMELINE] Capturing timeline screenshot...")
+        print("[TIMELINE] Capturing timeline screenshot")
         success = await capture_timeline_screenshots()
         
         if success:
@@ -133,7 +133,7 @@ def main():
     args = parser.parse_args()
     
     if args.capture:
-        print(f"[START] Capturing {args.mode} screenshots...")
+        print(f"[START] Capturing {args.mode} screenshots")
         if args.mode == 'dashboard':
             asyncio.run(capture_dashboard_screenshots())
         else:

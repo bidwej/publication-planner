@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import Dict, Optional, Any
 from datetime import date, timedelta
-from .base import BaseScheduler
+from base import BaseScheduler
 from core.models import SchedulerStrategy
 
 try:
@@ -37,7 +37,7 @@ class OptimalScheduler(BaseScheduler):
         """
         if not PULP_AVAILABLE:
             # Fall back to greedy if PuLP not available
-            from .greedy import GreedyScheduler
+            from greedy import GreedyScheduler
             greedy_scheduler = GreedyScheduler(self.config)
             return greedy_scheduler.schedule()
         
@@ -50,7 +50,7 @@ class OptimalScheduler(BaseScheduler):
         
         if solution is None:
             # If MILP fails, fall back to greedy
-            from .greedy import GreedyScheduler
+            from greedy import GreedyScheduler
             greedy_scheduler = GreedyScheduler(self.config)
             return greedy_scheduler.schedule()
         

@@ -67,6 +67,9 @@ reportUnknownVariableType = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src", "app", "."]
-addopts = "-v --tb=short --timeout=15 --import-mode=importlib"
-timeout = 15
+pythonpath = ["."]
+addopts = "-v --tb=short --import-mode=importlib"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning"
+]

@@ -5,8 +5,8 @@ from typing import Dict, List, Any
 from datetime import date, timedelta
 import json
 import csv
-from ..core.models import Config, SubmissionType, ScheduleSummary
-from ..core.constants import MAX_TITLE_LENGTH, DAYS_PER_MONTH
+from core.models import Config, SubmissionType, ScheduleSummary
+from core.constants import MAX_TITLE_LENGTH, DAYS_PER_MONTH
 from pathlib import Path
 
 
@@ -28,7 +28,7 @@ def generate_simple_monthly_table(config: Config) -> List[Dict[str, Any]]:
         
         table.append({
             "ID": submission.id,
-            "Title": submission.title[:MAX_TITLE_LENGTH] + ("..." if len(submission.title) > MAX_TITLE_LENGTH else ""),
+            "Title": submission.title[:MAX_TITLE_LENGTH] + ("" if len(submission.title) > MAX_TITLE_LENGTH else ""),
             "Type": submission.kind.value.title(),
             "Conference": conf_name,
             "Engineering": "Yes" if submission.engineering else "No"
@@ -61,7 +61,7 @@ def generate_schedule_summary_table(schedule: Dict[str, date], config: Config) -
         
         table.append({
             "ID": sid,
-            "Title": sub.title[:MAX_TITLE_LENGTH] + ("..." if len(sub.title) > MAX_TITLE_LENGTH else ""),
+            "Title": sub.title[:MAX_TITLE_LENGTH] + ("" if len(sub.title) > MAX_TITLE_LENGTH else ""),
             "Type": sub.kind.value.title(),
             "Conference": conf_name,
             "Start Date": start_date.strftime("%Y-%m-%d"),
@@ -97,7 +97,7 @@ def generate_schedule_table(schedule: Dict[str, date], config: Config) -> List[D
         
         table.append({
             "ID": sid,
-            "Title": sub.title[:MAX_TITLE_LENGTH] + ("..." if len(sub.title) > MAX_TITLE_LENGTH else ""),
+            "Title": sub.title[:MAX_TITLE_LENGTH] + ("" if len(sub.title) > MAX_TITLE_LENGTH else ""),
             "Type": sub.kind.value.title(),
             "Conference": conf_name,
             "Start Date": start_date.strftime("%Y-%m-%d"),
@@ -169,7 +169,7 @@ def generate_deadline_table(schedule: Dict[str, date], config: Config) -> List[D
         
         table.append({
             "Submission": sid,
-            "Title": sub.title[:MAX_TITLE_LENGTH] + ("..." if len(sub.title) > MAX_TITLE_LENGTH else ""),
+            "Title": sub.title[:MAX_TITLE_LENGTH] + ("" if len(sub.title) > MAX_TITLE_LENGTH else ""),
             "Conference": conf.name,
             "Type": sub.kind.value.title(),
             "Deadline": deadline.strftime("%Y-%m-%d"),

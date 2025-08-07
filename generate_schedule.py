@@ -44,7 +44,7 @@ def compare_all_strategies(config, output_file: Optional[str] = None) -> None:
     
     results = {}
     for strategy in SchedulerStrategy:
-        print(f"\nGenerating schedule with {strategy.value}...")
+        print(f"\nGenerating schedule with {strategy.value}")
         schedule = generate_schedule(config, strategy, verbose=False)
         if schedule:
             results[strategy.value] = schedule

@@ -3,8 +3,8 @@
 from __future__ import annotations
 from typing import List
 from datetime import timedelta, date
-from .greedy import GreedyScheduler
-from .base import BaseScheduler
+from greedy import GreedyScheduler
+from base import BaseScheduler
 from core.models import Submission, SchedulerStrategy
 from core.constants import DEFAULT_LOOKAHEAD_DAYS, SCHEDULER_LOOKAHEAD_BONUS_INCREMENT
 

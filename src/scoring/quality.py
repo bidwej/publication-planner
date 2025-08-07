@@ -4,9 +4,9 @@ from typing import Dict
 from datetime import date, timedelta
 import statistics
 
-from ..core.models import Config
-from ..core.constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
-from ..core.constants import (
+from core.models import Config
+from core.constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
+from core.constants import (
     MAX_SCORE, MIN_SCORE, ROBUSTNESS_SCALE_FACTOR, BALANCE_VARIANCE_FACTOR,
     SINGLE_SUBMISSION_ROBUSTNESS, SINGLE_SUBMISSION_BALANCE, QUALITY_RESOURCE_FALLBACK_SCORE,
     SCORING_QUALITY_DEADLINE_WEIGHT, SCORING_QUALITY_DEPENDENCY_WEIGHT, SCORING_QUALITY_RESOURCE_WEIGHT

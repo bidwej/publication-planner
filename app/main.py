@@ -221,11 +221,11 @@ def main():
     # Create the appropriate app based on mode
     if args.mode == 'timeline':
         app = create_timeline_app()
-        print("[START] Starting Paper Planner Timeline...")
+        print("[START] Starting Paper Planner Timeline")
         print("[CHART] Timeline will be available at: http://127.0.0.1:8050")
     else:
         app = create_dashboard_app()
-        print("[START] Starting Paper Planner Web Application...")
+        print("[START] Starting Paper Planner Web Application")
         print("[CHART] Dashboard will be available at: http://127.0.0.1:8050")
     
     print("[REFRESH] Press Ctrl+C to stop the server")

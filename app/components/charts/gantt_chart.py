@@ -8,7 +8,7 @@ from typing import Dict, List
 import json
 
 from src.core.models import Config, Submission, SubmissionType
-from .gantt_formatter import GanttFormatter
+from gantt_formatter import GanttFormatter
 
 class GanttChartBuilder:
     """Builder class for creating Gantt charts with proper separation of concerns."""

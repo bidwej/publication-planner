@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Dict, List
 from datetime import date
-from .models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
+from models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
 from dateutil.parser import parse as parse_date
 
 from dateutil.relativedelta import relativedelta
@@ -16,7 +16,7 @@ def load_config(config_path: str) -> Config:
         config_file = Path(config_path)
         if not config_file.exists():
             print(f"Config file not found: {config_path}")
-            print("Using default configuration with sample data...")
+            print("Using default configuration with sample data")
             return Config.create_default()
             
         with open(config_file, "r", encoding="utf-8") as f:

@@ -313,7 +313,7 @@ def is_server_running(url: str, timeout: int = 2) -> bool:
 
 def start_web_server(script_path: str, port: int, max_wait: int = 10) -> Optional[subprocess.Popen]:
     """Start a web server using the given script and wait for it to be ready."""
-    logger.info(f"[START] Starting web server on port {port}...")
+    logger.info(f"[START] Starting web server on port {port}")
     
     if not os.path.exists(script_path):
         error_msg = f"Script not found: {script_path}"
@@ -326,7 +326,7 @@ def start_web_server(script_path: str, port: int, max_wait: int = 10) -> Optiona
         ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
         # Wait for server to start
-        logger.info(f"[WAIT] Waiting for server to start...")
+        logger.info(f"[WAIT] Waiting for server to start")
         url = f"http://127.0.0.1:{port}"
         
         for i in range(max_wait):
@@ -334,7 +334,7 @@ def start_web_server(script_path: str, port: int, max_wait: int = 10) -> Optiona
                 logger.info(f"[OK] Server is running at {url}!")
                 return process
             time.sleep(1)
-            logger.info(f"   Waiting... ({i+1}/{max_wait})")
+            logger.info(f"   Waiting ({i+1}/{max_wait})")
         
         # If we get here, server didn't start
         error_msg = f"Server failed to start within {max_wait} seconds"
@@ -429,7 +429,7 @@ async def capture_web_page_screenshot(
             
             page = await browser.new_page()
             
-            logger.info(f"[SEARCH] Capturing screenshot from {url}...")
+            logger.info(f"[SEARCH] Capturing screenshot from {url}")
             
             try:
                 # Navigate to the page
@@ -483,7 +483,7 @@ async def capture_web_page_screenshot(
     finally:
         # Stop the server process if we started it
         if process:
-            logger.info("[STOP] Stopping server...")
+            logger.info("[STOP] Stopping server")
             try:
                 process.terminate()
                 process.wait(timeout=5)
@@ -565,7 +565,7 @@ async def capture_fallback_screenshot(
         True if fallback screenshot was captured, False otherwise
     """
     try:
-        print(f"[REFRESH] Attempting fallback screenshot for {scheduler_name}...")
+        print(f"[REFRESH] Attempting fallback screenshot for {scheduler_name}")
         
         # Take screenshot of current state
         fallback_path = output_path / f"chart_{scheduler_name}_fallback.png"
@@ -659,7 +659,7 @@ async def capture_all_scheduler_options(
     finally:
         # Stop server if we started it
         if process:
-            print("[STOP] Stopping server...")
+            print("[STOP] Stopping server")
             process.terminate()
             process.wait()
     

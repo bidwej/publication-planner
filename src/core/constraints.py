@@ -4,8 +4,8 @@ from __future__ import annotations
 from typing import Dict, Any
 from datetime import date, timedelta
 import statistics
-from .models import Config, Submission, SubmissionType, ConferenceType, DeadlineValidation, DependencyValidation, ResourceValidation, DeadlineViolation, DependencyViolation, ResourceViolation, ConstraintValidationResult
-from .constants import PERFECT_COMPLIANCE_RATE, PERCENTAGE_MULTIPLIER, DAYS_PER_MONTH, DEFAULT_ABSTRACT_ADVANCE_DAYS, DEFAULT_POSTER_DURATION_DAYS
+from models import Config, Submission, SubmissionType, ConferenceType, DeadlineValidation, DependencyValidation, ResourceValidation, DeadlineViolation, DependencyViolation, ResourceViolation, ConstraintValidationResult
+from constants import PERFECT_COMPLIANCE_RATE, PERCENTAGE_MULTIPLIER, DAYS_PER_MONTH, DEFAULT_ABSTRACT_ADVANCE_DAYS, DEFAULT_POSTER_DURATION_DAYS
 
 
 def is_working_day(check_date: date, blackout_dates: list[date] = None) -> bool:
@@ -864,10 +864,10 @@ def validate_schedule_comprehensive(schedule: Dict[str, date], config: Config) -
         Comprehensive validation results including constraints, scoring, and analytics
     """
     # Import here to avoid circular imports
-    from ..scoring.penalty import calculate_penalty_score
-    from ..scoring.quality import calculate_quality_score
-    from ..scoring.efficiency import calculate_efficiency_score
-    from ..output.analytics import (
+    from scoring.penalty import calculate_penalty_score
+    from scoring.quality import calculate_quality_score
+    from scoring.efficiency import calculate_efficiency_score
+    from output.analytics import (
         analyze_schedule_completeness,
         analyze_schedule_distribution,
         analyze_submission_types,

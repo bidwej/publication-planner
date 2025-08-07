@@ -23,7 +23,7 @@ def create_sidebar():
                     {'label': 'Optimal', 'value': SchedulerStrategy.OPTIMAL.value}
                 ],
                 value=SchedulerStrategy.GREEDY.value,
-                placeholder="Select strategy...",
+                placeholder="Select strategy",
                 className="strategy-dropdown"
             ),
             

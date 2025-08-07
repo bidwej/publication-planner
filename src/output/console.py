@@ -67,7 +67,7 @@ def print_deadline_status(schedule: Dict[str, date], config: Config) -> None:
         else:
             late += 1
             days_late = (end_date - deadline).days
-            print(f"  LATE: {sid} ({sub.title[:MAX_TITLE_LENGTH]}...) - {days_late} days late")
+            print(f"  LATE: {sid} ({sub.title[:MAX_TITLE_LENGTH]}) - {days_late} days late")
     
     if total > 0:
         print(f"On time: {on_time}/{total} ({on_time/total*100:.1f}%)")

@@ -45,7 +45,7 @@ class TestSidebarLayout:
         assert isinstance(strategy_dropdown, dcc.Dropdown)
         assert strategy_dropdown.id == "strategy-selector"
         assert strategy_dropdown.value == SchedulerStrategy.GREEDY.value
-        assert strategy_dropdown.placeholder == "Select strategy..."
+        assert strategy_dropdown.placeholder == "Select strategy"
         assert strategy_dropdown.className == "strategy-dropdown"
         
         # Check generate button

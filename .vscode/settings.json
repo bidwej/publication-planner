@@ -7,13 +7,19 @@
       "**/.venv/*": true
     },
     "python.analysis.extraPaths": [
-      "./src"
+      "./src",
+      "./app",
+      "."
     ],
     "python.defaultInterpreterPath": "./.venv/Scripts/python.exe",
     "python.terminal.activateEnvironment": true,
     "markdown-preview-enhanced.enableScriptExecution": true,
     "python.testing.pytestArgs": [
-      "tests"
+      "tests",
+      "--import-mode=prepend",
+      "--pythonpath=.",
+      "--pythonpath=src",
+      "--pythonpath=app"
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,

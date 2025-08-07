@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Dict, List, Set
 from datetime import date, timedelta
 from enum import Enum
-from .base import BaseScheduler
+from base import BaseScheduler
 from core.constraints import is_working_day
 from core.models import SchedulerStrategy
 from core.constants import DEFAULT_ABSTRACT_ADVANCE_DAYS
