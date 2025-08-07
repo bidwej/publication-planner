@@ -230,12 +230,16 @@ class TestWebAppWorkflows:
         # Dash apps may not have external_stylesheets as a direct attribute
         # They are typically configured during app creation
         assert dashboard_app is not None
+        assert hasattr(dashboard_app, 'layout')
+        assert dashboard_app.layout is not None
     
     def test_app_suppress_callback_exceptions(self, dashboard_app: dash.Dash) -> None:
         """Test that callback exceptions are properly suppressed."""
         # Dash apps may not have suppress_callback_exceptions as a direct attribute
         # They are typically configured during app creation
         assert dashboard_app is not None
+        assert hasattr(dashboard_app, 'callback_map')
+        assert len(dashboard_app.callback_map) > 0
     
     def test_timeline_minimal_layout(self, timeline_app: dash.Dash) -> None:
         """Test that timeline app has minimal required layout."""
@@ -271,7 +275,7 @@ class TestWebAppWorkflows:
         # Generate schedule
         schedule = scheduler.schedule()
         assert schedule is not None
-        assert len(schedule) >= 0
+        assert isinstance(schedule, dict)
         
         # Validate schedule
         validation_result = validate_schedule_comprehensive(schedule, config)
@@ -388,7 +392,7 @@ class TestWebAppWorkflows:
         
         # Verify schedule data is consistent - table may be empty if submissions not found in config
         # This is expected behavior when using mock config
-        assert len(sample_schedule) >= 0
+        assert len(sample_schedule) == 2
     
     def test_web_app_multiple_strategies(self, dashboard_app: dash.Dash, temp_config_file: Path) -> None:
         """Test web app with multiple scheduling strategies."""
@@ -407,6 +411,7 @@ class TestWebAppWorkflows:
                 # Generate schedule
                 schedule = scheduler.schedule()
                 assert schedule is not None
+                assert isinstance(schedule, dict)
                 
                 # Test chart generation
                 from app.components.charts.gantt_chart import create_gantt_chart
@@ -447,42 +452,6 @@ class TestWebAppUserInteractions:
         # Test charts page
         response = client.get('/charts')
         assert response.status_code in [200, 404]  # May not exist
-    
-    def test_user_schedule_generation_flow(self, client) -> None:
-        """Test user schedule generation workflow."""
-        # Dash apps don't have REST API endpoints for schedule generation
-        # They use callbacks for interactivity instead
-        assert True  # Skip this test as it's not applicable to Dash apps
-    
-    def test_user_data_export_flow(self, client) -> None:
-        """Test user data export workflow."""
-        # Dash apps don't have REST API endpoints for data export
-        # They use callbacks for interactivity instead
-        assert True  # Skip this test as it's not applicable to Dash apps
-    
-    def test_user_schedule_management_flow(self, client) -> None:
-        """Test user schedule management workflow."""
-        # Dash apps don't have REST API endpoints for schedule management
-        # They use callbacks for interactivity instead
-        assert True  # Skip this test as it's not applicable to Dash apps
-    
-    def test_user_validation_flow(self, client) -> None:
-        """Test user validation workflow."""
-        # Dash apps don't have REST API endpoints for validation
-        # They use callbacks for interactivity instead
-        assert True  # Skip this test as it's not applicable to Dash apps
-    
-    def test_user_configuration_flow(self, client) -> None:
-        """Test user configuration workflow."""
-        # Dash apps don't have REST API endpoints for configuration
-        # They use callbacks for interactivity instead
-        assert True  # Skip this test as it's not applicable to Dash apps
-    
-    def test_user_error_recovery_flow(self, client) -> None:
-        """Test user error recovery workflow."""
-        # Dash apps don't have REST API endpoints for error recovery
-        # They use callbacks for interactivity instead
-        assert True  # Skip this test as it's not applicable to Dash apps
     
     def test_user_performance_flow(self, client) -> None:
         """Test user performance workflow."""
