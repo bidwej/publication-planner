@@ -9,6 +9,7 @@ from core.constants import MAX_TITLE_LENGTH
 from core.constraints import validate_schedule_comprehensive
 from scoring.penalty import calculate_penalty_score
 from scoring.efficiency import calculate_efficiency_score
+from scoring.quality import calculate_quality_score
 
 
 def print_schedule_summary(schedule: Dict[str, date], config: Config) -> None:
@@ -17,7 +18,7 @@ def print_schedule_summary(schedule: Dict[str, date], config: Config) -> None:
         print("No schedule generated.")
         return
     
-    print(f"\n=== Schedule Summary ===")
+    print("\n=== Schedule Summary ===")
     print(f"Total submissions: {len(schedule)}")
     print(f"Date range: {min(schedule.values())} to {max(schedule.values())}")
     
@@ -40,7 +41,7 @@ def print_deadline_status(schedule: Dict[str, date], config: Config) -> None:
     if not schedule:
         return
     
-    print(f"\n=== Deadline Status ===")
+    print("\n=== Deadline Status ===")
     
     on_time = late = total = 0
     sub_map = {s.id: s for s in config.submissions}
@@ -81,7 +82,7 @@ def print_utilization_summary(schedule: Dict[str, date], config: Config) -> None
     if not schedule:
         return
     
-    print(f"\n=== Resource Utilization ===")
+    print("\n=== Resource Utilization ===")
     
     # Calculate daily utilization
     daily_load = {}
@@ -116,7 +117,7 @@ def print_utilization_summary(schedule: Dict[str, date], config: Config) -> None
 
 def print_metrics_summary(schedule: Dict[str, date], config: Config) -> None:
     """Print a comprehensive metrics summary."""
-    print(f"\n=== Metrics Summary ===")
+    print("\n=== Metrics Summary ===")
     
     if not schedule:
         print("No schedule to analyze.")
@@ -154,7 +155,7 @@ def print_schedule_analysis(schedule: Dict[str, date], config: Config, strategy_
     # Comprehensive validation using all constraints, scoring, and analytics
     validation_result = validate_schedule_comprehensive(schedule, config)
     
-    print(f"Comprehensive Schedule Analysis:")
+    print("Comprehensive Schedule Analysis:")
     print(f"  Feasibility: {'✓' if validation_result['overall_valid'] else '✗'}")
     print(f"  Completion: {validation_result['completion_rate']:.1f}%")
     print(f"  Duration: {validation_result['duration_days']} days")
