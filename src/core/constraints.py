@@ -8,11 +8,10 @@ from src.core.models import Config, Submission, SubmissionType, Conference, Conf
 from src.core.constants import (
     EFFICIENCY_CONSTANTS, 
     QUALITY_CONSTANTS, 
-    SCORING_WEIGHTS, 
+    SCORING_CONSTANTS, 
     REPORT_CONSTANTS, 
-    SCHEDULER_CONSTANTS,
-    ANALYTICS_CONSTANTS,
-    DEFAULT_ABSTRACT_ADVANCE_DAYS
+    SCHEDULING_CONSTANTS,
+    ANALYTICS_CONSTANTS
 )
 
 
@@ -308,7 +307,7 @@ def _validate_early_abstract_scheduling(schedule: Dict[str, date], config: Confi
     if not config.scheduling_options:
         return violations
     
-    abstract_advance = config.scheduling_options.get("abstract_advance_days", DEFAULT_ABSTRACT_ADVANCE_DAYS)
+    abstract_advance = config.scheduling_options.get("abstract_advance_days", SCHEDULING_CONSTANTS.default_abstract_advance_days)
     abstracts = [sid for sid, sub in config.submissions_dict.items() 
                 if sub.kind == SubmissionType.ABSTRACT]
     
@@ -428,7 +427,7 @@ def validate_conference_compatibility(schedule: Dict[str, date], config: Config)
     total_submissions = 0
     compatible_submissions = 0
     
-    for sid, start_date in schedule.items():
+    for sid, _ in schedule.items():
         sub = config.submissions_dict.get(sid)
         if not sub or not sub.conference_id:
             continue
@@ -476,7 +475,7 @@ def validate_single_conference_policy(schedule: Dict[str, date], config: Config)
     violations = []
     paper_conferences = {}
     
-    for sid, start_date in schedule.items():
+    for sid, _ in schedule.items():
         sub = config.submissions_dict.get(sid)
         if not sub or sub.kind != SubmissionType.PAPER:
             continue
@@ -558,7 +557,7 @@ def validate_priority_weighting(schedule: Dict[str, date], config: Config) -> Di
     
     # Calculate actual priority scores for scheduled submissions
     actual_priorities = []
-    for sid, start_date in schedule.items():
+    for sid, _ in schedule.items():
         sub = config.submissions_dict.get(sid)
         if not sub:
             continue
@@ -755,8 +754,9 @@ def validate_conference_submission_compatibility(schedule: Dict[str, date], conf
         
         # Check abstract-to-paper dependencies
         if sub.kind == SubmissionType.PAPER and conf.requires_abstract_before_paper():
-            # Find the corresponding abstract submission
-            abstract_id = f"{sid.replace('-pap', '')}-abs"
+            # Find the corresponding abstract submission using utility function
+            from src.core.models import generate_abstract_id
+            abstract_id = generate_abstract_id(sid, conf.id)
             if abstract_id not in schedule:
                 violations.append({
                     "submission_id": sid,

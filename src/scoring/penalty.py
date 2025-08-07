@@ -6,8 +6,7 @@ from collections import defaultdict
 
 from core.models import Config, PenaltyBreakdown, SubmissionType, ConferenceType
 from core.constants import (
-    MIN_SCORE, TECHNICAL_AUDIENCE_LOSS_PENALTY, AUDIENCE_MISMATCH_PENALTY,
-    DEFAULT_DEPENDENCY_VIOLATION_PENALTY
+    PENALTY_CONSTANTS, REPORT_CONSTANTS
 )
 # Note: Penalty costs moved to config.json because they are project-specific
 # and should be configurable by users. Only algorithm constants remain in constants.py.
@@ -16,10 +15,10 @@ def calculate_penalty_score(schedule: Dict[str, date], config: Config) -> Penalt
     """Calculate total penalty score for the schedule."""
     if not schedule:
         return PenaltyBreakdown(
-            total_penalty=MIN_SCORE,
-            deadline_penalties=MIN_SCORE,
-            dependency_penalties=MIN_SCORE,
-            resource_penalties=MIN_SCORE
+                    total_penalty=REPORT_CONSTANTS.min_score,
+        deadline_penalties=REPORT_CONSTANTS.min_score,
+        dependency_penalties=REPORT_CONSTANTS.min_score,
+        resource_penalties=REPORT_CONSTANTS.min_score
         )
     
     deadline_penalties = _calculate_deadline_penalties(schedule, config)
@@ -104,7 +103,7 @@ def _calculate_dependency_penalties(schedule: Dict[str, date], config: Config) -
             # Check if dependency is satisfied
             if start_date < dep_end:
                 # Dependency violation - use config penalty (project-specific)
-                penalty = (config.penalty_costs or {}).get("default_dependency_violation_penalty", DEFAULT_DEPENDENCY_VIOLATION_PENALTY)
+                penalty = (config.penalty_costs or {}).get("default_dependency_violation_penalty", PENALTY_CONSTANTS.default_dependency_violation_penalty)
                 total_penalty += penalty
     
     return total_penalty
@@ -146,7 +145,7 @@ def _calculate_conference_compatibility_penalties(schedule: Dict[str, date], con
     """Calculate penalties for conference compatibility issues."""
     total_penalty = 0.0
     
-    for sid, start_date in schedule.items():
+    for sid in schedule:
         sub = config.submissions_dict.get(sid)
         if not sub:
             continue
@@ -158,9 +157,9 @@ def _calculate_conference_compatibility_penalties(schedule: Dict[str, date], con
         
         # Check engineering vs medical mismatch
         if sub.engineering and conf.conf_type == ConferenceType.MEDICAL:
-            total_penalty += TECHNICAL_AUDIENCE_LOSS_PENALTY
+            total_penalty += PENALTY_CONSTANTS.technical_audience_loss_penalty
         elif not sub.engineering and conf.conf_type == ConferenceType.ENGINEERING:
-            total_penalty += AUDIENCE_MISMATCH_PENALTY
+            total_penalty += PENALTY_CONSTANTS.audience_mismatch_penalty
     
     return total_penalty
 
@@ -174,12 +173,15 @@ def _calculate_slack_cost_penalties(schedule: Dict[str, date], config: Config) -
     # Calculate Y_j (full-year deferral penalty)
     Y_j = (config.penalty_costs or {}).get("default_full_year_deferral_penalty", 5000.0)
     
-    A_j = (config.penalty_costs or {}).get("missed_abstract_penalty", 3000.0)  # Missed abstract-only window penalty
+    # Calculate different missed opportunity penalties
+    A_j = (config.penalty_costs or {}).get("missed_abstract_penalty", 3000.0)  # Missed abstract-only opportunity
+    P_missed = (config.penalty_costs or {}).get("missed_poster_penalty", 2000.0)  # Missed poster opportunity
+    AP_missed = (config.penalty_costs or {}).get("missed_abstract_paper_penalty", 4000.0)  # Missed abstract+paper opportunity
     
     # Calculate slack cost components for each submission
     for sid, start_date in schedule.items():
         sub = config.submissions_dict.get(sid)
-        if not sub or sub.kind != SubmissionType.PAPER:
+        if not sub:
             continue
         
         if sub.earliest_start_date:
@@ -194,11 +196,36 @@ def _calculate_slack_cost_penalties(schedule: Dict[str, date], config: Config) -
             else:
                 deferral_penalty = 0
             
-            # A_j(1_abstract-miss) - missed abstract penalty
-            # This would need more complex logic to determine if abstract was missed
-            abstract_penalty = 0  # Placeholder for now
+            # Calculate missed opportunity penalties based on submission type and conference requirements
+            missed_opportunity_penalty = 0
             
-            total_penalty += slip_penalty + deferral_penalty + abstract_penalty
+            if sub.conference_id and sub.conference_id in config.conferences_dict:
+                conf = config.conferences_dict[sub.conference_id]
+                
+                # Check for missed opportunities based on submission type and conference requirements
+                if sub.kind == SubmissionType.PAPER:
+                    if conf.requires_abstract_before_paper():
+                        # Abstract+Paper conference - check if abstract opportunity was missed
+                        missed_opportunity_penalty = AP_missed if months_delay >= 6 else 0
+                    else:
+                        # Paper-only conference - check if poster opportunity was missed
+                        missed_opportunity_penalty = P_missed if months_delay >= 4 else 0
+                elif sub.kind == SubmissionType.ABSTRACT:
+                    # Abstract-only submission - check if poster opportunity was missed
+                    missed_opportunity_penalty = P_missed if months_delay >= 3 else 0
+                elif sub.kind == SubmissionType.POSTER:
+                    # Poster submission - no additional missed opportunity penalty
+                    missed_opportunity_penalty = 0
+            else:
+                # Generic penalty for submissions without conference assignment
+                if sub.kind == SubmissionType.PAPER:
+                    missed_opportunity_penalty = A_j if months_delay >= 6 else 0
+                elif sub.kind == SubmissionType.ABSTRACT:
+                    missed_opportunity_penalty = P_missed if months_delay >= 3 else 0
+                else:  # POSTER
+                    missed_opportunity_penalty = 0
+            
+            total_penalty += slip_penalty + deferral_penalty + missed_opportunity_penalty
     
     return total_penalty
 

@@ -7,7 +7,7 @@ import statistics
 
 from core.models import Config, ResourceAnalysis, ScheduleAnalysis, ScheduleDistribution, SubmissionTypeAnalysis, TimelineAnalysis
 from core.constraints import _calculate_daily_load
-from core.constants import ANALYTICS_DEFAULT_COMPLETION_RATE, ANALYTICS_MONTHLY_CONVERSION_FACTOR, PERCENTAGE_MULTIPLIER
+from core.constants import ANALYTICS_CONSTANTS, QUALITY_CONSTANTS
 
 def analyze_schedule_completeness(schedule: Dict[str, date], config: Config) -> ScheduleAnalysis:
     """Analyze how complete the schedule is."""
@@ -22,7 +22,7 @@ def analyze_schedule_completeness(schedule: Dict[str, date], config: Config) -> 
     
     total_submissions = len(config.submissions)
     scheduled_count = len(schedule)
-    completion_rate = (scheduled_count / total_submissions * PERCENTAGE_MULTIPLIER) if total_submissions > 0 else ANALYTICS_DEFAULT_COMPLETION_RATE
+    completion_rate = (scheduled_count / total_submissions * QUALITY_CONSTANTS.percentage_multiplier) if total_submissions > 0 else ANALYTICS_CONSTANTS.default_completion_rate
     
     # Find missing submissions
     scheduled_ids = set(schedule.keys())
@@ -107,7 +107,7 @@ def analyze_submission_types(schedule: Dict[str, date], config: Config) -> Submi
     # Calculate percentages
     total = sum(type_counts.values())
     type_percentages = {
-        sub_type: (count / total * PERCENTAGE_MULTIPLIER) if total > 0 else ANALYTICS_DEFAULT_COMPLETION_RATE
+        sub_type: (count / total * QUALITY_CONSTANTS.percentage_multiplier) if total > 0 else ANALYTICS_CONSTANTS.default_completion_rate
         for sub_type, count in type_counts.items()
     }
     
@@ -144,7 +144,7 @@ def analyze_timeline(schedule: Dict[str, date], config: Config) -> TimelineAnaly
         start_date=timeline_start,
         end_date=timeline_end,
         duration_days=duration_days,
-        avg_submissions_per_month=avg_daily_load * ANALYTICS_MONTHLY_CONVERSION_FACTOR,  # Convert daily to monthly
+        avg_submissions_per_month=avg_daily_load * ANALYTICS_CONSTANTS.monthly_conversion_factor,  # Convert daily to monthly
         summary=f"Timeline spans {duration_days} days with peak load of {peak_daily_load} submissions"
     )
 

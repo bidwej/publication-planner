@@ -56,20 +56,20 @@ The Paper Planner is designed to help researchers and teams efficiently schedule
 
 ### Running the Application
 
-#### Web Dashboard (Full Features)
+#### Web Charts (Dashboard & Timeline)
 ```bash
-python run_web_dashboard.py
-```
-- **URL**: http://127.0.0.1:8050
-- **Features**: Interactive charts, real-time updates, strategy selection
-- **Debug Mode**: Disabled for stability
+# Dashboard mode (full features)
+python run_web_charts.py --mode dashboard
 
-#### Web Timeline (Timeline Only)
-```bash
-python run_web_timeline.py
+# Timeline mode (timeline only)
+python run_web_charts.py --mode timeline
+
+# Capture screenshots
+python run_web_charts.py --mode dashboard --capture
 ```
-- **URL**: http://127.0.0.1:8050
-- **Features**: Timeline-only view with Gantt chart
+- **Dashboard URL**: http://127.0.0.1:8050
+- **Timeline URL**: http://127.0.0.1:8051
+- **Features**: Interactive charts, real-time updates, strategy selection
 - **Debug Mode**: Disabled for stability
 
 #### Command Line Interface
@@ -105,8 +105,9 @@ source .venv/bin/activate
 ```
 
 **Port Already in Use**
-- The webapp runs on port 8050 by default
-- If port is busy, modify `run_web_app.py` to use a different port
+- The dashboard runs on port 8050 by default
+- The timeline runs on port 8051 by default
+- If port is busy, modify `run_web_charts.py` to use a different port
 - Or kill the process using the port: `netstat -ano | findstr :8050`
 
 **PowerShell Execution Policy**
@@ -398,9 +399,12 @@ python generate_schedule.py
 ### Web Interface (Interactive)
 ```bash
 # Start the web dashboard
-python src/web_app.py
+python run_web_charts.py --mode dashboard
 
-# Open browser to: http://127.0.0.1:8050
+# Start the timeline view
+python run_web_charts.py --mode timeline
+
+# Open browser to: http://127.0.0.1:8050 (dashboard) or http://127.0.0.1:8051 (timeline)
 ```
 
 ### Basic Usage
@@ -420,9 +424,9 @@ print("Overall Score: %s", metrics.overall_score)
 
 ### Interactive Visualization
 ```python
-from output.plots_plotly import create_interactive_gantt
+from app.components.charts.gantt_chart import create_gantt_chart
 
-fig = create_interactive_gantt(schedule, submissions, config)
+fig = create_gantt_chart(schedule, submissions, config)
 fig.show()  # Opens in browser
 fig.write_html("schedule.html")  # Save for sharing
 ```
@@ -451,8 +455,7 @@ src/
 │   ├── models.py   # Data classes (Submission, Conference, Config)
 │   ├── constraints.py  # Constraint validation logic
 │   ├── constants.py    # Centralized constants
-│   ├── config.py   # Configuration loading and parsing
-│   └── dates.py    # Date/time utilities
+│   └── config.py   # Configuration loading and parsing
 ├── schedulers/     # Scheduling algorithms
 │   ├── base.py     # Base scheduler class
 │   ├── greedy.py   # Greedy algorithm
@@ -473,8 +476,23 @@ src/
 │   ├── tables.py   # Table generation
 │   ├── generators/ # Output file generation
 │   └── formatters/ # Data formatting utilities
-├── web_app.py      # Dash web interface
 └── planner.py      # Main planner interface
+
+app/
+├── main.py         # Dash web application
+├── models.py       # Web app data models
+├── storage.py      # Data persistence
+├── components/     # UI components
+│   ├── charts/     # Interactive charts
+│   │   ├── gantt_chart.py      # Gantt chart component
+│   │   ├── gantt_formatter.py  # Chart formatting
+│   │   └── metrics_chart.py    # Metrics visualization
+│   └── tables/     # Data tables
+│       └── schedule_table.py   # Schedule display table
+└── layouts/        # Page layouts
+    ├── header.py   # Application header
+    ├── sidebar.py  # Navigation sidebar
+    └── main_content.py # Main content area
 ```
 
 ## Testing

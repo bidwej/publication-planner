@@ -5,13 +5,13 @@ Generate a schedule for the Endoscope AI project.
 This script loads configuration data and generates a schedule using the scheduler.
 """
 
-import sys
 import argparse
 from typing import Dict, Optional
 from datetime import date
 from pathlib import Path
 
 # Add the src directory to the path
+import sys
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 # Import after adding src to path - pylint: disable=wrong-import-position

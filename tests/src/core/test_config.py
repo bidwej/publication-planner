@@ -5,7 +5,7 @@ from pathlib import Path
 import json
 from datetime import date
 from dataclasses import asdict, replace
-from src.core.config import load_config, _load_conferences, _load_submissions, _load_blackout_dates
+from src.core.config import load_config, _load_conferences, _load_submissions_with_abstracts, _load_blackout_dates
 from src.core.models import Config, SubmissionType, ConferenceType, SchedulerStrategy, ConferenceRecurrence, Conference
 
 
@@ -115,7 +115,7 @@ class TestLoadConferences:
 
 
 class TestLoadSubmissions:
-    """Test the _load_submissions function."""
+    """Test the _load_submissions_with_abstracts function."""
     
     def test_load_valid_submissions(self, test_data_dir):
         """Test loading valid submission data."""
@@ -133,13 +133,14 @@ class TestLoadSubmissions:
             )
         ]
         
-        submissions = _load_submissions(
+        config_data = {
+            "penalty_costs": {"default_mod_penalty_per_day": 1000.0}
+        }
+        submissions = _load_submissions_with_abstracts(
             mods_path=mods_path,
             papers_path=papers_path,
             conferences=conferences,
-            abs_lead=30,
-            pap_lead=60,
-            penalty_costs={"default_mod_penalty_per_day": 1000.0}
+            config_data=config_data
         )
         
         assert len(submissions) > 0
@@ -164,13 +165,14 @@ class TestLoadSubmissions:
             )
         ]
         
-        submissions = _load_submissions(
+        config_data = {
+            "penalty_costs": {"default_mod_penalty_per_day": 1000.0}
+        }
+        submissions = _load_submissions_with_abstracts(
             mods_path=mods_path,
             papers_path=papers_path,
             conferences=conferences,
-            abs_lead=30,
-            pap_lead=60,
-            penalty_costs={"default_mod_penalty_per_day": 1000.0}
+            config_data=config_data
         )
         
         for submission in submissions:
@@ -198,13 +200,14 @@ class TestLoadSubmissions:
             )
         ]
         
-        submissions = _load_submissions(
+        config_data = {
+            "penalty_costs": {"default_mod_penalty_per_day": 1000.0}
+        }
+        submissions = _load_submissions_with_abstracts(
             mods_path=mods_path,
             papers_path=papers_path,
             conferences=conferences,
-            abs_lead=30,
-            pap_lead=60,
-            penalty_costs={"default_mod_penalty_per_day": 1000.0}
+            config_data=config_data
         )
         
         # Check that paper submissions have correct dependency format
@@ -246,7 +249,7 @@ class TestLoadBlackoutDates:
         """Test handling of missing blackout file."""
         # Should return empty list for non-existent file
         blackout_dates = _load_blackout_dates(Path("nonexistent.json"))
-        assert blackout_dates == []
+        assert not blackout_dates
     
     def test_blackout_dates_invalid_json(self):
         """Test handling of invalid JSON in blackout file."""
@@ -256,7 +259,7 @@ class TestLoadBlackoutDates:
         
         try:
             blackout_dates = _load_blackout_dates(Path(temp_path))
-            assert blackout_dates == []
+            assert not blackout_dates
         finally:
             Path(temp_path).unlink(missing_ok=True)
 
@@ -318,12 +321,12 @@ class TestConfigIntegration:
             for filename in ['conferences.json', 'mods.json', 'papers.json']:
                 src = Path(test_data_dir) / filename
                 dst = temp_dir / filename
-                if dst.exists():
-                    dst.write_text(dst.read_text())
+                if src.exists():
+                    dst.write_text(src.read_text())
             
             config = load_config(config_path)
             assert isinstance(config, Config)
-            assert len(config.blackout_dates or []) == 0  # Should be empty when disabled
+            assert not (config.blackout_dates or [])  # Should be empty when disabled
             
         finally:
             Path(config_path).unlink(missing_ok=True)

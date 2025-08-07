@@ -68,9 +68,22 @@ class BaseScheduler(ABC):
         return validate_deadline_compliance_single(start, sub, self.config)
     
     def _auto_link_abstract_paper(self):
-        """Auto-link abstracts to papers if not already linked."""
-        # This method can be implemented by subclasses
-        pass
+        """Auto-link abstracts to papers if not already linked (minimal edge case handling)."""
+        # Most abstract-paper dependencies are now handled during config loading
+        # This method only handles edge cases like dynamic conference assignments
+        
+        submissions_dict = self.config.submissions_dict
+        conferences_dict = self.config.conferences_dict
+        
+        # Only handle papers that don't have conference assignments yet
+        for submission_id, submission in submissions_dict.items():
+            if (submission.kind == SubmissionType.PAPER and 
+                not submission.conference_id and 
+                submission.candidate_conferences):
+                
+                # This will be handled by _assign_conferences method
+                # No need to create abstracts here since conference isn't assigned yet
+                pass
     
     def _assign_conferences(self, schedule: Dict[str, date]) -> Dict[str, date]:
         """Assign conferences to papers based on candidate_conferences and availability."""
@@ -152,63 +165,6 @@ class BaseScheduler(ABC):
                 return True
         
         return True
-    
-    def _create_abstract_submissions(self) -> Dict[str, date]:
-        """Create abstract submissions for papers that need them."""
-        submissions_dict = self.config.submissions_dict
-        conferences_dict = self.config.conferences_dict
-        
-        # The new config loading already creates abstract submissions
-        # This method is now mainly for validation and ensuring dependencies are correct
-        
-        # Find papers that should have abstract dependencies
-        papers_with_abstracts = []
-        for submission_id, submission in submissions_dict.items():
-            if (submission.kind == SubmissionType.PAPER and 
-                submission.conference_id and 
-                submission.conference_id in conferences_dict):
-                
-                conference = conferences_dict[submission.conference_id]
-                # Check if conference requires abstracts before papers
-                if (SubmissionType.ABSTRACT in conference.deadlines and 
-                    SubmissionType.PAPER in conference.deadlines):
-                    # Conference accepts both abstracts and papers
-                    # Check if we have the corresponding abstract submission
-                    paper_base_id = submission_id.replace('-pap-', '-').split('-')[0]
-                    conference_id = submission.conference_id
-                    abstract_id = f"{paper_base_id}-abs-{conference_id}"
-                    
-                    if abstract_id in submissions_dict:
-                        papers_with_abstracts.append((submission_id, abstract_id))
-                    else:
-                        # Create missing abstract submission
-                        abstract_submission = Submission(
-                            id=abstract_id,
-                            title=f"Abstract for {submission.title}",
-                            kind=SubmissionType.ABSTRACT,
-                            conference_id=submission.conference_id,
-                            depends_on=submission.depends_on,  # Same dependencies as paper
-                            draft_window_months=0,  # Abstracts are quick
-                            lead_time_from_parents=0,
-                            penalty_cost_per_day=submission.penalty_cost_per_day,
-                            engineering=submission.engineering,
-                            earliest_start_date=submission.earliest_start_date,
-                        )
-                        
-                        # Add to config
-                        self.config.submissions.append(abstract_submission)
-                        self.submissions[abstract_id] = abstract_submission
-                        papers_with_abstracts.append((submission_id, abstract_id))
-        
-        # Ensure paper depends on abstract
-        for paper_id, abstract_id in papers_with_abstracts:
-            paper = submissions_dict[paper_id]
-            if abstract_id not in (paper.depends_on or []):
-                if paper.depends_on is None:
-                    paper.depends_on = []
-                paper.depends_on.append(abstract_id)
-        
-        return {}
     
     def _validate_venue_compatibility(self):
         """Validate that submissions are compatible with their venues."""

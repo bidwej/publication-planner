@@ -6,14 +6,14 @@ from datetime import timedelta, date
 from src.schedulers.greedy import GreedyScheduler
 from src.schedulers.base import BaseScheduler
 from src.core.models import Submission, SchedulerStrategy
-from src.core.constants import DEFAULT_LOOKAHEAD_DAYS, SCHEDULER_CONSTANTS
+from src.core.constants import SCHEDULING_CONSTANTS
 
 
 @BaseScheduler.register_strategy(SchedulerStrategy.LOOKAHEAD)
 class LookaheadGreedyScheduler(GreedyScheduler):
     """Lookahead greedy scheduler that considers future implications of decisions."""
     
-    def __init__(self, config, lookahead_days: int = DEFAULT_LOOKAHEAD_DAYS):
+    def __init__(self, config, lookahead_days: int = SCHEDULING_CONSTANTS.default_lookahead_days):
         """Initialize scheduler with config and lookahead buffer."""
         super().__init__(config)
         self.lookahead_days = lookahead_days
@@ -38,7 +38,7 @@ class LookaheadGreedyScheduler(GreedyScheduler):
                 other_sub = self.submissions[other_sid]
                 if other_sub.depends_on and sid in other_sub.depends_on:
                     # This submission blocks others, give it higher priority
-                    lookahead_bonus += SCHEDULER_CONSTANTS.lookahead_bonus_increment
+                    lookahead_bonus += self.config.lookahead_bonus_increment
             
             return base_priority + lookahead_bonus
         

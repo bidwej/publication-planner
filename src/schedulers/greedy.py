@@ -1,12 +1,13 @@
 """Greedy scheduler implementation."""
 
 from __future__ import annotations
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Optional
 from datetime import date, timedelta
 from src.schedulers.base import BaseScheduler
 from src.core.constraints import is_working_day
 from src.core.models import SchedulerStrategy
-from src.core.constants import DEFAULT_ABSTRACT_ADVANCE_DAYS
+from src.core.constants import SCHEDULING_CONSTANTS
+from src.core.models import Submission
 
 
 @BaseScheduler.register_strategy(SchedulerStrategy.GREEDY)
@@ -14,83 +15,28 @@ class GreedyScheduler(BaseScheduler):
     """Greedy scheduler that schedules submissions as early as possible based on priority."""
     
     def schedule(self) -> Dict[str, date]:
-        """
-        Generate a schedule using greedy algorithm.
-        
-        Returns
-        -------
-        Dict[str, date]
-            Mapping of submission_id to start_date
-        """
+        """Generate a schedule using greedy algorithm."""
+        # Auto-link abstracts to papers if needed
         self._auto_link_abstract_paper()
-        self._validate_venue_compatibility()
         
-        # Assign conferences to papers that need them
+        # Get submissions in priority order
+        submissions = self._topological_order()
+        
+        # Initialize schedule
         schedule = {}
-        schedule = self._assign_conferences(schedule)
         
-        # Create abstract submissions for papers that need them
-        schedule = self._create_abstract_submissions()
-        
-        # Recalculate topological order after adding abstracts
-        topo = self._topological_order()
-        
-        # Global time window - use robust date calculation
-        current, end = self._get_scheduling_window()
-        
-        active: Set[str] = set()
-        
-        # Early abstract scheduling if enabled
-        if (self.config.scheduling_options and 
-            self.config.scheduling_options.get("enable_early_abstract_scheduling", False)):
-            abstract_advance = self.config.scheduling_options.get("abstract_advance_days", DEFAULT_ABSTRACT_ADVANCE_DAYS)
-            self._schedule_early_abstracts(schedule, abstract_advance)
-        
-        while current <= end and len(schedule) < len(self.submissions):
-            # Skip blackout dates
-            blackout_dates = self.config.blackout_dates or []
-            if not is_working_day(current, blackout_dates):
-                current += timedelta(days=1)
+        # Schedule each submission
+        for submission_id in submissions:
+            submission = self.config.submissions_dict[submission_id]
+            
+            # Find earliest valid start date
+            start_date = self._find_earliest_valid_start(submission, schedule)
+            
+            if start_date:
+                schedule[submission_id] = start_date
+            else:
+                # If we can't schedule this submission, skip it
                 continue
-            
-            # Retire finished drafts
-            active = {
-                sid for sid in active
-                if self._get_end_date(schedule[sid], self.submissions[sid]) > current
-            }
-            
-            # Gather ready submissions
-            ready: List[str] = []
-            for sid in topo:
-                if sid in schedule:
-                    continue
-                s = self.submissions[sid]
-                if not self._deps_satisfied(s, schedule, current):
-                    continue
-                # Use calculated earliest start date
-                earliest_start = self._calculate_earliest_start_date(s)
-                if current < earliest_start:
-                    continue
-                ready.append(sid)
-            
-            # Sort by priority weight (greedy selection)
-            ready = self._sort_by_priority(ready)
-            
-            # Try to schedule up to concurrency limit
-            for sid in ready:
-                if len(active) >= self.config.max_concurrent_submissions:
-                    break
-                if not self._meets_deadline(self.submissions[sid], current):
-                    continue
-                schedule[sid] = current
-                active.add(sid)
-            
-            current += timedelta(days=1)
-        
-        if len(schedule) != len(self.submissions):
-            missing = [sid for sid in self.submissions if sid not in schedule]
-            print("Note: Could not schedule %s submissions: %s", len(missing), missing)
-            print("Successfully scheduled %s out of %s submissions", len(schedule), len(self.submissions))
         
         return schedule
     
@@ -111,3 +57,49 @@ class GreedyScheduler(BaseScheduler):
             return base_priority
         
         return sorted(ready, key=get_priority, reverse=True) 
+
+    def _find_earliest_valid_start(self, submission: Submission, schedule: Dict[str, date]) -> Optional[date]:
+        """Find the earliest valid start date for a submission."""
+     
+        # Start with today
+        current_date = date.today()
+        
+        # Check dependencies
+        if submission.depends_on:
+            for dep_id in submission.depends_on:
+                if dep_id in schedule:
+                    dep_end = self._get_end_date(schedule[dep_id], self.config.submissions_dict[dep_id])
+                    current_date = max(current_date, dep_end)
+        
+        # Check earliest start date constraint
+        if submission.earliest_start_date:
+            current_date = max(current_date, submission.earliest_start_date)
+        
+        # Check deadline constraint
+        if submission.conference_id:
+            conf = self.config.conferences_dict.get(submission.conference_id)
+            if conf and submission.kind in conf.deadlines:
+                deadline = conf.deadlines[submission.kind]
+                duration = submission.get_duration_days(self.config)
+                latest_start = deadline - timedelta(days=duration)
+                if current_date > latest_start:
+                    return None  # Can't meet deadline
+                current_date = min(current_date, latest_start)
+        
+        # Check resource constraints
+        max_concurrent = self.config.max_concurrent_submissions
+        while current_date <= date.today() + timedelta(days=365):  # Reasonable limit
+            # Count active submissions on this date
+            active_count = 0
+            for scheduled_id, start_date in schedule.items():
+                scheduled_sub = self.config.submissions_dict[scheduled_id]
+                end_date = self._get_end_date(start_date, scheduled_sub)
+                if start_date <= current_date <= end_date:
+                    active_count += 1
+            
+            if active_count < max_concurrent:
+                return current_date
+            
+            current_date += timedelta(days=1)
+        
+        return None  # Could not find valid start date 

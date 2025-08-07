@@ -7,7 +7,7 @@ import statistics
 
 from core.models import Config, EfficiencyMetrics, TimelineMetrics
 from core.constants import (
-    EFFICIENCY_CONSTANTS, SCORING_WEIGHTS
+    EFFICIENCY_CONSTANTS, SCORING_CONSTANTS, REPORT_CONSTANTS, QUALITY_CONSTANTS
 )
 
 
@@ -28,8 +28,8 @@ def calculate_efficiency_score(schedule: Dict[str, date], config: Config) -> flo
         Efficiency score (0-100)
     """
     # Fixed scoring constants
-    max_score = 100.0
-    min_score = 0.0
+    max_score = REPORT_CONSTANTS.max_score
+    min_score = REPORT_CONSTANTS.min_score
     
     if not schedule:
         return min_score
@@ -42,8 +42,8 @@ def calculate_efficiency_score(schedule: Dict[str, date], config: Config) -> flo
     
     # Combine scores (weighted average)
     efficiency_score = (
-        resource_metrics.efficiency_score * SCORING_WEIGHTS.efficiency_resource_weight +
-        timeline_metrics.timeline_efficiency * SCORING_WEIGHTS.efficiency_timeline_weight
+        resource_metrics.efficiency_score * SCORING_CONSTANTS.efficiency_resource_weight +
+        timeline_metrics.timeline_efficiency * SCORING_CONSTANTS.efficiency_timeline_weight
     )
     
     return max(min_score, min(max_score, efficiency_score))
@@ -66,9 +66,9 @@ def calculate_efficiency_resource(schedule: Dict[str, date], config: Config) -> 
         Resource efficiency metrics
     """
     # Fixed scoring constants
-    max_score = 100.0
-    min_score = 0.0
-    percentage_multiplier = 100.0
+    max_score = REPORT_CONSTANTS.max_score
+    min_score = REPORT_CONSTANTS.min_score
+    percentage_multiplier = QUALITY_CONSTANTS.percentage_multiplier
     
     if not schedule:
         return EfficiencyMetrics(

@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 import tempfile
 import os
 
-from core.models import SchedulerStrategy
+from src.core.models import SchedulerStrategy
 from src.planner import Planner
 
 

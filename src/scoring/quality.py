@@ -7,14 +7,14 @@ import statistics
 from core.models import Config
 from core.constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
 from core.constants import (
-    QUALITY_CONSTANTS, SCORING_WEIGHTS
+    QUALITY_CONSTANTS, SCORING_CONSTANTS, REPORT_CONSTANTS
 )
 
 def calculate_quality_score(schedule: Dict[str, date], config: Config) -> float:
     """Calculate overall quality score (0-100) based on constraint compliance."""
     # Fixed scoring constants
-    max_score = 100.0
-    min_score = 0.0
+    max_score = REPORT_CONSTANTS.max_score
+    min_score = REPORT_CONSTANTS.min_score
     
     if not schedule:
         return min_score
@@ -31,9 +31,9 @@ def calculate_quality_score(schedule: Dict[str, date], config: Config) -> float:
     
     # Calculate weighted score
     quality_score = (
-        deadline_score * SCORING_WEIGHTS.quality_deadline_weight +
-        dependency_score * SCORING_WEIGHTS.quality_dependency_weight +
-        resource_score * SCORING_WEIGHTS.quality_resource_weight
+        deadline_score * SCORING_CONSTANTS.quality_deadline_weight +
+        dependency_score * SCORING_CONSTANTS.quality_dependency_weight +
+        resource_score * SCORING_CONSTANTS.quality_resource_weight
     )
     
     return min(max_score, max(min_score, quality_score))
@@ -41,8 +41,8 @@ def calculate_quality_score(schedule: Dict[str, date], config: Config) -> float:
 def calculate_quality_robustness(schedule: Dict[str, date], config: Config) -> float:
     """Calculate how robust the schedule is to disruptions."""
     # Fixed scoring constants
-    max_score = 100.0
-    min_score = 0.0
+    max_score = REPORT_CONSTANTS.max_score
+    min_score = REPORT_CONSTANTS.min_score
     
     if not schedule:
         return min_score
@@ -83,8 +83,8 @@ def _calculate_total_slack(schedule: Dict[str, date], config: Config) -> int:
 def calculate_quality_balance(schedule: Dict[str, date], config: Config) -> float:
     """Calculate how well balanced the schedule is."""
     # Fixed scoring constants
-    max_score = 100.0
-    min_score = 0.0
+    max_score = REPORT_CONSTANTS.max_score
+    min_score = REPORT_CONSTANTS.min_score
     
     if not schedule:
         return min_score

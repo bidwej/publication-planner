@@ -4,13 +4,13 @@ Unified runner script for the Paper Planner Web Charts.
 This runs either the dashboard or timeline with optional screenshot capture.
 """
 
-import sys
 import argparse
 import asyncio
 import logging
 from pathlib import Path
 
 # Add the project root to Python path
+import sys
 sys.path.append(str(Path(__file__).parent))
 
 # Configure logging for better debugging

@@ -113,7 +113,6 @@ class Submission:
     
     def get_end_date(self, start_date: date, config: 'Config') -> date:
         """Calculate the end date for this submission starting on the given date."""
-        from datetime import timedelta
         duration_days = self.get_duration_days(config)
         return start_date + timedelta(days=duration_days)
 
@@ -216,6 +215,51 @@ class Conference:
         """Check if conference has deadline for submission type."""
         return submission_type in self.deadlines
 
+
+# Utility functions for abstract-paper dependencies
+def generate_abstract_id(paper_id: str, conference_id: str) -> str:
+    """Generate consistent abstract ID from paper ID and conference ID."""
+    # Remove any existing suffixes to get base paper ID
+    base_paper_id = paper_id.replace('-pap-', '-').split('-')[0]
+    return f"{base_paper_id}-abs-{conference_id}"
+
+
+def create_abstract_submission(paper: Submission, conference_id: str, 
+                             penalty_costs: Dict[str, float]) -> Submission:
+    """Create an abstract submission for a paper at a specific conference."""
+    abstract_id = generate_abstract_id(paper.id, conference_id)
+    
+    return Submission(
+        id=abstract_id,
+        title=f"Abstract for {paper.title}",
+        kind=SubmissionType.ABSTRACT,
+        conference_id=conference_id,
+        depends_on=paper.depends_on.copy() if paper.depends_on else [],  # Same dependencies as paper
+        draft_window_months=0,  # Abstracts are quick
+        lead_time_from_parents=0,
+        penalty_cost_per_day=penalty_costs.get("default_mod_penalty_per_day", 0.0),
+        engineering=paper.engineering,
+        earliest_start_date=paper.earliest_start_date,
+        candidate_conferences=[conference_id],  # Specific to this conference
+    )
+
+
+def ensure_abstract_paper_dependency(paper: Submission, abstract_id: str) -> None:
+    """Ensure a paper depends on its corresponding abstract."""
+    if paper.depends_on is None:
+        paper.depends_on = []
+    
+    if abstract_id not in paper.depends_on:
+        paper.depends_on.append(abstract_id)
+
+
+def find_abstract_for_paper(paper_id: str, conference_id: str, 
+                          submissions_dict: Dict[str, Submission]) -> Optional[str]:
+    """Find the abstract ID for a paper at a specific conference."""
+    abstract_id = generate_abstract_id(paper_id, conference_id)
+    return abstract_id if abstract_id in submissions_dict else None
+
+
 @dataclass
 class Config:
     """Configuration for the scheduler."""
@@ -226,6 +270,10 @@ class Config:
     max_concurrent_submissions: int
     default_paper_lead_time_months: int = 3
     work_item_duration_days: int = 14  # Duration for work items (abstracts)
+    conference_response_time_days: int = 90
+    max_backtrack_days: int = 30
+    randomness_factor: float = 0.1
+    lookahead_bonus_increment: float = 0.5
     penalty_costs: Optional[Dict[str, float]] = None
     priority_weights: Optional[Dict[str, float]] = None
     scheduling_options: Optional[Dict[str, Any]] = None
@@ -235,8 +283,6 @@ class Config:
     @classmethod
     def create_default(cls) -> 'Config':
         """Create a default configuration with sample data."""
-        from datetime import date
-        
         # Create sample conferences
         sample_conferences = [
             Conference(
