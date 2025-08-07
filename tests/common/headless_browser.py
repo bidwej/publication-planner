@@ -254,8 +254,8 @@ def validate_configuration(
         # Validate port if provided
         if port:
             results["port"] = validate_port(port)
-            # Check if port is available
-            if not check_port_availability(port):
+            # Only check port availability if we're not checking connectivity
+            if check_connectivity and not check_port_availability(port):
                 raise ConfigurationError(f"Port {port} is already in use")
         
         # Validate URL if provided
@@ -325,15 +325,15 @@ def start_web_server(script_path: str, port: int, max_wait: int = 10) -> Optiona
         ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
         # Wait for server to start
-        logger.info(f"[WAIT] Waiting for server to start")
+        logger.info("[WAIT] Waiting for server to start")
         url = f"http://127.0.0.1:{port}"
         
         for i in range(max_wait):
             if is_server_running(url):
-                logger.info(f"[OK] Server is running at {url}!")
+                logger.info("[OK] Server is running at %s!", url)
                 return process
             time.sleep(1)
-            logger.info(f"   Waiting ({i+1}/{max_wait})")
+            logger.info("   Waiting (%d/%d)", i+1, max_wait)
         
         # If we get here, server didn't start
         error_msg = f"Server failed to start within {max_wait} seconds"
@@ -343,9 +343,9 @@ def start_web_server(script_path: str, port: int, max_wait: int = 10) -> Optiona
         try:
             stdout, stderr = process.communicate(timeout=1)
             if stderr:
-                logger.error(f"Server stderr: {stderr.decode()}")
+                logger.error("Server stderr: %s", stderr.decode())
             if stdout:
-                logger.info(f"Server stdout: {stdout.decode()}")
+                logger.info("Server stdout: %s", stdout.decode())
         except subprocess.TimeoutExpired:
             process.kill()
         
