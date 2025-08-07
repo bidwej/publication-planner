@@ -5,14 +5,9 @@ Comprehensive integration tests for web application functionality.
 import pytest
 from datetime import date
 from unittest.mock import Mock, patch, MagicMock
-import sys
-import os
 import tempfile
 import json
 from pathlib import Path
-
-# Add the src directory to the path for imports
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
 from app.main import create_dashboard_app, create_timeline_app
 from app.models import WebAppState
