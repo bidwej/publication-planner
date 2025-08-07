@@ -1,6 +1,6 @@
 # Paper Planner
 
-A sophisticated academic paper scheduling system that optimizes the submission timeline for research papers, abstracts, and posters while respecting various constraints and business rules.
+An academic paper scheduling system that optimizes the submission timeline for research papers, abstracts, and posters while respecting various constraints and business rules.
 
 ## Overview
 
