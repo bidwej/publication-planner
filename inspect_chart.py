@@ -40,21 +40,21 @@ def start_dashboard():
     """Start the web dashboard in the background."""
     print("🚀 Starting web dashboard...")
     try:
-        # Start the dashboard process
+        # Start the dashboard process using the correct script
         process = subprocess.Popen([
             sys.executable, 'run_web_dashboard.py'
         ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
         # Wait for it to start
         print("⏳ Waiting for dashboard to start...")
-        for i in range(30):  # Wait up to 30 seconds
+        for i in range(10):  # Wait up to 10 seconds
             if is_dashboard_running():
                 print("✅ Dashboard is running!")
                 return process
             time.sleep(1)
-            print(f"   Waiting... ({i+1}/30)")
+            print(f"   Waiting... ({i+1}/10)")
         
-        print("❌ Dashboard failed to start within 30 seconds")
+        print("❌ Dashboard failed to start within 10 seconds")
         return None
         
     except Exception as e:
@@ -65,7 +65,8 @@ async def inspect_chart():
     """Inspect the chart and generate PNG."""
     
     # Check if dashboard is running, start if not
-    if not is_dashboard_running():
+    server_was_running = is_dashboard_running()
+    if not server_was_running:
         print("📊 Dashboard not running, starting it...")
         process = start_dashboard()
         if not process:
@@ -77,7 +78,7 @@ async def inspect_chart():
         process = None
     
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)  # Changed to False for debugging
+        browser = await p.chromium.launch(headless=True)  # Use headless mode
         page = await browser.new_page()
         
         print("🔍 Inspecting chart...")
@@ -90,16 +91,16 @@ async def inspect_chart():
             # Wait for page to load
             await page.wait_for_load_state('networkidle')
             
-            # Wait for generate button
-            await page.wait_for_selector('#generate-btn', timeout=10000)
-            print("✅ Found generate button")
-            
-            # Click generate
-            await page.click('#generate-btn')
-            print("✅ Clicked generate")
-            
-            # Wait for chart
-            await page.wait_for_timeout(3000)
+            # Try to find and click generate button
+            try:
+                await page.wait_for_selector('#generate-btn', timeout=5000)
+                print("✅ Found generate button")
+                await page.click('#generate-btn')
+                print("✅ Clicked generate")
+                # Wait for chart
+                await page.wait_for_timeout(3000)
+            except:
+                print("⚠️  Generate button not found, taking screenshot of current state")
             
             # Take screenshot
             await page.screenshot(path='chart_current.png', full_page=True)
@@ -124,26 +125,6 @@ async def inspect_chart():
             bars = await page.query_selector_all('.trace.bars')
             print(f"📊 Bar traces: {len(bars)}")
             
-            # Check X-axis labels
-            x_labels = await page.query_selector_all('.xtick text')
-            print(f"📋 X-axis labels: {len(x_labels)}")
-            
-            if x_labels:
-                print("📝 First 5 X-axis labels:")
-                for i, label in enumerate(x_labels[:5]):
-                    text = await label.text_content()
-                    print(f"  {i+1}. '{text}'")
-            
-            # Check Y-axis labels
-            y_labels = await page.query_selector_all('.ytick text')
-            print(f"📋 Y-axis labels: {len(y_labels)}")
-            
-            if y_labels:
-                print("📝 First 5 Y-axis labels:")
-                for i, label in enumerate(y_labels[:5]):
-                    text = await label.text_content()
-                    print(f"  {i+1}. '{text}'")
-            
             print("\n✅ Inspection complete!")
             
         except Exception as e:
@@ -157,6 +138,9 @@ async def inspect_chart():
                 print("🛑 Stopping dashboard...")
                 process.terminate()
                 process.wait()
+                print("✅ Dashboard stopped. Exiting.")
+            else:
+                print("✅ Inspection complete. Exiting.")
 
 if __name__ == "__main__":
     asyncio.run(inspect_chart())
