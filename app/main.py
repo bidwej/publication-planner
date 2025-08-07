@@ -16,7 +16,8 @@ import sys
 # Import core functionality
 sys.path.append('src')
 from core.config import load_config
-from core.models import Config, SchedulerStrategy, ScheduleState, WebAppState
+from core.models import Config, SchedulerStrategy, ScheduleState
+from app.models import WebAppState
 from core.constraints import validate_schedule_comprehensive
 from scoring.penalty import calculate_penalty_score
 from scoring.quality import calculate_quality_score
@@ -98,6 +99,8 @@ def create_dashboard_app():
             return _load_saved_schedule()
         else:
             raise exceptions.PreventUpdate
+    
+
     
     def _generate_new_schedule(strategy: str) -> tuple:
         """Generate a new schedule using the selected strategy."""
