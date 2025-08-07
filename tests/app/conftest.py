@@ -129,7 +129,7 @@ def temp_config_file(tmp_path):
     }
     
     config_file = tmp_path / "test_config.json"
-    with open(config_file, 'w') as f:
+    with open(config_file, 'w', encoding='utf-8') as f:
         json.dump(config_data, f)
     
     return str(config_file)

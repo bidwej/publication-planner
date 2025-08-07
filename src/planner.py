@@ -34,7 +34,7 @@ class Planner:
     def _load_config(self) -> Config:
         """Load and validate the configuration."""
         if not self.config_path.exists():
-            print(f"Configuration file not found: {self.config_path}")
+            print("Configuration file not found: %s", self.config_path)
             print("Using default configuration with sample data")
             return Config.create_default()
         
@@ -113,7 +113,7 @@ class Planner:
                 constraint_result = validation_result["constraints"]
                 if "violations" in constraint_result:
                     for violation in constraint_result["violations"]:
-                        print(f"  - {violation.get('description', 'Unknown violation')}")
+                        print("  - %s", violation.get('description', 'Unknown violation'))
             
             return schedule
             

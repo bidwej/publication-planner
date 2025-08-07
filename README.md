@@ -216,6 +216,23 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 - **Duration Calculations**: Human-readable duration formatting
 - **Relative Time**: "In X days", "X weeks ago", etc.
 
+### 14. Conference Submission Type Validation
+- **Abstract-Only Conferences**: Some conferences only accept abstracts (e.g., RSNA, IFAR)
+- **Paper-Only Conferences**: Some conferences only accept papers (e.g., ICRA, AMIA Annual)
+- **Abstract + Paper Conferences**: Some require abstract submission before paper (e.g., ICML, MICCAI)
+- **Poster-Only Conferences**: Some conferences only accept posters
+- **All-Types Conferences**: Some accept all submission types
+- **Automatic Detection**: Conference submission types are auto-detected from deadline configuration
+- **Compatibility Validation**: Ensures submissions match conference requirements
+
+### 15. Abstract-to-Paper Dependencies
+- **Required Dependencies**: Papers at conferences requiring abstracts must have corresponding abstract submissions
+- **Timing Validation**: Abstracts must be scheduled before their corresponding papers
+- **Naming Convention**: Abstract submissions follow pattern `{paper_id}-abs` for automatic linking
+- **Missing Abstract Detection**: Identifies papers missing required abstract submissions
+- **Timing Violation Detection**: Identifies papers scheduled before their required abstracts
+- **Conference-Specific Rules**: Different conferences have different abstract requirements
+
 ## Scoring System
 
 ### Quality Score (0-100)
@@ -236,6 +253,8 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 - **Dependency Violations**: 50 points per day of violation
 - **Resource Violations**: 200 points per excess submission
 - **Conference Compatibility**: 1500-3000 points per mismatch
+- **Conference Submission Type Violations**: High penalties for incompatible submission types
+- **Abstract-to-Paper Dependency Violations**: High penalties for missing required abstracts
 - **Slack Cost Penalties**: 
   - **Monthly Slip Penalty (P_j)**: Penalty per month of delay from earliest start date
   - **Full-Year Deferral Penalty (Y_j)**: Additional penalty if delayed by 12+ months
@@ -387,7 +406,7 @@ result = planner.schedule()
 
 # Get metrics
 metrics = planner.get_schedule_metrics()
-print(f"Overall Score: {metrics.overall_score}")
+print("Overall Score: %s", metrics.overall_score)
 ```
 
 ### Interactive Visualization

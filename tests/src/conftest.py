@@ -99,7 +99,7 @@ def test_config_path(tmp_path):
     }
     
     config_file = tmp_path / "test_config.json"
-    with open(config_file, 'w') as f:
+    with open(config_file, 'w', encoding='utf-8') as f:
         json.dump(config_data, f)
     
     # Create the referenced data files
@@ -138,15 +138,15 @@ def test_config_path(tmp_path):
     
     # Write the data files
     conferences_file = tmp_path / "conferences.json"
-    with open(conferences_file, 'w') as f:
+    with open(conferences_file, 'w', encoding='utf-8') as f:
         json.dump(conferences_data, f)
     
     mods_file = tmp_path / "mods.json"
-    with open(mods_file, 'w') as f:
+    with open(mods_file, 'w', encoding='utf-8') as f:
         json.dump(mods_data, f)
     
     papers_file = tmp_path / "papers.json"
-    with open(papers_file, 'w') as f:
+    with open(papers_file, 'w', encoding='utf-8') as f:
         json.dump(papers_data, f)
     
     return str(config_file)

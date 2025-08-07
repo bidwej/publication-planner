@@ -4,7 +4,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Dict, List, Type
 from datetime import date, timedelta
-from src.core.models import Config, Submission, SubmissionType, SchedulerStrategy
+from src.core.models import Config, Submission, SubmissionType, SchedulerStrategy, Conference
 from src.core.constraints import validate_deadline_compliance_single, validate_dependencies_satisfied, validate_venue_compatibility
 
 
@@ -69,6 +69,146 @@ class BaseScheduler(ABC):
     
     def _auto_link_abstract_paper(self):
         """Auto-link abstracts to papers if not already linked."""
+        # This method can be implemented by subclasses
+        pass
+    
+    def _assign_conferences(self, schedule: Dict[str, date]) -> Dict[str, date]:
+        """Assign conferences to papers based on conference_families and availability."""
+        submissions_dict = self.config.submissions_dict
+        conferences_dict = self.config.conferences_dict
+        
+        # Find papers that need conference assignment (generic papers without conference_id)
+        papers_needing_assignment = []
+        for submission_id, submission in submissions_dict.items():
+            if (submission.kind == SubmissionType.PAPER and 
+                not submission.conference_id and 
+                submission.conference_families):
+                papers_needing_assignment.append(submission_id)
+        
+        # Simple assignment: pick first available conference from family
+        for paper_id in papers_needing_assignment:
+            submission = submissions_dict[paper_id]
+            
+            # Find compatible conferences from the family
+            compatible_conferences = []
+            for conf_id, conference in conferences_dict.items():
+                # Check if conference name matches any of the conference families
+                if (submission.conference_families and 
+                    conference.name in submission.conference_families):
+                    
+                    # Check conference compatibility matrix from README
+                    is_compatible = self._check_conference_compatibility(submission, conference)
+                    if is_compatible:
+                        compatible_conferences.append(conf_id)
+            
+            # Assign to first compatible conference with available deadline
+            for conf_id in compatible_conferences:
+                conference = conferences_dict[conf_id]
+                if submission.kind in conference.deadlines:
+                    # Update the submission with the assigned conference
+                    submission.conference_id = conf_id
+                    break
+        
+        return schedule
+    
+    def _check_conference_compatibility(self, submission: Submission, conference: 'Conference') -> bool:
+        """Check if a submission is compatible with a conference based on the compatibility matrix."""
+        from src.core.models import ConferenceType
+        
+        # Check if conference accepts the submission type
+        if submission.kind not in conference.deadlines:
+            return False
+        
+        # Check if conference is abstract-only (no paper deadline)
+        if (SubmissionType.ABSTRACT in conference.deadlines and 
+            SubmissionType.PAPER not in conference.deadlines):
+            # Abstract-only conference - papers cannot be assigned
+            if submission.kind == SubmissionType.PAPER:
+                return False
+        
+        # Check if conference is paper-only (no abstract deadline)
+        if (SubmissionType.PAPER in conference.deadlines and 
+            SubmissionType.ABSTRACT not in conference.deadlines):
+            # Paper-only conference - abstracts cannot be assigned
+            if submission.kind == SubmissionType.ABSTRACT:
+                return False
+        
+        # Check engineering vs medical compatibility
+        if submission.engineering:
+            # Engineering paper
+            if conference.conf_type == ConferenceType.MEDICAL:
+                # Engineering paper to medical conference - allowed but with penalty
+                return True
+            elif conference.conf_type == ConferenceType.ENGINEERING:
+                # Engineering paper to engineering conference - optimal
+                return True
+        else:
+            # Medical/Clinical paper
+            if conference.conf_type == ConferenceType.ENGINEERING:
+                # Medical paper to engineering conference - not recommended
+                return False
+            elif conference.conf_type == ConferenceType.MEDICAL:
+                # Medical paper to medical conference - optimal
+                return True
+        
+        return True
+    
+    def _create_abstract_submissions(self) -> Dict[str, date]:
+        """Create abstract submissions for papers that need them."""
+        submissions_dict = self.config.submissions_dict
+        conferences_dict = self.config.conferences_dict
+        
+        # The new config loading already creates abstract submissions
+        # This method is now mainly for validation and ensuring dependencies are correct
+        
+        # Find papers that should have abstract dependencies
+        papers_with_abstracts = []
+        for submission_id, submission in submissions_dict.items():
+            if (submission.kind == SubmissionType.PAPER and 
+                submission.conference_id and 
+                submission.conference_id in conferences_dict):
+                
+                conference = conferences_dict[submission.conference_id]
+                # Check if conference requires abstracts before papers
+                if (SubmissionType.ABSTRACT in conference.deadlines and 
+                    SubmissionType.PAPER in conference.deadlines):
+                    # Conference accepts both abstracts and papers
+                    # Check if we have the corresponding abstract submission
+                    paper_base_id = submission_id.replace('-pap-', '-').split('-')[0]
+                    conference_id = submission.conference_id
+                    abstract_id = f"{paper_base_id}-abs-{conference_id}"
+                    
+                    if abstract_id in submissions_dict:
+                        papers_with_abstracts.append((submission_id, abstract_id))
+                    else:
+                        # Create missing abstract submission
+                        abstract_submission = Submission(
+                            id=abstract_id,
+                            title=f"Abstract for {submission.title}",
+                            kind=SubmissionType.ABSTRACT,
+                            conference_id=submission.conference_id,
+                            depends_on=submission.depends_on,  # Same dependencies as paper
+                            draft_window_months=0,  # Abstracts are quick
+                            lead_time_from_parents=0,
+                            penalty_cost_per_day=submission.penalty_cost_per_day,
+                            engineering=submission.engineering,
+                            earliest_start_date=submission.earliest_start_date,
+                        )
+                        
+                        # Add to config
+                        self.config.submissions.append(abstract_submission)
+                        self.submissions[abstract_id] = abstract_submission
+                        papers_with_abstracts.append((submission_id, abstract_id))
+        
+        # Ensure paper depends on abstract
+        for paper_id, abstract_id in papers_with_abstracts:
+            paper = submissions_dict[paper_id]
+            if abstract_id not in (paper.depends_on or []):
+                if paper.depends_on is None:
+                    paper.depends_on = []
+                paper.depends_on.append(abstract_id)
+        
+        return {}
     
     def _validate_venue_compatibility(self):
         """Validate that submissions are compatible with their venues."""

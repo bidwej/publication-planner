@@ -14,6 +14,7 @@ from pathlib import Path
 # Add the src directory to the path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
+# Import after adding src to path - pylint: disable=wrong-import-position
 from core.config import load_config
 from core.models import SchedulerStrategy
 from schedulers.base import BaseScheduler
@@ -32,19 +33,19 @@ def generate_schedule(config, strategy: SchedulerStrategy, verbose: bool = True)
         return schedule
     except Exception as e:
         if verbose:
-            print(f"Error generating schedule with {strategy.value}: {e}")
+            print("Error generating schedule with %s: %s", strategy.value, e)
         return {}
 
 
 def compare_all_strategies(config, output_file: Optional[str] = None) -> None:
     """Compare all available scheduling strategies."""
-    print(f"\n{'='*60}")
+    print("\n%s", '='*60)
     print("COMPARING ALL STRATEGIES")
-    print(f"{'='*60}")
+    print("%s", '='*60)
     
     results = {}
     for strategy in SchedulerStrategy:
-        print(f"\nGenerating schedule with {strategy.value}")
+        print("\nGenerating schedule with %s", strategy.value)
         schedule = generate_schedule(config, strategy, verbose=False)
         if schedule:
             results[strategy.value] = schedule
@@ -104,15 +105,15 @@ def main():
                 strategy = SchedulerStrategy(args.strategy.lower())
                 generate_schedule(config, strategy, verbose=not args.quiet)
             except ValueError:
-                print(f"Unknown strategy: {args.strategy}")
-                print(f"Available strategies: {[s.value for s in SchedulerStrategy]}")
+                print("Unknown strategy: %s", args.strategy)
+                print("Available strategies: %s", [s.value for s in SchedulerStrategy])
                 sys.exit(1)
             
     except FileNotFoundError as e:
-        print(f"Configuration file not found: {e}")
+        print("Configuration file not found: %s", e)
         sys.exit(1)
     except Exception as e:
-        print(f"Error: {e}")
+        print("Error: %s", e)
         sys.exit(1)
 
 

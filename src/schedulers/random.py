@@ -87,7 +87,7 @@ class RandomScheduler(BaseScheduler):
         
         if len(schedule) != len(self.submissions):
             missing = [sid for sid in self.submissions if sid not in schedule]
-            print(f"Note: Could not schedule {len(missing)} submissions: {missing}")
-            print(f"Successfully scheduled {len(schedule)} out of {len(self.submissions)} submissions")
+            print("Note: Could not schedule %s submissions: %s", len(missing), missing)
+            print("Successfully scheduled %s out of %s submissions", len(schedule), len(self.submissions))
         
         return schedule

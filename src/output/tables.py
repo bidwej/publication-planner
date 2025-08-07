@@ -6,7 +6,7 @@ from datetime import date, timedelta
 import json
 import csv
 from src.core.models import Config, SubmissionType, ScheduleSummary
-from src.core.constants import MAX_TITLE_LENGTH, DAYS_PER_MONTH
+from src.core.constants import MAX_TITLE_LENGTH
 from pathlib import Path
 
 
@@ -199,11 +199,14 @@ def format_schedule_table(schedule: Dict[str, date], config: Config) -> List[Dic
             continue
         
         # Calculate end date
+        # Fixed time constants
+        days_per_month = 30
+        
         if sub.kind == SubmissionType.ABSTRACT:
             end_date = start_date
             duration_days = 0
         else:
-            duration_days = sub.draft_window_months * DAYS_PER_MONTH if sub.draft_window_months > 0 else config.min_paper_lead_time_days
+            duration_days = sub.draft_window_months * days_per_month if sub.draft_window_months > 0 else config.min_paper_lead_time_days
             end_date = start_date + timedelta(days=duration_days)
         
         # Get conference info
@@ -318,10 +321,13 @@ def format_deadline_table(schedule: Dict[str, date], config: Config) -> List[Dic
                 deadline_date = conf.deadlines[sub.kind]
                 
                 # Calculate end date
+                # Fixed time constants
+                days_per_month = 30
+                
                 if sub.kind == SubmissionType.ABSTRACT:
                     end_date = start_date
                 else:
-                    duration_days = sub.draft_window_months * DAYS_PER_MONTH if sub.draft_window_months > 0 else config.min_paper_lead_time_days
+                    duration_days = sub.draft_window_months * days_per_month if sub.draft_window_months > 0 else config.min_paper_lead_time_days
                     end_date = start_date + timedelta(days=duration_days)
                 
                 # Determine status
@@ -504,7 +510,7 @@ def create_analytics_table(validation_result: Dict[str, Any]) -> List[Dict[str, 
 def save_schedule_json(schedule: Dict[str, str], output_dir: str, filename: str = "schedule.json") -> str:
     """Save schedule as JSON file."""
     filepath = Path(output_dir) / filename
-    with open(filepath, 'w') as f:
+    with open(filepath, 'w', encoding='utf-8') as f:
         json.dump(schedule, f, default=str, indent=2)
     return str(filepath)
 
@@ -525,7 +531,7 @@ def save_table_csv(table_data: List[Dict[str, str]], output_dir: str, filename: 
 def save_metrics_json(metrics: ScheduleSummary, output_dir: str, filename: str = "metrics.json") -> str:
     """Save metrics as JSON file."""
     filepath = Path(output_dir) / filename
-    with open(filepath, 'w') as f:
+    with open(filepath, 'w', encoding='utf-8') as f:
         json.dump(metrics, f, default=str, indent=2)
     return str(filepath)
 

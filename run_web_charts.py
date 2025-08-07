@@ -36,11 +36,11 @@ def run_dashboard():
         main()
         
     except ImportError as e:
-        print(f"[ERROR] Error importing dashboard app: {e}")
+        print("[ERROR] Error importing dashboard app: %s", e)
         print("[TIP] Make sure you're in the project root directory")
         sys.exit(1)
     except Exception as e:
-        print(f"[ERROR] Error starting dashboard: {e}")
+        print("[ERROR] Error starting dashboard: %s", e)
         sys.exit(1)
 
 def run_timeline():
@@ -53,7 +53,7 @@ def run_timeline():
             from app.main import main as app_main
             logger.info("[OK] Successfully imported app.main")
         except ImportError as e:
-            logger.error(f"[ERROR] Error importing timeline app: {e}")
+            logger.error("[ERROR] Error importing timeline app: %s", e)
             logger.error("[TIP] Make sure you're in the project root directory")
             logger.error("[TIP] Check that all dependencies are installed")
             sys.exit(1)
@@ -73,7 +73,7 @@ def run_timeline():
         logger.info("[STOP] Timeline server stopped by user")
         sys.exit(0)
     except Exception as e:
-        logger.error(f"[ERROR] Error starting timeline: {e}")
+        logger.error("[ERROR] Error starting timeline: %s", e)
         logger.error("[TIP] Check the logs for more details")
         sys.exit(1)
 
@@ -88,14 +88,14 @@ async def capture_dashboard_screenshots():
         print("\n[SCATTER] Results:")
         for scheduler, success in results.items():
             status = "[OK]" if success else "[ERROR]"
-            print(f"  {status} {scheduler}")
+            print("  %s %s", status, scheduler)
         
         success_count = sum(results.values())
         total_count = len(results)
-        print(f"\n[CHART] Overall: {success_count}/{total_count} schedulers captured")
+        print("\n[CHART] Overall: %s/%s schedulers captured", success_count, total_count)
         
     except Exception as e:
-        print(f"[ERROR] Error capturing screenshots: {e}")
+        print("[ERROR] Error capturing screenshots: %s", e)
         sys.exit(1)
 
 async def capture_timeline_screenshot():
@@ -112,7 +112,7 @@ async def capture_timeline_screenshot():
             print("[ERROR] Timeline screenshot capture failed!")
             
     except Exception as e:
-        print(f"[ERROR] Error capturing timeline screenshot: {e}")
+        print("[ERROR] Error capturing timeline screenshot: %s", e)
         sys.exit(1)
 
 def main():
@@ -133,7 +133,7 @@ def main():
     args = parser.parse_args()
     
     if args.capture:
-        print(f"[START] Capturing {args.mode} screenshots")
+        print("[START] Capturing %s screenshots", args.mode)
         if args.mode == 'dashboard':
             asyncio.run(capture_dashboard_screenshots())
         else:

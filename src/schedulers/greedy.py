@@ -24,12 +24,20 @@ class GreedyScheduler(BaseScheduler):
         """
         self._auto_link_abstract_paper()
         self._validate_venue_compatibility()
+        
+        # Assign conferences to papers that need them
+        schedule = {}
+        schedule = self._assign_conferences(schedule)
+        
+        # Create abstract submissions for papers that need them
+        schedule = self._create_abstract_submissions()
+        
+        # Recalculate topological order after adding abstracts
         topo = self._topological_order()
         
         # Global time window - use robust date calculation
         current, end = self._get_scheduling_window()
         
-        schedule: Dict[str, date] = {}
         active: Set[str] = set()
         
         # Early abstract scheduling if enabled
@@ -81,8 +89,8 @@ class GreedyScheduler(BaseScheduler):
         
         if len(schedule) != len(self.submissions):
             missing = [sid for sid in self.submissions if sid not in schedule]
-            print(f"Note: Could not schedule {len(missing)} submissions: {missing}")
-            print(f"Successfully scheduled {len(schedule)} out of {len(self.submissions)} submissions")
+            print("Note: Could not schedule %s submissions: %s", len(missing), missing)
+            print("Successfully scheduled %s out of %s submissions", len(schedule), len(self.submissions))
         
         return schedule
     

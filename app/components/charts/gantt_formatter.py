@@ -32,28 +32,132 @@ class GanttFormatter:
         self.timeline_days = (end_date - start_date).days
     
     def get_axis_config(self) -> Dict:
-        """Get x-axis configuration for the Gantt chart."""
-        tick_positions, tick_labels = self.create_smart_ticks()
+        """Get primary x-axis configuration (quarters) - positioned at bottom."""
+        quarter_positions, quarter_labels = self.create_quarter_ticks()
         
         return {
-            'title': 'Timeline',
+            'title': 'Timeline (Quarters)',
             'showgrid': True,
             'gridcolor': 'lightgray',
             'tickmode': 'array',
-            'tickvals': tick_positions,
-            'ticktext': tick_labels,
+            'tickvals': quarter_positions,
+            'ticktext': quarter_labels,
             'range': [0, self.timeline_days],
             'tickangle': 0,
-            'tickfont': {'size': 10}
+            'tickfont': {'size': 11, 'color': 'darkblue'},
+            'side': 'bottom',
+            'position': 0.05,
+            'anchor': 'y'
         }
     
-    def get_margin_config(self) -> Dict:
-        """Get margin configuration for better label display."""
+    def get_year_annotations(self) -> List[Dict]:
+        """Get year annotations to place below the x-axis."""
+        year_positions, year_labels = self.create_year_ticks()
+        annotations = []
+        
+        for pos, label in zip(year_positions, year_labels):
+            annotations.append({
+                'x': pos,
+                'y': -0.1,  # Below the axis
+                'text': label,
+                'showarrow': False,
+                'xref': 'x',
+                'yref': 'paper',
+                'xanchor': 'center',
+                'yanchor': 'top',
+                'font': {'size': 12, 'color': 'darkred', 'weight': 'bold'},
+                'bgcolor': 'rgba(255, 255, 255, 0.8)',
+                'bordercolor': 'darkred',
+                'borderwidth': 1
+            })
+        
+        return annotations
+    
+    def get_secondary_axis_config(self) -> Dict:
+        """Get secondary x-axis configuration with years below quarters."""
+        year_positions, year_labels = self.create_year_ticks()
+        
         return {
-            'l': 50,
-            'r': 50,
-            't': 80,
-            'b': 80  # Increased bottom margin for multi-line labels
+            'title': 'Years',
+            'showgrid': False,
+            'tickmode': 'array',
+            'tickvals': year_positions,
+            'ticktext': year_labels,
+            'range': [0, self.timeline_days],
+            'tickangle': 0,
+            'tickfont': {'size': 12, 'color': 'darkred', 'weight': 'bold'},
+            'overlaying': 'x',
+            'side': 'bottom',
+            'position': 0.15,
+            'anchor': 'y'
+        }
+    
+    def get_tertiary_axis_config(self) -> Dict:
+        """Get tertiary x-axis configuration with years on bottom."""
+        year_positions, year_labels = self.create_year_ticks()
+        
+        return {
+            'title': 'Years',
+            'showgrid': False,
+            'tickmode': 'array',
+            'tickvals': year_positions,
+            'ticktext': year_labels,
+            'range': [0, self.timeline_days],
+            'tickangle': 0,
+            'tickfont': {'size': 12, 'color': 'darkred', 'weight': 'bold'},
+            'overlaying': 'x',
+            'side': 'bottom',
+            'position': 0.25,
+            'anchor': 'y'
+        }
+    
+    def create_quarter_ticks(self) -> Tuple[List[int], List[str]]:
+        """Create quarter tick positions and labels."""
+        tick_positions = []
+        tick_labels = []
+        
+        # Generate ticks for each quarter in the timeline
+        start_year = self.start_date.year
+        end_year = self.end_date.year
+        
+        for year in range(start_year, end_year + 1):
+            # Quarter ticks (January 1st, April 1st, July 1st, October 1st)
+            for month in [1, 4, 7, 10]:
+                quarter_date = date(year, month, 1)
+                if quarter_date >= self.start_date and quarter_date <= self.end_date:
+                    day_offset = (quarter_date - self.start_date).days
+                    quarter = (month - 1) // 3 + 1
+                    tick_positions.append(day_offset)
+                    tick_labels.append(f"Q{quarter}")
+        
+        return tick_positions, tick_labels
+    
+    def create_year_ticks(self) -> Tuple[List[int], List[str]]:
+        """Create year tick positions and labels."""
+        tick_positions = []
+        tick_labels = []
+        
+        # Generate ticks for each year in the timeline
+        start_year = self.start_date.year
+        end_year = self.end_date.year
+        
+        for year in range(start_year, end_year + 1):
+            # Year tick (January 1st)
+            year_start = date(year, 1, 1)
+            if year_start >= self.start_date and year_start <= self.end_date:
+                day_offset = (year_start - self.start_date).days
+                tick_positions.append(day_offset)
+                tick_labels.append(f"{year}")
+        
+        return tick_positions, tick_labels
+    
+    def get_margin_config(self) -> Dict:
+        """Get margin configuration for better label display with annotations."""
+        return {
+            'l': 50,   # Left margin
+            'r': 50,   # Right margin
+            't': 80,   # Top margin
+            'b': 120   # Bottom margin for annotations
         }
     
     def create_smart_ticks(self) -> Tuple[List[int], List[str]]:
@@ -99,7 +203,7 @@ class GanttFormatter:
         return spacing_map[format_type]
     
     def _create_label(self, date_obj: date, format_type: GanttFormat) -> str:
-        """Create multi-line label based on format type."""
+        """Create label based on format type."""
         if format_type == GanttFormat.WEEKLY:
             return self._create_weekly_label(date_obj)
         elif format_type == GanttFormat.BIWEEKLY:
@@ -110,23 +214,19 @@ class GanttFormatter:
             return self._create_quarterly_label(date_obj)
     
     def _create_weekly_label(self, date_obj: date) -> str:
-        """Create weekly label with multi-line format."""
-        week_num = (date_obj - self.start_date).days // 7 + 1
-        return f"Week {week_num}<br>{format_date_display(date_obj, '%m/%d')}"
+        """Create weekly label."""
+        return format_date_display(date_obj, '%m/%d')
     
     def _create_biweekly_label(self, date_obj: date) -> str:
-        """Create bi-weekly label with multi-line format."""
-        week_num = (date_obj - self.start_date).days // 7 + 1
-        return f"W{week_num}<br>{format_date_display(date_obj, '%m/%d')}"
+        """Create bi-weekly label."""
+        return format_date_display(date_obj, '%m/%d')
     
     def _create_monthly_label(self, date_obj: date) -> str:
-        """Create monthly label with multi-line format."""
-        month_name = date_obj.strftime('%b')
-        year = date_obj.year
-        return f"{month_name}<br>{year}"
+        """Create monthly label."""
+        return format_date_display(date_obj, '%b %Y')
     
     def _create_quarterly_label(self, date_obj: date) -> str:
-        """Create quarterly label with multi-line format."""
+        """Create quarterly label."""
         quarter = (date_obj.month - 1) // 3 + 1
         year = date_obj.year
-        return f"Q{quarter}<br>{year}"
+        return f"Q{quarter} {year}"

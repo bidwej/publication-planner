@@ -95,8 +95,8 @@ class HeuristicScheduler(BaseScheduler):
         
         if len(schedule) != len(self.submissions):
             missing = [sid for sid in self.submissions if sid not in schedule]
-            print(f"Note: Could not schedule {len(missing)} submissions: {missing}")
-            print(f"Successfully scheduled {len(schedule)} out of {len(self.submissions)} submissions")
+            print("Note: Could not schedule %s submissions: %s", len(missing), missing)
+            print("Successfully scheduled %s out of %s submissions", len(schedule), len(self.submissions))
         
         return schedule
     
@@ -104,16 +104,15 @@ class HeuristicScheduler(BaseScheduler):
         """Sort ready submissions by the specified heuristic strategy."""
         if self.strategy == HeuristicStrategy.EARLIEST_DEADLINE:
             return self._sort_by_earliest_deadline(ready)
-        elif self.strategy == HeuristicStrategy.LATEST_START:
+        if self.strategy == HeuristicStrategy.LATEST_START:
             return self._sort_by_latest_start(ready)
-        elif self.strategy == HeuristicStrategy.SHORTEST_PROCESSING_TIME:
+        if self.strategy == HeuristicStrategy.SHORTEST_PROCESSING_TIME:
             return self._sort_by_processing_time(ready, reverse=False)
-        elif self.strategy == HeuristicStrategy.LONGEST_PROCESSING_TIME:
+        if self.strategy == HeuristicStrategy.LONGEST_PROCESSING_TIME:
             return self._sort_by_processing_time(ready, reverse=True)
-        elif self.strategy == HeuristicStrategy.CRITICAL_PATH:
+        if self.strategy == HeuristicStrategy.CRITICAL_PATH:
             return self._sort_by_critical_path(ready)
-        else:
-            raise ValueError(f"Unknown heuristic strategy: {self.strategy}")
+        raise ValueError(f"Unknown heuristic strategy: {self.strategy}")
     
     def _sort_by_earliest_deadline(self, ready: List[str]) -> List[str]:
         """Sort by earliest deadline first."""

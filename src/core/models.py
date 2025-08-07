@@ -7,13 +7,22 @@ from dataclasses import asdict, dataclass
 from enum import Enum
 from dateutil.parser import parse as parse_date
 
-from src.core.constants import DAYS_PER_MONTH, DEFAULT_POSTER_DURATION_DAYS
+from src.core.constants import DEFAULT_POSTER_DURATION_DAYS
 
 class SubmissionType(str, Enum):
     """Types of submissions."""
     PAPER = "paper"
     ABSTRACT = "abstract"
     POSTER = "poster"
+
+class ConferenceSubmissionType(str, Enum):
+    """Types of conference submission requirements."""
+    ABSTRACT_ONLY = "abstract_only"      # Only accepts abstracts
+    PAPER_ONLY = "paper_only"           # Only accepts papers
+    POSTER_ONLY = "poster_only"         # Only accepts posters
+    ABSTRACT_AND_PAPER = "abstract_and_paper"  # Requires abstract before paper
+    ABSTRACT_OR_PAPER = "abstract_or_paper"    # Accepts either abstract or paper
+    ALL_TYPES = "all_types"             # Accepts all submission types
 
 class SchedulerStrategy(str, Enum):
     """Available scheduling strategies."""
@@ -31,17 +40,20 @@ class Submission:
     id: str
     title: str
     kind: SubmissionType
-    conference_id: str
+    conference_id: Optional[str] = None  # Optional - None for work items
     depends_on: Optional[List[str]] = None
     draft_window_months: int = 3
     lead_time_from_parents: int = 0
     penalty_cost_per_day: Optional[float] = None
     engineering: bool = False
     earliest_start_date: Optional[date] = None
+    conference_families: Optional[List[str]] = None  # Suggested conferences
     
     def __post_init__(self):
         if self.depends_on is None:
             self.depends_on = []
+        if self.conference_families is None:
+            self.conference_families = []
     
     def validate(self) -> List[str]:
         """Validate submission and return list of errors."""
@@ -50,9 +62,10 @@ class Submission:
             errors.append("Missing submission ID")
         if not self.title:
             errors.append("Missing title")
-        # Conference ID is optional for internal modules (mods)
-        if not self.conference_id and not self.id.endswith("-wrk"):
-            errors.append("Missing conference ID")
+        # Conference ID is optional for work items (mods)
+        # Papers can have conference_id or conference_families
+        if self.kind == SubmissionType.PAPER and not self.conference_id and not self.conference_families:
+            errors.append("Papers must have either conference_id or conference_families")
         if self.draft_window_months < 0:
             errors.append("Draft window months cannot be negative")
         if self.lead_time_from_parents < 0:
@@ -79,20 +92,24 @@ class Submission:
     
     def get_duration_days(self, config: 'Config') -> int:
         """Calculate the duration in days for this submission."""
+        # Fixed time constants
+        days_per_month = 30
+        
         if self.kind == SubmissionType.ABSTRACT:
-            return 0  # Abstracts are completed on the same day
-        elif self.kind == SubmissionType.POSTER:
+            # Work items (abstracts) should have meaningful duration for timeline visibility
+            # Use configurable work item duration, default to 14 days if not specified
+            work_item_duration = getattr(config, 'work_item_duration_days', 14)
+            return work_item_duration
+        if self.kind == SubmissionType.POSTER:
             # Posters typically have shorter duration than papers
             if self.draft_window_months > 0:
-                return self.draft_window_months * DAYS_PER_MONTH
-            else:
-                return DEFAULT_POSTER_DURATION_DAYS
-        else:  # SubmissionType.PAPER
-            # Use draft_window_months if available, otherwise fall back to config
-            if self.draft_window_months > 0:
-                return self.draft_window_months * DAYS_PER_MONTH
-            else:
-                return config.min_paper_lead_time_days
+                return self.draft_window_months * days_per_month
+            return DEFAULT_POSTER_DURATION_DAYS
+        # SubmissionType.PAPER
+        # Use draft_window_months if available, otherwise fall back to config
+        if self.draft_window_months > 0:
+            return self.draft_window_months * days_per_month
+        return config.min_paper_lead_time_days
     
     def get_end_date(self, start_date: date, config: 'Config') -> date:
         """Calculate the end date for this submission starting on the given date."""
@@ -119,6 +136,63 @@ class Conference:
     conf_type: ConferenceType
     recurrence: ConferenceRecurrence
     deadlines: Dict[SubmissionType, date]
+    submission_types: Optional[ConferenceSubmissionType] = None  # What types of submissions are accepted
+    
+    def __post_init__(self):
+        # Auto-determine submission type based on deadlines if not specified
+        if self.submission_types is None:
+            self.submission_types = self._determine_submission_type()
+    
+    def _determine_submission_type(self) -> ConferenceSubmissionType:
+        """Determine submission type based on available deadlines."""
+        has_abstract = SubmissionType.ABSTRACT in self.deadlines
+        has_paper = SubmissionType.PAPER in self.deadlines
+        has_poster = SubmissionType.POSTER in self.deadlines
+        
+        if has_abstract and has_paper:
+            return ConferenceSubmissionType.ABSTRACT_AND_PAPER
+        elif has_abstract and not has_paper:
+            return ConferenceSubmissionType.ABSTRACT_ONLY
+        elif has_paper and not has_abstract:
+            return ConferenceSubmissionType.PAPER_ONLY
+        elif has_poster and not has_abstract and not has_paper:
+            return ConferenceSubmissionType.POSTER_ONLY
+        elif has_abstract and has_paper and has_poster:
+            return ConferenceSubmissionType.ALL_TYPES
+        else:
+            return ConferenceSubmissionType.ABSTRACT_OR_PAPER
+    
+    def accepts_submission_type(self, submission_type: SubmissionType) -> bool:
+        """Check if conference accepts this submission type."""
+        if self.submission_types == ConferenceSubmissionType.ALL_TYPES:
+            return True
+        elif self.submission_types == ConferenceSubmissionType.ABSTRACT_ONLY:
+            return submission_type == SubmissionType.ABSTRACT
+        elif self.submission_types == ConferenceSubmissionType.PAPER_ONLY:
+            return submission_type == SubmissionType.PAPER
+        elif self.submission_types == ConferenceSubmissionType.POSTER_ONLY:
+            return submission_type == SubmissionType.POSTER
+        elif self.submission_types == ConferenceSubmissionType.ABSTRACT_AND_PAPER:
+            return submission_type in [SubmissionType.ABSTRACT, SubmissionType.PAPER]
+        elif self.submission_types == ConferenceSubmissionType.ABSTRACT_OR_PAPER:
+            return submission_type in [SubmissionType.ABSTRACT, SubmissionType.PAPER]
+        return False
+    
+    def requires_abstract_before_paper(self) -> bool:
+        """Check if conference requires abstract submission before paper submission."""
+        return self.submission_types == ConferenceSubmissionType.ABSTRACT_AND_PAPER
+    
+    def get_required_dependencies(self, submission_type: SubmissionType) -> List[str]:
+        """Get list of required dependencies for this submission type at this conference."""
+        dependencies = []
+        
+        if submission_type == SubmissionType.PAPER and self.requires_abstract_before_paper():
+            # Find the abstract submission for this conference
+            # This would need to be implemented based on the actual submission data
+            # For now, we'll return a placeholder
+            dependencies.append(f"abstract-{self.id}")
+        
+        return dependencies
     
     def validate(self) -> List[str]:
         """Validate conference and return list of errors."""
@@ -151,6 +225,7 @@ class Config:
     min_paper_lead_time_days: int
     max_concurrent_submissions: int
     default_paper_lead_time_months: int = 3
+    work_item_duration_days: int = 14  # Duration for work items (abstracts)
     penalty_costs: Optional[Dict[str, float]] = None
     priority_weights: Optional[Dict[str, float]] = None
     scheduling_options: Optional[Dict[str, Any]] = None

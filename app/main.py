@@ -111,7 +111,7 @@ def create_dashboard_app():
             return gantt_fig, metrics_fig, schedule_table, violations_table, summary_metrics
             
         except Exception as e:
-            print(f"Error generating schedule: {e}")
+            print("Error generating schedule: %s", e)
             return _create_default_figures()
     
     def _load_saved_schedule() -> tuple:
@@ -157,7 +157,7 @@ def generate_schedule(config_data=None):
         _current_schedule_data = schedule
         return schedule
     except Exception as e:
-        print(f"Error generating schedule: {e}")
+        print("Error generating schedule: %s", e)
         return {}
 
 
@@ -226,7 +226,7 @@ def create_timeline_app():
             return timeline_fig
             
         except Exception as e:
-            print(f"Error generating schedule: {e}")
+            print("Error generating schedule: %s", e)
             return create_gantt_chart({}, Config.create_default())
     
     return app
@@ -266,13 +266,13 @@ def main():
         )
     except OSError as e:
         if "Address already in use" in str(e):
-            print(f"[ERROR] Port {args.port} is already in use. Please stop the existing server or use a different port.")
+            print("[ERROR] Port %d is already in use. Please stop the existing server or use a different port.", args.port)
             sys.exit(1)
         else:
-            print(f"[ERROR] Server error: {e}")
+            print("[ERROR] Server error: %s", e)
             sys.exit(1)
     except Exception as e:
-        print(f"[ERROR] Unexpected error starting server: {e}")
+        print("[ERROR] Unexpected error starting server: %s", e)
         sys.exit(1)
 
 if __name__ == "__main__":

@@ -40,7 +40,7 @@ class ScheduleStorage:
                 """)
                 conn.commit()
         except Exception as e:
-            print(f"Warning: Could not initialize storage: {e}")
+            print("Warning: Could not initialize storage: %s", e)
             self.db_path = None
     
     def save_schedule(self, schedule_state: ScheduleState, filename: str) -> bool:
@@ -68,7 +68,7 @@ class ScheduleStorage:
             
             return True
         except Exception as e:
-            print(f"Error saving schedule: {e}")
+            print("Error saving schedule: %s", e)
             return False
     
     def load_schedule(self, filename: str) -> Optional[ScheduleState]:
@@ -89,7 +89,7 @@ class ScheduleStorage:
                     return ScheduleState.from_dict(data)
                 return None
         except Exception as e:
-            print(f"Error loading schedule: {e}")
+            print("Error loading schedule: %s", e)
             return None
     
     def list_saved_schedules(self) -> List[Dict[str, Any]]:
@@ -116,7 +116,7 @@ class ScheduleStorage:
                 
                 return schedules
         except Exception as e:
-            print(f"Error listing saved schedules: {e}")
+            print("Error listing saved schedules: %s", e)
             return []
     
     def delete_schedule(self, filename: str) -> bool:
@@ -131,7 +131,7 @@ class ScheduleStorage:
             
             return True
         except Exception as e:
-            print(f"Error deleting schedule: {e}")
+            print("Error deleting schedule: %s", e)
             return False
     
     def export_schedule(self, schedule_state: ScheduleState, filename: str) -> str:
@@ -141,7 +141,7 @@ class ScheduleStorage:
             schedule_data['filename'] = filename
             return json.dumps(schedule_data, indent=2)
         except Exception as e:
-            print(f"Error exporting schedule: {e}")
+            print("Error exporting schedule: %s", e)
             return ""
     
     def import_schedule(self, json_data: str) -> Optional[ScheduleState]:
@@ -150,7 +150,7 @@ class ScheduleStorage:
             data = json.loads(json_data)
             return ScheduleState.from_dict(data)
         except Exception as e:
-            print(f"Error importing schedule: {e}")
+            print("Error importing schedule: %s", e)
             return None
 
 
@@ -173,7 +173,7 @@ class StorageManager:
             success = self.storage.save_schedule(schedule_state, filename)
             return filename if success else ""
         except Exception as e:
-            print(f"Error saving schedule: {e}")
+            print("Error saving schedule: %s", e)
             return ""
     
     def load_schedule(self, filename: str) -> Optional[Dict[str, Any]]:
@@ -184,7 +184,7 @@ class StorageManager:
                 return schedule_state.to_dict()
             return None
         except Exception as e:
-            print(f"Error loading schedule: {e}")
+            print("Error loading schedule: %s", e)
             return None
     
     def list_schedules(self) -> List[Dict[str, Any]]:
@@ -192,7 +192,7 @@ class StorageManager:
         try:
             return self.storage.list_saved_schedules()
         except Exception as e:
-            print(f"Error listing schedules: {e}")
+            print("Error listing schedules: %s", e)
             return []
     
     def delete_schedule(self, filename: str) -> bool:
@@ -200,5 +200,5 @@ class StorageManager:
         try:
             return self.storage.delete_schedule(filename)
         except Exception as e:
-            print(f"Error deleting schedule: {e}")
+            print("Error deleting schedule: %s", e)
             return False

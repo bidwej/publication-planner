@@ -5,13 +5,14 @@ from typing import Dict, List
 from datetime import date, timedelta, datetime
 import statistics
 from pathlib import Path
+
+
+from core.constraints import validate_deadline_compliance, validate_resource_constraints
 from core.models import Config, ScheduleSummary, ScheduleMetrics, SubmissionType
+from output.tables import save_schedule_json, save_table_csv, save_metrics_json
+from scoring.efficiency import calculate_efficiency_score
 from scoring.penalty import calculate_penalty_score
 from scoring.quality import calculate_quality_score
-from scoring.efficiency import calculate_efficiency_score
-from core.constraints import validate_deadline_compliance, validate_resource_constraints
-from output.tables import save_schedule_json, save_table_csv, save_metrics_json
-from core.constants import DAYS_PER_MONTH
 
 def create_output_directory(base_dir: str = "output") -> str:
     """Create a timestamped output directory."""
@@ -117,10 +118,13 @@ def generate_schedule_metrics(schedule: Dict[str, date], config: Config) -> Sche
             continue
         
         # Calculate duration
+        # Fixed time constants
+        days_per_month = 30
+        
         if sub.kind == SubmissionType.ABSTRACT:
             duration_days = 0
         else:
-            duration_days = sub.draft_window_months * DAYS_PER_MONTH if sub.draft_window_months > 0 else config.min_paper_lead_time_days
+            duration_days = sub.draft_window_months * days_per_month if sub.draft_window_months > 0 else config.min_paper_lead_time_days
         
         # Add workload for each day
         for i in range(duration_days + 1):

@@ -68,7 +68,7 @@ def concat_source_files(
             source_file.write(file_path.read_text(encoding='utf-8'))
             source_file.write("\n\n")
     
-    print(f"Concatenated {len(source_files)} files into {output_file}")
+    print("Concatenated %s files into %s", len(source_files), output_file)
 
 def main():
     """Main function."""
@@ -82,9 +82,9 @@ def main():
     
     try:
         concat_source_files(args.input_folder, args.output_file, args.ignore, args.extensions)
-        print(f"Successfully concatenated files from {args.input_folder} to {args.output_file}")
+        print("Successfully concatenated files from %s to %s", args.input_folder, args.output_file)
     except Exception as e:
-        print(f"Error: {e}")
+        print("Error: %s", e)
 
 if __name__ == "__main__":
     main()

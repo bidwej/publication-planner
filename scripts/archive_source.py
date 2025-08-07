@@ -98,7 +98,7 @@ def create_archive(
                     file_path = Path(root) / file
                     zf.write(file_path, file_path.relative_to(temp_path))
 
-        print(f"Archive created: {archive_path}")
+        print("Archive created: %s", archive_path)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create source code archive")

@@ -6,7 +6,7 @@ from typing import List
 from src.schedulers.greedy import GreedyScheduler
 from src.schedulers.base import BaseScheduler
 from src.core.models import SchedulerStrategy
-from src.core.constants import SCHEDULER_RANDOMNESS_FACTOR
+from src.core.constants import SCHEDULER_CONSTANTS
 
 
 
@@ -14,7 +14,7 @@ from src.core.constants import SCHEDULER_RANDOMNESS_FACTOR
 class StochasticGreedyScheduler(GreedyScheduler):
     """Stochastic greedy scheduler that adds randomness to priority selection."""
     
-    def __init__(self, config, randomness_factor: float = SCHEDULER_RANDOMNESS_FACTOR):
+    def __init__(self, config, randomness_factor: float = SCHEDULER_CONSTANTS.randomness_factor):
         """Initialize scheduler with config and randomness factor."""
         super().__init__(config)
         self.randomness_factor = randomness_factor

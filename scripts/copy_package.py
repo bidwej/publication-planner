@@ -60,7 +60,7 @@ def copy_package(
             
             # Copy file
             shutil.copy2(item, dst_file)
-            print(f"Copied: {relative_path}")
+            print("Copied: %s", relative_path)
 
 def main():
     """Main function."""
@@ -74,9 +74,9 @@ def main():
     
     try:
         copy_package(args.source, args.dest, args.ignore)
-        print(f"Successfully copied {args.source} to {args.dest}")
+        print("Successfully copied %s to %s", args.source, args.dest)
     except Exception as e:
-        print(f"Error: {e}")
+        print("Error: %s", e)
 
 if __name__ == "__main__":
     main()

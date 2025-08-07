@@ -1,11 +1,20 @@
 """Constraint validation for the Endoscope AI project."""
 
 from __future__ import annotations
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 from datetime import date, timedelta
 import statistics
-from src.core.models import ConferenceType, Config, ConstraintValidationResult, DeadlineValidation, DeadlineViolation, DependencyValidation, DependencyViolation, ResourceValidation, ResourceViolation, Submission, SubmissionType
-from src.core.constants import PERFECT_COMPLIANCE_RATE, PERCENTAGE_MULTIPLIER, DAYS_PER_MONTH, DEFAULT_ABSTRACT_ADVANCE_DAYS, DEFAULT_POSTER_DURATION_DAYS
+from src.core.models import Config, Submission, SubmissionType, Conference, ConferenceType, ConferenceSubmissionType, DeadlineValidation, DeadlineViolation, DependencyValidation, DependencyViolation, ResourceValidation, ResourceViolation, ConstraintValidationResult
+from src.core.constants import (
+    EFFICIENCY_CONSTANTS, 
+    QUALITY_CONSTANTS, 
+    SCORING_WEIGHTS, 
+    REPORT_CONSTANTS, 
+    SCHEDULER_CONSTANTS,
+    ANALYTICS_CONSTANTS,
+    DEFAULT_ABSTRACT_ADVANCE_DAYS,
+    DEFAULT_POSTER_DURATION_DAYS
+)
 
 
 def is_working_day(check_date: date, blackout_dates: list[date] | None = None) -> bool:
@@ -35,12 +44,16 @@ def is_working_day(check_date: date, blackout_dates: list[date] | None = None) -
 
 def validate_deadline_compliance(schedule: Dict[str, date], config: Config) -> DeadlineValidation:
     """Validate that all submissions meet their deadlines."""
+    # Use constants from constants.py
+    perfect_compliance_rate = QUALITY_CONSTANTS.perfect_compliance_rate
+    percentage_multiplier = QUALITY_CONSTANTS.percentage_multiplier
+    
     if not schedule:
         return DeadlineValidation(
             is_valid=True,
             violations=[],
             summary="No submissions to validate",
-            compliance_rate=PERFECT_COMPLIANCE_RATE,
+            compliance_rate=perfect_compliance_rate,
             total_submissions=0,
             compliant_submissions=0
         )
@@ -65,7 +78,7 @@ def validate_deadline_compliance(schedule: Dict[str, date], config: Config) -> D
         total_submissions += 1
         deadline = conf.deadlines[sub.kind]
         
-        # Calculate end date using proper duration logic
+        # Calculate end date using submission method
         end_date = sub.get_end_date(start_date, config)
         
         # Check if deadline is met
@@ -85,7 +98,8 @@ def validate_deadline_compliance(schedule: Dict[str, date], config: Config) -> D
                 days_late=days_late
             ))
     
-    compliance_rate = (compliant_submissions / total_submissions * PERCENTAGE_MULTIPLIER) if total_submissions > 0 else PERFECT_COMPLIANCE_RATE
+    # Calculate compliance rate
+    compliance_rate = (compliant_submissions / total_submissions * percentage_multiplier) if total_submissions > 0 else perfect_compliance_rate
     is_valid = len(violations) == 0
     
     return DeadlineValidation(
@@ -99,12 +113,16 @@ def validate_deadline_compliance(schedule: Dict[str, date], config: Config) -> D
 
 def validate_dependency_satisfaction(schedule: Dict[str, date], config: Config) -> DependencyValidation:
     """Validate that all dependencies are satisfied."""
+    # Use constants from constants.py
+    perfect_compliance_rate = QUALITY_CONSTANTS.perfect_compliance_rate
+    percentage_multiplier = QUALITY_CONSTANTS.percentage_multiplier
+    
     if not schedule:
         return DependencyValidation(
             is_valid=True,
             violations=[],
             summary="No dependencies to validate",
-            satisfaction_rate=PERFECT_COMPLIANCE_RATE,
+            satisfaction_rate=perfect_compliance_rate,
             total_dependencies=0,
             satisfied_dependencies=0
         )
@@ -145,8 +163,8 @@ def validate_dependency_satisfaction(schedule: Dict[str, date], config: Config) 
                 ))
                 continue
             
-            # Calculate dependency end date using proper duration logic
-            dep_end = _get_submission_end_date(dep_start, dep_sub, config)
+            # Calculate dependency end date using submission method
+            dep_end = dep_sub.get_end_date(dep_start, config)
             
             # Check if dependency is completed before this submission starts
             if dep_end > start_date:
@@ -162,7 +180,7 @@ def validate_dependency_satisfaction(schedule: Dict[str, date], config: Config) 
             else:
                 satisfied_dependencies += 1
     
-    satisfaction_rate = (satisfied_dependencies / total_dependencies * PERCENTAGE_MULTIPLIER) if total_dependencies > 0 else PERFECT_COMPLIANCE_RATE
+    satisfaction_rate = (satisfied_dependencies / total_dependencies * percentage_multiplier) if total_dependencies > 0 else perfect_compliance_rate
     is_valid = len(violations) == 0
     
     return DependencyValidation(
@@ -221,12 +239,16 @@ def validate_resource_constraints(schedule: Dict[str, date], config: Config) -> 
 
 def validate_blackout_dates(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
     """Validate that no submissions are scheduled on blackout dates."""
+    # Use constants from constants.py
+    perfect_compliance_rate = QUALITY_CONSTANTS.perfect_compliance_rate
+    percentage_multiplier = QUALITY_CONSTANTS.percentage_multiplier
+    
     # Check if blackout periods are enabled
     if config.scheduling_options and not config.scheduling_options.get("enable_blackout_periods", True):
         return {
             "is_valid": True,
             "violations": [],
-            "compliance_rate": PERFECT_COMPLIANCE_RATE,
+            "compliance_rate": perfect_compliance_rate,
             "summary": "Blackout periods disabled"
         }
     
@@ -234,7 +256,7 @@ def validate_blackout_dates(schedule: Dict[str, date], config: Config) -> Dict[s
         return {
             "is_valid": True,
             "violations": [],
-            "compliance_rate": 100.0,
+            "compliance_rate": QUALITY_CONSTANTS.perfect_compliance_rate,
             "summary": "No blackout dates configured"
         }
     
@@ -267,7 +289,7 @@ def validate_blackout_dates(schedule: Dict[str, date], config: Config) -> Dict[s
         else:
             compliant_submissions += 1
     
-    compliance_rate = (compliant_submissions / total_submissions * PERCENTAGE_MULTIPLIER) if total_submissions > 0 else PERFECT_COMPLIANCE_RATE
+    compliance_rate = (compliant_submissions / total_submissions * percentage_multiplier) if total_submissions > 0 else perfect_compliance_rate
     is_valid = len(violations) == 0
     
     return {
@@ -278,6 +300,95 @@ def validate_blackout_dates(schedule: Dict[str, date], config: Config) -> Dict[s
         "compliant_submissions": compliant_submissions,
         "summary": f"Blackout dates: {compliant_submissions}/{total_submissions} submissions compliant ({compliance_rate:.1f}%)"
     }
+
+def _validate_early_abstract_scheduling(schedule: Dict[str, date], config: Config) -> List[Dict[str, Any]]:
+    """Validate early abstract scheduling."""
+    violations = []
+    
+    # Check if scheduling_options exists before accessing it
+    if not config.scheduling_options:
+        return violations
+    
+    abstract_advance = config.scheduling_options.get("abstract_advance_days", DEFAULT_ABSTRACT_ADVANCE_DAYS)
+    abstracts = [sid for sid, sub in config.submissions_dict.items() 
+                if sub.kind == SubmissionType.ABSTRACT]
+    
+    for abstract_id in abstracts:
+        if abstract_id not in schedule:
+            continue
+        
+        sub = config.submissions_dict[abstract_id]
+        if not sub.conference_id or sub.conference_id not in config.conferences_dict:
+            continue
+        
+        conf = config.conferences_dict[sub.conference_id]
+        if SubmissionType.ABSTRACT not in conf.deadlines:
+            continue
+        
+        deadline = conf.deadlines[SubmissionType.ABSTRACT]
+        early_date = deadline - timedelta(days=abstract_advance)
+        scheduled_date = schedule[abstract_id]
+        
+        if scheduled_date > early_date:
+            violations.append({
+                "submission_id": abstract_id,
+                "description": f"Abstract {abstract_id} not scheduled early enough (should be {early_date}, scheduled {scheduled_date})",
+                "severity": "low"
+            })
+    
+    return violations
+
+
+def _validate_conference_response_time(schedule: Dict[str, date], config: Config) -> List[Dict[str, Any]]:
+    """Validate conference response time."""
+    violations = []
+    
+    # Check if scheduling_options exists and has the required key
+    if not config.scheduling_options or "conference_response_time_days" not in config.scheduling_options:
+        return violations
+    
+    response_time = config.scheduling_options["conference_response_time_days"]
+    
+    for sid, start_date in schedule.items():
+        sub = config.submissions_dict.get(sid)
+        if not sub or sub.kind != SubmissionType.PAPER:
+            continue
+        
+        if not sub.conference_id or sub.conference_id not in config.conferences_dict:
+            continue
+        
+        conf = config.conferences_dict[sub.conference_id]
+        if SubmissionType.PAPER not in conf.deadlines:
+            continue
+        
+        deadline = conf.deadlines[SubmissionType.PAPER]
+        end_date = _get_submission_end_date(start_date, sub, config)
+        response_deadline = deadline + timedelta(days=response_time)
+        
+        if end_date > response_deadline:
+            violations.append({
+                "submission_id": sid,
+                "description": f"Paper {sid} may not meet conference response time ({response_time} days)",
+                "severity": "medium"
+            })
+    
+    return violations
+
+
+def _validate_working_days_only(schedule: Dict[str, date], config: Config) -> List[Dict[str, Any]]:
+    """Validate working days only scheduling."""
+    violations = []
+    
+    for sid, start_date in schedule.items():
+        if not is_working_day(start_date, config.blackout_dates):
+            violations.append({
+                "submission_id": sid,
+                "description": f"Submission {sid} scheduled on non-working day {start_date}",
+                "severity": "low"
+            })
+    
+    return violations
+
 
 def validate_scheduling_options(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
     """Validate that scheduling options are respected."""
@@ -292,84 +403,17 @@ def validate_scheduling_options(schedule: Dict[str, date], config: Config) -> Di
     
     # Check early abstract scheduling
     if config.scheduling_options.get("enable_early_abstract_scheduling", False):
-        abstract_advance = config.scheduling_options.get("abstract_advance_days", DEFAULT_ABSTRACT_ADVANCE_DAYS)
-        abstracts = [sid for sid, sub in config.submissions_dict.items() 
-                    if sub.kind == SubmissionType.ABSTRACT]
-        
-        for abstract_id in abstracts:
-            if abstract_id not in schedule:
-                continue
-            
-            sub = config.submissions_dict[abstract_id]
-            if not sub.conference_id or sub.conference_id not in config.conferences_dict:
-                continue
-            
-            conf = config.conferences_dict[sub.conference_id]
-            if SubmissionType.ABSTRACT not in conf.deadlines:
-                continue
-            
-            deadline = conf.deadlines[SubmissionType.ABSTRACT]
-            early_date = deadline - timedelta(days=abstract_advance)
-            scheduled_date = schedule[abstract_id]
-            
-            if scheduled_date > early_date:
-                violations.append({
-                    "submission_id": abstract_id,
-                    "description": f"Abstract {abstract_id} not scheduled early enough (should be {early_date}, scheduled {scheduled_date})",
-                    "severity": "low"
-                })
+        violations.extend(_validate_early_abstract_scheduling(schedule, config))
     
     # Check conference response time
     if config.scheduling_options.get("conference_response_time_days"):
-        response_time = config.scheduling_options["conference_response_time_days"]
-        # Validate that submissions have enough time for conference response
-        for sid, start_date in schedule.items():
-            sub = config.submissions_dict.get(sid)
-            if not sub or sub.kind != SubmissionType.PAPER:
-                continue
-            
-            if not sub.conference_id or sub.conference_id not in config.conferences_dict:
-                continue
-            
-            conf = config.conferences_dict[sub.conference_id]
-            if SubmissionType.PAPER not in conf.deadlines:
-                continue
-            
-            deadline = conf.deadlines[SubmissionType.PAPER]
-            end_date = _get_submission_end_date(start_date, sub, config)
-            response_deadline = deadline + timedelta(days=response_time)
-            
-            if end_date > response_deadline:
-                violations.append({
-                    "submission_id": sid,
-                    "description": f"Paper {sid} may not meet conference response time ({response_time} days)",
-                    "severity": "medium"
-                })
+        violations.extend(_validate_conference_response_time(schedule, config))
     
     # Check working days only
     if config.scheduling_options.get("enable_working_days_only", False):
-        for sid, start_date in schedule.items():
-            if not is_working_day(start_date, config.blackout_dates):
-                violations.append({
-                    "submission_id": sid,
-                    "description": f"Submission {sid} scheduled on non-working day {start_date}",
-                    "severity": "low"
-                })
+        violations.extend(_validate_working_days_only(schedule, config))
     
-    # Check priority weighting
-    if config.scheduling_options.get("enable_priority_weighting", False):
-        # This is validated in validate_priority_weighting function
-        pass
-    
-    # Check dependency tracking
-    if config.scheduling_options.get("enable_dependency_tracking", False):
-        # This is validated in validate_dependency_satisfaction function
-        pass
-    
-    # Check concurrency control
-    if config.scheduling_options.get("enable_concurrency_control", False):
-        # This is validated in validate_resource_constraints function
-        pass
+
     
     is_valid = len(violations) == 0
     
@@ -415,7 +459,8 @@ def validate_conference_compatibility(schedule: Dict[str, date], config: Config)
             # Compatible assignment
             compatible_submissions += 1
     
-    compatibility_rate = (compatible_submissions / total_submissions * PERCENTAGE_MULTIPLIER) if total_submissions > 0 else PERFECT_COMPLIANCE_RATE
+    # Calculate compliance rate using constants from constants.py
+    compatibility_rate = (compatible_submissions / total_submissions * QUALITY_CONSTANTS.percentage_multiplier) if total_submissions > 0 else QUALITY_CONSTANTS.perfect_compliance_rate
     is_valid = len(violations) == 0
     
     return {
@@ -452,6 +497,7 @@ def validate_single_conference_policy(schedule: Dict[str, date], config: Config)
         else:
             paper_conferences[paper_id] = sub.conference_id
     
+    # Calculate compliance rate using constants from constants.py
     is_valid = len(violations) == 0
     
     return {
@@ -490,7 +536,8 @@ def validate_soft_block_model(schedule: Dict[str, date], config: Config) -> Dict
                 "months_deviation": months_diff
             })
     
-    compliance_rate = (compliant_mods / total_mods * PERCENTAGE_MULTIPLIER) if total_mods > 0 else PERFECT_COMPLIANCE_RATE
+    # Calculate compliance rate using constants from constants.py
+    compliance_rate = (compliant_mods / total_mods * QUALITY_CONSTANTS.percentage_multiplier) if total_mods > 0 else QUALITY_CONSTANTS.perfect_compliance_rate
     is_valid = len(violations) == 0
     
     return {
@@ -572,6 +619,7 @@ def validate_all_constraints_comprehensive(schedule: Dict[str, date], config: Co
     blackout_validation = validate_blackout_dates(schedule, config)
     scheduling_options_validation = validate_scheduling_options(schedule, config)
     conference_compatibility = validate_conference_compatibility(schedule, config)
+    conference_submission_compatibility = validate_conference_submission_compatibility(schedule, config)
     single_conference_policy = validate_single_conference_policy(schedule, config)
     soft_block_model = validate_soft_block_model(schedule, config)
     priority_weighting = validate_priority_weighting(schedule, config)
@@ -584,6 +632,7 @@ def validate_all_constraints_comprehensive(schedule: Dict[str, date], config: Co
                 blackout_validation["is_valid"] and
                 scheduling_options_validation["is_valid"] and
                 conference_compatibility["is_valid"] and
+                conference_submission_compatibility["is_valid"] and
                 single_conference_policy["is_valid"] and
                 soft_block_model["is_valid"] and
                 paper_lead_time_validation["is_valid"])
@@ -605,17 +654,18 @@ def validate_all_constraints_comprehensive(schedule: Dict[str, date], config: Co
         
         # Overall
         "is_valid": is_valid,
-        "total_violations": (
-            len(deadline_validation.violations) +
-            len(dependency_validation.violations) +
-            len(resource_validation.violations) +
-            len(blackout_validation["violations"]) +
-            len(scheduling_options_validation["violations"]) +
-            len(conference_compatibility["violations"]) +
-            len(single_conference_policy["violations"]) +
-            len(soft_block_model["violations"]) +
-            len(paper_lead_time_validation["violations"])
-        ),
+                 "total_violations": (
+             len(deadline_validation.violations) +
+             len(dependency_validation.violations) +
+             len(resource_validation.violations) +
+             len(blackout_validation["violations"]) +
+             len(scheduling_options_validation["violations"]) +
+             len(conference_compatibility["violations"]) +
+             len(conference_submission_compatibility["violations"]) +
+             len(single_conference_policy["violations"]) +
+             len(soft_block_model["violations"]) +
+             len(paper_lead_time_validation["violations"])
+         ),
         "summary": {
             "deadline_compliance": deadline_validation.compliance_rate,
             "dependency_satisfaction": dependency_validation.satisfaction_rate,
@@ -658,7 +708,8 @@ def validate_paper_lead_time_months(schedule: Dict[str, date], config: Config) -
         else:
             compliant_papers += 1
     
-    compliance_rate = (compliant_papers / total_papers * PERCENTAGE_MULTIPLIER) if total_papers > 0 else PERFECT_COMPLIANCE_RATE
+    # Calculate compliance rate using constants from constants.py
+    compliance_rate = (compliant_papers / total_papers * QUALITY_CONSTANTS.percentage_multiplier) if total_papers > 0 else QUALITY_CONSTANTS.perfect_compliance_rate
     is_valid = len(violations) == 0
     
     return {
@@ -668,6 +719,80 @@ def validate_paper_lead_time_months(schedule: Dict[str, date], config: Config) -
         "total_papers": total_papers,
         "compliant_papers": compliant_papers,
         "summary": f"Paper lead time: {compliant_papers}/{total_papers} papers use config default ({compliance_rate:.1f}%)"
+    }
+
+def validate_conference_submission_compatibility(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+    """Validate that submissions are compatible with their conference submission types."""
+    violations = []
+    total_submissions = 0
+    compatible_submissions = 0
+    
+    for sid, start_date in schedule.items():
+        sub = config.submissions_dict.get(sid)
+        if not sub or not sub.conference_id:
+            continue
+        
+        total_submissions += 1
+        conf = config.conferences_dict.get(sub.conference_id)
+        if not conf:
+            violations.append({
+                "submission_id": sid,
+                "description": f"Submission {sid} references unknown conference {sub.conference_id}",
+                "severity": "high"
+            })
+            continue
+        
+        # Check if conference accepts this submission type
+        if not conf.accepts_submission_type(sub.kind):
+            submission_type_str = conf.submission_types.value if conf.submission_types else "unknown"
+            violations.append({
+                "submission_id": sid,
+                "description": f"Submission {sid} ({sub.kind.value}) not accepted by conference {sub.conference_id} ({submission_type_str})",
+                "severity": "high",
+                "submission_type": sub.kind.value,
+                "conference_submission_type": submission_type_str
+            })
+            continue
+        
+        # Check abstract-to-paper dependencies
+        if sub.kind == SubmissionType.PAPER and conf.requires_abstract_before_paper():
+            # Find the corresponding abstract submission
+            abstract_id = f"{sid.replace('-pap', '')}-abs"
+            if abstract_id not in schedule:
+                violations.append({
+                    "submission_id": sid,
+                    "description": f"Paper {sid} requires abstract submission {abstract_id} but it's not scheduled",
+                    "severity": "high",
+                    "missing_dependency": abstract_id
+                })
+                continue
+            
+            # Check if abstract is scheduled before paper
+            abstract_start = schedule[abstract_id]
+            if abstract_start >= start_date:
+                violations.append({
+                    "submission_id": sid,
+                    "description": f"Paper {sid} scheduled before required abstract {abstract_id}",
+                    "severity": "high",
+                    "abstract_id": abstract_id,
+                    "paper_start": start_date,
+                    "abstract_start": abstract_start
+                })
+                continue
+        
+        compatible_submissions += 1
+    
+    # Calculate compliance rate using constants from constants.py
+    compatibility_rate = (compatible_submissions / total_submissions * QUALITY_CONSTANTS.percentage_multiplier) if total_submissions > 0 else QUALITY_CONSTANTS.perfect_compliance_rate
+    is_valid = len(violations) == 0
+    
+    return {
+        "is_valid": is_valid,
+        "violations": violations,
+        "compatibility_rate": compatibility_rate,
+        "total_submissions": total_submissions,
+        "compatible_submissions": compatible_submissions,
+        "summary": f"Conference submission compatibility: {compatible_submissions}/{total_submissions} submissions compatible ({compatibility_rate:.1f}%)"
     }
 
 
@@ -690,20 +815,26 @@ def _get_submission_duration_days(sub: Submission, config: Config) -> int:
     int
         Duration in days
     """
+    # Local constant for days per month
+    DAYS_PER_MONTH = 30
+    
     if sub.kind == SubmissionType.ABSTRACT:
-        return 0  # Abstracts are instantaneous
-    elif sub.kind == SubmissionType.POSTER:
+        # Work items (abstracts) should have meaningful duration for timeline visibility
+        # Use configurable work item duration, default to 14 days if not specified
+        work_item_duration = getattr(config, 'work_item_duration_days', 14)
+        return work_item_duration
+    
+    if sub.kind == SubmissionType.POSTER:
         # Posters typically have shorter duration than papers
         if sub.draft_window_months > 0:
             return sub.draft_window_months * DAYS_PER_MONTH
-        else:
-            return DEFAULT_POSTER_DURATION_DAYS  # Default 1 month for posters
-    else:  # SubmissionType.PAPER
-        # Use draft_window_months if available, otherwise fall back to config
-        if sub.draft_window_months > 0:
-            return sub.draft_window_months * DAYS_PER_MONTH
-        else:
-            return config.min_paper_lead_time_days
+        return DEFAULT_POSTER_DURATION_DAYS  # Default 1 month for posters
+    
+    # SubmissionType.PAPER
+    # Use draft_window_months if available, otherwise fall back to config
+    if sub.draft_window_months > 0:
+        return sub.draft_window_months * DAYS_PER_MONTH
+    return config.min_paper_lead_time_days
 
 
 def _get_submission_end_date(start_date: date, sub: Submission, config: Config) -> date:
@@ -761,6 +892,63 @@ def _calculate_daily_load(schedule: Dict[str, date], config: Config) -> Dict[dat
     return daily_load
 
 
+def _get_next_deadline(conference: 'Conference', submission_type: SubmissionType, current_date: date) -> Optional[date]:
+    """
+    Get the next available deadline for a recurring conference.
+    
+    Parameters
+    ----------
+    conference : Conference
+        The conference to check
+    submission_type : SubmissionType
+        The type of submission
+    current_date : date
+        The current date to calculate from
+        
+    Returns
+    -------
+    Optional[date]
+        The next deadline, or None if no deadline exists
+    """
+    if submission_type not in conference.deadlines:
+        return None
+    
+    base_deadline = conference.deadlines[submission_type]
+    if base_deadline is None:
+        return None
+    
+    # If current date is before or equal to base deadline, use base deadline
+    if current_date <= base_deadline:
+        return base_deadline
+    
+    # Calculate next deadline based on recurrence
+    if conference.recurrence.value == "annual":
+        # Add years until we find a deadline after current_date
+        next_deadline = base_deadline
+        while next_deadline <= current_date:
+            next_deadline = date(next_deadline.year + 1, next_deadline.month, next_deadline.day)
+        return next_deadline
+    elif conference.recurrence.value == "biennial":
+        # Add 2 years until we find a deadline after current_date
+        next_deadline = base_deadline
+        while next_deadline <= current_date:
+            next_deadline = date(next_deadline.year + 2, next_deadline.month, next_deadline.day)
+        return next_deadline
+    elif conference.recurrence.value == "quarterly":
+        # Add 3 months until we find a deadline after current_date
+        next_deadline = base_deadline
+        while next_deadline <= current_date:
+            # Add 3 months
+            if next_deadline.month <= 9:
+                next_deadline = date(next_deadline.year, next_deadline.month + 3, next_deadline.day)
+            else:
+                next_deadline = date(next_deadline.year + 1, next_deadline.month - 9, next_deadline.day)
+        return next_deadline
+    else:
+        # Unknown recurrence, return base deadline
+        return base_deadline
+
+
 def validate_deadline_compliance_single(start_date: date, sub: Submission, config: Config) -> bool:
     """
     Validate if a submission starting on the given date meets its deadline.
@@ -786,7 +974,8 @@ def validate_deadline_compliance_single(start_date: date, sub: Submission, confi
     if sub.kind not in conf.deadlines:
         return True  # No deadline for this submission type
     
-    deadline = conf.deadlines[sub.kind]
+    # Get the next available deadline (handles recurring conferences)
+    deadline = _get_next_deadline(conf, sub.kind, start_date)
     if deadline is None:
         return True  # No deadline set
     
@@ -816,7 +1005,7 @@ def validate_deadline_with_lookahead(sub: Submission, start: date, config: Confi
         if deadline is None:
             return True
         
-        end_date = sub.get_end_date(start, config)
+        end_date = _get_submission_end_date(start, sub, config)
         buffer_date = deadline - timedelta(days=lookahead_days)
         return end_date <= buffer_date
     
@@ -831,7 +1020,7 @@ def validate_dependencies_satisfied(sub: Submission, schedule: Dict[str, date],
     for dep_id in sub.depends_on:
         if dep_id not in schedule:
             return False
-        dep_end = submissions[dep_id].get_end_date(schedule[dep_id], config)
+        dep_end = _get_submission_end_date(schedule[dep_id], submissions[dep_id], config)
         if current < dep_end + timedelta(days=sub.lead_time_from_parents):
             return False
     return True
@@ -842,6 +1031,52 @@ def validate_venue_compatibility(submissions: Dict[str, Submission], conferences
     for sid, submission in submissions.items():
         if submission.conference_id and submission.conference_id not in conferences:
             raise ValueError(f"Submission {sid} references unknown conference {submission.conference_id}")
+
+
+def _calculate_comprehensive_scores(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+    """Calculate all scoring metrics for a schedule."""
+    from scoring.penalty import calculate_penalty_score
+    from scoring.quality import calculate_quality_score
+    from scoring.efficiency import calculate_efficiency_score
+    
+    penalty_breakdown = calculate_penalty_score(schedule, config)
+    quality_score = calculate_quality_score(schedule, config)
+    efficiency_score = calculate_efficiency_score(schedule, config)
+    
+    return {
+        "penalty": penalty_breakdown,
+        "quality_score": quality_score,
+        "efficiency_score": efficiency_score,
+        "total_penalty": penalty_breakdown.total_penalty
+    }
+
+
+def _calculate_comprehensive_analytics(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+    """Calculate all analytics for a schedule."""
+    from output.analytics import (
+        analyze_schedule_completeness,
+        analyze_schedule_distribution,
+        analyze_submission_types,
+        analyze_timeline,
+        analyze_resources
+    )
+    
+    completeness = analyze_schedule_completeness(schedule, config)
+    distribution = analyze_schedule_distribution(schedule, config)
+    types_analysis = analyze_submission_types(schedule, config)
+    timeline = analyze_timeline(schedule, config)
+    resources = analyze_resources(schedule, config)
+    
+    return {
+        "completeness": completeness,
+        "distribution": distribution,
+        "types": types_analysis,
+        "timeline": timeline,
+        "resources": resources,
+        "completion_rate": completeness.completion_rate,
+        "duration_days": timeline.duration_days,
+        "peak_load": resources.peak_load
+    }
 
 
 def validate_schedule_comprehensive(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
@@ -863,69 +1098,45 @@ def validate_schedule_comprehensive(schedule: Dict[str, date], config: Config) -
     Dict[str, Any]
         Comprehensive validation results including constraints, scoring, and analytics
     """
-    # Import here to avoid circular imports
-    from scoring.penalty import calculate_penalty_score
-    from scoring.quality import calculate_quality_score
-    from scoring.efficiency import calculate_efficiency_score
-    from output.analytics import (
-        analyze_schedule_completeness,
-        analyze_schedule_distribution,
-        analyze_submission_types,
-        analyze_timeline,
-        analyze_resources
-    )
-    
     # 1. Constraint validation
     constraint_result = validate_all_constraints_comprehensive(schedule, config)
     
     # 2. Scoring calculations
-    penalty_breakdown = calculate_penalty_score(schedule, config)
-    quality_score = calculate_quality_score(schedule, config)
-    efficiency_score = calculate_efficiency_score(schedule, config)
+    scores = _calculate_comprehensive_scores(schedule, config)
     
     # 3. Analytics
-    completeness = analyze_schedule_completeness(schedule, config)
-    distribution = analyze_schedule_distribution(schedule, config)
-    types_analysis = analyze_submission_types(schedule, config)
-    timeline = analyze_timeline(schedule, config)
-    resources = analyze_resources(schedule, config)
+    analytics = _calculate_comprehensive_analytics(schedule, config)
+    
+    # 4. Build result
+    summary = constraint_result["summary"]
+    overall_score = (scores["quality_score"] + scores["efficiency_score"]) / 2
     
     return {
         # Constraints
         "constraints": constraint_result,
-        "deadline_compliance": constraint_result["summary"]["deadline_compliance"],
-        "dependency_satisfaction": constraint_result["summary"]["dependency_satisfaction"],
-        "resource_valid": constraint_result["summary"]["resource_valid"],
-        "blackout_compliant": constraint_result["summary"]["blackout_compliant"],
-        "scheduling_options_valid": constraint_result["summary"]["scheduling_options_valid"],
-        "conference_compatible": constraint_result["summary"]["conference_compatible"],
-        "single_conference_valid": constraint_result["summary"]["single_conference_valid"],
-        "soft_block_compliant": constraint_result["summary"]["soft_block_compliant"],
-        "overall_valid": constraint_result["summary"]["overall_valid"],
+        "deadline_compliance": summary["deadline_compliance"],
+        "dependency_satisfaction": summary["dependency_satisfaction"],
+        "resource_valid": summary["resource_valid"],
+        "blackout_compliant": summary["blackout_compliant"],
+        "scheduling_options_valid": summary["scheduling_options_valid"],
+        "conference_compatible": summary["conference_compatible"],
+        "single_conference_valid": summary["single_conference_valid"],
+        "soft_block_compliant": summary["soft_block_compliant"],
+        "overall_valid": summary["overall_valid"],
         
         # Scoring
-        "penalty": penalty_breakdown,
-        "quality_score": quality_score,
-        "efficiency_score": efficiency_score,
-        "total_penalty": penalty_breakdown.total_penalty,
+        **scores,
         
         # Analytics
-        "completeness": completeness,
-        "distribution": distribution,
-        "types": types_analysis,
-        "timeline": timeline,
-        "resources": resources,
-        "completion_rate": completeness.completion_rate,
-        "duration_days": timeline.duration_days,
-        "peak_load": resources.peak_load,
+        **analytics,
         
         # Summary
         "summary": {
-            "is_feasible": constraint_result["summary"]["overall_valid"],
+            "is_feasible": summary["overall_valid"],
             "total_violations": constraint_result["total_violations"],
-            "overall_score": (quality_score + efficiency_score) / 2,
-            "completion_rate": completeness.completion_rate,
-            "duration_days": timeline.duration_days,
-            "peak_load": resources.peak_load
+            "overall_score": overall_score,
+            "completion_rate": analytics["completion_rate"],
+            "duration_days": analytics["duration_days"],
+            "peak_load": analytics["peak_load"]
         }
     } 

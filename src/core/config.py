@@ -3,18 +3,17 @@
 import json
 from pathlib import Path
 from typing import Dict, List
-from datetime import date
-from src.core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
+from datetime import date, timedelta
 from dateutil.parser import parse as parse_date
-
 from dateutil.relativedelta import relativedelta
+from src.core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
 
 def load_config(config_path: str) -> Config:
     """Load the master config and all child JSON files."""
     try:
         config_file = Path(config_path)
         if not config_file.exists():
-            print(f"Config file not found: {config_path}")
+            print("Config file not found: %s", config_path)
             print("Using default configuration with sample data")
             return Config.create_default()
             
@@ -63,7 +62,7 @@ def load_config(config_path: str) -> Config:
                 if blackout_path.exists():
                     blackout_dates = _load_blackout_dates(blackout_path)
                 else:
-                    print(f"Warning: Blackout file not found: {blackout_path}")
+                    print("Warning: Blackout file not found: %s", blackout_path)
         
         return Config(
             submissions=submissions,
@@ -72,6 +71,7 @@ def load_config(config_path: str) -> Config:
             min_paper_lead_time_days=raw_cfg["min_paper_lead_time_days"],
             max_concurrent_submissions=raw_cfg["max_concurrent_submissions"],
             default_paper_lead_time_months=raw_cfg.get("default_paper_lead_time_months", 3),
+            work_item_duration_days=raw_cfg.get("work_item_duration_days", 14),
             penalty_costs=raw_cfg.get("penalty_costs", {"default_mod_penalty_per_day": 1000}),
             priority_weights=raw_cfg.get(
                 "priority_weights",
@@ -131,7 +131,7 @@ def _load_blackout_dates(path: Path) -> List[date]:
         
         return blackout_dates
     except Exception as e:
-        print(f"Warning: Could not load blackout dates: {e}")
+        print("Warning: Could not load blackout dates: %s", e)
         return []
 
 def _load_recurring_holidays(recurring_holidays: List[Dict]) -> List[date]:
@@ -193,45 +193,28 @@ def _load_submissions(
         papers = json.load(f)
 
     submissions: List[Submission] = []
-    conf_map = {c.id: c for c in conferences}
     conf_type_map = {c.id: c.conf_type for c in conferences}
 
-    # Load mods as abstracts
+    # Load mods as abstracts (work items)
     for mod in mods:
         mod_id = mod.get("id")
         if not mod_id:
             continue
-        conf_id = mod.get("conference_id")
-        # If not set, try to map by candidate conferences
-        if not conf_id and mod.get("candidate_conferences"):
-            for conf in mod["candidate_conferences"]:
-                if conf in conf_map:  # Check if this specific conference exists
-                    conf_id = conf
-                    break
         
-        # Determine engineering flag from candidate conferences
-        engineering = mod.get("engineering")
-        if engineering is None:
-            if mod.get("candidate_conferences"):
-                # Check if any candidate conference is engineering
-                has_engineering = any(conf in conf_type_map and conf_type_map[conf] == ConferenceType.ENGINEERING 
-                                   for conf in mod["candidate_conferences"])
-                has_medical = any(conf in conf_type_map and conf_type_map[conf] == ConferenceType.MEDICAL 
-                                for conf in mod["candidate_conferences"])
-                # If it can go to engineering conferences, it's engineering
-                engineering = has_engineering
-            elif conf_id in conf_type_map:
-                # Fallback to assigned conference
-                engineering = conf_type_map[conf_id] == ConferenceType.ENGINEERING
-            else:
-                engineering = False
+        # Mods (work items) don't have conference assignments
+        # They are internal development items
+        conf_id = None
+        
+        # Determine engineering flag based on the mod content
+        # For now, we'll assume medical since these are endoscope-related
+        engineering = False
         
         submissions.append(
             Submission(
                 id=f"{mod_id}-wrk",
                 title=mod.get("title", f"Mod {mod_id}"),
                 kind=SubmissionType.ABSTRACT,
-                conference_id=conf_id,
+                conference_id=conf_id,  # None for work items
                 depends_on=mod.get("depends_on", []),
                 draft_window_months=mod.get("draft_window_months", 0),
                 lead_time_from_parents=mod.get("lead_time_from_parents", 0),
@@ -246,53 +229,125 @@ def _load_submissions(
         paper_id = paper.get("id")
         if not paper_id:
             continue
+        
         # Convert mod_dependencies to new submission IDs
         mod_deps = []
         for mod_id in paper.get("mod_dependencies", []):
             mod_deps.append(f"{mod_id}-wrk")
+        
         # Convert parent_papers to new submission IDs
         parent_deps = []
         for parent_id in paper.get("parent_papers", []):
             parent_deps.append(f"{parent_id}-pap")
-        conf_id = paper.get("conference_id")
-        # If not set, try to map by candidate conferences
-        if not conf_id and paper.get("candidate_conferences"):
-            for conf in paper["candidate_conferences"]:
-                if conf in conf_map:  # Check if this specific conference exists
-                    conf_id = conf
-                    break
         
-        # Determine engineering flag from candidate conferences
-        engineering = paper.get("engineering")
-        if engineering is None:
-            if paper.get("candidate_conferences"):
-                # Check if any candidate conference is engineering
-                has_engineering = any(conf in conf_type_map and conf_type_map[conf] == ConferenceType.ENGINEERING 
-                                   for conf in paper["candidate_conferences"])
-                has_medical = any(conf in conf_type_map and conf_type_map[conf] == ConferenceType.MEDICAL 
-                                for conf in paper["candidate_conferences"])
-                # If it can go to engineering conferences, it's engineering
-                engineering = has_engineering
-            elif conf_id in conf_type_map:
-                # Fallback to assigned conference
-                engineering = conf_type_map[conf_id] == ConferenceType.ENGINEERING
-            else:
-                engineering = False
+        # Papers have candidate_conferences as suggestions, not assignments
+        # We'll leave conference_id as None for now - it can be assigned later
+        conf_id = None
+        conference_families = paper.get("candidate_conferences", [])
         
-        submissions.append(
-            Submission(
-                id=f"{paper_id}-pap",
-                title=paper.get("title", f"Paper {paper_id}"),
-                kind=SubmissionType.PAPER,
-                conference_id=conf_id,
-                depends_on=mod_deps + parent_deps,
-                draft_window_months=paper.get("draft_window_months", 3),
-                lead_time_from_parents=paper.get("lead_time_from_parents", pap_lead),
-                penalty_cost_per_day=penalty_costs.get("default_paper_penalty_per_day", 0.0),
-                engineering=engineering,
-                earliest_start_date=parse_date(paper.get("earliest_start_date", "2025-01-01")).date(),
+        # Determine engineering flag based on conference families
+        engineering = False
+        if conference_families:
+            # Check if any conference family is engineering
+            has_engineering = any(family in conf_type_map and conf_type_map[family] == ConferenceType.ENGINEERING 
+                               for family in conference_families)
+            has_medical = any(family in conf_type_map and conf_type_map[family] == ConferenceType.MEDICAL 
+                            for family in conference_families)
+            # If it can go to engineering conferences, it's engineering
+            engineering = has_engineering
+        
+        # Calculate earliest start date based on conference deadlines
+        earliest_start_date = parse_date(paper.get("earliest_start_date", "2025-01-01")).date()
+        
+        # If we have conference families, try to calculate a better earliest start date
+        if conference_families:
+            # Find the earliest deadline among compatible conferences
+            earliest_deadline = None
+            for conf in conferences:
+                if conf.name in conference_families and SubmissionType.PAPER in conf.deadlines:
+                    deadline = conf.deadlines[SubmissionType.PAPER]
+                    if earliest_deadline is None or deadline < earliest_deadline:
+                        earliest_deadline = deadline
+            
+            # If we found a deadline, calculate the latest start date needed
+            if earliest_deadline:
+                draft_window_months = paper.get("draft_window_months", 3)
+                duration_days = draft_window_months * 30  # Approximate
+                latest_start = earliest_deadline - timedelta(days=duration_days)
+                # Use the earlier of: calculated latest start or original earliest start
+                earliest_start_date = min(earliest_start_date, latest_start)
+        
+        # Create submissions for each compatible conference
+        for conf in conferences:
+            if conf.name not in conference_families:
+                continue
+            
+            # Check if conference requires abstracts
+            has_abstract_deadline = SubmissionType.ABSTRACT in conf.deadlines
+            has_paper_deadline = SubmissionType.PAPER in conf.deadlines
+            
+            # Create abstract submission if conference requires it
+            if has_abstract_deadline:
+                abstract_id = f"{paper_id}-abs-{conf.id}"
+                submissions.append(
+                    Submission(
+                        id=abstract_id,
+                        title=f"Abstract for {paper.get('title', f'Paper {paper_id}')}",
+                        kind=SubmissionType.ABSTRACT,
+                        conference_id=conf.id,
+                        depends_on=mod_deps + parent_deps,  # Abstract depends on mods and parent papers
+                        draft_window_months=0,  # Abstracts are quick
+                        lead_time_from_parents=paper.get("lead_time_from_parents", abs_lead),
+                        penalty_cost_per_day=penalty_costs.get("default_mod_penalty_per_day", 0.0),
+                        engineering=engineering,
+                        earliest_start_date=earliest_start_date,
+                        conference_families=[conf.name],  # Specific to this conference
+                    )
+                )
+            
+            # Create paper submission if conference requires it
+            if has_paper_deadline:
+                paper_id_suffix = f"{paper_id}-pap-{conf.id}"
+                
+                # Paper depends on abstract if conference requires both
+                paper_dependencies = mod_deps + parent_deps
+                if has_abstract_deadline:
+                    abstract_dep_id = f"{paper_id}-abs-{conf.id}"
+                    paper_dependencies.append(abstract_dep_id)
+                
+                submissions.append(
+                    Submission(
+                        id=paper_id_suffix,
+                        title=paper.get("title", f"Paper {paper_id}"),
+                        kind=SubmissionType.PAPER,
+                        conference_id=conf.id,
+                        depends_on=paper_dependencies,
+                        draft_window_months=paper.get("draft_window_months", 3),
+                        lead_time_from_parents=paper.get("lead_time_from_parents", pap_lead),
+                        penalty_cost_per_day=penalty_costs.get("default_paper_penalty_per_day", 0.0),
+                        engineering=engineering,
+                        earliest_start_date=earliest_start_date,
+                        conference_families=[conf.name],  # Specific to this conference
+                    )
+                )
+        
+        # If no conferences were compatible, create a generic paper submission
+        if not conference_families or not any(conf.name in conference_families for conf in conferences):
+            submissions.append(
+                Submission(
+                    id=f"{paper_id}-pap",
+                    title=paper.get("title", f"Paper {paper_id}"),
+                    kind=SubmissionType.PAPER,
+                    conference_id=conf_id,  # None initially - can be assigned later
+                    depends_on=mod_deps + parent_deps,
+                    draft_window_months=paper.get("draft_window_months", 3),
+                    lead_time_from_parents=paper.get("lead_time_from_parents", pap_lead),
+                    penalty_cost_per_day=penalty_costs.get("default_paper_penalty_per_day", 0.0),
+                    engineering=engineering,
+                    earliest_start_date=earliest_start_date,
+                    conference_families=conference_families,  # Set the conference families
+                )
             )
-        )
 
     return submissions
 
@@ -309,6 +364,7 @@ def save_config(config: Config, config_path: str) -> None:
             "min_paper_lead_time_days": config.min_paper_lead_time_days,
             "max_concurrent_submissions": config.max_concurrent_submissions,
             "default_paper_lead_time_months": config.default_paper_lead_time_months,
+            "work_item_duration_days": config.work_item_duration_days,
             "penalty_costs": config.penalty_costs or {},
             "priority_weights": config.priority_weights or {},
             "scheduling_options": config.scheduling_options or {},

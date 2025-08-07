@@ -1,61 +1,67 @@
 """Quality scoring functions."""
 
-from typing import Dict
+from typing import Dict, Any
 from datetime import date, timedelta
 import statistics
 
 from core.models import Config
 from core.constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
 from core.constants import (
-    MAX_SCORE, MIN_SCORE, ROBUSTNESS_SCALE_FACTOR, BALANCE_VARIANCE_FACTOR,
-    SINGLE_SUBMISSION_ROBUSTNESS, SINGLE_SUBMISSION_BALANCE, QUALITY_RESOURCE_FALLBACK_SCORE,
-    SCORING_QUALITY_DEADLINE_WEIGHT, SCORING_QUALITY_DEPENDENCY_WEIGHT, SCORING_QUALITY_RESOURCE_WEIGHT
+    QUALITY_CONSTANTS, SCORING_WEIGHTS
 )
 
 def calculate_quality_score(schedule: Dict[str, date], config: Config) -> float:
     """Calculate overall quality score (0-100) based on constraint compliance."""
-    if not schedule:
-        return MIN_SCORE
+    # Fixed scoring constants
+    max_score = 100.0
+    min_score = 0.0
     
-    # Get constraint validations (quality is based on how well constraints are satisfied)
+    if not schedule:
+        return min_score
+    
+    # Get constraint validations
     deadline_validation = validate_deadline_compliance(schedule, config)
     dependency_validation = validate_dependency_satisfaction(schedule, config)
     resource_validation = validate_resource_constraints(schedule, config)
     
-    # Calculate component scores from constraint compliance
+    # Calculate component scores
     deadline_score = deadline_validation.compliance_rate
     dependency_score = dependency_validation.satisfaction_rate
-    resource_score = MAX_SCORE if resource_validation.is_valid else QUALITY_RESOURCE_FALLBACK_SCORE
+    resource_score = max_score if resource_validation.is_valid else QUALITY_CONSTANTS.quality_resource_fallback_score
     
-    # Weighted average based on constraint importance
-    weights = {
-        "deadline": SCORING_QUALITY_DEADLINE_WEIGHT,      # Deadlines are most important
-        "dependency": SCORING_QUALITY_DEPENDENCY_WEIGHT,    # Dependencies are important
-        "resource": SCORING_QUALITY_RESOURCE_WEIGHT       # Resource constraints are important
-    }
-    
+    # Calculate weighted score
     quality_score = (
-        deadline_score * weights["deadline"] +
-        dependency_score * weights["dependency"] +
-        resource_score * weights["resource"]
+        deadline_score * SCORING_WEIGHTS.quality_deadline_weight +
+        dependency_score * SCORING_WEIGHTS.quality_dependency_weight +
+        resource_score * SCORING_WEIGHTS.quality_resource_weight
     )
     
-    return min(MAX_SCORE, max(MIN_SCORE, quality_score))
+    return min(max_score, max(min_score, quality_score))
 
 def calculate_quality_robustness(schedule: Dict[str, date], config: Config) -> float:
     """Calculate how robust the schedule is to disruptions."""
+    # Fixed scoring constants
+    max_score = 100.0
+    min_score = 0.0
+    
     if not schedule:
-        return MIN_SCORE
+        return min_score
     
-    # Calculate slack time (buffer between submissions)
-    total_slack = 0
     total_submissions = len(schedule)
-    
     if total_submissions < 2:
-        return SINGLE_SUBMISSION_ROBUSTNESS  # Single submission is always robust
+        return QUALITY_CONSTANTS.single_submission_robustness  # Single submission is always robust
     
-    # Sort submissions by start date
+    total_slack = _calculate_total_slack(schedule, config)
+    avg_slack = total_slack / (total_submissions - 1) if total_submissions > 1 else 0
+    robustness_score = min(max_score, avg_slack * QUALITY_CONSTANTS.robustness_scale_factor)
+    
+    return max(min_score, robustness_score)
+
+
+def _calculate_total_slack(schedule: Dict[str, date], config: Config) -> int:
+    """Calculate total slack time between submissions."""
     sorted_submissions = sorted(schedule.items(), key=lambda x: x[1])
+    total_slack = 0
     
     for i in range(len(sorted_submissions) - 1):
         current_id, current_start = sorted_submissions[i]
@@ -65,25 +71,23 @@ def calculate_quality_robustness(schedule: Dict[str, date], config: Config) -> f
         if not current_sub:
             continue
         
-        # Calculate current submission end date using proper duration logic
         current_duration = current_sub.get_duration_days(config)
         current_end = current_start + timedelta(days=current_duration)
-        
-        # Calculate slack between current and next submission
         slack_days = (next_start - current_end).days
+        
         if slack_days > 0:
             total_slack += slack_days
     
-    # Robustness score based on average slack
-    avg_slack = total_slack / (total_submissions - 1) if total_submissions > 1 else 0
-    robustness_score = min(MAX_SCORE, avg_slack * ROBUSTNESS_SCALE_FACTOR)  # Scale slack to 0-100
-    
-    return max(MIN_SCORE, robustness_score)
+    return total_slack
 
 def calculate_quality_balance(schedule: Dict[str, date], config: Config) -> float:
     """Calculate how well balanced the schedule is."""
+    # Fixed scoring constants
+    max_score = 100.0
+    min_score = 0.0
+    
     if not schedule:
-        return MIN_SCORE
+        return min_score
     
     # Calculate work distribution over time
     daily_work = {}
@@ -101,7 +105,7 @@ def calculate_quality_balance(schedule: Dict[str, date], config: Config) -> floa
             daily_work[day] = daily_work.get(day, 0) + 1
     
     if not daily_work:
-        return MIN_SCORE
+        return min_score
     
     # Calculate balance score based on work distribution
     work_values = list(daily_work.values())
@@ -109,9 +113,9 @@ def calculate_quality_balance(schedule: Dict[str, date], config: Config) -> floa
     
     # Balance score (lower variance is better)
     if avg_work == 0:
-        return SINGLE_SUBMISSION_BALANCE
+        return QUALITY_CONSTANTS.single_submission_balance
     
     variance = statistics.variance(work_values)
-    balance_score = max(MIN_SCORE, MAX_SCORE - (variance / avg_work) * BALANCE_VARIANCE_FACTOR)
+    balance_score = max(min_score, max_score - (variance / avg_work) * QUALITY_CONSTANTS.balance_variance_factor)
     
-    return min(MAX_SCORE, balance_score) 
+    return min(max_score, balance_score) 

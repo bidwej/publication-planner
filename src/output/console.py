@@ -21,8 +21,8 @@ def print_schedule_summary(schedule: Dict[str, date], config: Config) -> None:
         return
     
     print("\n=== Schedule Summary ===")
-    print(f"Total submissions: {len(schedule)}")
-    print(f"Date range: {min(schedule.values())} to {max(schedule.values())}")
+    print("Total submissions: %s", len(schedule))
+    print("Date range: %s to %s", min(schedule.values()), max(schedule.values()))
     
     # Count by type
     abstracts = papers = 0
@@ -33,8 +33,8 @@ def print_schedule_summary(schedule: Dict[str, date], config: Config) -> None:
             abstracts += sub.kind.value == "abstract"
             papers += sub.kind.value == "paper"
     
-    print(f"Abstracts: {abstracts}")
-    print(f"Papers: {papers}")
+    print("Abstracts: %s", abstracts)
+    print("Papers: %s", papers)
     print()
 
 
@@ -112,8 +112,8 @@ def print_utilization_summary(schedule: Dict[str, date], config: Config) -> None
     
     print(f"Max concurrent submissions: {max_load}")
     print(f"Average daily load: {avg_load:.1f}")
-    print(f"Max utilization: {max_utilization:.1%}")
-    print(f"Average utilization: {avg_utilization:.1%}")
+    print(f"Max utilization: {max_utilization * 100:.1f}%")
+    print(f"Average utilization: {avg_utilization * 100:.1f}%")
     print()
 
 
@@ -209,7 +209,7 @@ def print_available_strategies() -> None:
     """Print all available scheduling strategies."""
     print("Available scheduling strategies:")
     for strategy in SchedulerStrategy:
-        print(f"  - {strategy.value}")
+        print("  - %s", strategy.value)
     print("\nUse --strategy <name> to specify a strategy.")
 
 

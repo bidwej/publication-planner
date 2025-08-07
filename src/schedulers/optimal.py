@@ -3,9 +3,10 @@
 from __future__ import annotations
 from typing import Dict, Optional, Any
 from datetime import date, timedelta
-from src.schedulers.base import BaseScheduler
-from src.core.models import SchedulerStrategy
 import pulp
+
+from src.core.models import SchedulerStrategy
+from src.schedulers.base import BaseScheduler
 
 
 @BaseScheduler.register_strategy(SchedulerStrategy.OPTIMAL)
@@ -146,11 +147,10 @@ class OptimalScheduler(BaseScheduler):
             
             if status == pulp.LpStatusOptimal:
                 return model
-            else:
-                print(f"MILP solver status: {pulp.LpStatus[status]}")
-                return None
+            print("MILP solver status: %s", pulp.LpStatus[status])
+            return None
         except Exception as e:
-            print(f"Error solving MILP: {e}")
+            print("Error solving MILP: %s", e)
             return None
     
     def _extract_schedule_from_solution(self, solution: Optional[Any]) -> Dict[str, date]:
