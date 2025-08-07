@@ -47,7 +47,7 @@ class StorageManager:
     
     def save_schedule(self, schedule_data, filename):
         """Save schedule data to file."""
-        from datetime import date
+        
         
         def serialize_dates(obj):
             """Custom JSON serializer for date objects."""
@@ -65,11 +65,22 @@ class StorageManager:
     
     def load_schedule(self, filename):
         """Load schedule data from file."""
+        
         file_path = Path(self.data_dir) / filename
         if not file_path.exists():
             raise FileNotFoundError(f"Schedule file not found: {filename}")
         
         data = json.loads(Path(file_path).read_text(encoding='utf-8'))
+        
+        # Convert date strings back to date objects
+        if 'schedule' in data and isinstance(data['schedule'], dict):
+            for key, value in data['schedule'].items():
+                if isinstance(value, str):
+                    try:
+                        data['schedule'][key] = date.fromisoformat(value)
+                    except ValueError:
+                        # Keep as string if not a valid date
+                        pass
         
         return ScheduleData(
             schedule=data['schedule'],
@@ -178,9 +189,6 @@ class TestWebAppIntegration:
     @pytest.fixture
     def temp_config_file(self, sample_config) -> Path:
         """Create a temporary config file for testing."""
-        import tempfile
-        import shutil
-        
         # Create a temporary directory for the test
         temp_dir = tempfile.mkdtemp()
         temp_data_dir = Path(temp_dir) / "data"
@@ -1066,8 +1074,6 @@ class TestWebAppErrorHandling:
     
     def test_concurrent_requests(self, client):
         """Test handling of concurrent requests."""
-        import threading
-        
         results = []
         
         def make_request():
@@ -1270,7 +1276,6 @@ class TestWebAppChartsRunner:
         """Test charts runner performance."""
         # Create large schedule with valid dates
         large_schedule = {}
-        from datetime import date, timedelta
         
         start_date = date(2024, 1, 1)
         for i in range(100):
@@ -1279,7 +1284,6 @@ class TestWebAppChartsRunner:
             large_schedule[f"submission_{i}"] = submission_date
         
         # Test performance with large dataset
-        import time
         start_time = time.time()
         
         gantt_chart = create_gantt_chart(large_schedule, sample_config)
