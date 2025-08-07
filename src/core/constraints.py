@@ -4,11 +4,11 @@ from __future__ import annotations
 from typing import Dict, Any
 from datetime import date, timedelta
 import statistics
-from models import Config, Submission, SubmissionType, ConferenceType, DeadlineValidation, DependencyValidation, ResourceValidation, DeadlineViolation, DependencyViolation, ResourceViolation, ConstraintValidationResult
-from constants import PERFECT_COMPLIANCE_RATE, PERCENTAGE_MULTIPLIER, DAYS_PER_MONTH, DEFAULT_ABSTRACT_ADVANCE_DAYS, DEFAULT_POSTER_DURATION_DAYS
+from core.models import Config, Submission, SubmissionType, ConferenceType, DeadlineValidation, DependencyValidation, ResourceValidation, DeadlineViolation, DependencyViolation, ResourceViolation, ConstraintValidationResult
+from core.constants import PERFECT_COMPLIANCE_RATE, PERCENTAGE_MULTIPLIER, DAYS_PER_MONTH, DEFAULT_ABSTRACT_ADVANCE_DAYS, DEFAULT_POSTER_DURATION_DAYS
 
 
-def is_working_day(check_date: date, blackout_dates: list[date] = None) -> bool:
+def is_working_day(check_date: date, blackout_dates: list[date] | None = None) -> bool:
     """
     Check if a date is a working day (not weekend or blackout).
     

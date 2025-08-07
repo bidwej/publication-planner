@@ -2,7 +2,7 @@
 Schedule table component for displaying schedule data.
 """
 
-from src.output.tables import (
+from output.tables import (
     create_schedule_table,
     create_violations_table,
     create_metrics_table,

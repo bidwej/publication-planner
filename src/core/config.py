@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Dict, List
 from datetime import date
-from models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
+from core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
 from dateutil.parser import parse as parse_date
 
 from dateutil.relativedelta import relativedelta

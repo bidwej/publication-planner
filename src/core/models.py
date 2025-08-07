@@ -7,7 +7,7 @@ from dataclasses import asdict, dataclass
 from enum import Enum
 from dateutil.parser import parse as parse_date
 
-from constants import DAYS_PER_MONTH, DEFAULT_POSTER_DURATION_DAYS
+from core.constants import DAYS_PER_MONTH, DEFAULT_POSTER_DURATION_DAYS
 
 class SubmissionType(str, Enum):
     """Types of submissions."""

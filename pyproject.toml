@@ -83,7 +83,7 @@ reportUnknownVariableType = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src", "app"]
+pythonpath = [".", "src", "app"]
 addopts = "-v --tb=short --import-mode=importlib"
 filterwarnings = [
     "ignore::DeprecationWarning",

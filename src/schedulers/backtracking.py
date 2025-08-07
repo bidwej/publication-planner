@@ -3,8 +3,8 @@
 from __future__ import annotations
 from typing import Dict, List, Set
 from datetime import date, timedelta
-from greedy import GreedyScheduler
-from base import BaseScheduler
+from schedulers.greedy import GreedyScheduler
+from schedulers.base import BaseScheduler
 from core.constraints import is_working_day
 from core.models import SchedulerStrategy
 from core.constants import DEFAULT_ABSTRACT_ADVANCE_DAYS, MAX_BACKTRACK_DAYS
@@ -139,4 +139,22 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
         if len(active) >= self.config.max_concurrent_submissions:
             return False
         
-        return True 
+        return True
+    
+    def _sort_by_priority(self, ready: List[str]) -> List[str]:
+        """Sort ready submissions by priority weight (inherited from GreedyScheduler)."""
+        def get_priority(sid: str) -> float:
+            s = self.submissions[sid]
+            weights = self.config.priority_weights or {}
+            
+            base_priority = 0.0
+            if s.kind.value == "PAPER":
+                base_priority = weights.get("engineering_paper" if s.engineering else "medical_paper", 1.0)
+            elif s.kind.value == "ABSTRACT":
+                base_priority = weights.get("abstract", 0.5)
+            else:
+                base_priority = weights.get("mod", 1.5)
+            
+            return base_priority
+        
+        return sorted(ready, key=get_priority, reverse=True) 

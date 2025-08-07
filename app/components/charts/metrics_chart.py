@@ -4,7 +4,7 @@ Performance metrics chart component.
 
 import plotly.graph_objects as go
 from typing import Dict, Any, List
-from src.core.models import Config
+from core.models import Config
 
 def create_metrics_chart(validation_result: Dict[str, Any], config: Config) -> go.Figure:
     """Create performance metrics chart."""

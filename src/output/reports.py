@@ -6,7 +6,7 @@ from datetime import date
 from core.models import Config
 from core.constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
 from scoring.penalty import calculate_penalty_score
-from analytics import analyze_timeline, analyze_resources
+from output.analytics import analyze_timeline, analyze_resources
 from core.constants import (
     REPORT_MAX_SCORE, REPORT_MIN_SCORE, PENALTY_NORMALIZATION_FACTOR, MAX_PENALTY_FACTOR,
     REPORT_DEADLINE_VIOLATION_PENALTY, REPORT_DEPENDENCY_VIOLATION_PENALTY, REPORT_RESOURCE_VIOLATION_PENALTY
