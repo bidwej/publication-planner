@@ -84,12 +84,11 @@ reportUnknownVariableType = false
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = [".", "src", "app"]
-addopts = "-v --tb=short --import-mode=importlib --timeout=15"
+addopts = "-v --tb=short --import-mode=importlib"
 filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::PendingDeprecationWarning"
 ]
-timeout = 15
 
 [tool.pytest-timeout]
 timeout = 15

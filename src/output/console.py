@@ -3,10 +3,12 @@
 from __future__ import annotations
 from typing import Dict, Any, List, Optional
 from datetime import date, timedelta
+import json
 import statistics
+from pathlib import Path
 from core.models import Config, SchedulerStrategy
 from core.constants import MAX_TITLE_LENGTH
-from core.constraints import validate_schedule_comprehensive
+from core.constraints import validate_schedule_comprehensive, validate_deadline_compliance
 from scoring.penalty import calculate_penalty_score
 from scoring.efficiency import calculate_efficiency_score
 from scoring.quality import calculate_quality_score
@@ -124,10 +126,6 @@ def print_metrics_summary(schedule: Dict[str, date], config: Config) -> None:
         print()
         return
     
-    from core.constraints import validate_deadline_compliance
-    from scoring.quality import calculate_quality_score
-    from scoring.efficiency import calculate_efficiency_score
-    
     # Calculate metrics
     penalty_breakdown = calculate_penalty_score(schedule, config)
     quality_score = calculate_quality_score(schedule, config)
@@ -179,9 +177,6 @@ def print_strategy_comparison(results: Dict[str, Dict[str, date]], config: Confi
     
     comparison_data = []
     
-    from scoring.quality import calculate_quality_score
-    from scoring.efficiency import calculate_efficiency_score
-    
     for strategy_name, schedule in results.items():
         penalty = calculate_penalty_score(schedule, config)
         quality = calculate_quality_score(schedule, config)
@@ -204,9 +199,7 @@ def print_strategy_comparison(results: Dict[str, Dict[str, date]], config: Confi
     # Save comparison results if output file specified
     if output_file:
         try:
-            import json
-            with open(output_file, 'w') as f:
-                json.dump(comparison_data, f, indent=2)
+            Path(output_file).write_text(json.dumps(comparison_data, indent=2), encoding='utf-8')
             print(f"\nComparison results saved to: {output_file}")
         except Exception as e:
             print(f"Error saving comparison results: {e}")
