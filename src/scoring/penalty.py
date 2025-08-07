@@ -25,9 +25,10 @@ def calculate_penalty_score(schedule: Dict[str, date], config: Config) -> Penalt
     dependency_penalties = _calculate_dependency_penalties(schedule, config)
     resource_penalties = _calculate_resource_penalties(schedule, config)
     conference_penalties = _calculate_conference_compatibility_penalties(schedule, config)
+    abstract_paper_penalties = _calculate_abstract_paper_dependency_penalties(schedule, config)
     slack_penalties = _calculate_slack_cost_penalties(schedule, config)
     
-    total_penalty = deadline_penalties + dependency_penalties + resource_penalties + conference_penalties + slack_penalties
+    total_penalty = deadline_penalties + dependency_penalties + resource_penalties + conference_penalties + abstract_paper_penalties + slack_penalties
     
     return PenaltyBreakdown(
         total_penalty=total_penalty,
@@ -162,6 +163,56 @@ def _calculate_conference_compatibility_penalties(schedule: Dict[str, date], con
             total_penalty += PENALTY_CONSTANTS.audience_mismatch_penalty
     
     return total_penalty
+
+
+def _calculate_abstract_paper_dependency_penalties(schedule: Dict[str, date], config: Config) -> float:
+    """Calculate penalties for abstract-paper dependency violations."""
+    total_penalty = 0.0
+    
+    for sid in schedule:
+        sub = config.submissions_dict.get(sid)
+        if not sub or sub.kind != SubmissionType.PAPER or not sub.conference_id:
+            continue
+        
+        conf = config.conferences_dict.get(sub.conference_id)
+        if not conf or not conf.requires_abstract_before_paper():
+            continue
+        
+        # Check if required abstract exists and is scheduled
+        from src.core.models import generate_abstract_id
+        abstract_id = generate_abstract_id(sub.id, sub.conference_id)
+        abstract = config.submissions_dict.get(abstract_id)
+        
+        if not abstract:
+            # Missing abstract - high penalty
+            missing_abstract_penalty = (config.penalty_costs or {}).get("missing_abstract_penalty", 3000.0)
+            total_penalty += missing_abstract_penalty
+            continue
+        
+        if abstract_id not in schedule:
+            # Abstract exists but not scheduled - high penalty
+            unscheduled_abstract_penalty = (config.penalty_costs or {}).get("unscheduled_abstract_penalty", 2500.0)
+            total_penalty += unscheduled_abstract_penalty
+            continue
+        
+        # Check if paper is scheduled after abstract
+        paper_start = schedule[sid]
+        abstract_start = schedule[abstract_id]
+        
+        if paper_start <= abstract_start:
+            # Paper scheduled before or same time as abstract - high penalty
+            timing_violation_penalty = (config.penalty_costs or {}).get("abstract_paper_timing_penalty", 2000.0)
+            total_penalty += timing_violation_penalty
+            continue
+        
+        # Check if paper depends on abstract
+        if abstract_id not in (sub.depends_on or []):
+            # Missing dependency - medium penalty
+            missing_dependency_penalty = (config.penalty_costs or {}).get("missing_abstract_dependency_penalty", 1500.0)
+            total_penalty += missing_dependency_penalty
+    
+    return total_penalty
+
 
 def _calculate_slack_cost_penalties(schedule: Dict[str, date], config: Config) -> float:
     """Calculate penalties for slack costs (opportunity costs)."""

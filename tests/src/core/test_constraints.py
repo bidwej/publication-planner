@@ -20,6 +20,7 @@ from src.core.constraints import (
     validate_schedule_comprehensive,
     validate_soft_block_model,
     validate_scheduling_options,
+    validate_abstract_paper_dependencies,
 )
 from src.core.models import Submission, SubmissionType, ConferenceType
 from src.core.constants import QUALITY_CONSTANTS
@@ -547,6 +548,69 @@ class TestPaperLeadTimeMonths:
         # while config default is 3, so we expect some violations
 
 
+class TestAbstractPaperDependencies:
+    """Test abstract-paper dependency validation."""
+    
+    def test_valid_abstract_paper_dependencies(self):
+        """Test valid abstract-paper dependencies."""
+        config = load_config("tests/common/data/config.json")
+        
+        # Create a schedule with valid abstract-paper dependencies
+        schedule = {
+            "J1-abs-ICML": date(2025, 1, 15),  # Abstract first
+            "J1-pap-ICML": date(2025, 2, 1),   # Paper after abstract
+        }
+        
+        result = validate_abstract_paper_dependencies(schedule, config)
+        
+        assert result["is_valid"] is True
+        assert result["dependency_rate"] == 100.0
+        assert result["total_papers"] >= 0  # Depends on config data
+    
+    def test_missing_abstract_dependency(self):
+        """Test missing abstract dependency."""
+        config = load_config("tests/common/data/config.json")
+        
+        # Create a schedule with paper but no abstract
+        schedule = {
+            "J1-pap-ICML": date(2025, 2, 1),  # Paper without abstract
+        }
+        
+        result = validate_abstract_paper_dependencies(schedule, config)
+        
+        # Should have violations if ICML requires abstracts
+        if result["total_papers"] > 0:
+            assert len(result["violations"]) > 0
+            assert any("requires abstract" in v["description"] for v in result["violations"])
+    
+    def test_paper_before_abstract(self):
+        """Test paper scheduled before abstract."""
+        config = load_config("tests/common/data/config.json")
+        
+        # Create a schedule with paper before abstract
+        schedule = {
+            "J1-pap-ICML": date(2025, 1, 1),   # Paper first
+            "J1-abs-ICML": date(2025, 2, 1),   # Abstract after paper
+        }
+        
+        result = validate_abstract_paper_dependencies(schedule, config)
+        
+        # Should have violations if ICML requires abstracts
+        if result["total_papers"] > 0:
+            assert len(result["violations"]) > 0
+            assert any("must be scheduled after abstract" in v["description"] for v in result["violations"])
+    
+    def test_empty_schedule(self):
+        """Test empty schedule."""
+        config = load_config("tests/common/data/config.json")
+        
+        result = validate_abstract_paper_dependencies({}, config)
+        
+        assert result["is_valid"] is True
+        assert result["total_papers"] == 0
+        assert result["dependency_rate"] == 100.0
+
+
 class TestComprehensiveConstraints:
     """Test comprehensive constraint validation."""
     
@@ -570,6 +634,8 @@ class TestComprehensiveConstraints:
         assert "blackout_dates" in result
         assert "scheduling_options" in result
         assert "conference_compatibility" in result
+        assert "conference_submission_compatibility" in result
+        assert "abstract_paper_dependencies" in result
         assert "single_conference_policy" in result
         assert "soft_block_model" in result
         assert "priority_weighting" in result

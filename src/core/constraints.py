@@ -618,6 +618,7 @@ def validate_all_constraints_comprehensive(schedule: Dict[str, date], config: Co
     scheduling_options_validation = validate_scheduling_options(schedule, config)
     conference_compatibility = validate_conference_compatibility(schedule, config)
     conference_submission_compatibility = validate_conference_submission_compatibility(schedule, config)
+    abstract_paper_dependencies = validate_abstract_paper_dependencies(schedule, config)
     single_conference_policy = validate_single_conference_policy(schedule, config)
     soft_block_model = validate_soft_block_model(schedule, config)
     priority_weighting = validate_priority_weighting(schedule, config)
@@ -631,6 +632,7 @@ def validate_all_constraints_comprehensive(schedule: Dict[str, date], config: Co
                 scheduling_options_validation["is_valid"] and
                 conference_compatibility["is_valid"] and
                 conference_submission_compatibility["is_valid"] and
+                abstract_paper_dependencies["is_valid"] and
                 single_conference_policy["is_valid"] and
                 soft_block_model["is_valid"] and
                 paper_lead_time_validation["is_valid"])
@@ -645,6 +647,8 @@ def validate_all_constraints_comprehensive(schedule: Dict[str, date], config: Co
         "blackout_dates": blackout_validation,
         "scheduling_options": scheduling_options_validation,
         "conference_compatibility": conference_compatibility,
+        "conference_submission_compatibility": conference_submission_compatibility,
+        "abstract_paper_dependencies": abstract_paper_dependencies,
         "single_conference_policy": single_conference_policy,
         "soft_block_model": soft_block_model,
         "priority_weighting": priority_weighting,
@@ -660,6 +664,7 @@ def validate_all_constraints_comprehensive(schedule: Dict[str, date], config: Co
              len(scheduling_options_validation["violations"]) +
              len(conference_compatibility["violations"]) +
              len(conference_submission_compatibility["violations"]) +
+             len(abstract_paper_dependencies["violations"]) +
              len(single_conference_policy["violations"]) +
              len(soft_block_model["violations"]) +
              len(paper_lead_time_validation["violations"])
@@ -671,6 +676,8 @@ def validate_all_constraints_comprehensive(schedule: Dict[str, date], config: Co
             "blackout_compliant": blackout_validation["compliance_rate"],
             "scheduling_options_valid": scheduling_options_validation["is_valid"],
             "conference_compatible": conference_compatibility["compatibility_rate"],
+            "conference_submission_compatible": conference_submission_compatibility["compatibility_rate"],
+            "abstract_paper_dependencies_valid": abstract_paper_dependencies["dependency_rate"],
             "single_conference_valid": single_conference_policy["is_valid"],
             "soft_block_compliant": soft_block_model["compliance_rate"],
             "paper_lead_time_compliant": paper_lead_time_validation["compliance_rate"],
@@ -792,6 +799,85 @@ def validate_conference_submission_compatibility(schedule: Dict[str, date], conf
         "total_submissions": total_submissions,
         "compatible_submissions": compatible_submissions,
         "summary": f"Conference submission compatibility: {compatible_submissions}/{total_submissions} submissions compatible ({compatibility_rate:.1f}%)"
+    }
+
+
+def validate_abstract_paper_dependencies(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+    """Validate abstract-paper dependency relationships."""
+    violations = []
+    total_papers = 0
+    valid_papers = 0
+    
+    for sid in schedule:
+        sub = config.submissions_dict.get(sid)
+        if not sub or sub.kind != SubmissionType.PAPER or not sub.conference_id:
+            continue
+        
+        conf = config.conferences_dict.get(sub.conference_id)
+        if not conf or not conf.requires_abstract_before_paper():
+            continue
+        
+        total_papers += 1
+        
+        # Check if required abstract exists and is scheduled
+        from src.core.models import generate_abstract_id
+        abstract_id = generate_abstract_id(sub.id, sub.conference_id)
+        abstract = config.submissions_dict.get(abstract_id)
+        
+        if not abstract:
+            violations.append({
+                "submission_id": sid,
+                "conference_id": sub.conference_id,
+                "missing_abstract_id": abstract_id,
+                "description": f"Paper {sid} requires abstract {abstract_id} for conference {sub.conference_id}"
+            })
+            continue
+        
+        if abstract_id not in schedule:
+            violations.append({
+                "submission_id": sid,
+                "conference_id": sub.conference_id,
+                "missing_abstract_id": abstract_id,
+                "description": f"Paper {sid} requires abstract {abstract_id} to be scheduled"
+            })
+            continue
+        
+        # Check if paper is scheduled after abstract
+        paper_start = schedule[sid]
+        abstract_start = schedule[abstract_id]
+        
+        if paper_start <= abstract_start:
+            violations.append({
+                "submission_id": sid,
+                "conference_id": sub.conference_id,
+                "abstract_id": abstract_id,
+                "paper_start": paper_start.isoformat(),
+                "abstract_start": abstract_start.isoformat(),
+                "description": f"Paper {sid} must be scheduled after abstract {abstract_id}"
+            })
+            continue
+        
+        # Check if paper depends on abstract
+        if abstract_id not in (sub.depends_on or []):
+            violations.append({
+                "submission_id": sid,
+                "conference_id": sub.conference_id,
+                "abstract_id": abstract_id,
+                "description": f"Paper {sid} must depend on abstract {abstract_id}"
+            })
+            continue
+        
+        valid_papers += 1
+    
+    dependency_rate = (valid_papers / total_papers * QUALITY_CONSTANTS.percentage_multiplier) if total_papers > 0 else QUALITY_CONSTANTS.perfect_compliance_rate
+    
+    return {
+        "is_valid": len(violations) == 0,
+        "violations": violations,
+        "dependency_rate": dependency_rate,
+        "total_papers": total_papers,
+        "valid_papers": valid_papers,
+        "summary": f"Abstract-paper dependencies: {valid_papers}/{total_papers} papers valid ({dependency_rate:.1f}%)"
     }
 
 

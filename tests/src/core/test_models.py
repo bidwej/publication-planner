@@ -168,6 +168,87 @@ class TestSubmission:
         assert abstract_submission.get_priority_score(config) == 0.5
 
 
+class TestAbstractPaperDependencies:
+    """Test abstract-paper dependency functionality."""
+    
+    def test_generate_abstract_id(self):
+        """Test abstract ID generation."""
+        from core.models import generate_abstract_id
+        
+        # Test basic ID generation
+        abstract_id = generate_abstract_id("paper1", "conf1")
+        assert abstract_id == "paper1-abs-conf1"
+        
+        # Test with complex paper ID
+        abstract_id = generate_abstract_id("paper1-pap-conf1", "conf2")
+        assert abstract_id == "paper1-abs-conf2"
+    
+    def test_create_abstract_submission(self):
+        """Test abstract submission creation."""
+        from core.models import create_abstract_submission
+        
+        paper = Submission(
+            id="paper1",
+            title="Test Paper",
+            kind=SubmissionType.PAPER,
+            conference_id="conf1",
+            depends_on=["dep1"],
+            engineering=True,
+            earliest_start_date=date(2024, 1, 1)
+        )
+        
+        penalty_costs = {"default_mod_penalty_per_day": 1000.0}
+        abstract = create_abstract_submission(paper, "conf1", penalty_costs)
+        
+        assert abstract.id == "paper1-abs-conf1"
+        assert abstract.title == "Abstract for Test Paper"
+        assert abstract.kind == SubmissionType.ABSTRACT
+        assert abstract.conference_id == "conf1"
+        assert abstract.depends_on == ["dep1"]  # Same dependencies as paper
+        assert abstract.engineering == True
+        assert abstract.earliest_start_date == date(2024, 1, 1)
+        assert abstract.candidate_conferences == ["conf1"]
+    
+    def test_ensure_abstract_paper_dependency(self):
+        """Test ensuring paper depends on abstract."""
+        from core.models import ensure_abstract_paper_dependency
+        
+        paper = Submission(
+            id="paper1",
+            title="Test Paper",
+            kind=SubmissionType.PAPER,
+            conference_id="conf1"
+        )
+        
+        # Initially no dependencies
+        assert paper.depends_on == []
+        
+        # Add abstract dependency
+        ensure_abstract_paper_dependency(paper, "paper1-abs-conf1")
+        assert "paper1-abs-conf1" in paper.depends_on
+        
+        # Adding again should not duplicate
+        ensure_abstract_paper_dependency(paper, "paper1-abs-conf1")
+        assert paper.depends_on.count("paper1-abs-conf1") == 1
+    
+    def test_find_abstract_for_paper(self):
+        """Test finding abstract for paper."""
+        from core.models import find_abstract_for_paper
+        
+        submissions_dict = {
+            "paper1": Submission(id="paper1", title="Paper", kind=SubmissionType.PAPER),
+            "paper1-abs-conf1": Submission(id="paper1-abs-conf1", title="Abstract", kind=SubmissionType.ABSTRACT)
+        }
+        
+        # Find existing abstract
+        abstract_id = find_abstract_for_paper("paper1", "conf1", submissions_dict)
+        assert abstract_id == "paper1-abs-conf1"
+        
+        # Abstract doesn't exist
+        abstract_id = find_abstract_for_paper("paper1", "conf2", submissions_dict)
+        assert abstract_id is None
+
+
 class TestConference:
     """Test Conference model."""
     
@@ -345,6 +426,88 @@ class TestConfig:
         assert "conf1" in config.conferences_dict
         assert config.submissions_dict["test-pap"] == submission
         assert config.conferences_dict["conf1"] == conference
+    
+    def test_config_abstract_paper_dependency_validation(self):
+        """Test config validation of abstract-paper dependencies."""
+        # Create conference that requires abstracts
+        conference = Conference(
+            id="conf1",
+            name="Test Conference",
+            conf_type=ConferenceType.MEDICAL,
+            recurrence=ConferenceRecurrence.ANNUAL,
+            deadlines={
+                SubmissionType.ABSTRACT: date(2024, 3, 1),
+                SubmissionType.PAPER: date(2024, 6, 1)
+            }
+        )
+        
+        # Paper without required abstract
+        paper = Submission(
+            id="paper1",
+            title="Test Paper",
+            kind=SubmissionType.PAPER,
+            conference_id="conf1"
+        )
+        
+        config = Config(
+            submissions=[paper],
+            conferences=[conference],
+            min_abstract_lead_time_days=30,
+            min_paper_lead_time_days=90,
+            max_concurrent_submissions=3
+        )
+        
+        # Should have validation error for missing abstract
+        errors = config.validate()
+        assert any("requires abstract" in error for error in errors)
+    
+    def test_config_ensure_abstract_paper_dependencies(self):
+        """Test automatic creation of abstract dependencies."""
+        # Create conference that requires abstracts
+        conference = Conference(
+            id="conf1",
+            name="Test Conference",
+            conf_type=ConferenceType.MEDICAL,
+            recurrence=ConferenceRecurrence.ANNUAL,
+            deadlines={
+                SubmissionType.ABSTRACT: date(2024, 3, 1),
+                SubmissionType.PAPER: date(2024, 6, 1)
+            }
+        )
+        
+        # Paper without abstract
+        paper = Submission(
+            id="paper1",
+            title="Test Paper",
+            kind=SubmissionType.PAPER,
+            conference_id="conf1"
+        )
+        
+        config = Config(
+            submissions=[paper],
+            conferences=[conference],
+            min_abstract_lead_time_days=30,
+            min_paper_lead_time_days=90,
+            max_concurrent_submissions=3,
+            penalty_costs={"default_mod_penalty_per_day": 1000.0}
+        )
+        
+        # Initially no abstract
+        assert len(config.submissions) == 1
+        assert "paper1-abs-conf1" not in config.submissions_dict
+        
+        # Ensure abstract dependencies
+        config.ensure_abstract_paper_dependencies()
+        
+        # Should now have abstract
+        assert len(config.submissions) == 2
+        assert "paper1-abs-conf1" in config.submissions_dict
+        
+        # Paper should depend on abstract
+        abstract = config.submissions_dict["paper1-abs-conf1"]
+        assert abstract.kind == SubmissionType.ABSTRACT
+        assert abstract.conference_id == "conf1"
+        assert "paper1-abs-conf1" in paper.depends_on
 
 
 class TestUnifiedModels:

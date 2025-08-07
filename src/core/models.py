@@ -187,12 +187,28 @@ class Conference:
         dependencies = []
         
         if submission_type == SubmissionType.PAPER and self.requires_abstract_before_paper():
-            # Find the abstract submission for this conference
-            # This would need to be implemented based on the actual submission data
-            # For now, we'll return a placeholder
-            dependencies.append(f"abstract-{self.id}")
+            # For papers at conferences requiring abstracts, the abstract ID would be
+            # generated based on the paper ID and conference ID
+            # This is handled in the Config class during validation
+            pass
         
         return dependencies
+    
+    def validate_submission_compatibility(self, submission: Submission) -> List[str]:
+        """Validate that a submission is compatible with this conference."""
+        errors = []
+        
+        # Check if conference accepts this submission type
+        if not self.accepts_submission_type(submission.kind):
+            errors.append(f"Conference {self.id} does not accept {submission.kind.value} submissions")
+        
+        # Check if submission has required dependencies
+        if submission.kind == SubmissionType.PAPER and self.requires_abstract_before_paper():
+            abstract_id = generate_abstract_id(submission.id, self.id)
+            if abstract_id not in (submission.depends_on or []):
+                errors.append(f"Paper {submission.id} must depend on abstract {abstract_id} for conference {self.id}")
+        
+        return errors
     
     def validate(self) -> List[str]:
         """Validate conference and return list of errors."""
@@ -366,7 +382,63 @@ class Config:
                 errors.append(f"Duplicate conference ID: {conference.id}")
             conference_ids.add(conference.id)
         
+        # Validate abstract-paper dependencies
+        errors.extend(self._validate_abstract_paper_dependencies())
+        
         return errors
+    
+    def _validate_abstract_paper_dependencies(self) -> List[str]:
+        """Validate that papers have required abstract dependencies."""
+        errors = []
+        submission_dict = {sub.id: sub for sub in self.submissions}
+        conference_dict = {conf.id: conf for conf in self.conferences}
+        
+        for submission in self.submissions:
+            if submission.kind == SubmissionType.PAPER and submission.conference_id:
+                conference = conference_dict.get(submission.conference_id)
+                if conference and conference.requires_abstract_before_paper():
+                    # Check if required abstract exists
+                    abstract_id = generate_abstract_id(submission.id, submission.conference_id)
+                    if abstract_id not in submission_dict:
+                        errors.append(f"Paper {submission.id} requires abstract {abstract_id} for conference {submission.conference_id}")
+                    else:
+                        # Check if paper depends on its abstract
+                        abstract = submission_dict[abstract_id]
+                        if abstract_id not in (submission.depends_on or []):
+                            errors.append(f"Paper {submission.id} must depend on its abstract {abstract_id}")
+        
+        return errors
+    
+    def ensure_abstract_paper_dependencies(self) -> None:
+        """Automatically create missing abstract submissions and dependencies."""
+        if not self.submissions or not self.conferences:
+            return
+        
+        submission_dict = {sub.id: sub for sub in self.submissions}
+        conference_dict = {conf.id: conf for conf in self.conferences}
+        penalty_costs = self.penalty_costs or {}
+        
+        # Find papers that need abstracts
+        papers_needing_abstracts = []
+        for submission in self.submissions:
+            if (submission.kind == SubmissionType.PAPER and 
+                submission.conference_id and 
+                submission.conference_id in conference_dict):
+                
+                conference = conference_dict[submission.conference_id]
+                if conference.requires_abstract_before_paper():
+                    abstract_id = generate_abstract_id(submission.id, submission.conference_id)
+                    if abstract_id not in submission_dict:
+                        papers_needing_abstracts.append((submission, abstract_id))
+        
+        # Create missing abstracts
+        for paper, abstract_id in papers_needing_abstracts:
+            abstract = create_abstract_submission(paper, paper.conference_id, penalty_costs)
+            self.submissions.append(abstract)
+            submission_dict[abstract_id] = abstract
+            
+            # Ensure paper depends on abstract
+            ensure_abstract_paper_dependency(paper, abstract_id)
     
     # Computed properties
     @property

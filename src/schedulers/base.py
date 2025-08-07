@@ -8,7 +8,7 @@ from src.core.models import (
     Config, Submission, SubmissionType, SchedulerStrategy, Conference,
     generate_abstract_id, create_abstract_submission, ensure_abstract_paper_dependency
 )
-from src.core.constraints import validate_deadline_compliance_single, validate_dependencies_satisfied, validate_venue_compatibility
+from src.core.constraints import validate_deadline_compliance_single, validate_dependencies_satisfied, validate_venue_compatibility, is_working_day
 
 
 class BaseScheduler(ABC):
@@ -73,6 +73,10 @@ class BaseScheduler(ABC):
     def _validate_soft_block_model(self, sub: Submission, start: date) -> bool:
         """Validate soft block model (PCCP) - submissions within ±2 months of earliest start."""
         if not sub.earliest_start_date:
+            return True
+        
+        # Only apply to modifications (PCCP model)
+        if not sub.id.endswith("-wrk"):
             return True
         
         months_diff = abs((start.year - sub.earliest_start_date.year) * 12 + 
