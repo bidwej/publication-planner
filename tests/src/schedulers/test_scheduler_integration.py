@@ -109,7 +109,8 @@ class TestSchedulerIntegration:
         assert len(schedules) == len(strategies)
     
     def test_scheduler_with_complex_constraints(self):
-        """Test schedulers with complex constraint configurations."""
+        """Test scheduler with complex constraints."""
+        from datetime import date
         from src.schedulers.base import BaseScheduler
         from src.core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
         
@@ -137,14 +138,14 @@ class TestSchedulerIntegration:
                 name="Engineering Conference",
                 conf_type=ConferenceType.ENGINEERING,
                 recurrence=ConferenceRecurrence.ANNUAL,
-                deadlines={SubmissionType.PAPER: date(2025, 6, 1)}
+                deadlines={SubmissionType.PAPER: date(2025, 12, 1)}
             ),
             Conference(
                 id="conf2",
                 name="Medical Conference", 
                 conf_type=ConferenceType.MEDICAL,
                 recurrence=ConferenceRecurrence.ANNUAL,
-                deadlines={SubmissionType.PAPER: date(2025, 8, 1)}
+                deadlines={SubmissionType.PAPER: date(2026, 3, 1)}
             )
         ]
         

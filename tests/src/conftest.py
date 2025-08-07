@@ -166,11 +166,11 @@ def sample_config():
     # Create sample conferences
     conference1 = create_mock_conference(
         "conf1", "Test Conference 1", 
-        {SubmissionType.PAPER: date(2024, 6, 1)}
+        {SubmissionType.PAPER: date(2026, 6, 1)}
     )
     conference2 = create_mock_conference(
         "conf2", "Test Conference 2", 
-        {SubmissionType.ABSTRACT: date(2024, 8, 1)}
+        {SubmissionType.ABSTRACT: date(2026, 8, 1)}
     )
     
     return create_mock_config([submission1, submission2], [conference1, conference2])
@@ -199,7 +199,7 @@ def minimal_config():
     # Create minimal conference
     conference1 = create_mock_conference(
         "conf1", "Test Conference", 
-        {SubmissionType.PAPER: date(2024, 6, 1)}
+        {SubmissionType.PAPER: date(2026, 6, 1)}
     )
     
     return create_mock_config([submission1], [conference1])

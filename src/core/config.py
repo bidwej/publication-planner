@@ -41,8 +41,14 @@ def load_config(config_path: str) -> Config:
             mods_path, papers_path, conferences, config_data
         )
         
-        # Load blackout dates
-        blackout_dates = _load_blackout_dates(blackouts_path)
+        # Load blackout dates only if enabled
+        scheduling_options = config_data.get("scheduling_options", {})
+        enable_blackout_periods = scheduling_options.get("enable_blackout_periods", False)
+        
+        if enable_blackout_periods:
+            blackout_dates = _load_blackout_dates(blackouts_path)
+        else:
+            blackout_dates = []
         
         # Create config object
         config = Config(
@@ -87,7 +93,30 @@ def _load_blackout_dates(path: Path) -> List[date]:
             except (ValueError, TypeError):
                 continue
         
-        # Load recurring holidays
+        # Load federal holidays (new format)
+        for year in [2025, 2026]:
+            federal_holidays_key = f"federal_holidays_{year}"
+            if federal_holidays_key in data:
+                for date_str in data[federal_holidays_key]:
+                    try:
+                        blackout_dates.append(parse_date(date_str).date())
+                    except (ValueError, TypeError):
+                        continue
+        
+        # Load custom blackout periods
+        custom_periods = data.get("custom_blackout_periods", [])
+        for period in custom_periods:
+            try:
+                start_date = parse_date(period["start"]).date()
+                end_date = parse_date(period["end"]).date()
+                current_date = start_date
+                while current_date <= end_date:
+                    blackout_dates.append(current_date)
+                    current_date += timedelta(days=1)
+            except (KeyError, ValueError, TypeError):
+                continue
+        
+        # Load recurring holidays (old format)
         recurring_holidays = data.get("recurring_holidays", [])
         holiday_dates = _load_recurring_holidays(recurring_holidays)
         blackout_dates.extend(holiday_dates)
@@ -251,6 +280,14 @@ def _load_mods(path: Path) -> List[Submission]:
         
         for mod_data in data:
             try:
+                # Infer engineering flag from candidate conferences if not explicitly set
+                engineering = mod_data.get("engineering", False)
+                if not engineering and mod_data.get("candidate_conferences"):
+                    # Check if any candidate conferences are engineering conferences
+                    # This would need to be done after conferences are loaded
+                    # For now, we'll use the explicit engineering flag
+                    pass
+                
                 mod = Submission(
                     id=f"{mod_data['id']}-wrk",
                     title=mod_data.get("title", f"Mod {mod_data['id']}"),
@@ -260,7 +297,7 @@ def _load_mods(path: Path) -> List[Submission]:
                     draft_window_months=0,
                     lead_time_from_parents=0,
                     penalty_cost_per_day=0.0,
-                    engineering=mod_data.get("engineering", False),
+                    engineering=engineering,
                     earliest_start_date=parse_date(mod_data.get("est_data_ready", "2025-06-01")).date() if mod_data.get("est_data_ready") else None,
                 )
                 mods.append(mod)

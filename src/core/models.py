@@ -286,23 +286,23 @@ class Config:
         # Create sample conferences
         sample_conferences = [
             Conference(
-                id="ICRA2025",
-                name="IEEE International Conference on Robotics and Automation 2025",
+                id="ICRA2026",
+                name="IEEE International Conference on Robotics and Automation 2026",
                 conf_type=ConferenceType.ENGINEERING,
                 recurrence=ConferenceRecurrence.ANNUAL,
                 deadlines={
-                    SubmissionType.ABSTRACT: date(2025, 1, 15),
-                    SubmissionType.PAPER: date(2025, 2, 15)
+                    SubmissionType.ABSTRACT: date(2026, 1, 15),
+                    SubmissionType.PAPER: date(2026, 2, 15)
                 }
             ),
             Conference(
-                id="MICCAI2025",
-                name="Medical Image Computing and Computer Assisted Intervention 2025",
+                id="MICCAI2026",
+                name="Medical Image Computing and Computer Assisted Intervention 2026",
                 conf_type=ConferenceType.MEDICAL,
                 recurrence=ConferenceRecurrence.ANNUAL,
                 deadlines={
-                    SubmissionType.ABSTRACT: date(2025, 3, 1),
-                    SubmissionType.PAPER: date(2025, 4, 1)
+                    SubmissionType.ABSTRACT: date(2026, 3, 1),
+                    SubmissionType.PAPER: date(2026, 4, 1)
                 }
             )
         ]
@@ -313,7 +313,7 @@ class Config:
                 id="mod1-wrk",
                 title="Endoscope Navigation Module",
                 kind=SubmissionType.ABSTRACT,
-                conference_id="ICRA2025",
+                conference_id="ICRA2026",
                 depends_on=[],
                 draft_window_months=0,
                 engineering=True
@@ -322,7 +322,7 @@ class Config:
                 id="paper1-pap",
                 title="AI-Powered Endoscope Control System",
                 kind=SubmissionType.PAPER,
-                conference_id="ICRA2025",
+                conference_id="ICRA2026",
                 depends_on=["mod1-wrk"],
                 draft_window_months=3,
                 engineering=True
@@ -331,7 +331,7 @@ class Config:
                 id="mod2-wrk",
                 title="Medical Image Analysis Module",
                 kind=SubmissionType.ABSTRACT,
-                conference_id="MICCAI2025",
+                conference_id="MICCAI2026",
                 depends_on=[],
                 draft_window_months=0,
                 engineering=False
@@ -340,7 +340,7 @@ class Config:
                 id="paper2-pap",
                 title="Deep Learning for Endoscope Guidance",
                 kind=SubmissionType.PAPER,
-                conference_id="MICCAI2025",
+                conference_id="MICCAI2026",
                 depends_on=["mod2-wrk"],
                 draft_window_months=3,
                 engineering=False
@@ -381,7 +381,7 @@ class Config:
             penalty_costs=default_penalty_costs,
             priority_weights=default_priority_weights,
             scheduling_options=default_scheduling_options,
-            blackout_dates=[],
+            blackout_dates=[],  # Empty when disabled
             data_files={
                 "conferences": "conferences.json",
                 "papers": "papers.json",

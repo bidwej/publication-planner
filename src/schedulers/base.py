@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Dict, List, Type
+from typing import Dict, List, Type, Optional
 from datetime import date, timedelta
 from src.core.models import Config, Submission, SubmissionType, SchedulerStrategy, Conference
 from src.core.constraints import validate_deadline_compliance_single, validate_dependencies_satisfied, validate_venue_compatibility

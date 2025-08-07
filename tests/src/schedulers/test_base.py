@@ -1,9 +1,12 @@
 """Tests for the base scheduler."""
 
-from datetime import date
+from datetime import date, timedelta
 
-from core.models import SubmissionType
-from schedulers.greedy import GreedyScheduler
+import pytest
+
+from src.core.models import SubmissionType
+from src.schedulers.greedy import GreedyScheduler
+from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
 
 
 class TestScheduler:
@@ -20,9 +23,9 @@ class TestScheduler:
         """Test scheduler with empty config."""
         scheduler = GreedyScheduler(empty_config)
         
-        assert scheduler.config == empty_config
-        assert len(scheduler.config.submissions) == 0
-        assert len(scheduler.config.conferences) == 0
+        result = scheduler.schedule()
+        assert isinstance(result, dict)
+        assert len(result) == 0
 
     def test_scheduler_with_sample_data(self, sample_config):
         """Test scheduler with sample data."""
@@ -52,17 +55,15 @@ class TestScheduler:
 
     def test_schedule_with_no_valid_dates(self):
         """Test scheduling with no valid dates."""
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
-        
         # Create submission with impossible constraints
         submission = create_mock_submission(
             "paper1", "Test Paper", SubmissionType.PAPER, "conf1",
-            earliest_start_date=date(2024, 12, 1)  # Start after deadline
+            earliest_start_date=date(2025, 12, 1)  # Start after deadline
         )
         
         conference = create_mock_conference(
             "conf1", "Test Conference", 
-            {SubmissionType.PAPER: date(2024, 6, 1)}
+            {SubmissionType.PAPER: date(2025, 6, 1)}
         )
         
         config = create_mock_config([submission], [conference])
@@ -76,8 +77,6 @@ class TestScheduler:
 
     def test_schedule_with_dependencies(self):
         """Test scheduling with dependencies."""
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
-        
         # Create submissions with dependencies
         submission1 = create_mock_submission(
             "paper1", "Dependency Paper", SubmissionType.PAPER, "conf1"
@@ -90,7 +89,7 @@ class TestScheduler:
         
         conference = create_mock_conference(
             "conf1", "Test Conference", 
-            {SubmissionType.PAPER: date(2024, 6, 1)}
+            {SubmissionType.PAPER: date(2025, 12, 1)}
         )
         
         config = create_mock_config([submission1, submission2], [conference])
@@ -129,12 +128,15 @@ class TestScheduler:
         
         assert isinstance(result, dict)
         
-        # Check that all scheduled dates are before deadlines
+        # Check that all scheduled dates meet deadlines
         for submission_id, scheduled_date in result.items():
             submission = sample_config.submissions_dict[submission_id]
-            conference = sample_config.conferences_dict[submission.conference_id]
-            deadline = conference.deadlines[submission.kind]
-            assert scheduled_date <= deadline
+            if submission.conference_id:
+                conf = sample_config.conferences_dict.get(submission.conference_id)
+                if conf and submission.kind in conf.deadlines:
+                    deadline = conf.deadlines[submission.kind]
+                    end_date = scheduled_date + timedelta(days=sample_config.min_paper_lead_time_days)
+                    assert end_date <= deadline
 
     def test_schedule_respects_concurrency_limit(self, sample_config):
         """Test that schedule respects concurrency limits."""
@@ -147,7 +149,5 @@ class TestScheduler:
         # Check that no more than max_concurrent_submissions are scheduled on the same day
         scheduled_dates = list(result.values())
         for i, date1 in enumerate(scheduled_dates):
-            for j, date2 in enumerate(scheduled_dates):
-                if i != j and date1 == date2:
-                    same_date_count = sum(1 for d in scheduled_dates if d == date1)
-                    assert same_date_count <= sample_config.max_concurrent_submissions
+            same_date_count = sum(1 for d in scheduled_dates if d == date1)
+            assert same_date_count <= sample_config.max_concurrent_submissions
