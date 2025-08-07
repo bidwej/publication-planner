@@ -6,7 +6,7 @@ import datetime
 import tempfile
 import fnmatch
 from pathlib import Path
-from typing import Optional, Set
+from typing import Set
 
 DEFAULT_INPUT: Path = Path("./")
 DEFAULT_OUTPUT: Path = Path("./")
@@ -43,10 +43,10 @@ def should_ignore_file(file_name: str, ignore_files: Set[str]) -> bool:
     return file_name in ignore_files or any(file_name.endswith(ext) for ext in ignore_files)
 
 def create_archive(
-    input_path: Optional[Path] = DEFAULT_INPUT,
-    output_path: Optional[Path] = DEFAULT_OUTPUT,
-    ignore_folders: Optional[Set[str]] = None,
-    ignore_files: Optional[Set[str]] = None,
+    input_path: Path = DEFAULT_INPUT,
+    output_path: Path = DEFAULT_OUTPUT,
+    ignore_folders: Set[str] = None,
+    ignore_files: Set[str] = None,
 ) -> None:
     """Create a ZIP archive of source code with specified exclusions."""
     if ignore_folders is None:
@@ -54,11 +54,7 @@ def create_archive(
     if ignore_files is None:
         ignore_files = DEFAULT_IGNORE_FILES
 
-    # Ensure paths are not None
-    if input_path is None:
-        input_path = DEFAULT_INPUT
-    if output_path is None:
-        output_path = DEFAULT_OUTPUT
+
 
     # Resolve paths
     input_path = input_path.resolve()

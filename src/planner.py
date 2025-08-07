@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Dict, Optional, Any, List
+from typing import Dict, Any, List
 from datetime import date
 
 from core.config import load_config
@@ -10,18 +10,10 @@ from core.models import Config, SchedulerStrategy, ValidationResult, ScoringResu
 from core.constants import PERFECT_COMPLIANCE_RATE
 from dataclasses import replace
 from schedulers.base import BaseScheduler
-# Import all schedulers to register them
-from schedulers.greedy import GreedyScheduler
-from schedulers.stochastic import StochasticGreedyScheduler
-from schedulers.lookahead import LookaheadGreedyScheduler
-from schedulers.backtracking import BacktrackingGreedyScheduler
-from schedulers.random import RandomScheduler
-from schedulers.heuristic import HeuristicScheduler
-from schedulers.optimal import OptimalScheduler
 from core.constraints import validate_schedule_comprehensive
 from scoring.penalty import calculate_penalty_score
 from scoring.quality import calculate_quality_score
-from scoring.efficiency import calculate_efficiency_score, calculate_efficiency_resource, calculate_efficiency_timeline
+from scoring.efficiency import calculate_efficiency_score
 from src.output.tables import generate_simple_monthly_table
 
 

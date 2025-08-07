@@ -6,7 +6,7 @@ Copy a package to a new location with optional filtering.
 import argparse
 import shutil
 from pathlib import Path
-from typing import List, Callable, Optional
+from typing import List, Callable
 
 def is_ignored(path: Path, ignore_patterns: List[str]) -> bool:
     """Check if a path should be ignored based on patterns."""
@@ -17,7 +17,7 @@ def copy_package(
     source: str,
     destination: str,
     ignore_patterns: List[str] = None,
-    filter_func: Optional[Callable[[Path], bool]] = None
+    filter_func: Callable[[Path], bool] = None
 ) -> None:
     """
     Copy a package to a new location with optional filtering.

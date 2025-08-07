@@ -7,8 +7,8 @@ This script loads configuration data and generates a schedule using the schedule
 
 import sys
 import argparse
-from datetime import date
 from typing import Dict, Optional
+from datetime import date
 from pathlib import Path
 
 # Add the src directory to the path
@@ -17,14 +17,6 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 from core.config import load_config
 from core.models import SchedulerStrategy
 from schedulers.base import BaseScheduler
-# Import all schedulers to ensure they're registered
-from schedulers.greedy import GreedyScheduler
-from schedulers.stochastic import StochasticGreedyScheduler
-from schedulers.lookahead import LookaheadGreedyScheduler
-from schedulers.backtracking import BacktrackingGreedyScheduler
-from schedulers.random import RandomScheduler
-from schedulers.heuristic import HeuristicScheduler
-from schedulers.optimal import OptimalScheduler
 from output.console import print_schedule_analysis, print_strategy_comparison, print_available_strategies
 
 

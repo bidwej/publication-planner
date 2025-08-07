@@ -596,7 +596,7 @@ async def capture_fallback_screenshot(
 async def capture_all_scheduler_options(
     base_url: str = "http://127.0.0.1:8050",
     output_dir: str = "web_charts",
-    script_path: str = "run_web_dashboard.py",
+    script_path: str = "run_web_charts.py",
     port: int = 8050
 ) -> Dict[str, bool]:
     """
@@ -755,7 +755,7 @@ async def capture_all_scheduler_options(
 async def capture_timeline_screenshots(
     base_url: str = "http://127.0.0.1:8051",
     output_dir: str = "timeline_charts",
-    script_path: str = "run_web_timeline.py",
+    script_path: str = "run_web_charts.py",
     port: int = 8051
 ) -> bool:
     """

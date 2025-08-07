@@ -5,8 +5,7 @@ Supports both dashboard and timeline modes.
 
 import dash
 from dash import html, dcc, Input, Output, State, callback_context, exceptions
-import plotly.graph_objects as go
-from datetime import date, datetime
+from datetime import date
 import json
 from pathlib import Path
 from typing import Dict, List, Optional, Any
@@ -19,18 +18,8 @@ from core.config import load_config
 from core.models import Config, SchedulerStrategy, ScheduleState
 from app.models import WebAppState
 from core.constraints import validate_schedule_comprehensive
-from scoring.penalty import calculate_penalty_score
-from scoring.quality import calculate_quality_score
-from scoring.efficiency import calculate_efficiency_score
+
 from schedulers.base import BaseScheduler
-# Import all schedulers to ensure they're registered
-from schedulers.greedy import GreedyScheduler
-from schedulers.stochastic import StochasticGreedyScheduler
-from schedulers.lookahead import LookaheadGreedyScheduler
-from schedulers.backtracking import BacktrackingGreedyScheduler
-from schedulers.random import RandomScheduler
-from schedulers.heuristic import HeuristicScheduler
-from schedulers.optimal import OptimalScheduler
 
 # Import app components
 from app.layouts.header import create_header
