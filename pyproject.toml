@@ -1,3 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "paper-planner"
+version = "0.1.0"
+description = "A paper planning and scheduling tool"
+requires-python = ">=3.8"
+dependencies = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "plotly>=5.0.0",
+    "dash>=2.0.0",
+    "pandas>=1.5.0",
+    "numpy>=1.21.0",
+    "python-dateutil>=2.8.0"
+]
+
 [tool.pylint]
 extension-pkg-allow-list = ["cv2", "numpy", "dateutil"]
 ignore = ["__pycache__"]
@@ -24,8 +43,6 @@ disable = [
   "protected-access"         # ignore W0212 - allows access to protected methods
 ]
 
-
-
 [tool.pylint.typecheck]
 generated-members = [
   "cv2.*",
@@ -49,9 +66,8 @@ venvPath = "."
 venv = ".venv"
 pythonVersion = "3.12"
 
-# if you need extra source roots:
-# (Pyright will look here for modules before complaining)
-analysis.extraPaths = ["src"]
+# Configure source paths for both src and app
+analysis.extraPaths = ["src", "app"]
 
 # have Pyright/Pylance use library code for types
 analysis.useLibraryCodeForTypes = true
@@ -67,7 +83,7 @@ reportUnknownVariableType = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
+pythonpath = ["src", "app"]
 addopts = "-v --tb=short --import-mode=importlib"
 filterwarnings = [
     "ignore::DeprecationWarning",
