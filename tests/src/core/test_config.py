@@ -281,8 +281,9 @@ class TestConfigIntegration:
         """Test that default config can be created."""
         config = Config.create_default()
         assert isinstance(config, Config)
-        assert len(config.submissions) > 0
-        assert len(config.conferences) > 0
+        # Default config now has empty lists for app initialization
+        assert len(config.submissions) == 0
+        assert len(config.conferences) == 0
         assert config.min_abstract_lead_time_days > 0
         assert config.min_paper_lead_time_days > 0
         assert config.max_concurrent_submissions > 0

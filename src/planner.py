@@ -7,7 +7,7 @@ from dataclasses import replace
 from datetime import date
 from core.config import load_config
 from core.models import Config, SchedulerStrategy, ValidationResult, ScoringResult, ScheduleResult, ScheduleSummary, ScheduleMetrics
-from core.constants import PERFECT_COMPLIANCE_RATE
+from core.constants import QUALITY_CONSTANTS
 from scoring.quality import calculate_quality_score
 from scoring.penalty import calculate_penalty_score
 from scoring.efficiency import calculate_efficiency_score, calculate_efficiency_resource, calculate_efficiency_timeline
@@ -21,6 +21,7 @@ from src.schedulers.backtracking import BacktrackingGreedyScheduler
 from src.schedulers.random import RandomScheduler
 from src.schedulers.heuristic import HeuristicScheduler
 from src.schedulers.optimal import OptimalScheduler
+# Advanced scheduler removed as per requirements
 
 # Import scheduler implementations to register them
 
@@ -256,7 +257,7 @@ class Planner:
             penalty_score=penalty_breakdown.total_penalty,
             quality_score=quality_score,
             efficiency_score=efficiency_score,
-            deadline_compliance=PERFECT_COMPLIANCE_RATE if validation_result.is_valid else 0.0,
+            deadline_compliance=QUALITY_CONSTANTS.perfect_compliance_rate if validation_result.is_valid else 0.0,
             resource_utilization=efficiency_metrics.utilization_rate
         )
         
@@ -266,7 +267,7 @@ class Planner:
             avg_utilization=efficiency_metrics.avg_utilization,
             peak_utilization=efficiency_metrics.peak_utilization,
             total_penalty=penalty_breakdown.total_penalty,
-            compliance_rate=PERFECT_COMPLIANCE_RATE if validation_result.is_valid else 0.0,
+            compliance_rate=QUALITY_CONSTANTS.perfect_compliance_rate if validation_result.is_valid else 0.0,
             quality_score=quality_score
         )
         

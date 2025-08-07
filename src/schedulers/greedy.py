@@ -61,7 +61,7 @@ class GreedyScheduler(BaseScheduler):
         return sorted(ready, key=get_priority, reverse=True) 
 
     def _find_earliest_valid_start(self, submission: Submission, schedule: Dict[str, date]) -> Optional[date]:
-        """Find the earliest valid start date for a submission."""
+        """Find the earliest valid start date for a submission with comprehensive constraint validation."""
      
         # Start with today
         current_date = date.today()
@@ -87,7 +87,7 @@ class GreedyScheduler(BaseScheduler):
                 if current_date > latest_start:
                     return None  # Can't meet deadline
         
-        # Check resource constraints
+        # Check resource constraints and all other constraints
         max_concurrent = self.config.max_concurrent_submissions
         while current_date <= date.today() + timedelta(days=365):  # Reasonable limit
             # Count active submissions on this date
@@ -98,7 +98,13 @@ class GreedyScheduler(BaseScheduler):
                 if start_date <= current_date <= end_date:
                     active_count += 1
             
-            if active_count < max_concurrent:
+            # Check resource constraint
+            if active_count >= max_concurrent:
+                current_date += timedelta(days=1)
+                continue
+            
+            # Check all other constraints using comprehensive validation
+            if self._validate_all_constraints(submission, current_date, schedule):
                 return current_date
             
             current_date += timedelta(days=1)

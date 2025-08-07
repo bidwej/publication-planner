@@ -54,33 +54,38 @@ def create_mock_conference(conference_id: str, name: str, deadlines: dict, **kwa
     )
 
 
-def create_mock_config(submissions: list, conferences: list, **kwargs):
+def create_mock_config(submissions=None, conferences=None, **kwargs):
     """Create a mock config for testing."""
-    # Extract specific parameters to avoid duplicates
-    min_abstract_lead_time_days = kwargs.pop('min_abstract_lead_time_days', 30)
-    min_paper_lead_time_days = kwargs.pop('min_paper_lead_time_days', 90)
-    max_concurrent_submissions = kwargs.pop('max_concurrent_submissions', 3)
+    if submissions is None:
+        submissions = []
+    if conferences is None:
+        conferences = []
     
     return Config(
         submissions=submissions,
         conferences=conferences,
-        min_abstract_lead_time_days=min_abstract_lead_time_days,
-        min_paper_lead_time_days=min_paper_lead_time_days,
-        max_concurrent_submissions=max_concurrent_submissions,
-        **kwargs
+        min_abstract_lead_time_days=kwargs.get('min_abstract_lead_time_days', 30),
+        min_paper_lead_time_days=kwargs.get('min_paper_lead_time_days', 90),
+        max_concurrent_submissions=kwargs.get('max_concurrent_submissions', 3),
+        default_paper_lead_time_months=kwargs.get('default_paper_lead_time_months', 3),
+        penalty_costs=kwargs.get('penalty_costs', {}),
+        priority_weights=kwargs.get('priority_weights', {}),
+        scheduling_options=kwargs.get('scheduling_options', {}),
+        blackout_dates=kwargs.get('blackout_dates', []),
+        data_files=kwargs.get('data_files', {})
     )
 
 
 @pytest.fixture
 def empty_config():
     """Fixture to provide an empty configuration for testing."""
-    return create_mock_config([], [])
+    return Config.create_default()
 
 
 @pytest.fixture
 def sample_config():
-    """Fixture to provide a sample configuration with future dates for testing."""
-    # Create sample conferences with future dates
+    """Fixture to provide a sample configuration with test data."""
+    # Create sample conferences
     sample_conferences = [
         Conference(
             id="ICRA2026",
@@ -104,7 +109,7 @@ def sample_config():
         )
     ]
     
-    # Create sample submissions with future dates
+    # Create sample submissions
     sample_submissions = [
         Submission(
             id="mod1-wrk",

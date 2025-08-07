@@ -50,7 +50,7 @@ class HeuristicScheduler(BaseScheduler):
         # Early abstract scheduling if enabled
         if (self.config.scheduling_options and 
             self.config.scheduling_options.get("enable_early_abstract_scheduling", False)):
-            abstract_advance = self.config.scheduling_options.get("abstract_advance_days", SCHEDULING_CONSTANTS.default_abstract_advance_days)
+            abstract_advance = self.config.scheduling_options.get("abstract_advance_days", SCHEDULING_CONSTANTS.abstract_advance_days)
             self._schedule_early_abstracts(schedule, abstract_advance)
         
         while current <= end and len(schedule) < len(self.submissions):
@@ -86,8 +86,11 @@ class HeuristicScheduler(BaseScheduler):
             for sid in ready:
                 if len(active) >= self.config.max_concurrent_submissions:
                     break
-                if not self._meets_deadline(self.submissions[sid], current):
+                
+                # Use comprehensive constraint validation
+                if not self._validate_all_constraints(self.submissions[sid], current, schedule):
                     continue
+                
                 schedule[sid] = current
                 active.add(sid)
             

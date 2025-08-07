@@ -6,7 +6,6 @@ This script loads configuration data and generates a schedule using the schedule
 """
 
 import argparse
-import sys
 from typing import Dict, Optional
 from datetime import date
 from pathlib import Path
@@ -20,6 +19,16 @@ from core.config import load_config
 from core.models import SchedulerStrategy
 from schedulers.base import BaseScheduler
 from output.console import print_schedule_analysis, print_strategy_comparison, print_available_strategies
+
+# Import all schedulers to register them
+from schedulers.greedy import GreedyScheduler
+from schedulers.stochastic import StochasticGreedyScheduler
+from schedulers.lookahead import LookaheadGreedyScheduler
+from schedulers.backtracking import BacktrackingGreedyScheduler
+from schedulers.random import RandomScheduler
+from schedulers.heuristic import HeuristicScheduler
+from schedulers.optimal import OptimalScheduler
+# Advanced scheduler removed as per requirements
 
 
 def generate_schedule(config, strategy: SchedulerStrategy, verbose: bool = True) -> Dict[str, date]:

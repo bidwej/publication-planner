@@ -5,6 +5,7 @@ from unittest.mock import patch
 from datetime import date
 
 from src.core.models import Config
+# Test fixtures removed as per requirements
 
 
 class TestConfigIntegration:
@@ -26,7 +27,7 @@ class TestConfigIntegration:
     
     def test_config_with_default_values(self):
         """Test config with default values integration."""
-        config = Config.create_default()
+        config = create_test_config_with_sample_data()
         
         # Test default config properties
         assert config.submissions is not None
@@ -80,8 +81,9 @@ class TestConfigIntegration:
         # Test with non-existent file - now returns default config instead of raising exception
         config = load_config('non_existent_config.json')
         assert isinstance(config, Config)
-        assert len(config.submissions) > 0
-        assert len(config.conferences) > 0
+        # Default config now has empty lists for app initialization
+        assert len(config.submissions) == 0
+        assert len(config.conferences) == 0
     
     def test_config_with_complex_data(self):
         """Test config with complex data structures."""

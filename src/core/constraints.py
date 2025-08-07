@@ -307,7 +307,7 @@ def _validate_early_abstract_scheduling(schedule: Dict[str, date], config: Confi
     if not config.scheduling_options:
         return violations
     
-    abstract_advance = config.scheduling_options.get("abstract_advance_days", SCHEDULING_CONSTANTS.default_abstract_advance_days)
+    abstract_advance = config.scheduling_options.get("abstract_advance_days", SCHEDULING_CONSTANTS.abstract_advance_days)
     abstracts = [sid for sid, sub in config.submissions_dict.items() 
                 if sub.kind == SubmissionType.ABSTRACT]
     

@@ -3,6 +3,7 @@
 import pytest
 import socket
 import os
+import requests
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, Mock, patch

@@ -7,7 +7,7 @@ from dataclasses import asdict, dataclass
 from enum import Enum
 from dateutil.parser import parse as parse_date
 
-from src.core.constants import DEFAULT_POSTER_DURATION_DAYS
+from src.core.constants import SCHEDULING_CONSTANTS
 
 class SubmissionType(str, Enum):
     """Types of submissions."""
@@ -33,6 +33,7 @@ class SchedulerStrategy(str, Enum):
     RANDOM = "random"
     HEURISTIC = "heuristic"
     OPTIMAL = "optimal"
+    ADVANCED = "advanced"
 
 @dataclass
 class Submission:
@@ -104,7 +105,7 @@ class Submission:
             # Posters typically have shorter duration than papers
             if self.draft_window_months > 0:
                 return self.draft_window_months * days_per_month
-            return DEFAULT_POSTER_DURATION_DAYS
+            return SCHEDULING_CONSTANTS.poster_duration_days
         # SubmissionType.PAPER
         # Use draft_window_months if available, otherwise fall back to config
         if self.draft_window_months > 0:
@@ -282,71 +283,7 @@ class Config:
     
     @classmethod
     def create_default(cls) -> 'Config':
-        """Create a default configuration with sample data."""
-        # Create sample conferences
-        sample_conferences = [
-            Conference(
-                id="ICRA2026",
-                name="IEEE International Conference on Robotics and Automation 2026",
-                conf_type=ConferenceType.ENGINEERING,
-                recurrence=ConferenceRecurrence.ANNUAL,
-                deadlines={
-                    SubmissionType.ABSTRACT: date(2026, 1, 15),
-                    SubmissionType.PAPER: date(2026, 2, 15)
-                }
-            ),
-            Conference(
-                id="MICCAI2026",
-                name="Medical Image Computing and Computer Assisted Intervention 2026",
-                conf_type=ConferenceType.MEDICAL,
-                recurrence=ConferenceRecurrence.ANNUAL,
-                deadlines={
-                    SubmissionType.ABSTRACT: date(2026, 3, 1),
-                    SubmissionType.PAPER: date(2026, 4, 1)
-                }
-            )
-        ]
-        
-        # Create sample submissions
-        sample_submissions = [
-            Submission(
-                id="mod1-wrk",
-                title="Endoscope Navigation Module",
-                kind=SubmissionType.ABSTRACT,
-                conference_id="ICRA2026",
-                depends_on=[],
-                draft_window_months=0,
-                engineering=True
-            ),
-            Submission(
-                id="paper1-pap",
-                title="AI-Powered Endoscope Control System",
-                kind=SubmissionType.PAPER,
-                conference_id="ICRA2026",
-                depends_on=["mod1-wrk"],
-                draft_window_months=3,
-                engineering=True
-            ),
-            Submission(
-                id="mod2-wrk",
-                title="Medical Image Analysis Module",
-                kind=SubmissionType.ABSTRACT,
-                conference_id="MICCAI2026",
-                depends_on=[],
-                draft_window_months=0,
-                engineering=False
-            ),
-            Submission(
-                id="paper2-pap",
-                title="Deep Learning for Endoscope Guidance",
-                kind=SubmissionType.PAPER,
-                conference_id="MICCAI2026",
-                depends_on=["mod2-wrk"],
-                draft_window_months=3,
-                engineering=False
-            )
-        ]
-        
+        """Create a default configuration with minimal data for app initialization."""
         # Default penalty costs
         default_penalty_costs = {
             "default_mod_penalty_per_day": 1000.0,
@@ -372,8 +309,8 @@ class Config:
         }
         
         return cls(
-            submissions=sample_submissions,
-            conferences=sample_conferences,
+            submissions=[],  # Empty for app initialization
+            conferences=[],  # Empty for app initialization
             min_abstract_lead_time_days=30,
             min_paper_lead_time_days=90,
             max_concurrent_submissions=3,

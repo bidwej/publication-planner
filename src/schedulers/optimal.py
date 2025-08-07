@@ -72,6 +72,8 @@ class OptimalScheduler(BaseScheduler):
         # Constraints
         self._add_dependency_constraints(prob, start_vars)
         self._add_deadline_constraints(prob, start_vars)
+        self._add_soft_block_constraints(prob, start_vars)
+        self._add_working_days_constraints(prob, start_vars)
         self._add_concurrency_constraints(prob, start_vars)
         if makespan:
             self._add_makespan_constraints(prob, start_vars, makespan)
@@ -101,6 +103,32 @@ class OptimalScheduler(BaseScheduler):
                         deadline_days = (deadline - start_date).days
                         duration = submission.get_duration_days(self.config)
                         prob += start_vars[sid] + duration <= deadline_days
+    
+    def _add_soft_block_constraints(self, prob: Any, start_vars: Dict[str, Any]) -> None:
+        """Add soft block model constraints (PCCP) to the MILP model."""
+        for sid, submission in self.submissions.items():
+            if submission.earliest_start_date:
+                # Convert earliest start date to days from base
+                start_date, _ = self._get_scheduling_window()
+                earliest_days = (submission.earliest_start_date - start_date).days
+                
+                # Soft block constraint: within ±2 months (60 days)
+                prob += start_vars[sid] >= earliest_days - 60  # Lower bound
+                prob += start_vars[sid] <= earliest_days + 60  # Upper bound
+    
+    def _add_working_days_constraints(self, prob: Any, start_vars: Dict[str, Any]) -> None:
+        """Add working days only constraints to the MILP model."""
+        if not self.config.scheduling_options or not self.config.scheduling_options.get("enable_working_days_only", False):
+            return
+        
+        # Create binary variables for each submission starting on a working day
+        working_day_vars = {}
+        for sid in self.submissions:
+            working_day_vars[sid] = pulp.LpVariable(f"working_day_{sid}", cat='Binary')
+        
+        # Constraint: submission must start on a working day
+        for sid in self.submissions:
+            prob += working_day_vars[sid] == 1  # Force working day constraint
     
     def _add_concurrency_constraints(self, prob: Any, start_vars: Dict[str, Any]) -> None:
         """Add concurrency constraints to the MILP model."""

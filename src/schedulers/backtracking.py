@@ -34,7 +34,7 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
         # Early abstract scheduling if enabled
         if (self.config.scheduling_options and 
             self.config.scheduling_options.get("enable_early_abstract_scheduling", False)):
-            abstract_advance = self.config.scheduling_options.get("abstract_advance_days", SCHEDULING_CONSTANTS.default_abstract_advance_days)
+            abstract_advance = self.config.scheduling_options.get("abstract_advance_days", SCHEDULING_CONSTANTS.abstract_advance_days)
             self._schedule_early_abstracts(schedule, abstract_advance)
         
         while current <= end and len(schedule) < len(self.submissions) and backtracks < self.max_backtracks:

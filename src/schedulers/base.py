@@ -4,7 +4,10 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Dict, List, Type, Optional
 from datetime import date, timedelta
-from src.core.models import Config, Submission, SubmissionType, SchedulerStrategy, Conference
+from src.core.models import (
+    Config, Submission, SubmissionType, SchedulerStrategy, Conference,
+    generate_abstract_id, create_abstract_submission, ensure_abstract_paper_dependency
+)
 from src.core.constraints import validate_deadline_compliance_single, validate_dependencies_satisfied, validate_venue_compatibility
 
 
@@ -67,23 +70,133 @@ class BaseScheduler(ABC):
         """Check if starting on this date meets the deadline."""
         return validate_deadline_compliance_single(start, sub, self.config)
     
-    def _auto_link_abstract_paper(self):
-        """Auto-link abstracts to papers if not already linked (minimal edge case handling)."""
-        # Most abstract-paper dependencies are now handled during config loading
-        # This method only handles edge cases like dynamic conference assignments
+    def _validate_soft_block_model(self, sub: Submission, start: date) -> bool:
+        """Validate soft block model (PCCP) - submissions within ±2 months of earliest start."""
+        if not sub.earliest_start_date:
+            return True
         
+        months_diff = abs((start.year - sub.earliest_start_date.year) * 12 + 
+                         (start.month - sub.earliest_start_date.month))
+        return months_diff <= 2
+    
+    def _validate_working_days_only(self, start: date) -> bool:
+        """Validate working days only constraint."""
+        if not self.config.scheduling_options or not self.config.scheduling_options.get("enable_working_days_only", False):
+            return True
+        
+        return is_working_day(start, self.config.blackout_dates)
+    
+    def _validate_conference_response_time(self, sub: Submission, start: date) -> bool:
+        """Validate conference response time buffer."""
+        if not self.config.scheduling_options or "conference_response_time_days" not in self.config.scheduling_options:
+            return True
+        
+        if not sub.conference_id or sub.conference_id not in self.conferences:
+            return True
+        
+        conf = self.conferences[sub.conference_id]
+        if sub.kind not in conf.deadlines:
+            return True
+        
+        deadline = conf.deadlines[sub.kind]
+        end_date = sub.get_end_date(start, self.config)
+        response_time = self.config.scheduling_options["conference_response_time_days"]
+        response_deadline = deadline + timedelta(days=response_time)
+        
+        return end_date <= response_deadline
+    
+    def _validate_single_conference_policy(self, sub: Submission, schedule: Dict[str, date]) -> bool:
+        """Validate single conference policy - one venue per paper per annual cycle."""
+        if sub.kind != SubmissionType.PAPER or not sub.conference_id:
+            return True
+        
+        # Group by paper ID (remove -pap suffix)
+        paper_id = sub.id.replace("-pap", "")
+        
+        # Check if this paper is already assigned to a different conference
+        for scheduled_id, _ in schedule.items():
+            scheduled_sub = self.submissions.get(scheduled_id)
+            if (scheduled_sub and 
+                scheduled_sub.kind == SubmissionType.PAPER and
+                scheduled_sub.id.replace("-pap", "") == paper_id and
+                scheduled_sub.conference_id != sub.conference_id):
+                return False
+        
+        return True
+    
+    def _validate_all_constraints(self, sub: Submission, start: date, schedule: Dict[str, date]) -> bool:
+        """Validate all constraints for a submission at a given start date."""
+        # Basic constraints
+        if not self._meets_deadline(sub, start):
+            return False
+        
+        if not self._deps_satisfied(sub, schedule, start):
+            return False
+        
+        # Advanced constraints
+        if not self._validate_soft_block_model(sub, start):
+            return False
+        
+        if not self._validate_working_days_only(start):
+            return False
+        
+        if not self._validate_conference_response_time(sub, start):
+            return False
+        
+        if not self._validate_single_conference_policy(sub, schedule):
+            return False
+        
+        # Conference compatibility
+        if sub.conference_id and sub.conference_id in self.conferences:
+            conf = self.conferences[sub.conference_id]
+            if not conf.accepts_submission_type(sub.kind):
+                return False
+        
+        return True
+    
+    def _auto_link_abstract_paper(self):
+        """Auto-link abstracts to papers and create missing abstract submissions."""
         submissions_dict = self.config.submissions_dict
         conferences_dict = self.config.conferences_dict
         
-        # Only handle papers that don't have conference assignments yet
+        # Track papers that need abstracts
+        papers_needing_abstracts = []
+        
+        # Find papers that need abstract submissions
         for submission_id, submission in submissions_dict.items():
             if (submission.kind == SubmissionType.PAPER and 
-                not submission.conference_id and 
-                submission.candidate_conferences):
+                submission.conference_id and 
+                submission.conference_id in conferences_dict):
                 
-                # This will be handled by _assign_conferences method
-                # No need to create abstracts here since conference isn't assigned yet
-                pass
+                conf = conferences_dict[submission.conference_id]
+                
+                # Check if conference requires abstract before paper
+                if conf.requires_abstract_before_paper():
+                    # Generate abstract ID
+                    abstract_id = generate_abstract_id(submission_id, submission.conference_id)
+                    
+                    # Check if abstract already exists
+                    if abstract_id not in submissions_dict:
+                        # Create abstract submission
+                        abstract_submission = create_abstract_submission(
+                            submission, submission.conference_id, 
+                            self.config.penalty_costs or {}
+                        )
+                        
+                        # Add to config submissions
+                        self.config.submissions.append(abstract_submission)
+                        submissions_dict[abstract_id] = abstract_submission
+                        
+                        # Ensure paper depends on abstract
+                        ensure_abstract_paper_dependency(submission, abstract_id)
+                        
+                        papers_needing_abstracts.append(submission_id)
+        
+        # Update submissions dict after adding new submissions
+        self.submissions = {s.id: s for s in self.config.submissions}
+        
+        if papers_needing_abstracts:
+            print(f"Created {len(papers_needing_abstracts)} abstract submissions for papers: {papers_needing_abstracts}")
     
     def _assign_conferences(self, schedule: Dict[str, date]) -> Dict[str, date]:
         """Assign conferences to papers based on candidate_conferences and availability."""

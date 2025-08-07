@@ -7,7 +7,7 @@ import json
 import statistics
 from pathlib import Path
 from core.models import Config, SchedulerStrategy
-from core.constants import MAX_TITLE_LENGTH
+from core.constants import DISPLAY_CONSTANTS
 from core.constraints import validate_schedule_comprehensive, validate_deadline_compliance
 from scoring.penalty import calculate_penalty_score
 from scoring.efficiency import calculate_efficiency_score
@@ -69,7 +69,7 @@ def print_deadline_status(schedule: Dict[str, date], config: Config) -> None:
         else:
             late += 1
             days_late = (end_date - deadline).days
-            print(f"  LATE: {sid} ({sub.title[:MAX_TITLE_LENGTH]}) - {days_late} days late")
+            print(f"  LATE: {sid} ({sub.title[:DISPLAY_CONSTANTS.max_title_length]}) - {days_late} days late")
     
     if total > 0:
         print(f"On time: {on_time}/{total} ({on_time/total*100:.1f}%)")

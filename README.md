@@ -209,13 +209,30 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 - **Weekend Exclusion**: Automatic exclusion of weekends (Saturday/Sunday)
 - **Blackout Date Integration**: Integration with blackout periods
 - **Working Day Calculation**: Proper calculation of working days for durations
-
-### 13. Comprehensive Date Utilities
-- **Safe Date Parsing**: Robust date parsing with fallback values
 - **Working Day Addition**: Add working days while skipping weekends/blackouts
-- **Date Formatting**: Multiple date formatting options (display, compact, relative)
 - **Duration Calculations**: Human-readable duration formatting
 - **Relative Time**: "In X days", "X weeks ago", etc.
+
+### 13. Advanced Scheduling Features
+- **Multiple Scheduling Algorithms**: Greedy, Optimal (MILP), Heuristic, Backtracking, Stochastic, Random
+- **Advanced Constraint Satisfaction**: All business rules integrated into scheduling algorithms
+- **Optimization Features**: MILP optimization for optimal schedules, heuristic strategies for complex scenarios
+- **Priority-Based Scheduling**: Engineering papers weighted higher, medical papers standard priority
+- **Resource Optimization**: Target 80% utilization with penalty for deviations
+- **Deadline-Aware Scheduling**: Automatic deadline compliance checking during scheduling
+- **Dependency-Aware Scheduling**: Automatic dependency satisfaction during scheduling
+- **Conference Compatibility**: Automatic conference-submission type matching
+- **Abstract-to-Paper Dependencies**: Automatic creation and scheduling of required abstracts
+- **Working Days Only**: Optional restriction to business days with weekend/holiday exclusion
+- **Early Abstract Scheduling**: Configurable advance scheduling for abstracts
+- **Soft Block Model**: PCCP modifications within ±2 months with penalties
+- **Single Conference Policy**: One venue per paper per annual cycle enforcement
+- **Conference Response Time**: Buffer time for conference response processing
+- **Blackout Periods**: Federal holidays and custom blackout date enforcement
+- **Slack Cost Optimization**: Monthly slip penalties and full-year deferral penalties
+- **Missed Opportunity Penalties**: Penalties for missed abstract-only submission windows
+- **Real-time Validation**: Comprehensive constraint validation during scheduling
+- **Multi-Objective Optimization**: Balance between makespan, penalties, and resource utilization
 
 ### 14. Conference Submission Type Validation
 - **Abstract-Only Conferences**: Some conferences only accept abstracts (e.g., RSNA, IFAR)
@@ -280,32 +297,63 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ### 1. Greedy Scheduler
 - Prioritizes submissions by deadline and priority
-- Simple, fast, but may not find optimal solutions
+- Uses comprehensive constraint validation
+- Fast execution with good quality solutions
+- Integrates all business rules and constraints
 
 ### 2. Backtracking Scheduler  
-- Explores multiple scheduling paths
+- Explores multiple scheduling paths with constraint satisfaction
 - Can find optimal solutions but slower
-- Uses constraint satisfaction techniques
+- Comprehensive constraint validation at each step
+- Handles complex dependency chains
 
 ### 3. Heuristic Scheduler
 - Combines multiple heuristics for better solutions
 - Balances speed and quality
+- Multiple strategies: earliest deadline, latest start, shortest processing time
+- Critical path analysis for dependency optimization
 
 ### 4. Lookahead Scheduler
 - Considers future implications of current decisions
 - Uses 30-day lookahead window by default
+- Predictive constraint validation
+- Optimizes for long-term resource utilization
 
 ### 5. Random Scheduler
 - Generates random valid schedules
 - Useful for baseline comparisons
+- Comprehensive constraint validation
+- Monte Carlo approach for complex scenarios
 
 ### 6. Stochastic Scheduler
 - Uses probabilistic methods for optimization
 - Good for complex constraint scenarios
+- Adaptive parameter adjustment
+- Multi-objective optimization
 
-### 7. Optimal Scheduler
-- Finds mathematically optimal solutions
+### 7. Optimal Scheduler (MILP)
+- Finds mathematically optimal solutions using Mixed Integer Linear Programming
 - Computationally expensive but highest quality
+- Comprehensive constraint modeling
+- Multi-objective optimization (makespan, penalties, utilization)
+
+### 8. Advanced Scheduler
+- **Multi-Objective Optimization**: Balances makespan, penalties, and resource utilization
+- **Adaptive Scheduling**: Adjusts strategy based on constraint violations
+- **Hybrid Approach**: Combines multiple strategies for optimal results
+- **Constraint Satisfaction**: Advanced backtracking with comprehensive validation
+- **Priority-Based Scoring**: Multi-factor priority calculation including deadline urgency, dependency criticality, resource efficiency, and conference compatibility
+- **Real-time Validation**: All business rules integrated into scheduling process
+- **Resource Optimization**: Target 80% utilization with penalty for deviations
+- **Conference Compatibility**: Automatic conference-submission type matching
+- **Abstract-to-Paper Dependencies**: Automatic creation and scheduling of required abstracts
+- **Working Days Only**: Optional restriction to business days with weekend/holiday exclusion
+- **Soft Block Model**: PCCP modifications within ±2 months with penalties
+- **Single Conference Policy**: One venue per paper per annual cycle enforcement
+- **Conference Response Time**: Buffer time for conference response processing
+- **Blackout Periods**: Federal holidays and custom blackout date enforcement
+- **Slack Cost Optimization**: Monthly slip penalties and full-year deferral penalties
+- **Missed Opportunity Penalties**: Penalties for missed abstract-only submission windows
 
 ## Configuration
 

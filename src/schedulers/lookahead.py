@@ -13,7 +13,7 @@ from src.core.constants import SCHEDULING_CONSTANTS
 class LookaheadGreedyScheduler(GreedyScheduler):
     """Lookahead greedy scheduler that considers future implications of decisions."""
     
-    def __init__(self, config, lookahead_days: int = SCHEDULING_CONSTANTS.default_lookahead_days):
+    def __init__(self, config, lookahead_days: int = SCHEDULING_CONSTANTS.lookahead_window_days):
         """Initialize scheduler with config and lookahead buffer."""
         super().__init__(config)
         self.lookahead_days = lookahead_days
