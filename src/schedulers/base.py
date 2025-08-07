@@ -74,6 +74,70 @@ class BaseScheduler(ABC):
         """Validate that submissions are compatible with their venues."""
         validate_venue_compatibility(self.submissions, self.conferences)
     
+    def _calculate_earliest_start_date(self, submission: Submission) -> date:
+        """Calculate the earliest start date for a submission based on dependencies and constraints."""
+        # If explicitly set, use it
+        if submission.earliest_start_date:
+            return submission.earliest_start_date
+        
+        # Calculate based on dependencies
+        earliest_date = date.today()
+        
+        # Check if any dependencies exist
+        if submission.depends_on:
+            for dep_id in submission.depends_on:
+                if dep_id in self.submissions:
+                    dep = self.submissions[dep_id]
+                    # For now, assume dependency must be completed before this submission starts
+                    # In a real system, you might have more complex dependency logic
+                    earliest_date = max(earliest_date, date.today() + timedelta(days=1))
+        
+        # Check conference deadline and work backwards
+        if submission.conference_id and submission.conference_id in self.conferences:
+            conf = self.conferences[submission.conference_id]
+            if submission.kind in conf.deadlines:
+                deadline = conf.deadlines[submission.kind]
+                # Work backwards from deadline
+                lead_time = self.config.min_paper_lead_time_days
+                if submission.kind.value == "ABSTRACT":
+                    lead_time = self.config.min_abstract_lead_time_days
+                
+                # Calculate latest possible start date
+                latest_start = deadline - timedelta(days=lead_time)
+                earliest_date = max(earliest_date, latest_start - timedelta(days=30))  # Buffer
+        
+        return earliest_date
+    
+    def _get_scheduling_window(self) -> tuple[date, date]:
+        """Get the scheduling window (start and end dates) for all submissions."""
+        # Collect all relevant dates
+        dates = []
+        
+        # Add explicit earliest start dates
+        for submission in self.submissions.values():
+            if submission.earliest_start_date:
+                dates.append(submission.earliest_start_date)
+            else:
+                # Calculate implicit earliest start date
+                dates.append(self._calculate_earliest_start_date(submission))
+        
+        # Add conference deadlines
+        for conference in self.conferences.values():
+            dates.extend(conference.deadlines.values())
+        
+        # Add today's date as fallback
+        dates.append(date.today())
+        
+        if not dates:
+            # Ultimate fallback
+            start_date = date.today()
+            end_date = start_date + timedelta(days=365)  # 1 year from today
+        else:
+            start_date = min(dates)
+            end_date = max(dates) + timedelta(days=self.config.min_paper_lead_time_days * 2)
+        
+        return start_date, end_date
+    
     def _schedule_early_abstracts(self, schedule: Dict[str, date], abstract_advance: int):
         """Schedule abstracts early if enabled."""
         abstracts = [sid for sid, sub in self.submissions.items() 

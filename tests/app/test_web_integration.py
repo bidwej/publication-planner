@@ -24,6 +24,23 @@ from core.models import SchedulerStrategy
 from schedulers.base import BaseScheduler
 from core.constraints import validate_schedule_comprehensive
 
+# Mock classes for testing
+class ScheduleData:
+    def __init__(self, schedule, config, validation_result):
+        self.schedule = schedule
+        self.config = config
+        self.validation_result = validation_result
+
+class ValidationResult:
+    def __init__(self, scores, summary, constraints):
+        self.scores = scores
+        self.summary = summary
+        self.constraints = constraints
+
+class StorageManager:
+    def __init__(self, data_dir):
+        self.data_dir = data_dir
+
 import dash
 
 
@@ -33,7 +50,7 @@ class TestWebAppIntegration:
     @pytest.fixture
     def app(self):
         """Create test app instance."""
-        app = create_app()
+        app = create_dashboard_app()
         app.config['TESTING'] = True
         return app
     
@@ -79,14 +96,14 @@ class TestWebAppIntegration:
         return config
     
     @pytest.fixture
-    def sample_schedule_data(self):
+    def sample_schedule_data(self, sample_config):
         """Create sample schedule data."""
         return ScheduleData(
             schedule={
                 'paper1': date(2024, 1, 1),
                 'abstract1': date(2024, 2, 1)
             },
-            config=sample_config(self),
+            config=sample_config,
             validation_result={
                 'scores': {
                     'penalty_score': 85.2,
@@ -416,7 +433,7 @@ class TestWebAppIntegration:
     def test_app_initialization_workflow(self):
         """Test complete app initialization workflow."""
         # Test app creation
-        app = create_app()
+        app = create_dashboard_app()
         assert app is not None
         assert app.config['TESTING'] is False
         
@@ -901,7 +918,7 @@ class TestWebAppErrorHandling:
     @pytest.fixture
     def app(self):
         """Create test app with error handling."""
-        app = create_app()
+        app = create_dashboard_app()
         app.config['TESTING'] = True
         return app
     
@@ -976,7 +993,7 @@ class TestWebAppUserInteractions:
     @pytest.fixture
     def app(self):
         """Create test app for user interaction testing."""
-        app = create_app()
+        app = create_dashboard_app()
         app.config['TESTING'] = True
         return app
     
@@ -1091,7 +1108,7 @@ class TestWebAppChartsRunner:
     @pytest.fixture
     def app(self):
         """Create test app for charts runner testing."""
-        app = create_app()
+        app = create_dashboard_app()
         app.config['TESTING'] = True
         return app
     

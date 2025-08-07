@@ -125,6 +125,8 @@ def print_metrics_summary(schedule: Dict[str, date], config: Config) -> None:
         return
     
     from core.constraints import validate_deadline_compliance
+    from scoring.quality import calculate_quality_score
+    from scoring.efficiency import calculate_efficiency_score
     
     # Calculate metrics
     penalty_breakdown = calculate_penalty_score(schedule, config)
@@ -176,6 +178,9 @@ def print_strategy_comparison(results: Dict[str, Dict[str, date]], config: Confi
     print(f"{'='*60}")
     
     comparison_data = []
+    
+    from scoring.quality import calculate_quality_score
+    from scoring.efficiency import calculate_efficiency_score
     
     for strategy_name, schedule in results.items():
         penalty = calculate_penalty_score(schedule, config)

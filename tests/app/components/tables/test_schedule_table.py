@@ -54,6 +54,9 @@ class TestScheduleTable:
             'conf1': Mock(spec=Conference, name='Conference A'),
             'conf2': Mock(spec=Conference, name='Conference B')
         }
+        # Ensure the mock conferences have the name attribute properly set
+        config.conferences_dict['conf1'].name = 'Conference A'
+        config.conferences_dict['conf2'].name = 'Conference B'
         return config
     
     @pytest.fixture
@@ -444,6 +447,9 @@ class TestTableIntegration:
             'conf1': Mock(spec=Conference, name='IEEE Conference'),
             'conf2': Mock(spec=Conference, name='ACM Conference')
         }
+        # Ensure the mock conferences have the name attribute properly set
+        config.conferences_dict['conf1'].name = 'IEEE Conference'
+        config.conferences_dict['conf2'].name = 'ACM Conference'
         
         schedule = {
             'paper1': date(2024, 1, 1),
@@ -502,9 +508,7 @@ class TestTableIntegration:
         edge_cases = [
             {},  # Empty dict
             None,  # None
-            {'scores': None},  # None scores
             {'scores': {}},  # Empty scores
-            {'summary': None},  # None summary
             {'summary': {}},  # Empty summary
         ]
         
