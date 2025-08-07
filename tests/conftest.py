@@ -1,7 +1,6 @@
 """Pytest configuration and shared fixtures for all tests."""
 
 import pytest
-import sys
 from pathlib import Path
 
 

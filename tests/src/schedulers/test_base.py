@@ -1,6 +1,5 @@
 """Tests for the base scheduler."""
 
-import pytest
 from datetime import date
 
 from core.models import SubmissionType

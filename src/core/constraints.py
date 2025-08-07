@@ -1,10 +1,10 @@
 """Constraint validation for the Endoscope AI project."""
 
 from __future__ import annotations
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict
 from datetime import date, timedelta
 import statistics
-from src.core.models import Config, Submission, SubmissionType, ConferenceType, DeadlineValidation, DependencyValidation, ResourceValidation, DeadlineViolation, DependencyViolation, ResourceViolation, ConstraintViolation, ConstraintValidationResult
+from src.core.models import ConferenceType, Config, ConstraintValidationResult, DeadlineValidation, DeadlineViolation, DependencyValidation, DependencyViolation, ResourceValidation, ResourceViolation, Submission, SubmissionType
 from src.core.constants import PERFECT_COMPLIANCE_RATE, PERCENTAGE_MULTIPLIER, DAYS_PER_MONTH, DEFAULT_ABSTRACT_ADVANCE_DAYS, DEFAULT_POSTER_DURATION_DAYS
 
 

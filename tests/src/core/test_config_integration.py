@@ -1,6 +1,5 @@
 """Integration tests for config functionality."""
 
-import pytest
 import sys
 from pathlib import Path
 from unittest.mock import patch

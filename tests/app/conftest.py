@@ -3,7 +3,6 @@
 import pytest
 import json
 from unittest.mock import Mock
-from datetime import date
 
 
 @pytest.fixture
@@ -59,8 +58,6 @@ def mock_storage():
 @pytest.fixture
 def temp_config_file(tmp_path):
     """Fixture to provide a temporary config file for testing."""
-    from src.core.models import Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
-    from datetime import date
     
     # Create sample submissions and conferences
     submissions = [

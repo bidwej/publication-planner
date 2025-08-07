@@ -1,7 +1,6 @@
 """Tests for app.main module."""
 
 from unittest.mock import Mock, patch
-import sys
 
 from app.main import main, create_dashboard_app, create_timeline_app
 

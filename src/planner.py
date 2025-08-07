@@ -13,8 +13,6 @@ from scoring.penalty import calculate_penalty_score
 from scoring.efficiency import calculate_efficiency_score, calculate_efficiency_resource, calculate_efficiency_timeline
 from core.constraints import validate_schedule_comprehensive
 from schedulers.base import BaseScheduler
-from output.reports import generate_schedule_report
-from output.console import print_schedule_summary
 
 
 class Planner:

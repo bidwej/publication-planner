@@ -4,7 +4,7 @@ Web application specific models.
 
 from dataclasses import dataclass
 from typing import Optional, List
-from src.core.models import ScheduleState, SchedulerStrategy, ScheduleSummary
+from src.core.models import ScheduleState, SchedulerStrategy
 
 
 @dataclass

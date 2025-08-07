@@ -1,8 +1,6 @@
 """Tests for app.storage module."""
 
-import json
 from unittest.mock import Mock, patch
-from pathlib import Path
 from app.storage import ScheduleStorage
 from src.core.models import ScheduleState, SchedulerStrategy
 

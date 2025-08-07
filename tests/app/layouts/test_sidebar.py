@@ -1,5 +1,6 @@
 """Tests for app.layouts.sidebar module."""
 
+
 from dash import html, dcc
 from layouts.sidebar import create_sidebar
 from core.models import SchedulerStrategy
@@ -8,14 +9,14 @@ from core.models import SchedulerStrategy
 class TestSidebarLayout:
     """Test cases for sidebar layout component."""
     
-    def test_create_sidebar_returns_aside_element(self):
+    def test_create_sidebar_returns_aside_element(self) -> None:
         """Test that create_sidebar returns an aside element."""
         sidebar = create_sidebar()
         
         assert isinstance(sidebar, html.Aside)
         assert sidebar.className == "sidebar"
     
-    def test_sidebar_contains_strategy_section(self):
+    def test_sidebar_contains_strategy_section(self) -> None:
         """Test that sidebar contains the strategy selection section."""
         sidebar = create_sidebar()
         
@@ -58,7 +59,7 @@ class TestSidebarLayout:
         assert generate_btn.children[0].className == "fas fa-play"
         assert generate_btn.children[1] == " Generate Schedule"
     
-    def test_sidebar_contains_configuration_section(self):
+    def test_sidebar_contains_configuration_section(self) -> None:
         """Test that sidebar contains the configuration section with sliders."""
         sidebar = create_sidebar()
         
