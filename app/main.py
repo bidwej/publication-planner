@@ -5,21 +5,18 @@ Supports both dashboard and timeline modes.
 
 import dash
 from dash import html, dcc, Input, Output, State, callback_context, exceptions
-from datetime import date
-import json
-from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict
 import argparse
 import sys
 
 # Import core functionality
-sys.path.append('src')
-from core.config import load_config
-from core.models import Config, SchedulerStrategy, ScheduleState
+from src.core.config import load_config
+from src.core.models import Config, SchedulerStrategy
 from app.models import WebAppState
-from core.constraints import validate_schedule_comprehensive
+from src.core.constraints import validate_schedule_comprehensive
 
-from schedulers.base import BaseScheduler
+from src.schedulers.base import BaseScheduler
+# Import scheduler implementations to register them
 
 # Import app components
 from app.layouts.header import create_header

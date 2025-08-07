@@ -4,15 +4,10 @@ Interactive Gantt chart component for schedule visualization.
 
 import plotly.graph_objects as go
 from datetime import date, timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List
 import json
-import sys
-import os
 
-# Add the src directory to the path for imports
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'src'))
-
-from core.models import Config, Submission, SubmissionType
+from src.core.models import Config, Submission, SubmissionType
 from .gantt_formatter import GanttFormatter
 
 class GanttChartBuilder:

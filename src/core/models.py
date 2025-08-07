@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import Dict, List, Optional, Any
 from datetime import date
-from dataclasses import dataclass, asdict, replace
+from dataclasses import asdict, dataclass
 from enum import Enum
 from dateutil.parser import parse as parse_date
 
@@ -160,7 +160,7 @@ class Config:
     @classmethod
     def create_default(cls) -> 'Config':
         """Create a default configuration with sample data."""
-        from datetime import date, timedelta
+        from datetime import date
         
         # Create sample conferences
         sample_conferences = [

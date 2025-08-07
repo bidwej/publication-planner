@@ -1,9 +1,7 @@
 """Pytest configuration and shared fixtures for src tests."""
 
 import pytest
-import os
 import json
-import tempfile
 from datetime import date
 from pathlib import Path
 

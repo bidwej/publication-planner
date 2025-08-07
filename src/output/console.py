@@ -7,9 +7,9 @@ import statistics
 from core.models import Config, SchedulerStrategy
 from core.constants import MAX_TITLE_LENGTH
 from core.constraints import validate_schedule_comprehensive
-from scoring.penalty import calculate_penalty_score
-from scoring.quality import calculate_quality_score
-from scoring.efficiency import calculate_efficiency_score
+from src.scoring.penalty import calculate_penalty_score
+from src.scoring.quality import calculate_quality_score
+from src.scoring.efficiency import calculate_efficiency_score
 
 
 def print_schedule_summary(schedule: Dict[str, date], config: Config) -> None:

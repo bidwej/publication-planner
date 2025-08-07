@@ -1,11 +1,11 @@
 """Penalty scoring functions."""
 
-from typing import Dict, List
+from typing import Dict
 from datetime import date, timedelta
 from collections import defaultdict
 
-from core.models import Config, PenaltyBreakdown, SubmissionType, ConferenceType
-from core.constants import (
+from ..core.models import Config, PenaltyBreakdown, SubmissionType, ConferenceType
+from ..core.constants import (
     MIN_SCORE, TECHNICAL_AUDIENCE_LOSS_PENALTY, AUDIENCE_MISMATCH_PENALTY,
     DEFAULT_DEPENDENCY_VIOLATION_PENALTY
 )

@@ -1,6 +1,5 @@
 """Tests for core models."""
 
-import pytest
 from datetime import date
 from src.core.models import (
     Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence,

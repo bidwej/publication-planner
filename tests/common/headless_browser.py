@@ -2,7 +2,6 @@
 Headless browser test functions for capturing web app screenshots.
 """
 
-import asyncio
 import subprocess
 import time
 import requests
@@ -11,15 +10,14 @@ import os
 import socket
 import logging
 from pathlib import Path
-from typing import Optional, Dict, Any, Tuple, List
-from playwright.async_api import async_playwright, Browser, Page, TimeoutError as PlaywrightTimeoutError
+from typing import Any, Dict, Optional
+from playwright.async_api import Page, TimeoutError as PlaywrightTimeoutError, async_playwright
 
 # Add project root to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 class ConfigurationError(Exception):
     """Raised when configuration validation fails."""
-    pass
 
 def validate_script_path(script_path: str) -> bool:
     """
@@ -162,19 +160,19 @@ def validate_dependencies() -> bool:
     
     # Check for playwright
     try:
-        import playwright
+        pass
     except ImportError:
         missing_deps.append("playwright")
     
     # Check for requests
     try:
-        import requests
+        pass
     except ImportError:
         missing_deps.append("requests")
     
     # Check for asyncio
     try:
-        import asyncio
+        pass
     except ImportError:
         missing_deps.append("asyncio")
     
@@ -294,15 +292,12 @@ logger = logging.getLogger(__name__)
 
 class HeadlessBrowserError(Exception):
     """Custom exception for headless browser operations."""
-    pass
 
 class ServerStartupError(HeadlessBrowserError):
     """Exception raised when server fails to start."""
-    pass
 
 class ScreenshotCaptureError(HeadlessBrowserError):
     """Exception raised when screenshot capture fails."""
-    pass
 
 def is_server_running(url: str, timeout: int = 2) -> bool:
     """Check if a web server is running at the given URL."""

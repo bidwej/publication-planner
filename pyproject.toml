@@ -67,6 +67,6 @@ reportUnknownVariableType = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = ["src", "app", "."]
 addopts = "-v --tb=short --timeout=15 --import-mode=importlib"
 timeout = 15

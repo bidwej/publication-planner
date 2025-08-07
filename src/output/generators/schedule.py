@@ -1,18 +1,17 @@
 """Schedule generation and output functions."""
 
 from __future__ import annotations
-from typing import Dict, List, Optional, Any
+from typing import Dict, List
 from datetime import date, timedelta, datetime
 import statistics
-from collections import defaultdict
 from pathlib import Path
-from core.models import Config, ScheduleSummary, ScheduleMetrics, SubmissionType
-from scoring.penalty import calculate_penalty_score
-from scoring.quality import calculate_quality_score
-from scoring.efficiency import calculate_efficiency_score
-from core.constraints import validate_deadline_compliance, validate_resource_constraints
-from src.output.tables import save_schedule_json, save_table_csv, save_metrics_json
-from core.constants import DAYS_PER_MONTH, PERFECT_COMPLIANCE_RATE, PERCENTAGE_MULTIPLIER
+from ...core.models import Config, ScheduleSummary, ScheduleMetrics, SubmissionType
+from ...scoring.penalty import calculate_penalty_score
+from ...scoring.quality import calculate_quality_score
+from ...scoring.efficiency import calculate_efficiency_score
+from ...core.constraints import validate_deadline_compliance, validate_resource_constraints
+from ...output.tables import save_schedule_json, save_table_csv, save_metrics_json
+from ...core.constants import DAYS_PER_MONTH
 
 def create_output_directory(base_dir: str = "output") -> str:
     """Create a timestamped output directory."""

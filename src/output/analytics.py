@@ -1,14 +1,13 @@
 """Analytics and reporting functions."""
 
 from __future__ import annotations
-from typing import Dict, List, Optional, Any
-from datetime import date, timedelta
+from typing import Dict
+from datetime import date
 import statistics
-from collections import defaultdict
 
-from core.models import Config, ScheduleAnalysis, ScheduleDistribution, SubmissionTypeAnalysis, TimelineAnalysis, ResourceAnalysis, SubmissionType
-from core.constraints import _calculate_daily_load, validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
-from core.constants import ANALYTICS_MONTHLY_CONVERSION_FACTOR, PERCENTAGE_MULTIPLIER, ANALYTICS_DEFAULT_COMPLETION_RATE, PERFECT_COMPLIANCE_RATE
+from core.models import Config, ResourceAnalysis, ScheduleAnalysis, ScheduleDistribution, SubmissionTypeAnalysis, TimelineAnalysis
+from core.constraints import _calculate_daily_load
+from core.constants import ANALYTICS_DEFAULT_COMPLETION_RATE, ANALYTICS_MONTHLY_CONVERSION_FACTOR, PERCENTAGE_MULTIPLIER
 
 def analyze_schedule_completeness(schedule: Dict[str, date], config: Config) -> ScheduleAnalysis:
     """Analyze how complete the schedule is."""

@@ -1,7 +1,6 @@
 """Tests for app.main module."""
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from app.main import main, create_dashboard_app, create_timeline_app
 
 

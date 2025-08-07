@@ -3,9 +3,8 @@ Performance metrics chart component.
 """
 
 import plotly.graph_objects as go
-import plotly.express as px
 from typing import Dict, Any, List
-from core.models import Config
+from src.core.models import Config
 
 def create_metrics_chart(validation_result: Dict[str, Any], config: Config) -> go.Figure:
     """Create performance metrics chart."""
@@ -122,7 +121,7 @@ def create_timeline_metrics_chart(schedule: Dict[str, Any], config: Config) -> g
 
 def _calculate_timeline_metrics(schedule: Dict[str, Any], config: Config) -> Dict[str, Any]:
     """Calculate timeline-based metrics."""
-    from datetime import date, timedelta
+    from datetime import timedelta
     
     if not schedule:
         return {'dates': [], 'workload': []}

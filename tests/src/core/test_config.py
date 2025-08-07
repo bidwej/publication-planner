@@ -1,6 +1,5 @@
 """Tests for core configuration loading."""
 
-import pytest
 import tempfile
 from pathlib import Path
 import json

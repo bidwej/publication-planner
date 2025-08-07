@@ -7,7 +7,6 @@ import sqlite3
 import json
 from pathlib import Path
 from typing import Dict, List, Optional, Any
-from datetime import datetime
 
 from src.core.models import ScheduleState
 

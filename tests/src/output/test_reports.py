@@ -3,11 +3,11 @@
 import pytest
 from datetime import date
 from unittest.mock import MagicMock
-from output.reports import (
+from src.output.reports import (
     generate_schedule_report,
     calculate_overall_score
 )
-from core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
+from src.core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
 
 
 class TestReports:

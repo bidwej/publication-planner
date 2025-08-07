@@ -14,7 +14,6 @@ from src.output.tables import (
     create_analytics_table,
     save_schedule_json,
     save_table_csv,
-    save_metrics_json,
     get_output_summary
 )
 

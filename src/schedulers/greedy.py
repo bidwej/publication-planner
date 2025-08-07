@@ -46,7 +46,8 @@ class GreedyScheduler(BaseScheduler):
         
         while current <= end and len(schedule) < len(self.submissions):
             # Skip blackout dates
-            if not is_working_day(current, self.config.blackout_dates):
+            blackout_dates = self.config.blackout_dates or []
+            if not is_working_day(current, blackout_dates):
                 current += timedelta(days=1)
                 continue
             
