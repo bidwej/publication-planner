@@ -405,15 +405,15 @@ class TestMainContentLayout:
         for child in main_content.children:
             if hasattr(child, 'id') and child.id:
                 component_ids.append(child.id)
-            if hasattr(child, 'children'):
+            if hasattr(child, 'children') and child.children:
                 for grandchild in child.children:
                     if hasattr(grandchild, 'id') and grandchild.id:
                         component_ids.append(grandchild.id)
-                    if hasattr(grandchild, 'children'):
+                    if hasattr(grandchild, 'children') and grandchild.children:
                         for great_grandchild in grandchild.children:
                             if hasattr(great_grandchild, 'id') and great_grandchild.id:
                                 component_ids.append(great_grandchild.id)
-                            if hasattr(great_grandchild, 'children'):
+                            if hasattr(great_grandchild, 'children') and great_grandchild.children:
                                 for great_great_grandchild in great_grandchild.children:
                                     if hasattr(great_great_grandchild, 'id') and great_great_grandchild.id:
                                         component_ids.append(great_great_grandchild.id)

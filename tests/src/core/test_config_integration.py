@@ -168,15 +168,11 @@ class TestConfigIntegration:
         # Create a test config
         config = Config.create_default()
         
-        # Test serialization (if save_config exists)
-        try:
-            from src.core.config import save_config
-            with patch('builtins.open', create=True) as mock_open:
-                save_config(config, 'test_config.json')
-                mock_open.assert_called()
-        except ImportError:
-            # save_config doesn't exist, skip this test
-            pytest.skip("save_config function not available")
+        # Test serialization
+        from src.core.config import save_config
+        with patch('builtins.open', create=True) as mock_open:
+            save_config(config, 'test_config.json')
+            mock_open.assert_called()
     
     def test_config_with_edge_cases(self):
         """Test config with edge cases and boundary conditions."""

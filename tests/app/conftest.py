@@ -1,23 +1,9 @@
 """Pytest configuration for app tests."""
 
-import sys
-from pathlib import Path
-
 import pytest
 import json
 from unittest.mock import Mock
-
-# Ensure app and src are in the Python path for these tests
-project_root = Path(__file__).parent.parent.parent
-app_path = project_root / "app"
-src_path = project_root / "src"
-
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
-if str(app_path) not in sys.path:
-    sys.path.insert(0, str(app_path))
-if str(src_path) not in sys.path:
-    sys.path.insert(0, str(src_path))
+from datetime import date
 
 
 @pytest.fixture

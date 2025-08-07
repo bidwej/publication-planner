@@ -296,4 +296,30 @@ def _load_submissions(
 
     return submissions
 
+
+def save_config(config: Config, config_path: str) -> None:
+    """Save a Config object to a JSON file."""
+    try:
+        config_file = Path(config_path)
+        config_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Convert config to dictionary
+        config_dict = {
+            "min_abstract_lead_time_days": config.min_abstract_lead_time_days,
+            "min_paper_lead_time_days": config.min_paper_lead_time_days,
+            "max_concurrent_submissions": config.max_concurrent_submissions,
+            "default_paper_lead_time_months": config.default_paper_lead_time_months,
+            "penalty_costs": config.penalty_costs or {},
+            "priority_weights": config.priority_weights or {},
+            "scheduling_options": config.scheduling_options or {},
+            "blackout_dates": [d.isoformat() for d in (config.blackout_dates or [])],
+            "data_files": config.data_files or {}
+        }
+        
+        with open(config_file, "w", encoding="utf-8") as f:
+            json.dump(config_dict, f, indent=2, ensure_ascii=False)
+            
+    except Exception as e:
+        raise RuntimeError(f"Failed to save configuration: {e}")
+
  

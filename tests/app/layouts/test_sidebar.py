@@ -189,7 +189,7 @@ class TestSidebarLayout:
         """Test that sidebar contains the actions section with buttons."""
         sidebar = create_sidebar()
         
-        # Find the actions section
+        # Find the actions section (last section with action buttons)
         actions_section = None
         for child in sidebar.children:
             if hasattr(child, 'className') and child.className == "sidebar-section":

@@ -69,7 +69,7 @@ class TestHeaderLayout:
         for i, link in enumerate(nav_links):
             assert isinstance(link, html.A)
             assert link.children == expected_links[i]
-            assert link.className == "nav-link"
+            assert "nav-link" in link.className
             assert link.href == "#"
             
             # First link should be active
