@@ -46,9 +46,10 @@ class TestScheduler:
         """Test scheduling with no submissions."""
         scheduler = GreedyScheduler(empty_config)
         
-        # Should raise RuntimeError for empty submissions
-        with pytest.raises(RuntimeError, match="No valid dates found for scheduling"):
-            scheduler.schedule()
+        # Should return empty schedule for no submissions
+        result = scheduler.schedule()
+        assert isinstance(result, dict)
+        assert len(result) == 0
 
     def test_schedule_with_no_valid_dates(self):
         """Test scheduling with no valid dates."""

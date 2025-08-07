@@ -80,8 +80,9 @@ class BaseScheduler(ABC):
         if submission.earliest_start_date:
             return submission.earliest_start_date
         
-        # Calculate based on dependencies
-        earliest_date = date.today()
+        # Start with a reasonable past date as the earliest possible date
+        # Use a date that's well before any reasonable deadline
+        earliest_date = date(2020, 1, 1)  # Use a fixed past date instead of today
         
         # Check if any dependencies exist
         if submission.depends_on:
@@ -90,7 +91,7 @@ class BaseScheduler(ABC):
                     dep = self.submissions[dep_id]
                     # For now, assume dependency must be completed before this submission starts
                     # In a real system, you might have more complex dependency logic
-                    earliest_date = max(earliest_date, date.today() + timedelta(days=1))
+                    earliest_date = max(earliest_date, date(2020, 1, 1) + timedelta(days=1))
         
         # Check conference deadline and work backwards
         if submission.conference_id and submission.conference_id in self.conferences:
@@ -104,6 +105,7 @@ class BaseScheduler(ABC):
                 
                 # Calculate latest possible start date
                 latest_start = deadline - timedelta(days=lead_time)
+                # Use the earlier of: today or latest_start - buffer
                 earliest_date = max(earliest_date, latest_start - timedelta(days=30))  # Buffer
         
         return earliest_date

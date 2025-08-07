@@ -119,8 +119,8 @@ class OptimalScheduler(BaseScheduler):
                 if submission.kind in conf.deadlines:
                     deadline = conf.deadlines[submission.kind]
                     if deadline:
-                        # Convert deadline to days from start
-                        start_date = min(s.earliest_start_date for s in self.submissions.values() if s.earliest_start_date)
+                        # Convert deadline to days from start using robust date calculation
+                        start_date, _ = self._get_scheduling_window()
                         deadline_days = (deadline - start_date).days
                         duration = submission.get_duration_days(self.config)
                         prob += start_vars[sid] + duration <= deadline_days
@@ -169,10 +169,8 @@ class OptimalScheduler(BaseScheduler):
         if solution is None:
             return schedule
         
-        # Get the base date for conversion
-        base_date = min(s.earliest_start_date for s in self.submissions.values() if s.earliest_start_date)
-        if not base_date:
-            base_date = date(2025, 1, 1)  # fallback
+        # Get the base date for conversion using robust date calculation
+        base_date, _ = self._get_scheduling_window()
         
         # Extract start times from solution
         for var in solution.variables():

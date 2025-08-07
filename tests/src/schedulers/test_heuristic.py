@@ -21,9 +21,10 @@ class TestHeuristicScheduler:
         """Test scheduling with empty submissions."""
         scheduler = HeuristicScheduler(empty_config)
         
-        # Empty submissions should raise RuntimeError
-        with pytest.raises(RuntimeError, match="No valid dates found for scheduling"):
-            scheduler.schedule()
+        # Empty submissions should return empty schedule
+        result = scheduler.schedule()
+        assert isinstance(result, dict)
+        assert len(result) == 0
 
     def test_schedule_single_paper(self):
         """Test scheduling with single paper."""

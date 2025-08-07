@@ -5,10 +5,10 @@ import json
 from datetime import date
 from pathlib import Path
 
-from core.models import (
+from src.core.models import (
     Submission, SubmissionType, Config, Conference, ConferenceType, ConferenceRecurrence
 )
-from schedulers.greedy import GreedyScheduler
+from src.schedulers.greedy import GreedyScheduler
 
 
 def create_mock_submission(submission_id, title, submission_type, conference_id, **kwargs):

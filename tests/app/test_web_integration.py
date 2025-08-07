@@ -51,13 +51,12 @@ class TestWebAppIntegration:
     def app(self):
         """Create test app instance."""
         app = create_dashboard_app()
-        app.config['TESTING'] = True
         return app
     
     @pytest.fixture
     def client(self, app):
         """Create test client."""
-        return app.test_client()
+        return app.server.test_client()
     
     @pytest.fixture
     def dashboard_app(self):
@@ -919,13 +918,12 @@ class TestWebAppErrorHandling:
     def app(self):
         """Create test app with error handling."""
         app = create_dashboard_app()
-        app.config['TESTING'] = True
         return app
     
     @pytest.fixture
     def client(self, app):
         """Create test client."""
-        return app.test_client()
+        return app.server.test_client()
     
     def test_invalid_json_request(self, client):
         """Test handling of invalid JSON requests."""
@@ -994,13 +992,12 @@ class TestWebAppUserInteractions:
     def app(self):
         """Create test app for user interaction testing."""
         app = create_dashboard_app()
-        app.config['TESTING'] = True
         return app
     
     @pytest.fixture
     def client(self, app):
         """Create test client."""
-        return app.test_client()
+        return app.server.test_client()
     
     def test_user_navigation_flow(self, client):
         """Test user navigation through the application."""
@@ -1109,13 +1106,12 @@ class TestWebAppChartsRunner:
     def app(self):
         """Create test app for charts runner testing."""
         app = create_dashboard_app()
-        app.config['TESTING'] = True
         return app
     
     @pytest.fixture
     def client(self, app):
         """Create test client."""
-        return app.test_client()
+        return app.server.test_client()
     
     def test_charts_runner_initialization(self):
         """Test charts runner initialization."""

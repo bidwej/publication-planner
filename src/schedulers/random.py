@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 import random
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Optional
 from datetime import date, timedelta
 from schedulers.base import BaseScheduler
 from core.constraints import is_working_day
@@ -14,7 +14,7 @@ from core.constants import DEFAULT_ABSTRACT_ADVANCE_DAYS
 class RandomScheduler(BaseScheduler):
     """Random scheduler that schedules submissions in random order for baseline comparison."""
     
-    def __init__(self, config, seed: int = None):
+    def __init__(self, config, seed: Optional[int] = None):
         """Initialize scheduler with config and optional seed."""
         super().__init__(config)
         if seed is not None:
@@ -33,14 +33,8 @@ class RandomScheduler(BaseScheduler):
         self._validate_venue_compatibility()
         topo = self._topological_order()
         
-        # Global time window
-        dates = [s.earliest_start_date for s in self.submissions.values() if s.earliest_start_date]
-        for c in self.conferences.values():
-            dates.extend(c.deadlines.values())
-        if not dates:
-            raise RuntimeError("No valid dates found for scheduling")
-        current = min(dates)
-        end = max(dates) + timedelta(days=self.config.min_paper_lead_time_days * 2)
+        # Global time window - use robust date calculation
+        current, end = self._get_scheduling_window()
         
         schedule: Dict[str, date] = {}
         active: Set[str] = set()
@@ -71,7 +65,9 @@ class RandomScheduler(BaseScheduler):
                 s = self.submissions[sid]
                 if not self._deps_satisfied(s, schedule, current):
                     continue
-                if s.earliest_start_date and current < s.earliest_start_date:
+                # Use calculated earliest start date
+                earliest_start = self._calculate_earliest_start_date(s)
+                if current < earliest_start:
                     continue
                 ready.append(sid)
             

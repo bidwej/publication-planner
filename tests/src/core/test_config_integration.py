@@ -9,7 +9,7 @@ from datetime import date
 # Add root directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
-from core.models import Config
+from src.core.models import Config
 
 
 class TestConfigIntegration:
@@ -17,7 +17,7 @@ class TestConfigIntegration:
     
     def test_config_loading_integration(self):
         """Test config loading integration with default config."""
-        from core.config import load_config
+        from src.core.config import load_config
         
         with patch('core.config.load_config') as mock_load:
             # Mock load_config to return default config
@@ -42,7 +42,7 @@ class TestConfigIntegration:
     
     def test_config_validation_integration(self):
         """Test config validation integration."""
-        from core.models import Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
+        from src.core.models import Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
         
         # Create valid config
         submissions = [
@@ -80,16 +80,17 @@ class TestConfigIntegration:
     
     def test_config_error_handling(self):
         """Test config error handling integration."""
-        from core.config import load_config
+        from src.core.config import load_config
         
-        # Test with non-existent file
-        with patch('builtins.open', side_effect=FileNotFoundError("Config not found")):
-            with pytest.raises(FileNotFoundError):
-                load_config('non_existent_config.json')
+        # Test with non-existent file - now returns default config instead of raising exception
+        config = load_config('non_existent_config.json')
+        assert isinstance(config, Config)
+        assert len(config.submissions) > 0
+        assert len(config.conferences) > 0
     
     def test_config_with_complex_data(self):
         """Test config with complex data structures."""
-        from core.models import Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
+        from src.core.models import Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
         
         # Create complex config with multiple submissions and conferences
         submissions = [
@@ -164,23 +165,22 @@ class TestConfigIntegration:
     
     def test_config_serialization_integration(self):
         """Test config serialization and deserialization integration."""
-        from core.config import save_config
-        
         # Create a test config
         config = Config.create_default()
         
         # Test serialization (if save_config exists)
         try:
+            from src.core.config import save_config
             with patch('builtins.open', create=True) as mock_open:
                 save_config(config, 'test_config.json')
                 mock_open.assert_called()
-        except NameError:
-            # save_config might not exist, skip this test
-            pass
+        except ImportError:
+            # save_config doesn't exist, skip this test
+            pytest.skip("save_config function not available")
     
     def test_config_with_edge_cases(self):
         """Test config with edge cases and boundary conditions."""
-        from core.models import Config
+        from src.core.models import Config
         
         # Test with empty submissions and conferences
         config = Config(

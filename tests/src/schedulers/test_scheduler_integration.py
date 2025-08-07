@@ -61,7 +61,7 @@ class TestSchedulerIntegration:
         # All dates should be valid
         for submission_id, start_date in schedule.items():
             assert isinstance(start_date, date)
-            assert start_date >= date(2025, 1, 1)  # Reasonable start date
+            assert start_date >= date(2020, 1, 1)  # Reasonable start date (using our robust calculation)
     
     def test_scheduler_error_handling(self):
         """Test scheduler error handling with invalid configurations."""

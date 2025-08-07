@@ -21,9 +21,10 @@ class TestOptimalScheduler:
         """Test scheduling with empty submissions."""
         scheduler = OptimalScheduler(empty_config)
         
-        # Empty submissions should raise ValueError due to no earliest start dates
-        with pytest.raises(ValueError, match="min\\(\\) iterable argument is empty"):
-            scheduler.schedule()
+        # Empty submissions should return empty schedule
+        result = scheduler.schedule()
+        assert isinstance(result, dict)
+        assert len(result) == 0
 
     def test_schedule_single_paper(self):
         """Test scheduling with single paper."""
