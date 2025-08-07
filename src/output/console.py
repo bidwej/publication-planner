@@ -21,8 +21,8 @@ def print_schedule_summary(schedule: Dict[str, date], config: Config) -> None:
         return
     
     print("\n=== Schedule Summary ===")
-    print("Total submissions: %s", len(schedule))
-    print("Date range: %s to %s", min(schedule.values()), max(schedule.values()))
+    print(f"Total submissions: {len(schedule)}")
+    print(f"Date range: {min(schedule.values())} to {max(schedule.values())}")
     
     # Count by type
     abstracts = papers = 0
@@ -33,8 +33,8 @@ def print_schedule_summary(schedule: Dict[str, date], config: Config) -> None:
             abstracts += sub.kind.value == "abstract"
             papers += sub.kind.value == "paper"
     
-    print("Abstracts: %s", abstracts)
-    print("Papers: %s", papers)
+    print(f"Abstracts: {abstracts}")
+    print(f"Papers: {papers}")
     print()
 
 

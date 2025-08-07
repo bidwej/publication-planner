@@ -27,8 +27,8 @@ class TestDeadlineCompliance:
         
         # Create a schedule with valid deadlines (much earlier to account for duration)
         schedule = {
-            "J1-pap": date(2024, 11, 1),  # Much before ICML deadline
-            "J2-pap": date(2024, 11, 1),  # Much before MICCAI deadline
+            "J1-pap-ICML": date(2024, 11, 1),  # Much before ICML deadline
+            "J2-pap-MICCAI": date(2024, 11, 1),  # Much before MICCAI deadline
         }
         
         result = validate_deadline_compliance(schedule, config)
@@ -70,7 +70,8 @@ class TestDependencySatisfaction:
         # Create a schedule with valid dependencies
         schedule = {
             "1-wrk": date(2025, 1, 1),   # Mod 1
-            "J1-pap": date(2025, 2, 1),  # Paper depends on mod 1
+            "J1-abs-ICML": date(2025, 1, 15),  # Abstract depends on mod 1
+            "J1-pap-ICML": date(2025, 2, 1),  # Paper depends on abstract and mod 1
         }
         
         result = validate_dependency_satisfaction(schedule, config)
@@ -84,7 +85,7 @@ class TestDependencySatisfaction:
         
         # Create a schedule with violated dependencies
         schedule = {
-            "J1-pap": date(2025, 1, 1),  # Paper before its dependency
+            "J1-pap-ICML": date(2025, 1, 1),  # Paper before its dependency
             "1-wrk": date(2025, 2, 1),   # Mod after paper
         }
         
@@ -99,7 +100,7 @@ class TestDependencySatisfaction:
         
         # Create a schedule with missing dependencies
         schedule = {
-            "J1-pap": date(2025, 1, 1),  # Paper without its dependency
+            "J1-pap-ICML": date(2025, 1, 1),  # Paper without its dependency
         }
         
         result = validate_dependency_satisfaction(schedule, config)
@@ -126,8 +127,8 @@ class TestResourceConstraints:
         
         # Create a schedule with valid concurrency
         schedule = {
-            "J1-pap": date(2025, 1, 1),
-            "J2-pap": date(2025, 2, 1),  # Different time periods
+            "J1-pap-ICML": date(2025, 1, 1),
+            "J2-pap-MICCAI": date(2025, 2, 1),  # Different time periods
         }
         
         result = validate_resource_constraints(schedule, config)
@@ -141,9 +142,9 @@ class TestResourceConstraints:
         
         # Create a schedule with too many concurrent submissions
         schedule = {
-            "J1-pap": date(2025, 1, 1),
-            "J2-pap": date(2025, 1, 1),
-            "J3-pap": date(2025, 1, 1),  # Too many on same day
+            "J1-pap-ICML": date(2025, 1, 1),
+            "J2-pap-MICCAI": date(2025, 1, 1),
+            "J3-pap-MICCAI": date(2025, 1, 1),  # Too many on same day
         }
         
         result = validate_resource_constraints(schedule, config)
@@ -171,7 +172,8 @@ class TestAllConstraints:
         # Create a valid schedule with proper dependency order
         schedule = {
             "1-wrk": date(2024, 6, 1),   # Mod 1 (much earlier)
-            "J1-pap": date(2024, 12, 1),  # Paper after mod dependency
+            "J1-abs-ICML": date(2024, 11, 1),  # Abstract after mod dependency
+            "J1-pap-ICML": date(2024, 12, 1),  # Paper after abstract dependency
         }
         
         result = validate_all_constraints(schedule, config)
@@ -187,9 +189,9 @@ class TestAllConstraints:
         
         # Create an invalid schedule
         schedule = {
-            "J1-pap": date(2025, 1, 1),  # Paper without dependency
-            "J2-pap": date(2025, 1, 1),  # Too many concurrent
-            "J3-pap": date(2025, 1, 1),  # Too many concurrent
+            "J1-pap-ICML": date(2025, 1, 1),  # Paper without dependency
+            "J2-pap-MICCAI": date(2025, 1, 1),  # Too many concurrent
+            "J3-pap-MICCAI": date(2025, 1, 1),  # Too many concurrent
         }
         
         result = validate_all_constraints(schedule, config)
@@ -214,14 +216,14 @@ class TestConstraintViolations:
         
         # Create a schedule with deadline violations
         schedule = {
-            "J1-pap": date(2025, 12, 1),  # After deadline
+            "J1-pap-ICML": date(2025, 12, 1),  # After deadline
         }
         
         result = validate_deadline_compliance(schedule, config)
         
         assert len(result.violations) > 0
         for violation in result.violations:
-            assert violation.submission_id == "J1-pap"
+            assert violation.submission_id == "J1-pap-ICML"
             # Check if it's a DeadlineViolation with days_late attribute
             if hasattr(violation, 'days_late'):
                 assert violation.days_late > 0
@@ -232,7 +234,7 @@ class TestConstraintViolations:
         
         # Create a schedule with dependency violations
         schedule = {
-            "J1-pap": date(2025, 1, 1),  # Paper before dependency
+            "J1-pap-ICML": date(2025, 1, 1),  # Paper before dependency
             "1-wrk": date(2025, 2, 1),   # Dependency after paper
         }
         
@@ -240,7 +242,7 @@ class TestConstraintViolations:
         
         assert len(result.violations) > 0
         for violation in result.violations:
-            assert violation.submission_id == "J1-pap"
+            assert violation.submission_id == "J1-pap-ICML"
             # Check if it's a DependencyViolation with dependency_id attribute
             if hasattr(violation, 'dependency_id'):
                 assert violation.dependency_id == "1-wrk"
@@ -251,9 +253,9 @@ class TestConstraintViolations:
         
         # Create a schedule with resource violations
         schedule = {
-            "J1-pap": date(2025, 1, 1),
-            "J2-pap": date(2025, 1, 1),
-            "J3-pap": date(2025, 1, 1),  # Too many concurrent
+            "J1-pap-ICML": date(2025, 1, 1),
+            "J2-pap-MICCAI": date(2025, 1, 1),
+            "J3-pap-MICCAI": date(2025, 1, 1),  # Too many concurrent
         }
         
         result = validate_resource_constraints(schedule, config)
@@ -314,13 +316,9 @@ class TestConferenceCompatibility:
         
         # Create schedule with valid assignments
         schedule = {
-            "J1-pap": date(2025, 1, 1),  # Engineering paper
-            "J2-pap": date(2025, 1, 1),  # Medical paper
+            "J1-pap-ICML": date(2025, 1, 1),  # Engineering paper
+            "J2-pap-MICCAI": date(2025, 1, 1),  # Medical paper
         }
-        
-        # Manually set conference assignments
-        config.submissions_dict["J1-pap"].conference_id = "ICML"  # Engineering
-        config.submissions_dict["J2-pap"].conference_id = "MICCAI"  # Medical
         
         result = validate_conference_compatibility(schedule, config)
         
@@ -334,11 +332,8 @@ class TestConferenceCompatibility:
         config = load_config("tests/common/data/config.json")
         
         schedule = {
-            "J2-pap": date(2025, 1, 1),  # Medical paper
+            "J2-pap-ICML": date(2025, 1, 1),  # Medical paper assigned to engineering conference
         }
-        
-        # Assign medical paper to engineering conference (violation)
-        config.submissions_dict["J2-pap"].conference_id = "ICML"  # Engineering
         
         result = validate_conference_compatibility(schedule, config)
         
@@ -358,13 +353,9 @@ class TestSingleConferencePolicy:
         config = load_config("tests/common/data/config.json")
         
         schedule = {
-            "J1-pap": date(2025, 1, 1),
-            "J2-pap": date(2025, 1, 1),
+            "J1-pap-ICML": date(2025, 1, 1),
+            "J2-pap-MICCAI": date(2025, 1, 1),
         }
-        
-        # Assign different conferences
-        config.submissions_dict["J1-pap"].conference_id = "ICML"
-        config.submissions_dict["J2-pap"].conference_id = "MICCAI"
         
         result = validate_single_conference_policy(schedule, config)
         
@@ -406,8 +397,8 @@ class TestBlackoutDates:
         config.blackout_dates = [date(2025, 1, 15)]
         
         schedule = {
-            "J1-pap": date(2025, 1, 15),  # On blackout date
-            "J2-pap": date(2025, 1, 20),  # Regular date
+            "J1-pap-ICML": date(2025, 1, 15),  # On blackout date
+            "J2-pap-MICCAI": date(2025, 1, 20),  # Regular date
         }
         
         result = validate_blackout_dates(schedule, config)
@@ -428,7 +419,7 @@ class TestSchedulingOptions:
         config.scheduling_options = None
         
         schedule = {
-            "J1-pap": date(2025, 1, 1),
+            "J1-pap-ICML": date(2025, 1, 1),
         }
         
         result = validate_scheduling_options(schedule, config)
@@ -445,8 +436,8 @@ class TestPriorityWeighting:
         config = load_config("tests/common/data/config.json")
         
         schedule = {
-            "J1-pap": date(2025, 1, 1),  # Engineering paper
-            "J2-pap": date(2025, 1, 1),  # Medical paper
+            "J1-pap-ICML": date(2025, 1, 1),  # Engineering paper
+            "J2-pap-MICCAI": date(2025, 1, 1),  # Medical paper
             "1-wrk": date(2025, 1, 1),   # Mod
         }
         
@@ -463,7 +454,7 @@ class TestPriorityWeighting:
         config.priority_weights = None
         
         schedule = {
-            "J1-pap": date(2025, 1, 1),
+            "J1-pap-ICML": date(2025, 1, 1),
         }
         
         result = validate_priority_weighting(schedule, config)
@@ -480,8 +471,8 @@ class TestPaperLeadTimeMonths:
         config = load_config("tests/common/data/config.json")
         
         schedule = {
-            "J1-pap": date(2025, 1, 1),
-            "J2-pap": date(2025, 1, 1),
+            "J1-pap-ICML": date(2025, 1, 1),
+            "J2-pap-MICCAI": date(2025, 1, 1),
         }
         
         result = validate_paper_lead_time_months(schedule, config)
@@ -503,8 +494,8 @@ class TestComprehensiveConstraints:
         
         # Create a valid schedule
         schedule = {
-            "J1-pap": date(2025, 1, 1),
-            "J2-pap": date(2025, 1, 1),
+            "J1-pap-ICML": date(2025, 1, 1),
+            "J2-pap-MICCAI": date(2025, 1, 1),
             "1-wrk": date(2025, 6, 1),
         }
         
@@ -533,10 +524,10 @@ class TestComprehensiveConstraints:
         
         # Create schedule with violations
         schedule = {
-            "J1-pap": date(2025, 1, 1),
-            "J2-pap": date(2025, 1, 1),
-            "J3-pap": date(2025, 1, 1),  # Too many concurrent
-            "J4-pap": date(2025, 1, 1),  # Too many concurrent
+            "J1-pap-ICML": date(2025, 1, 1),
+            "J2-pap-MICCAI": date(2025, 1, 1),
+            "J3-pap-MICCAI": date(2025, 1, 1),  # Too many concurrent
+            "J4-pap-MICCAI": date(2025, 1, 1),  # Too many concurrent
         }
         
         result = validate_all_constraints_comprehensive(schedule, config)

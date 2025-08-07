@@ -12,7 +12,17 @@ from scoring.quality import calculate_quality_score
 from scoring.penalty import calculate_penalty_score
 from scoring.efficiency import calculate_efficiency_score, calculate_efficiency_resource, calculate_efficiency_timeline
 from core.constraints import validate_schedule_comprehensive
-from schedulers.base import BaseScheduler
+from src.schedulers.base import BaseScheduler
+# Import scheduler implementations to register them
+from src.schedulers.greedy import GreedyScheduler
+from src.schedulers.stochastic import StochasticGreedyScheduler
+from src.schedulers.lookahead import LookaheadGreedyScheduler
+from src.schedulers.backtracking import BacktrackingGreedyScheduler
+from src.schedulers.random import RandomScheduler
+from src.schedulers.heuristic import HeuristicScheduler
+from src.schedulers.optimal import OptimalScheduler
+
+# Import scheduler implementations to register them
 
 
 class Planner:

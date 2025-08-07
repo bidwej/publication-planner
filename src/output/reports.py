@@ -127,4 +127,5 @@ def calculate_overall_score(deadline_validation, dependency_validation,
     if dependency_validation.satisfaction_rate > 95:
         score += 0.05
     
-    return max(min(score, REPORT_MAX_SCORE), REPORT_MIN_SCORE)  # Clamp between REPORT_MIN_SCORE and REPORT_MAX_SCORE 
+    # Clamp between REPORT_MIN_SCORE and REPORT_MAX_SCORE
+    return max(min(score, 1.0), REPORT_MIN_SCORE) 

@@ -501,9 +501,10 @@ class TestConferenceMappingAndEngineering:
         
         # Check that submissions are mapped correctly
         mod_submission = next(s for s in config.submissions if s.id == "mod1-wrk")
-        paper_submission = next(s for s in config.submissions if s.id == "paper1-pap")
+        paper_submission = next(s for s in config.submissions if s.id == "paper1-pap-IEEE_ICRA")
         
-        assert mod_submission.conference_id == "IEEE_ICRA"
+        # Mods don't get conference assignments (they are internal work items)
+        assert mod_submission.conference_id is None
         assert paper_submission.conference_id == "IEEE_ICRA"
         assert "mod1-wrk" in (paper_submission.depends_on or [])
     

@@ -222,6 +222,15 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 - **Abstract + Paper Conferences**: Some require abstract submission before paper (e.g., ICML, MICCAI)
 - **Poster-Only Conferences**: Some conferences only accept posters
 - **All-Types Conferences**: Some accept all submission types
+- **Abstract-to-Paper Dependencies**: Papers may require corresponding abstract submissions
+- **Submission Type Compatibility**: Validates that submissions match conference requirements
+- **Conference Submission Types**: 
+  - `ABSTRACT_ONLY`: Only accepts abstracts
+  - `PAPER_ONLY`: Only accepts papers
+  - `POSTER_ONLY`: Only accepts posters
+  - `ABSTRACT_AND_PAPER`: Requires abstract before paper
+  - `ABSTRACT_OR_PAPER`: Accepts either abstract or paper
+  - `ALL_TYPES`: Accepts all submission types
 - **Automatic Detection**: Conference submission types are auto-detected from deadline configuration
 - **Compatibility Validation**: Ensures submissions match conference requirements
 

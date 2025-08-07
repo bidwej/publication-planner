@@ -145,7 +145,9 @@ class GanttChartBuilder:
         """Add federal holiday periods."""
         holiday_dates = set()
         
-        for year in ['2025', '2026']:
+        # Use current year and next year for holiday generation
+        current_year = date.today().year
+        for year in [str(current_year), str(current_year + 1)]:
             holidays = blackout_data.get(f'federal_holidays_{year}', [])
             for holiday_str in holidays:
                 holiday_date = date.fromisoformat(holiday_str)
@@ -320,9 +322,9 @@ class GanttChartBuilder:
             if conference:
                 return conference.name
         
-        if submission.conference_families:
+        if submission.candidate_conferences:
             # Truncate if too many conferences
-            families = submission.conference_families
+            families = submission.candidate_conferences
             if len(families) > 3:
                 families = families[:3] + ['...']
             return f"Suggested: {', '.join(families)}"

@@ -12,8 +12,7 @@ from src.core.constants import (
     REPORT_CONSTANTS, 
     SCHEDULER_CONSTANTS,
     ANALYTICS_CONSTANTS,
-    DEFAULT_ABSTRACT_ADVANCE_DAYS,
-    DEFAULT_POSTER_DURATION_DAYS
+    DEFAULT_ABSTRACT_ADVANCE_DAYS
 )
 
 
@@ -270,7 +269,7 @@ def validate_blackout_dates(schedule: Dict[str, date], config: Config) -> Dict[s
             continue
         
         total_submissions += 1
-        duration_days = _get_submission_duration_days(sub, config)
+        duration_days = sub.get_duration_days(config)
         
         # Check each day of the submission
         submission_violations = []
@@ -362,7 +361,7 @@ def _validate_conference_response_time(schedule: Dict[str, date], config: Config
             continue
         
         deadline = conf.deadlines[SubmissionType.PAPER]
-        end_date = _get_submission_end_date(start_date, sub, config)
+        end_date = sub.get_end_date(start_date, config)
         response_deadline = deadline + timedelta(days=response_time)
         
         if end_date > response_deadline:
@@ -796,67 +795,7 @@ def validate_conference_submission_compatibility(schedule: Dict[str, date], conf
     }
 
 
-def _get_submission_duration_days(sub: Submission, config: Config) -> int:
-    """
-    Calculate the duration in days for a submission.
-    
-    This is the centralized logic for duration calculation used across
-    the entire codebase to ensure consistency.
-    
-    Parameters
-    ----------
-    sub : Submission
-        The submission to calculate duration for
-    config : Config
-        Configuration containing default durations
-        
-    Returns
-    -------
-    int
-        Duration in days
-    """
-    # Local constant for days per month
-    DAYS_PER_MONTH = 30
-    
-    if sub.kind == SubmissionType.ABSTRACT:
-        # Work items (abstracts) should have meaningful duration for timeline visibility
-        # Use configurable work item duration, default to 14 days if not specified
-        work_item_duration = getattr(config, 'work_item_duration_days', 14)
-        return work_item_duration
-    
-    if sub.kind == SubmissionType.POSTER:
-        # Posters typically have shorter duration than papers
-        if sub.draft_window_months > 0:
-            return sub.draft_window_months * DAYS_PER_MONTH
-        return DEFAULT_POSTER_DURATION_DAYS  # Default 1 month for posters
-    
-    # SubmissionType.PAPER
-    # Use draft_window_months if available, otherwise fall back to config
-    if sub.draft_window_months > 0:
-        return sub.draft_window_months * DAYS_PER_MONTH
-    return config.min_paper_lead_time_days
 
-
-def _get_submission_end_date(start_date: date, sub: Submission, config: Config) -> date:
-    """
-    Calculate the end date for a submission.
-    
-    Parameters
-    ----------
-    start_date : date
-        Start date of the submission
-    sub : Submission
-        The submission
-    config : Config
-        Configuration containing default durations
-        
-    Returns
-    -------
-    date
-        End date of the submission
-    """
-    duration_days = _get_submission_duration_days(sub, config)
-    return start_date + timedelta(days=duration_days)
 
 
 def _calculate_daily_load(schedule: Dict[str, date], config: Config) -> Dict[date, int]:
@@ -882,7 +821,7 @@ def _calculate_daily_load(schedule: Dict[str, date], config: Config) -> Dict[dat
         if not sub:
             continue
         
-        duration_days = _get_submission_duration_days(sub, config)
+        duration_days = sub.get_duration_days(config)
         
         # Add load for each day the submission is active
         for i in range(duration_days + 1):
@@ -979,7 +918,7 @@ def validate_deadline_compliance_single(start_date: date, sub: Submission, confi
     if deadline is None:
         return True  # No deadline set
     
-    end_date = _get_submission_end_date(start_date, sub, config)
+    end_date = sub.get_end_date(start_date, config)
     return end_date <= deadline
 
 
@@ -1005,7 +944,7 @@ def validate_deadline_with_lookahead(sub: Submission, start: date, config: Confi
         if deadline is None:
             return True
         
-        end_date = _get_submission_end_date(start, sub, config)
+        end_date = sub.get_end_date(start, config)
         buffer_date = deadline - timedelta(days=lookahead_days)
         return end_date <= buffer_date
     
@@ -1020,7 +959,7 @@ def validate_dependencies_satisfied(sub: Submission, schedule: Dict[str, date],
     for dep_id in sub.depends_on:
         if dep_id not in schedule:
             return False
-        dep_end = _get_submission_end_date(schedule[dep_id], submissions[dep_id], config)
+        dep_end = submissions[dep_id].get_end_date(schedule[dep_id], config)
         if current < dep_end + timedelta(days=sub.lead_time_from_parents):
             return False
     return True

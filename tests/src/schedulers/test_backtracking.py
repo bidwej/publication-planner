@@ -3,7 +3,7 @@
 import pytest
 from datetime import date
 
-from core.models import SubmissionType
+from core.models import SubmissionType, ConferenceRecurrence
 from schedulers.backtracking import BacktrackingGreedyScheduler as BacktrackingScheduler
 
 
@@ -125,12 +125,13 @@ class TestBacktrackingScheduler:
         # Create mock paper with very short deadline
         submission = create_mock_submission(
             "sub1", "Test Paper", SubmissionType.PAPER, "conf1",
-            earliest_start_date=date(2024, 1, 15)  # Start after deadline
+            earliest_start_date=date(2024, 1, 15)  # Start date
         )
         
         conference = create_mock_conference(
             "conf1", "Test Conference", 
-            {SubmissionType.PAPER: date(2024, 2, 1)}
+            {SubmissionType.PAPER: date(2024, 1, 20)},  # Very short deadline - only 5 days
+            recurrence=ConferenceRecurrence.QUARTERLY  # Use quarterly to avoid next year's deadline
         )
         
         config = create_mock_config([submission], [conference])

@@ -47,13 +47,13 @@ class Submission:
     penalty_cost_per_day: Optional[float] = None
     engineering: bool = False
     earliest_start_date: Optional[date] = None
-    conference_families: Optional[List[str]] = None  # Suggested conferences
+    candidate_conferences: Optional[List[str]] = None  # Suggested conferences
     
     def __post_init__(self):
         if self.depends_on is None:
             self.depends_on = []
-        if self.conference_families is None:
-            self.conference_families = []
+        if self.candidate_conferences is None:
+            self.candidate_conferences = []
     
     def validate(self) -> List[str]:
         """Validate submission and return list of errors."""
@@ -63,9 +63,9 @@ class Submission:
         if not self.title:
             errors.append("Missing title")
         # Conference ID is optional for work items (mods)
-        # Papers can have conference_id or conference_families
-        if self.kind == SubmissionType.PAPER and not self.conference_id and not self.conference_families:
-            errors.append("Papers must have either conference_id or conference_families")
+        # Papers can have conference_id or candidate_conferences
+        if self.kind == SubmissionType.PAPER and not self.conference_id and not self.candidate_conferences:
+            errors.append("Papers must have either conference_id or candidate_conferences")
         if self.draft_window_months < 0:
             errors.append("Draft window months cannot be negative")
         if self.lead_time_from_parents < 0:
@@ -406,7 +406,7 @@ class Config:
                 earliest_dates.append(submission.earliest_start_date)
             else:
                 # Use a reasonable default if no earliest_start_date is set
-                earliest_dates.append(date(2020, 1, 1))
+                earliest_dates.append(date.today())
         
         return min(earliest_dates) if earliest_dates else date.today()
     
@@ -416,12 +416,17 @@ class Config:
         if not self.conferences:
             return date.today() + timedelta(days=365)
         
+        # Find the latest deadline and add some buffer
         latest_deadlines = []
         for conference in self.conferences:
             for deadline in conference.deadlines.values():
                 latest_deadlines.append(deadline)
         
-        return max(latest_deadlines) if latest_deadlines else date.today() + timedelta(days=365)
+        if latest_deadlines:
+            latest_deadline = max(latest_deadlines)
+            return latest_deadline + timedelta(days=90)  # 3 months buffer after latest deadline
+        else:
+            return date.today() + timedelta(days=365)
 
 # ===== UNIFIED VALIDATION MODELS =====
 

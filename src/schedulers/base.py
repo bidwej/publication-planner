@@ -73,7 +73,7 @@ class BaseScheduler(ABC):
         pass
     
     def _assign_conferences(self, schedule: Dict[str, date]) -> Dict[str, date]:
-        """Assign conferences to papers based on conference_families and availability."""
+        """Assign conferences to papers based on candidate_conferences and availability."""
         submissions_dict = self.config.submissions_dict
         conferences_dict = self.config.conferences_dict
         
@@ -82,7 +82,7 @@ class BaseScheduler(ABC):
         for submission_id, submission in submissions_dict.items():
             if (submission.kind == SubmissionType.PAPER and 
                 not submission.conference_id and 
-                submission.conference_families):
+                submission.candidate_conferences):
                 papers_needing_assignment.append(submission_id)
         
         # Simple assignment: pick first available conference from family
@@ -92,9 +92,9 @@ class BaseScheduler(ABC):
             # Find compatible conferences from the family
             compatible_conferences = []
             for conf_id, conference in conferences_dict.items():
-                # Check if conference name matches any of the conference families
-                if (submission.conference_families and 
-                    conference.name in submission.conference_families):
+                # Check if conference name matches any of the candidate conferences
+                if (submission.candidate_conferences and 
+                    conference.name in submission.candidate_conferences):
                     
                     # Check conference compatibility matrix from README
                     is_compatible = self._check_conference_compatibility(submission, conference)
@@ -220,18 +220,19 @@ class BaseScheduler(ABC):
         if submission.earliest_start_date:
             return submission.earliest_start_date
         
-        # Start with a reasonable past date as the earliest possible date
-        # Use a date that's well before any reasonable deadline
-        earliest_date = date(2020, 1, 1)  # Use a fixed past date instead of today
+        # Start with today as the earliest possible date
+        earliest_date = date.today()
         
-        # Check if any dependencies exist
+        # Check dependencies - submission must start after all dependencies are completed
         if submission.depends_on:
             for dep_id in submission.depends_on:
                 if dep_id in self.submissions:
                     dep = self.submissions[dep_id]
-                    # For now, assume dependency must be completed before this submission starts
-                    # In a real system, you might have more complex dependency logic
-                    earliest_date = max(earliest_date, date(2020, 1, 1) + timedelta(days=1))
+                    # Calculate when this dependency would end if scheduled today
+                    dep_duration = dep.get_duration_days(self.config)
+                    dep_end_date = date.today() + timedelta(days=dep_duration)
+                    # This submission must start after the dependency ends
+                    earliest_date = max(earliest_date, dep_end_date)
         
         # Check conference deadline and work backwards
         if submission.conference_id and submission.conference_id in self.conferences:
@@ -243,10 +244,12 @@ class BaseScheduler(ABC):
                 if submission.kind.value == "ABSTRACT":
                     lead_time = self.config.min_abstract_lead_time_days
                 
-                # Calculate latest possible start date
+                # Calculate latest possible start date to meet deadline
                 latest_start = deadline - timedelta(days=lead_time)
-                # Use the earlier of: today or latest_start - buffer
-                earliest_date = max(earliest_date, latest_start - timedelta(days=30))  # Buffer
+                # Add buffer to ensure we have enough time
+                latest_start_with_buffer = latest_start - timedelta(days=30)
+                # Earliest date must be before the latest start date
+                earliest_date = min(earliest_date, latest_start_with_buffer)
         
         return earliest_date
     
@@ -270,13 +273,21 @@ class BaseScheduler(ABC):
         # Add today's date as fallback
         dates.append(date.today())
         
-        if not dates:
-            # Ultimate fallback
-            start_date = date.today()
-            end_date = start_date + timedelta(days=365)  # 1 year from today
+        # Calculate window
+        start_date = min(dates)
+        
+        # Calculate end date based on actual conference deadlines
+        if self.conferences:
+            latest_deadlines = []
+            for conf in self.conferences.values():
+                latest_deadlines.extend(conf.deadlines.values())
+            if latest_deadlines:
+                latest_deadline = max(latest_deadlines)
+                end_date = latest_deadline + timedelta(days=90)  # 3 months buffer after latest deadline
+            else:
+                end_date = start_date + timedelta(days=365)  # 1 year from start as fallback
         else:
-            start_date = min(dates)
-            end_date = max(dates) + timedelta(days=self.config.min_paper_lead_time_days * 2)
+            end_date = start_date + timedelta(days=365)  # 1 year from start as fallback
         
         return start_date, end_date
     

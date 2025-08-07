@@ -108,7 +108,8 @@ def _load_blackout_dates(path: Path) -> List[date]:
             blackout_dates.extend(_load_recurring_holidays(raw["recurring_holidays"]))
         
         # Add federal holidays from year-specific data (fallback)
-        for year_key in ["federal_holidays_2025", "federal_holidays_2026"]:
+        current_year = date.today().year
+        for year_key in [f"federal_holidays_{current_year}", f"federal_holidays_{current_year + 1}"]:
             if year_key in raw:
                 for date_str in raw[year_key]:
                     try:
@@ -186,6 +187,7 @@ def _load_submissions(
     pap_lead: int,
     penalty_costs: Dict[str, float],
 ) -> List[Submission]:
+    from datetime import date
     """Load submissions from mods and papers files."""
     with open(mods_path, "r", encoding="utf-8") as f:
         mods = json.load(f)
@@ -205,9 +207,17 @@ def _load_submissions(
         # They are internal development items
         conf_id = None
         
-        # Determine engineering flag based on the mod content
-        # For now, we'll assume medical since these are endoscope-related
+        # Determine engineering flag based on candidate conferences
         engineering = False
+        candidate_conferences = mod.get("candidate_conferences", [])
+        if candidate_conferences:
+            # Check if any conference family is engineering
+            has_engineering = any(family in conf_type_map and conf_type_map[family] == ConferenceType.ENGINEERING 
+                               for family in candidate_conferences)
+            has_medical = any(family in conf_type_map and conf_type_map[family] == ConferenceType.MEDICAL 
+                            for family in candidate_conferences)
+            # If it can go to engineering conferences, it's engineering
+            engineering = has_engineering
         
         submissions.append(
             Submission(
@@ -220,7 +230,7 @@ def _load_submissions(
                 lead_time_from_parents=mod.get("lead_time_from_parents", 0),
                 penalty_cost_per_day=penalty_costs.get("default_mod_penalty_per_day", 0.0),
                 engineering=engineering,
-                earliest_start_date=parse_date(mod.get("est_data_ready", "2025-01-01")).date(),
+                earliest_start_date=parse_date(mod.get("est_data_ready", date.today().isoformat())).date(),
             )
         )
 
@@ -243,28 +253,33 @@ def _load_submissions(
         # Papers have candidate_conferences as suggestions, not assignments
         # We'll leave conference_id as None for now - it can be assigned later
         conf_id = None
-        conference_families = paper.get("candidate_conferences", [])
+        candidate_conferences = paper.get("candidate_conferences", [])
         
-        # Determine engineering flag based on conference families
+        # Determine engineering flag based on candidate conferences
         engineering = False
-        if conference_families:
-            # Check if any conference family is engineering
-            has_engineering = any(family in conf_type_map and conf_type_map[family] == ConferenceType.ENGINEERING 
-                               for family in conference_families)
-            has_medical = any(family in conf_type_map and conf_type_map[family] == ConferenceType.MEDICAL 
-                            for family in conference_families)
+        if candidate_conferences:
+            # Check if any candidate conference is engineering
+            has_engineering = any(conf in conf_type_map and conf_type_map[conf] == ConferenceType.ENGINEERING 
+                               for conf in candidate_conferences)
+            has_medical = any(conf in conf_type_map and conf_type_map[conf] == ConferenceType.MEDICAL 
+                            for conf in candidate_conferences)
             # If it can go to engineering conferences, it's engineering
             engineering = has_engineering
         
-        # Calculate earliest start date based on conference deadlines
-        earliest_start_date = parse_date(paper.get("earliest_start_date", "2025-01-01")).date()
+        # Calculate earliest start date - use provided date or calculate from conference deadlines
+        provided_earliest_date = paper.get("earliest_start_date")
+        if provided_earliest_date:
+            earliest_start_date = parse_date(provided_earliest_date).date()
+        else:
+            # If no explicit date provided, calculate based on conference deadlines
+            earliest_start_date = None
         
-        # If we have conference families, try to calculate a better earliest start date
-        if conference_families:
+        # If we have candidate conferences, try to calculate a better earliest start date
+        if candidate_conferences:
             # Find the earliest deadline among compatible conferences
             earliest_deadline = None
             for conf in conferences:
-                if conf.name in conference_families and SubmissionType.PAPER in conf.deadlines:
+                if conf.name in candidate_conferences and SubmissionType.PAPER in conf.deadlines:
                     deadline = conf.deadlines[SubmissionType.PAPER]
                     if earliest_deadline is None or deadline < earliest_deadline:
                         earliest_deadline = deadline
@@ -274,12 +289,20 @@ def _load_submissions(
                 draft_window_months = paper.get("draft_window_months", 3)
                 duration_days = draft_window_months * 30  # Approximate
                 latest_start = earliest_deadline - timedelta(days=duration_days)
-                # Use the earlier of: calculated latest start or original earliest start
-                earliest_start_date = min(earliest_start_date, latest_start)
+                # Use the calculated start date, or the provided date if it's earlier
+                if earliest_start_date is None:
+                    earliest_start_date = latest_start
+                else:
+                    earliest_start_date = min(earliest_start_date, latest_start)
+        
+        # If we still don't have an earliest start date, use a reasonable default
+        if earliest_start_date is None:
+            # Use current date as a reasonable starting point
+            earliest_start_date = date.today()
         
         # Create submissions for each compatible conference
         for conf in conferences:
-            if conf.name not in conference_families:
+            if conf.name not in candidate_conferences:
                 continue
             
             # Check if conference requires abstracts
@@ -301,7 +324,7 @@ def _load_submissions(
                         penalty_cost_per_day=penalty_costs.get("default_mod_penalty_per_day", 0.0),
                         engineering=engineering,
                         earliest_start_date=earliest_start_date,
-                        conference_families=[conf.name],  # Specific to this conference
+                        candidate_conferences=[conf.name],  # Specific to this conference
                     )
                 )
             
@@ -327,12 +350,12 @@ def _load_submissions(
                         penalty_cost_per_day=penalty_costs.get("default_paper_penalty_per_day", 0.0),
                         engineering=engineering,
                         earliest_start_date=earliest_start_date,
-                        conference_families=[conf.name],  # Specific to this conference
+                        candidate_conferences=[conf.name],  # Specific to this conference
                     )
                 )
         
         # If no conferences were compatible, create a generic paper submission
-        if not conference_families or not any(conf.name in conference_families for conf in conferences):
+        if not candidate_conferences or not any(conf.name in candidate_conferences for conf in conferences):
             submissions.append(
                 Submission(
                     id=f"{paper_id}-pap",
@@ -345,7 +368,7 @@ def _load_submissions(
                     penalty_cost_per_day=penalty_costs.get("default_paper_penalty_per_day", 0.0),
                     engineering=engineering,
                     earliest_start_date=earliest_start_date,
-                    conference_families=conference_families,  # Set the conference families
+                    candidate_conferences=candidate_conferences,  # Set the candidate conferences
                 )
             )
 

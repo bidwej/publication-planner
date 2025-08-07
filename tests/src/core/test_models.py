@@ -119,7 +119,7 @@ class TestSubmission:
         assert len(errors) > 0
         assert any("Missing submission ID" in error for error in errors)
         assert any("Missing title" in error for error in errors)
-        assert any("Missing conference ID" in error for error in errors)
+        assert any("Papers must have either conference_id or candidate_conferences" in error for error in errors)
         assert any("Draft window months cannot be negative" in error for error in errors)
         assert any("Lead time from parents cannot be negative" in error for error in errors)
         assert any("Penalty cost per day cannot be negative" in error for error in errors)
