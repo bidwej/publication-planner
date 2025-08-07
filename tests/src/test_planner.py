@@ -7,8 +7,8 @@ from unittest.mock import Mock, patch
 import tempfile
 import os
 
-from src.core.models import SchedulerStrategy
-from src.planner import Planner
+from core.models import SchedulerStrategy
+from planner import Planner
 
 
 class TestPlanner:
@@ -124,7 +124,7 @@ class TestPlanner:
         try:
             planner = Planner(config_path)
             
-            with patch('src.planner.BaseScheduler.create_scheduler') as mock_create:
+            with patch('planner.BaseScheduler.create_scheduler') as mock_create:
                 mock_scheduler = Mock()
                 mock_scheduler.schedule.return_value = {
                     "paper1": date(2024, 5, 1),
@@ -162,7 +162,7 @@ class TestPlanner:
         try:
             planner = Planner(config_path)
             
-            with patch('src.planner.BaseScheduler.create_scheduler') as mock_create:
+            with patch('planner.BaseScheduler.create_scheduler') as mock_create:
                 mock_scheduler = Mock()
                 mock_scheduler.schedule.return_value = {"paper1": date(2024, 5, 1)}
                 mock_create.return_value = mock_scheduler
@@ -194,7 +194,7 @@ class TestPlanner:
         try:
             planner = Planner(config_path)
             
-            with patch('src.planner.BaseScheduler.create_scheduler') as mock_create:
+            with patch('planner.BaseScheduler.create_scheduler') as mock_create:
                 mock_scheduler = Mock()
                 mock_scheduler.schedule.return_value = {"paper1": date(2024, 5, 1)}
                 mock_create.return_value = mock_scheduler
@@ -226,7 +226,7 @@ class TestPlanner:
         try:
             planner = Planner(config_path)
             
-            with patch('src.planner.generate_simple_monthly_table') as mock_generate:
+            with patch('planner.generate_simple_monthly_table') as mock_generate:
                 mock_generate.return_value = [
                     {"Month": "2024-05", "Papers": "1", "Deadlines": "0"},
                     {"Month": "2024-07", "Papers": "1", "Deadlines": "0"}
@@ -269,7 +269,7 @@ class TestPlanner:
         try:
             planner = Planner(config_path)
             
-            with patch('src.planner.BaseScheduler.create_scheduler') as mock_create:
+            with patch('planner.BaseScheduler.create_scheduler') as mock_create:
                 mock_scheduler = Mock()
                 mock_scheduler.schedule.side_effect = Exception("Scheduler failed")
                 mock_create.return_value = mock_scheduler

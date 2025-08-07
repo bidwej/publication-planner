@@ -1,8 +1,8 @@
 """Tests for app.layouts.sidebar module."""
 
 from dash import html, dcc
-from app.layouts.sidebar import create_sidebar
-from src.core.models import SchedulerStrategy
+from layouts.sidebar import create_sidebar
+from core.models import SchedulerStrategy
 
 
 class TestSidebarLayout:

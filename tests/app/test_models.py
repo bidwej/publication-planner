@@ -1,7 +1,7 @@
 """Tests for app.models module."""
 
 from datetime import date
-from app.models import ScheduleSummary
+from src.core.models import ScheduleSummary
 
 
 class TestScheduleSummary:

@@ -3,8 +3,8 @@
 import pytest
 from datetime import date
 
-from src.core.models import SubmissionType
-from src.schedulers.lookahead import LookaheadGreedyScheduler
+from core.models import SubmissionType
+from schedulers.lookahead import LookaheadGreedyScheduler
 
 
 class TestLookaheadScheduler:

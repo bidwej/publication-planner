@@ -3,8 +3,8 @@
 import pytest
 from datetime import date
 
-from src.core.models import SubmissionType
-from src.schedulers.heuristic import HeuristicScheduler
+from core.models import SubmissionType
+from schedulers.heuristic import HeuristicScheduler
 
 
 class TestHeuristicScheduler:

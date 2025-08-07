@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from src.scoring.penalty import calculate_penalty_score
+from scoring.penalty import calculate_penalty_score
 
 
 class TestCalculatePenaltyScore:

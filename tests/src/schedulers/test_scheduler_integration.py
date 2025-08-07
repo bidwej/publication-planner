@@ -9,7 +9,7 @@ from datetime import date
 # Add root directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
-from src.core.models import SchedulerStrategy
+from core.models import SchedulerStrategy
 
 # Import scheduler implementations to register them
 
@@ -19,8 +19,8 @@ class TestSchedulerIntegration:
     
     def test_scheduler_creation_with_all_strategies(self):
         """Test that all scheduler strategies can be created successfully."""
-        from src.schedulers.base import BaseScheduler
-        from src.core.models import Config
+        from schedulers.base import BaseScheduler
+        from core.models import Config
         
         # Create a minimal config for testing
         config = Config.create_default()
@@ -46,8 +46,8 @@ class TestSchedulerIntegration:
     
     def test_scheduler_schedule_generation(self):
         """Test that schedulers can generate valid schedules."""
-        from src.schedulers.base import BaseScheduler
-        from src.core.models import Config
+        from schedulers.base import BaseScheduler
+        from core.models import Config
         
         config = Config.create_default()
         strategy = SchedulerStrategy.GREEDY
@@ -65,8 +65,8 @@ class TestSchedulerIntegration:
     
     def test_scheduler_error_handling(self):
         """Test scheduler error handling with invalid configurations."""
-        from src.schedulers.base import BaseScheduler
-        from src.core.models import Config
+        from schedulers.base import BaseScheduler
+        from core.models import Config
         
         # Test with empty config
         config = Config.create_default()
@@ -81,8 +81,8 @@ class TestSchedulerIntegration:
     
     def test_scheduler_strategy_comparison(self):
         """Test comparing different scheduler strategies."""
-        from src.schedulers.base import BaseScheduler
-        from src.core.models import Config
+        from schedulers.base import BaseScheduler
+        from core.models import Config
         
         config = Config.create_default()
         
@@ -104,8 +104,8 @@ class TestSchedulerIntegration:
     
     def test_scheduler_with_complex_constraints(self):
         """Test schedulers with complex constraint configurations."""
-        from src.schedulers.base import BaseScheduler
-        from src.core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
+        from schedulers.base import BaseScheduler
+        from core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
         
         # Create a more complex config
         submissions = [

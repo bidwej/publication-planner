@@ -1,11 +1,11 @@
-"""Abstract base scheduler with shared utilities and strategy pattern."""
+"""Base scheduler implementation."""
 
 from __future__ import annotations
-from typing import Dict, List, Type
-from datetime import date, timedelta
 from abc import ABC, abstractmethod
-from core.models import Config, Submission, SubmissionType, SchedulerStrategy
-from core.constraints import validate_deadline_compliance_single, validate_dependencies_satisfied, validate_venue_compatibility
+from typing import Dict, Any, Optional, Type, List
+from datetime import date, timedelta
+from src.core.models import Config, Submission, SubmissionType, SchedulerStrategy
+from src.core.constraints import validate_deadline_compliance_single, validate_dependencies_satisfied, validate_venue_compatibility
 
 
 class BaseScheduler(ABC):

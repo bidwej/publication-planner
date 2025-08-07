@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
-from src.core.models import ScheduleState
+from core.models import ScheduleState
 
 
 class ScheduleStorage:

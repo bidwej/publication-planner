@@ -5,8 +5,8 @@ from pathlib import Path
 import json
 from datetime import date
 from dataclasses import asdict, replace
-from src.core.config import load_config, _load_conferences, _load_submissions, _load_blackout_dates
-from src.core.models import Config, SubmissionType, ConferenceType, SchedulerStrategy, ConferenceRecurrence, Conference
+from core.config import load_config, _load_conferences, _load_submissions, _load_blackout_dates
+from core.models import Config, SubmissionType, ConferenceType, SchedulerStrategy, ConferenceRecurrence, Conference
 
 
 class TestLoadConfig:
@@ -318,8 +318,8 @@ class TestConfigIntegration:
             for filename in ['conferences.json', 'mods.json', 'papers.json']:
                 src = Path(test_data_dir) / filename
                 dst = temp_dir / filename
-                if src.exists():
-                    dst.write_text(src.read_text())
+                if exists():
+                    dst.write_text(read_text())
             
             config = load_config(config_path)
             assert isinstance(config, Config)

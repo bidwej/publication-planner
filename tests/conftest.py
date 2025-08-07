@@ -26,7 +26,7 @@ def temp_dir(tmp_path):
 def create_mock_submission(submission_id: str, title: str, submission_type, conference_id: str, **kwargs):
     """Create a mock submission for testing."""
     # Import here to avoid circular imports
-    from src.core.models import Submission, SubmissionType
+    from core.models import Submission, SubmissionType
     
     if isinstance(submission_type, str):
         submission_type = SubmissionType(submission_type)
@@ -43,7 +43,7 @@ def create_mock_submission(submission_id: str, title: str, submission_type, conf
 def create_mock_conference(conference_id: str, name: str, deadlines: dict, **kwargs):
     """Create a mock conference for testing."""
     # Import here to avoid circular imports
-    from src.core.models import Conference, ConferenceType, ConferenceRecurrence
+    from core.models import Conference, ConferenceType, ConferenceRecurrence
     
     return Conference(
         id=conference_id,
@@ -57,7 +57,7 @@ def create_mock_conference(conference_id: str, name: str, deadlines: dict, **kwa
 def create_mock_config(submissions: list, conferences: list, **kwargs):
     """Create a mock config for testing."""
     # Import here to avoid circular imports
-    from src.core.models import Config
+    from core.models import Config
     
     return Config(
         submissions=submissions,

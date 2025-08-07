@@ -1,7 +1,7 @@
 """Tests for core models."""
 
 from datetime import date
-from src.core.models import (
+from core.models import (
     Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence,
     Config, ValidationResult, ScoringResult, ScheduleResult, ScheduleSummary, ScheduleMetrics,
     PenaltyBreakdown, EfficiencyMetrics, TimelineMetrics
@@ -40,7 +40,7 @@ class TestEnums:
     
     def test_scheduler_strategy_enum(self):
         """Test scheduler strategy enum values."""
-        from src.core.models import SchedulerStrategy
+        from core.models import SchedulerStrategy
         assert SchedulerStrategy.GREEDY == "greedy"
         assert SchedulerStrategy.STOCHASTIC == "stochastic"
         assert SchedulerStrategy.LOOKAHEAD == "lookahead"
@@ -487,7 +487,7 @@ class TestAnalysisClasses:
     
     def test_schedule_analysis(self):
         """Test ScheduleAnalysis creation."""
-        from src.core.models import ScheduleAnalysis
+        from core.models import ScheduleAnalysis
         
         analysis = ScheduleAnalysis(
             scheduled_count=5,
@@ -506,7 +506,7 @@ class TestAnalysisClasses:
     
     def test_schedule_distribution(self):
         """Test ScheduleDistribution creation."""
-        from src.core.models import ScheduleDistribution
+        from core.models import ScheduleDistribution
         
         distribution = ScheduleDistribution(
             monthly_distribution={"2024-05": 2, "2024-06": 3},
@@ -523,7 +523,7 @@ class TestAnalysisClasses:
     
     def test_submission_type_analysis(self):
         """Test SubmissionTypeAnalysis creation."""
-        from src.core.models import SubmissionTypeAnalysis
+        from core.models import SubmissionTypeAnalysis
         
         analysis = SubmissionTypeAnalysis(
             type_counts={"paper": 3, "abstract": 2},
@@ -538,7 +538,7 @@ class TestAnalysisClasses:
     
     def test_timeline_analysis(self):
         """Test TimelineAnalysis creation."""
-        from src.core.models import TimelineAnalysis
+        from core.models import TimelineAnalysis
         
         analysis = TimelineAnalysis(
             start_date=date(2024, 5, 1),
@@ -557,7 +557,7 @@ class TestAnalysisClasses:
     
     def test_resource_analysis(self):
         """Test ResourceAnalysis creation."""
-        from src.core.models import ResourceAnalysis
+        from core.models import ResourceAnalysis
         
         analysis = ResourceAnalysis(
             peak_load=3,

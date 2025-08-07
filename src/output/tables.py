@@ -5,8 +5,8 @@ from typing import Dict, List, Any
 from datetime import date, timedelta
 import json
 import csv
-from core.models import Config, SubmissionType, ScheduleSummary
-from core.constants import MAX_TITLE_LENGTH, DAYS_PER_MONTH
+from src.core.models import Config, SubmissionType, ScheduleSummary
+from src.core.constants import MAX_TITLE_LENGTH, DAYS_PER_MONTH
 from pathlib import Path
 
 

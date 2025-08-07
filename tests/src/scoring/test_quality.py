@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from src.scoring.quality import calculate_quality_score, calculate_quality_robustness, calculate_quality_balance
+from scoring.quality import calculate_quality_score, calculate_quality_robustness, calculate_quality_balance
 
 
 class TestCalculateQualityScore:

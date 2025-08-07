@@ -1,7 +1,7 @@
 """Tests for app.layouts.main_content module."""
 
 from dash import html, dcc
-from app.layouts.main_content import create_main_content
+from layouts.main_content import create_main_content
 
 
 class TestMainContentLayout:

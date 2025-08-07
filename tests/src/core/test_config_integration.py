@@ -9,7 +9,7 @@ from datetime import date
 # Add root directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
-from src.core.models import Config
+from core.models import Config
 
 
 class TestConfigIntegration:
@@ -17,9 +17,9 @@ class TestConfigIntegration:
     
     def test_config_loading_integration(self):
         """Test config loading integration with default config."""
-        from src.core.config import load_config
+        from core.config import load_config
         
-        with patch('src.core.config.load_config') as mock_load:
+        with patch('core.config.load_config') as mock_load:
             # Mock load_config to return default config
             mock_config = Config.create_default()
             mock_load.return_value = mock_config
@@ -42,7 +42,7 @@ class TestConfigIntegration:
     
     def test_config_validation_integration(self):
         """Test config validation integration."""
-        from src.core.models import Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
+        from core.models import Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
         
         # Create valid config
         submissions = [
@@ -80,7 +80,7 @@ class TestConfigIntegration:
     
     def test_config_error_handling(self):
         """Test config error handling integration."""
-        from src.core.config import load_config
+        from core.config import load_config
         
         # Test with non-existent file
         with patch('builtins.open', side_effect=FileNotFoundError("Config not found")):
@@ -89,7 +89,7 @@ class TestConfigIntegration:
     
     def test_config_with_complex_data(self):
         """Test config with complex data structures."""
-        from src.core.models import Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
+        from core.models import Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
         
         # Create complex config with multiple submissions and conferences
         submissions = [
@@ -164,7 +164,7 @@ class TestConfigIntegration:
     
     def test_config_serialization_integration(self):
         """Test config serialization and deserialization integration."""
-        from src.core.config import save_config
+        from core.config import save_config
         
         # Create a test config
         config = Config.create_default()
@@ -180,7 +180,7 @@ class TestConfigIntegration:
     
     def test_config_with_edge_cases(self):
         """Test config with edge cases and boundary conditions."""
-        from src.core.models import Config
+        from core.models import Config
         
         # Test with empty submissions and conferences
         config = Config(

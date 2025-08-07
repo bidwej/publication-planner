@@ -1,7 +1,7 @@
 """Tests for output tables module."""
 
 from datetime import date
-from src.output.tables import (
+from output.tables import (
     generate_simple_monthly_table, 
     generate_schedule_summary_table, 
     generate_deadline_table,

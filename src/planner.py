@@ -1,19 +1,15 @@
-"""Main planner module for the Endoscope AI project."""
+"""Main planner module."""
 
-from pathlib import Path
-from typing import Dict, Any, List
-from datetime import date
-
+from __future__ import annotations
+from typing import Dict, Any
 from core.config import load_config
 from core.models import Config, SchedulerStrategy, ValidationResult, ScoringResult, ScheduleResult, ScheduleSummary, ScheduleMetrics
 from core.constants import PERFECT_COMPLIANCE_RATE
-from dataclasses import replace
-from schedulers.base import BaseScheduler
-from core.constraints import validate_schedule_comprehensive
-from scoring.penalty import calculate_penalty_score
 from scoring.quality import calculate_quality_score
-from scoring.efficiency import calculate_efficiency_score
-from output.tables import generate_simple_monthly_table
+from core.constraints import validate_schedule_comprehensive
+from schedulers.base import BaseScheduler
+from output.reports import generate_schedule_report
+from output.console import print_schedule_summary
 
 
 class Planner:

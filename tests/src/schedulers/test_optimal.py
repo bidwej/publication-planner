@@ -3,8 +3,8 @@
 import pytest
 from datetime import date
 
-from src.core.models import SubmissionType
-from src.schedulers.optimal import OptimalScheduler
+from core.models import SubmissionType
+from schedulers.optimal import OptimalScheduler
 
 
 class TestOptimalScheduler:

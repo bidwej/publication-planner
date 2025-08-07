@@ -1,11 +1,10 @@
-"""Configuration loading and parsing."""
+"""Configuration management for the Endoscope AI project."""
 
-from __future__ import annotations
 import json
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, Any, List, Optional
 from datetime import date
-from core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
+from src.core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
 from dateutil.parser import parse as parse_date
 
 from dateutil.relativedelta import relativedelta

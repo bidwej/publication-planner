@@ -1,7 +1,7 @@
 """Tests for app.layouts.header module."""
 
 from dash import html
-from app.layouts.header import create_header
+from layouts.header import create_header
 
 
 class TestHeaderLayout:

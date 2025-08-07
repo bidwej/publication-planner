@@ -5,10 +5,10 @@ import json
 from datetime import date
 from pathlib import Path
 
-from src.core.models import (
+from core.models import (
     Submission, SubmissionType, Config, Conference, ConferenceType, ConferenceRecurrence
 )
-from src.schedulers.greedy import GreedyScheduler
+from schedulers.greedy import GreedyScheduler
 
 
 def create_mock_submission(submission_id, title, submission_type, conference_id, **kwargs):
@@ -229,7 +229,7 @@ def sample_scheduler(sample_config):
 @pytest.fixture
 def mock_schedule_summary():
     """Fixture to provide a mock schedule summary for testing."""
-    from src.core.models import ScheduleSummary
+    from core.models import ScheduleSummary
     
     return ScheduleSummary(
         total_submissions=5,

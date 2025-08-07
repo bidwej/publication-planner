@@ -3,8 +3,8 @@
 import pytest
 from datetime import date
 
-from src.core.models import SubmissionType
-from src.schedulers.backtracking import BacktrackingGreedyScheduler as BacktrackingScheduler
+from core.models import SubmissionType
+from schedulers.backtracking import BacktrackingGreedyScheduler as BacktrackingScheduler
 
 
 class TestBacktrackingScheduler:

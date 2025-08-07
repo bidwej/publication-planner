@@ -14,20 +14,20 @@ from pathlib import Path
 # Add the src directory to the path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
-from app.main import create_app, create_dashboard_app, create_timeline_app
-from app.models import ScheduleData, ValidationResult, WebAppState
-from app.storage import StorageManager
+from app.main import create_dashboard_app, create_timeline_app
+from app.models import WebAppState
+from app.storage import ScheduleStorage
 from app.components.charts.gantt_chart import create_gantt_chart
 from app.components.charts.metrics_chart import create_metrics_chart
 from app.components.tables.schedule_table import create_schedule_table
 from app.layouts.header import create_header
 from app.layouts.sidebar import create_sidebar
 from app.layouts.main_content import create_main_content
-from src.core.models import Config, Submission, SubmissionType, Conference
-from src.core.config import load_config
-from src.core.models import SchedulerStrategy
-from src.schedulers.base import BaseScheduler
-from src.core.constraints import validate_schedule_comprehensive
+from core.models import Config, Submission, SubmissionType, Conference
+from core.config import load_config
+from core.models import SchedulerStrategy
+from schedulers.base import BaseScheduler
+from core.constraints import validate_schedule_comprehensive
 
 import dash
 

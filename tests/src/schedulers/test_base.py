@@ -3,8 +3,8 @@
 import pytest
 from datetime import date
 
-from src.core.models import SubmissionType
-from src.schedulers.greedy import GreedyScheduler
+from core.models import SubmissionType
+from schedulers.greedy import GreedyScheduler
 
 
 class TestScheduler:

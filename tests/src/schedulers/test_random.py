@@ -3,8 +3,8 @@
 import pytest
 from datetime import date
 
-from src.core.models import SubmissionType
-from src.schedulers.random import RandomScheduler
+from core.models import SubmissionType
+from schedulers.random import RandomScheduler
 
 
 class TestRandomScheduler:

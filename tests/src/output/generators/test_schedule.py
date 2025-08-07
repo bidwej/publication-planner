@@ -4,13 +4,13 @@ from datetime import date
 from unittest.mock import Mock, patch
 from pathlib import Path
 
-from src.output.generators.schedule import (
+from output.generators.schedule import (
     create_output_directory,
     save_all_outputs,
     generate_schedule_summary,
     generate_schedule_metrics
 )
-from src.core.models import Config, ScheduleSummary, ScheduleMetrics
+from core.models import Config, ScheduleSummary, ScheduleMetrics
 
 
 class TestCreateOutputDirectory:
@@ -28,8 +28,8 @@ class TestCreateOutputDirectory:
 
     def test_create_output_directory_default(self, tmp_path):
         """Test directory creation with default base_dir."""
-        with patch('src.output.generators.schedule.Path') as mock_path, \
-             patch('src.output.generators.schedule.Path.mkdir') as mock_mkdir:
+        with patch('output.generators.schedule.Path') as mock_path, \
+             patch('output.generators.schedule.Path.mkdir') as mock_mkdir:
             
             mock_path_instance = Mock()
             # Set up the __truediv__ method for path operations
@@ -64,9 +64,9 @@ class TestSaveAllOutputs:
         
         output_dir = str(tmp_path)
         
-        with patch('src.output.generators.schedule.save_schedule_json') as mock_save_schedule, \
-             patch('src.output.generators.schedule.save_table_csv') as mock_save_csv, \
-             patch('src.output.generators.schedule.save_metrics_json') as mock_save_metrics:
+        with patch('output.generators.schedule.save_schedule_json') as mock_save_schedule, \
+             patch('output.generators.schedule.save_table_csv') as mock_save_csv, \
+             patch('output.generators.schedule.save_metrics_json') as mock_save_metrics:
             
             mock_save_schedule.return_value = "/test/schedule.json"
             mock_save_csv.return_value = "/test/table.csv"
@@ -92,9 +92,9 @@ class TestSaveAllOutputs:
         
         output_dir = str(tmp_path)
         
-        with patch('src.output.generators.schedule.save_schedule_json') as mock_save_schedule, \
-             patch('src.output.generators.schedule.save_table_csv') as mock_save_csv, \
-             patch('src.output.generators.schedule.save_metrics_json') as mock_save_metrics:
+        with patch('output.generators.schedule.save_schedule_json') as mock_save_schedule, \
+             patch('output.generators.schedule.save_table_csv') as mock_save_csv, \
+             patch('output.generators.schedule.save_metrics_json') as mock_save_metrics:
             
             mock_save_schedule.return_value = "/test/schedule.json"
             mock_save_metrics.return_value = "/test/metrics.json"
@@ -142,11 +142,11 @@ class TestGenerateScheduleSummary:
         config = Mock(spec=Config)
         config.submissions = [Mock(), Mock()]
         
-        with patch('src.output.generators.schedule.calculate_penalty_score') as mock_penalty, \
-             patch('src.output.generators.schedule.calculate_quality_score') as mock_quality, \
-             patch('src.output.generators.schedule.calculate_efficiency_score') as mock_efficiency, \
-             patch('src.output.generators.schedule.validate_deadline_compliance') as mock_deadline, \
-             patch('src.output.generators.schedule.validate_resource_constraints') as mock_resource:
+        with patch('output.generators.schedule.calculate_penalty_score') as mock_penalty, \
+             patch('output.generators.schedule.calculate_quality_score') as mock_quality, \
+             patch('output.generators.schedule.calculate_efficiency_score') as mock_efficiency, \
+             patch('output.generators.schedule.validate_deadline_compliance') as mock_deadline, \
+             patch('output.generators.schedule.validate_resource_constraints') as mock_resource:
             
             mock_penalty.return_value = Mock(total_penalty=150.0)
             mock_quality.return_value = 0.85
@@ -209,9 +209,9 @@ class TestGenerateScheduleMetrics:
         config.submissions = [paper1, paper2]
         config.min_paper_lead_time_days = 90
         
-        with patch('src.output.generators.schedule.calculate_penalty_score') as mock_penalty, \
-             patch('src.output.generators.schedule.validate_deadline_compliance') as mock_deadline, \
-             patch('src.output.generators.schedule.calculate_quality_score') as mock_quality:
+        with patch('output.generators.schedule.calculate_penalty_score') as mock_penalty, \
+             patch('output.generators.schedule.validate_deadline_compliance') as mock_deadline, \
+             patch('output.generators.schedule.calculate_quality_score') as mock_quality:
             
             mock_penalty.return_value = Mock(total_penalty=150.0)
             mock_deadline.return_value = Mock(compliance_rate=90.0)

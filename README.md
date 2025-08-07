@@ -377,7 +377,7 @@ python src/web_app.py
 
 ### Basic Usage
 ```python
-from src.planner import Planner
+from planner import Planner
 
 # Load configuration
 planner = Planner("config.json")

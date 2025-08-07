@@ -3,7 +3,7 @@ Sidebar layout component for the Paper Planner web application.
 """
 
 from dash import html, dcc
-from core.models import SchedulerStrategy
+from src.core.models import SchedulerStrategy
 
 def create_sidebar():
     """Create the application sidebar with controls."""
