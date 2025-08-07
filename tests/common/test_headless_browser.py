@@ -126,6 +126,25 @@ class TestValidationFunctions:
 class TestServerManagement:
     """Test server management functionality."""
     
+    @patch('requests.get')
+    def test_is_server_running_success(self, mock_get: Mock) -> None:
+        """Test is_server_running when server is running."""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+        
+        result = is_server_running("http://localhost:8080")
+        assert result is True
+        mock_get.assert_called_once_with("http://localhost:8080", timeout=2)
+    
+    @patch('requests.get')
+    def test_is_server_running_failure(self, mock_get: Mock) -> None:
+        """Test is_server_running when server is not running."""
+        mock_get.side_effect = requests.exceptions.ConnectionError("Connection refused")
+        
+        result = is_server_running("http://localhost:8080")
+        assert result is False
+    
     @patch('subprocess.Popen')
     @patch('tests.common.headless_browser.is_server_running')
     def test_start_web_server_success(self, mock_is_running: Mock, mock_popen: Mock, temp_dir: Path) -> None:

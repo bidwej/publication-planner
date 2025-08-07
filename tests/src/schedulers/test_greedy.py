@@ -421,8 +421,8 @@ class TestGreedyScheduler:
         )
         conference = create_mock_conference(
             "conf1", "Test Conference", 
-            {SubmissionType.ABSTRACT: date(2025, 3, 1),
-             SubmissionType.PAPER: date(2025, 6, 1)}
+            {SubmissionType.ABSTRACT: date(2025, 10, 1),
+             SubmissionType.PAPER: date(2025, 12, 1)}
         )
         config = create_mock_config([abstract, paper], [conference])
         

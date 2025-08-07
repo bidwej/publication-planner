@@ -6,6 +6,7 @@ This script loads configuration data and generates a schedule using the schedule
 """
 
 import argparse
+import sys
 from typing import Dict, Optional
 from datetime import date
 from pathlib import Path

@@ -7,6 +7,7 @@ This runs either the dashboard or timeline with optional screenshot capture.
 import argparse
 import asyncio
 import logging
+import sys
 from pathlib import Path
 
 # Add the project root to Python path
