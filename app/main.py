@@ -26,6 +26,9 @@ from app.components.charts.gantt_chart import create_gantt_chart
 from app.components.charts.metrics_chart import create_metrics_chart
 from app.components.tables.schedule_table import create_schedule_table, create_violations_table
 
+# Global state for the application
+_current_schedule_data = None
+
 def create_dashboard_app():
     """Create the full dashboard application."""
     app = dash.Dash(
@@ -136,6 +139,27 @@ def create_dashboard_app():
         ])
     
     return app
+
+
+def get_current_schedule_data():
+    """Get the current schedule data."""
+    global _current_schedule_data
+    return _current_schedule_data
+
+
+def generate_schedule(config_data=None):
+    """Generate a new schedule."""
+    global _current_schedule_data
+    try:
+        config = load_config('config.json')
+        scheduler = BaseScheduler.create_scheduler(SchedulerStrategy('greedy'), config)
+        schedule = scheduler.schedule()
+        _current_schedule_data = schedule
+        return schedule
+    except Exception as e:
+        print(f"Error generating schedule: {e}")
+        return {}
+
 
 def create_timeline_app():
     """Create the minimal timeline application."""

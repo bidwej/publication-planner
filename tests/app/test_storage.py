@@ -4,7 +4,7 @@ import json
 from unittest.mock import Mock, patch
 from pathlib import Path
 from app.storage import ScheduleStorage
-from core.models import ScheduleState, SchedulerStrategy
+from src.core.models import ScheduleState, SchedulerStrategy
 
 
 class TestScheduleStorage:

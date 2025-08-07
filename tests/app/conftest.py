@@ -73,10 +73,53 @@ def mock_storage():
 @pytest.fixture
 def temp_config_file(tmp_path):
     """Fixture to provide a temporary config file for testing."""
+    from src.core.models import Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
+    from datetime import date
+    
+    # Create sample submissions and conferences
+    submissions = [
+        {
+            "id": "paper1",
+            "title": "Test Paper 1",
+            "kind": "paper",
+            "conference_id": "conf1",
+            "depends_on": [],
+            "draft_window_months": 3,
+            "lead_time_from_parents": 0,
+            "engineering": True
+        },
+        {
+            "id": "abstract1",
+            "title": "Test Abstract 1",
+            "kind": "abstract",
+            "conference_id": "conf1",
+            "depends_on": [],
+            "draft_window_months": 0,
+            "lead_time_from_parents": 0,
+            "engineering": True
+        }
+    ]
+    
+    conferences = [
+        {
+            "id": "conf1",
+            "name": "Test Conference 1",
+            "conf_type": "ENGINEERING",
+            "recurrence": "annual",
+            "deadlines": {
+                "paper": "2025-06-01",
+                "abstract": "2025-03-01"
+            }
+        }
+    ]
+    
     config_data = {
+        "submissions": submissions,
+        "conferences": conferences,
         "min_abstract_lead_time_days": 30,
         "min_paper_lead_time_days": 90,
         "max_concurrent_submissions": 3,
+        "default_paper_lead_time_months": 3,
         "priority_weights": {
             "engineering_paper": 2.0,
             "medical_paper": 1.0,
@@ -85,6 +128,20 @@ def temp_config_file(tmp_path):
         },
         "penalty_costs": {
             "default_mod_penalty_per_day": 1000
+        },
+        "scheduling_options": {
+            "enable_blackout_periods": False,
+            "enable_early_abstract_scheduling": False,
+            "enable_working_days_only": False,
+            "enable_priority_weighting": True,
+            "enable_dependency_tracking": True,
+            "enable_concurrency_control": True
+        },
+        "blackout_dates": [],
+        "data_files": {
+            "conferences": "conferences.json",
+            "papers": "papers.json",
+            "mods": "mods.json"
         }
     }
     
@@ -108,3 +165,48 @@ def mock_planner():
         "efficiency_score": 0.78
     }
     return mock_planner
+
+
+@pytest.fixture
+def sample_config():
+    """Fixture to provide sample config for testing."""
+    from src.core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
+    from datetime import date
+    
+    submissions = [
+        Submission(
+            id="paper1",
+            title="Test Paper 1",
+            kind=SubmissionType.PAPER,
+            conference_id="conf1",
+            engineering=True
+        ),
+        Submission(
+            id="abstract1",
+            title="Test Abstract 1",
+            kind=SubmissionType.ABSTRACT,
+            conference_id="conf1",
+            engineering=True
+        )
+    ]
+    
+    conferences = [
+        Conference(
+            id="conf1",
+            name="Test Conference 1",
+            conf_type=ConferenceType.ENGINEERING,
+            recurrence=ConferenceRecurrence.ANNUAL,
+            deadlines={
+                SubmissionType.PAPER: date(2025, 6, 1),
+                SubmissionType.ABSTRACT: date(2025, 3, 1)
+            }
+        )
+    ]
+    
+    return Config(
+        submissions=submissions,
+        conferences=conferences,
+        min_paper_lead_time_days=90,
+        min_abstract_lead_time_days=30,
+        max_concurrent_submissions=2
+    )

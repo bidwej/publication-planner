@@ -37,7 +37,12 @@ class TestScheduleSummary:
             total_submissions=3,
             schedule_span=90,
             start_date=date(2024, 1, 1),
-            end_date=date(2024, 4, 1)
+            end_date=date(2024, 4, 1),
+            penalty_score=0.0,
+            quality_score=0.0,
+            efficiency_score=0.0,
+            deadline_compliance=0.0,
+            resource_utilization=0.0
         )
         
         assert summary.total_submissions == 3

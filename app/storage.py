@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
-from core.models import ScheduleState
+from src.core.models import ScheduleState
 
 
 class ScheduleStorage:
@@ -152,3 +152,53 @@ class ScheduleStorage:
         except Exception as e:
             print(f"Error importing schedule: {e}")
             return None
+
+
+class StorageManager:
+    """Manager class for storage operations."""
+    
+    def __init__(self):
+        """Initialize storage manager."""
+        self.storage = ScheduleStorage()
+    
+    def save_schedule(self, schedule_data: Dict[str, Any], filename: str) -> str:
+        """Save schedule data."""
+        try:
+            # Convert dict to ScheduleState if needed
+            if isinstance(schedule_data, dict):
+                schedule_state = ScheduleState.from_dict(schedule_data)
+            else:
+                schedule_state = schedule_data
+            
+            success = self.storage.save_schedule(schedule_state, filename)
+            return filename if success else ""
+        except Exception as e:
+            print(f"Error saving schedule: {e}")
+            return ""
+    
+    def load_schedule(self, filename: str) -> Optional[Dict[str, Any]]:
+        """Load schedule data."""
+        try:
+            schedule_state = self.storage.load_schedule(filename)
+            if schedule_state:
+                return schedule_state.to_dict()
+            return None
+        except Exception as e:
+            print(f"Error loading schedule: {e}")
+            return None
+    
+    def list_schedules(self) -> List[Dict[str, Any]]:
+        """List all saved schedules."""
+        try:
+            return self.storage.list_saved_schedules()
+        except Exception as e:
+            print(f"Error listing schedules: {e}")
+            return []
+    
+    def delete_schedule(self, filename: str) -> bool:
+        """Delete a saved schedule."""
+        try:
+            return self.storage.delete_schedule(filename)
+        except Exception as e:
+            print(f"Error deleting schedule: {e}")
+            return False

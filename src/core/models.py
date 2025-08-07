@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from typing import Dict, List, Optional, Any
-from datetime import date
+from datetime import date, timedelta
 from dataclasses import asdict, dataclass
 from enum import Enum
 from dateutil.parser import parse as parse_date
@@ -318,6 +318,35 @@ class Config:
     @property
     def conferences_dict(self) -> Dict[str, Conference]:
         return {conf.id: conf for conf in self.conferences}
+    
+    @property
+    def start_date(self) -> date:
+        """Get the earliest start date for any submission."""
+        if not self.submissions:
+            return date.today()
+        
+        earliest_dates = []
+        for submission in self.submissions:
+            if submission.earliest_start_date:
+                earliest_dates.append(submission.earliest_start_date)
+            else:
+                # Use a reasonable default if no earliest_start_date is set
+                earliest_dates.append(date(2020, 1, 1))
+        
+        return min(earliest_dates) if earliest_dates else date.today()
+    
+    @property
+    def end_date(self) -> date:
+        """Get the latest deadline for any conference."""
+        if not self.conferences:
+            return date.today() + timedelta(days=365)
+        
+        latest_deadlines = []
+        for conference in self.conferences:
+            for deadline in conference.deadlines.values():
+                latest_deadlines.append(deadline)
+        
+        return max(latest_deadlines) if latest_deadlines else date.today() + timedelta(days=365)
 
 # ===== UNIFIED VALIDATION MODELS =====
 
@@ -534,6 +563,50 @@ class ScheduleSummary:
     efficiency_score: float
     deadline_compliance: float
     resource_utilization: float
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            'total_submissions': self.total_submissions,
+            'schedule_span': self.schedule_span,
+            'start_date': self.start_date.isoformat() if self.start_date else None,
+            'end_date': self.end_date.isoformat() if self.end_date else None,
+            'penalty_score': self.penalty_score,
+            'quality_score': self.quality_score,
+            'efficiency_score': self.efficiency_score,
+            'deadline_compliance': self.deadline_compliance,
+            'resource_utilization': self.resource_utilization
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'ScheduleSummary':
+        """Create from dictionary."""
+        start_date = None
+        end_date = None
+        
+        if data.get('start_date'):
+            try:
+                start_date = parse_date(data['start_date']).date()
+            except (ValueError, TypeError):
+                pass
+                
+        if data.get('end_date'):
+            try:
+                end_date = parse_date(data['end_date']).date()
+            except (ValueError, TypeError):
+                pass
+        
+        return cls(
+            total_submissions=data.get('total_submissions', 0),
+            schedule_span=data.get('schedule_span', 0),
+            start_date=start_date,
+            end_date=end_date,
+            penalty_score=data.get('penalty_score', 0.0),
+            quality_score=data.get('quality_score', 0.0),
+            efficiency_score=data.get('efficiency_score', 0.0),
+            deadline_compliance=data.get('deadline_compliance', 0.0),
+            resource_utilization=data.get('resource_utilization', 0.0)
+        )
 
 @dataclass
 class ScheduleMetrics:
