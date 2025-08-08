@@ -76,11 +76,11 @@ class BaseScheduler(ABC):
     # the comprehensive validation functions from constraints.py
     
     def _validate_all_constraints(self, sub: Submission, start: date, schedule: Dict[str, date]) -> bool:
-        """Validate all constraints for a submission at a given start date."""
-        from src.validation import validate_submission_placement
-        
-        # Use the new validation function
-        return validate_submission_placement(sub, start, schedule, self.config)
+    """Validate all constraints for a submission at a given start date."""
+    from src.validation.submission import validate_submission_placement
+
+    # Use the submission validation function
+    return validate_submission_placement(sub, start, schedule, self.config)
     
     def _auto_link_abstract_paper(self):
         """Auto-link abstracts to papers and create missing abstract submissions."""

@@ -7,13 +7,93 @@ from src.core.models import Config, Submission, ConstraintValidationResult
 from src.core.constants import QUALITY_CONSTANTS
 
 from .deadline import validate_deadline_compliance
-from .constraints import validate_dependency_satisfaction
 from .resources import validate_resource_constraints
 from .venue import validate_conference_compatibility, validate_conference_submission_compatibility, validate_single_conference_policy
 
 
-def validate_all_constraints(schedule: Dict[str, date], config: Config) -> ConstraintValidationResult:
-    """Validate all constraints and return basic structured result."""
+def validate_dependency_satisfaction(schedule: Dict[str, date], config: Config):
+    """Validate that all dependencies are satisfied for entire schedule."""
+    from src.core.models import DependencyValidation, DependencyViolation
+    
+    perfect_satisfaction_rate = QUALITY_CONSTANTS.perfect_compliance_rate
+    percentage_multiplier = QUALITY_CONSTANTS.percentage_multiplier
+    
+    if not schedule:
+        return DependencyValidation(
+            is_valid=True,
+            violations=[],
+            summary="No submissions to validate",
+            satisfaction_rate=perfect_satisfaction_rate,
+            total_dependencies=0,
+            satisfied_dependencies=0
+        )
+    
+    violations = []
+    total_dependencies = 0
+    satisfied_dependencies = 0
+    
+    for sid, start_date in schedule.items():
+        sub = config.submissions_dict.get(sid)
+        if not sub or not sub.depends_on:
+            continue
+        
+        for dep_id in sub.depends_on:
+            total_dependencies += 1
+            
+            # Check if dependency exists in schedule
+            if dep_id not in schedule:
+                violations.append(DependencyViolation(
+                    submission_id=sid,
+                    description=f"Dependency {dep_id} not scheduled",
+                    dependency_id=dep_id,
+                    issue="missing_dependency",
+                    severity="high"
+                ))
+                continue
+            
+            # Check if dependency is completed before this submission starts
+            dep_start = schedule[dep_id]
+            dep_sub = config.submissions_dict.get(dep_id)
+            if not dep_sub:
+                violations.append(DependencyViolation(
+                    submission_id=sid,
+                    description=f"Dependency {dep_id} not found in submissions",
+                    dependency_id=dep_id,
+                    issue="invalid_dependency",
+                    severity="high"
+                ))
+                continue
+            
+            dep_end = dep_sub.get_end_date(dep_start, config)
+            
+            if start_date < dep_end:
+                days_violation = (dep_end - start_date).days
+                violations.append(DependencyViolation(
+                    submission_id=sid,
+                    description=f"Submission {sid} starts before dependency {dep_id} completes",
+                    dependency_id=dep_id,
+                    issue="timing_violation",
+                    days_violation=days_violation,
+                    severity="medium"
+                ))
+            else:
+                satisfied_dependencies += 1
+    
+    satisfaction_rate = (satisfied_dependencies / total_dependencies * percentage_multiplier) if total_dependencies > 0 else perfect_satisfaction_rate
+    is_valid = len(violations) == 0
+    
+    return DependencyValidation(
+        is_valid=is_valid,
+        violations=violations,
+        summary=f"{satisfied_dependencies}/{total_dependencies} dependencies satisfied ({satisfaction_rate:.1f}%)",
+        satisfaction_rate=satisfaction_rate,
+        total_dependencies=total_dependencies,
+        satisfied_dependencies=satisfied_dependencies
+    )
+
+
+def validate_schedule_constraints(schedule: Dict[str, date], config: Config) -> ConstraintValidationResult:
+    """Validate all constraints for a complete schedule and return structured result."""
     # Basic validations
     deadline_result = validate_deadline_compliance(schedule, config)
     dependency_result = validate_dependency_satisfaction(schedule, config)
@@ -47,8 +127,8 @@ def validate_all_constraints(schedule: Dict[str, date], config: Config) -> Const
     )
 
 
-def validate_all_constraints_comprehensive(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
-    """Validate all constraints comprehensively and return detailed results."""
+def validate_schedule_comprehensive(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+    """Validate complete schedule comprehensively and return detailed results."""
     if not schedule:
         return {
             "summary": {
@@ -141,10 +221,10 @@ def validate_all_constraints_comprehensive(schedule: Dict[str, date], config: Co
     }
 
 
-def validate_schedule_comprehensive(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
-    """Validate complete schedule comprehensively."""
+def analyze_schedule_comprehensive(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+    """Analyze complete schedule comprehensively with additional metrics."""
     # Get comprehensive validation results
-    result = validate_all_constraints_comprehensive(schedule, config)
+    result = validate_schedule_comprehensive(schedule, config)
     
     # Add additional schedule analysis
     result["schedule_analysis"] = {
@@ -158,35 +238,18 @@ def validate_schedule_comprehensive(schedule: Dict[str, date], config: Config) -
 
 def validate_submission_placement(submission: Submission, start_date: date, schedule: Dict[str, date], config: Config) -> bool:
     """Validate placement of a single submission (lighter version for schedulers)."""
-    from .deadline import validate_deadline_compliance_single
-    from .constraints import validate_dependencies_satisfied
-    from .venue import validate_venue_compatibility
-    
-    # Basic deadline check
-    if not validate_deadline_compliance_single(start_date, submission, config):
-        return False
-    
-    # Basic dependency check
-    if not validate_dependencies_satisfied(submission, schedule, config.submissions_dict, config, start_date):
-        return False
-    
-    # Basic venue compatibility check
-    try:
-        validate_venue_compatibility({submission.id: submission}, config.conferences_dict)
-    except ValueError:
-        return False
-    
-    return True
+    from .submission import validate_submission_placement as _validate_submission_placement
+    return _validate_submission_placement(submission, start_date, schedule, config)
 
 
-def validate_submission_comprehensive(submission: Submission, start_date: date, schedule: Dict[str, date], config: Config) -> bool:
-    """Validate placement of a single submission comprehensively."""
+def validate_submission_in_schedule(submission: Submission, start_date: date, schedule: Dict[str, date], config: Config) -> bool:
+    """Validate if a submission placement works within the complete schedule context."""
     # Create a temporary schedule with this submission
     temp_schedule = schedule.copy()
     temp_schedule[submission.id] = start_date
     
     # Run comprehensive validation on the temporary schedule
-    result = validate_all_constraints_comprehensive(temp_schedule, config)
+    result = validate_schedule_comprehensive(temp_schedule, config)
     
     return result["summary"]["overall_valid"]
 

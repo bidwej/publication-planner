@@ -2,11 +2,11 @@
 
 # Import main validation functions
 from .schedule import (
-    validate_all_constraints,
-    validate_all_constraints_comprehensive,
+    validate_schedule_constraints,
     validate_schedule_comprehensive,
+    analyze_schedule_comprehensive,
     validate_submission_placement,
-    validate_submission_comprehensive
+    validate_submission_in_schedule
 )
 
 # Import specific validation functions
@@ -18,10 +18,10 @@ from .deadline import (
     validate_paper_lead_time_months
 )
 
-from .constraints import (
-    validate_dependency_satisfaction,
+from .submission import (
     validate_dependencies_satisfied,
-    validate_abstract_paper_dependencies
+    validate_venue_compatibility,
+    validate_submission_placement
 )
 
 from .resources import (
@@ -38,11 +38,11 @@ from .venue import (
 # Export main functions for backward compatibility
 __all__ = [
     # Main validation functions
-    "validate_all_constraints",
-    "validate_all_constraints_comprehensive", 
-    "validate_schedule_comprehensive",
+    "validate_schedule_constraints",
+    "validate_schedule_comprehensive", 
+    "analyze_schedule_comprehensive",
     "validate_submission_placement",
-    "validate_submission_comprehensive",
+    "validate_submission_in_schedule",
     
     # Deadline validation
     "validate_deadline_compliance",
@@ -51,10 +51,10 @@ __all__ = [
     "validate_blackout_dates",
     "validate_paper_lead_time_months",
     
-    # Constraint validation
-    "validate_dependency_satisfaction",
+    # Submission validation
     "validate_dependencies_satisfied",
-    "validate_abstract_paper_dependencies",
+    "validate_venue_compatibility",
+    "validate_submission_placement",
     
     # Resource validation
     "validate_resource_constraints",
