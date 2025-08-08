@@ -5,10 +5,10 @@ from pathlib import Path
 import json
 from datetime import date
 from dataclasses import asdict, replace
-from unittest.mock import patch
-from src.core.config import (
 from typing import Dict, List, Any, Optional
+from unittest.mock import patch
 
+from src.core.config import (
     load_config, find_mod_by_number, find_paper_by_base_and_conference,
     _load_conferences, _load_submissions_with_abstracts, _load_blackout_dates
 )

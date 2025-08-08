@@ -13,7 +13,7 @@ import sys
 from src.core.config import load_config
 from src.core.models import Config, SchedulerStrategy
 from app.models import WebAppState
-from src.planner import validate_schedule_comprehensive
+from src.validation.schedule import validate_schedule_comprehensive
 
 from src.schedulers.base import BaseScheduler
 # Import scheduler implementations to register them

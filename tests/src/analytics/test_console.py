@@ -2,10 +2,10 @@
 
 import pytest
 from datetime import date
-from unittest.mock import patch
-from src.analytics.console import (
 from typing import Dict, List, Any, Optional
+from unittest.mock import patch
 
+from src.analytics.console import (
     print_schedule_summary,
     print_deadline_status,
     print_utilization_summary,

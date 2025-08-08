@@ -4,10 +4,9 @@ import pytest
 import json
 from datetime import date
 from pathlib import Path
-
-from src.core.models import (
 from typing import Dict, List, Any, Optional
 
+from src.core.models import (
     Submission, SubmissionType, Config, Conference, ConferenceType, ConferenceRecurrence
 )
 from src.schedulers.greedy import GreedyScheduler

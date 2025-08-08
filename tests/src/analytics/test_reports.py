@@ -2,10 +2,10 @@
 
 import pytest
 from datetime import date
-from unittest.mock import MagicMock
-from src.analytics.reports import (
 from typing import Dict, List, Any, Optional
+from unittest.mock import MagicMock
 
+from src.analytics.reports import (
     generate_schedule_report,
     calculate_overall_score
 )

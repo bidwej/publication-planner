@@ -13,8 +13,8 @@ class ProgressEntry:
     """A single progress entry for a submission."""
     submission_id: str
     planned_start_date: date
-    actual_start_date: Optional[date] = None
     planned_end_date: date
+    actual_start_date: Optional[date] = None
     actual_end_date: Optional[date] = None
     status: str = "planned"  # planned, in_progress, completed, delayed
     notes: Optional[str] = None
