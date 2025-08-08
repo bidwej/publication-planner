@@ -9,9 +9,9 @@ from src.core.config import load_config
 from src.validation import (
     validate_schedule_constraints,
     validate_deadline_compliance,
-    validate_dependencies_satisfied,
+    _validate_dependencies_satisfied,
     validate_resources_all_constraints,
-    validate_venue_all_constraints,
+    validate_venue_constraints,
 )
 from src.core.models import Submission, SubmissionType, ConferenceType
 from src.core.constants import QUALITY_CONSTANTS
@@ -73,7 +73,8 @@ class TestDependencySatisfaction:
             "J1-pap-ICML": date(2025, 2, 1),  # Paper depends on abstract and mod 1
         }
         
-        result = validate_dependency_satisfaction(schedule, config)
+        from src.validation.schedule import _validate_dependency_satisfaction
+        result = _validate_dependency_satisfaction(schedule, config)
         
         assert result.is_valid is True
         assert result.satisfaction_rate == 100.0
@@ -88,7 +89,8 @@ class TestDependencySatisfaction:
             "1-wrk": date(2025, 2, 1),   # Mod after paper
         }
         
-        result = validate_dependency_satisfaction(schedule, config)
+        from src.validation.schedule import _validate_dependency_satisfaction
+        result = _validate_dependency_satisfaction(schedule, config)
         
         assert result.is_valid is False
         assert result.satisfaction_rate < 100.0
@@ -102,7 +104,8 @@ class TestDependencySatisfaction:
             "J1-pap-ICML": date(2025, 1, 1),  # Paper without its dependency
         }
         
-        result = validate_dependency_satisfaction(schedule, config)
+        from src.validation.schedule import _validate_dependency_satisfaction
+        result = _validate_dependency_satisfaction(schedule, config)
         
         assert result.is_valid is False
         assert result.satisfaction_rate < 100.0
@@ -111,7 +114,8 @@ class TestDependencySatisfaction:
         """Test empty schedule."""
         config = load_config("tests/common/data/config.json")
         
-        result = validate_dependency_satisfaction({}, config)
+        from src.validation.schedule import _validate_dependency_satisfaction
+        result = _validate_dependency_satisfaction({}, config)
         
         assert result.is_valid is True
         assert result.total_dependencies == 0
@@ -130,7 +134,8 @@ class TestResourceConstraints:
             "J2-pap-MICCAI": date(2025, 2, 1),  # Different time periods
         }
         
-        result = validate_resource_constraints(schedule, config)
+        from src.validation.resources import validate_resources_constraints
+        result = validate_resources_constraints(schedule, config)
         
         assert result.is_valid is True
         assert result.max_observed <= result.max_concurrent
@@ -146,7 +151,8 @@ class TestResourceConstraints:
             "J3-pap-MICCAI": date(2025, 1, 1),  # Too many on same day
         }
         
-        result = validate_resource_constraints(schedule, config)
+        from src.validation.resources import validate_resources_constraints
+        result = validate_resources_constraints(schedule, config)
         
         assert result.is_valid is False
         assert result.max_observed > result.max_concurrent
@@ -155,7 +161,8 @@ class TestResourceConstraints:
         """Test empty schedule."""
         config = load_config("tests/common/data/config.json")
         
-        result = validate_resource_constraints({}, config)
+        from src.validation.resources import validate_resources_constraints
+        result = validate_resources_constraints({}, config)
         
         assert result.is_valid is True
         assert result.max_observed == 0

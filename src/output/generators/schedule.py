@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 from src.validation.deadline import validate_deadline_compliance
-from src.validation.resources import validate_resource_constraints
+from src.validation.resources import validate_resources_constraints
 from core.models import Config, ScheduleSummary, ScheduleMetrics, SubmissionType
 from output.tables import save_schedule_json, save_table_csv, save_metrics_json
 from scoring.efficiency import calculate_efficiency_score
@@ -78,7 +78,7 @@ def generate_schedule_summary(schedule: Dict[str, date], config: Config) -> Sche
     
     # Calculate compliance
     deadline_validation = validate_deadline_compliance(schedule, config)
-    resource_validation = validate_resource_constraints(schedule, config)
+    resource_validation = validate_resources_constraints(schedule, config)
     
     return ScheduleSummary(
         total_submissions=len(schedule),

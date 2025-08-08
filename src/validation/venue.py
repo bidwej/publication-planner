@@ -8,7 +8,7 @@ from src.core.constants import QUALITY_CONSTANTS
 from src.core.models import SubmissionType
 
 
-def validate_venue_all_constraints(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+def validate_venue_constraints(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
     """Validate all venue-related constraints for the complete schedule."""
     # Run all venue validations
     conference_compat_result = _validate_conference_compatibility(schedule, config)
@@ -210,7 +210,7 @@ def _validate_single_conference_policy(schedule: Dict[str, date], config: Config
     }
 
 
-def validate_venue_compatibility(submissions: Dict[str, Submission], conferences: Dict[str, Any]) -> None:
+def _validate_venue_compatibility(submissions: Dict[str, Submission], conferences: Dict[str, Any]) -> None:
     """Validate venue compatibility between submissions and conferences."""
     for sid, sub in submissions.items():
         if not sub.conference_id or sub.conference_id not in conferences:

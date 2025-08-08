@@ -59,7 +59,8 @@ class BaseScheduler(ABC):
     
     def _deps_satisfied(self, sub: Submission, schedule: Dict[str, date], current: date) -> bool:
         """Check if all dependencies are satisfied."""
-        return validate_dependencies_satisfied(sub, schedule, self.submissions, self.config, current)
+        from src.validation.submission import _validate_dependencies_satisfied
+        return _validate_dependencies_satisfied(sub, schedule, self.submissions, self.config, current)
     
     def _get_end_date(self, start: date, sub: Submission) -> date:
         """Calculate end date for a submission."""

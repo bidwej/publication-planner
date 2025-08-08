@@ -7,8 +7,8 @@ from src.core.models import Config, Submission, ConstraintValidationResult
 from src.core.constants import QUALITY_CONSTANTS
 
 from .deadline import validate_deadline_compliance
-from .resources import validate_resources_all_constraints
-from .venue import validate_venue_all_constraints
+from .resources import validate_resources_constraints
+from .venue import validate_venue_constraints
 
 
 def validate_schedule_constraints(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
@@ -27,9 +27,9 @@ def validate_schedule_constraints(schedule: Dict[str, date], config: Config) -> 
     # Run all validations
     deadline_result = validate_deadline_compliance(schedule, config)
     dependency_result = _validate_dependency_satisfaction(schedule, config)
-    resource_result = validate_resources_all_constraints(schedule, config)
+    resource_result = validate_resources_constraints(schedule, config)
     blackout_result = _validate_blackout_dates(schedule, config)
-    venue_result = validate_venue_all_constraints(schedule, config)
+    venue_result = validate_venue_constraints(schedule, config)
     
     # Combine all violations
     all_violations = (
@@ -243,16 +243,16 @@ def _validate_blackout_dates(schedule: Dict[str, date], config: Config) -> Dict[
     }
 
 
-def _validate_schedule_constraints(schedule: Dict[str, date], config: Config) -> ConstraintValidationResult:
+def _validate_schedule_constraints_structured(schedule: Dict[str, date], config: Config) -> ConstraintValidationResult:
     """Validate all constraints for a complete schedule and return structured result."""
     # Basic validations
     deadline_result = validate_deadline_compliance(schedule, config)
     dependency_result = _validate_dependency_satisfaction(schedule, config)
-    resource_result = validate_resources_all_constraints(schedule, config)
+    resource_result = validate_resources_constraints(schedule, config)
     
     # Additional validations
     blackout_result = _validate_blackout_dates(schedule, config)
-    venue_result = validate_venue_all_constraints(schedule, config)
+    venue_result = validate_venue_constraints(schedule, config)
     
     # Combine all violations
     all_violations = (

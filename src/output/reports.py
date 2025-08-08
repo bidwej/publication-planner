@@ -6,7 +6,7 @@ from datetime import date
 from core.models import Config
 from src.validation.deadline import validate_deadline_compliance
 from src.validation.schedule import validate_schedule_constraints
-from src.validation.resources import validate_resource_constraints
+from src.validation.resources import validate_resources_constraints
 from scoring.penalties import calculate_penalty_score
 from output.analytics import analyze_timeline, analyze_resources
 from core.constants import (

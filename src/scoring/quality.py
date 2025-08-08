@@ -7,7 +7,7 @@ import statistics
 from core.models import Config
 from src.validation.deadline import validate_deadline_compliance
 from src.validation.schedule import validate_schedule_constraints
-from src.validation.resources import validate_resource_constraints
+from src.validation.resources import validate_resources_constraints
 from core.constants import (
     QUALITY_CONSTANTS, SCORING_CONSTANTS, REPORT_CONSTANTS
 )

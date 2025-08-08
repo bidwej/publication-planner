@@ -20,8 +20,8 @@ def validate_submission_placement(submission: Submission, start_date: date, sche
     
     # Basic venue compatibility check
     try:
-        from .venue import validate_venue_compatibility
-        validate_venue_compatibility({submission.id: submission}, config.conferences_dict)
+        from .venue import _validate_venue_compatibility
+        _validate_venue_compatibility({submission.id: submission}, config.conferences_dict)
     except ValueError:
         return False
     

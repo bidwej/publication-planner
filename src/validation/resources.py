@@ -7,12 +7,7 @@ from src.core.models import Config, ResourceValidation, ResourceViolation
 from src.core.constants import QUALITY_CONSTANTS
 
 
-def validate_resources_all_constraints(schedule: Dict[str, date], config: Config) -> ResourceValidation:
-    """Validate all resource-related constraints for the complete schedule."""
-    return _validate_resource_constraints(schedule, config)
-
-
-def _validate_resource_constraints(schedule: Dict[str, date], config: Config) -> ResourceValidation:
+def validate_resources_constraints(schedule: Dict[str, date], config: Config) -> ResourceValidation:
     """Validate that resource constraints (concurrency limits) are respected."""
     if not schedule:
         return ResourceValidation(
