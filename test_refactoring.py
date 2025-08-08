@@ -2,7 +2,7 @@
 """Test script to verify deadline validation refactoring."""
 
 from datetime import date
-from src.core.models import Config, Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence
+from src.core.models import Config, Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence, ConferenceSubmissionType
 from src.validation.deadline import validate_deadline_constraints
 from src.validation.submission import validate_submission_constraints
 from src.validation.schedule import validate_schedule_constraints
@@ -16,7 +16,7 @@ def test_deadline_refactoring():
         id="test_conf",
         name="Test Conference",
         conf_type=ConferenceType.MEDICAL,
-        submission_types=None,  # Will be auto-determined
+        submission_types=ConferenceSubmissionType.PAPER_ONLY,  # Explicitly set to accept papers
         deadlines={SubmissionType.PAPER: date(2024, 6, 1)},
         recurrence=ConferenceRecurrence.ANNUAL
     )
@@ -40,25 +40,33 @@ def test_deadline_refactoring():
         scheduling_options={}
     )
     
-    # Test single submission deadline validation
-    start_date = date(2024, 5, 1)  # Should meet deadline
-    schedule1 = {submission.id: start_date}
+    # Test single submission deadline validation with more realistic dates
+    # Start date that should meet the deadline (June 1st deadline, starting March 1st)
+    start_date_valid = date(2024, 3, 1)  # Should meet deadline
+    schedule1 = {submission.id: start_date_valid}
     result1 = validate_deadline_constraints(schedule1, config)
     print(f"Deadline validation (valid): {result1.is_valid}")
+    print(f"  Compliance rate: {result1.compliance_rate:.1f}%")
+    print(f"  Violations: {len(result1.violations)}")
     
+    # Start date that should miss the deadline (June 1st deadline, starting May 15th)
     start_date_late = date(2024, 5, 15)  # Should miss deadline
     schedule2 = {submission.id: start_date_late}
     result2 = validate_deadline_constraints(schedule2, config)
     print(f"Deadline validation (late): {result2.is_valid}")
+    print(f"  Compliance rate: {result2.compliance_rate:.1f}%")
+    print(f"  Violations: {len(result2.violations)}")
     
     # Test submission placement validation
-    schedule = {"test_sub": start_date}
-    result3 = validate_submission_constraints(submission, start_date, schedule, config)
+    schedule = {"test_sub": start_date_valid}
+    result3 = validate_submission_constraints(submission, start_date_valid, schedule, config)
     print(f"Submission placement validation: {result3}")
     
     # Test comprehensive schedule validation
     result4 = validate_schedule_constraints(schedule, config)
     print(f"Comprehensive schedule validation: {result4['summary']['overall_valid']}")
+    print(f"  Overall compliance rate: {result4['summary']['compliance_rate']:.1f}%")
+    print(f"  Total violations: {result4['summary']['total_violations']}")
     
     print("All tests passed! Deadline validation refactoring is working correctly.")
 

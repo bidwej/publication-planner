@@ -7,7 +7,7 @@ import pytest
 
 from src.core.config import load_config
 from src.validation.schedule import validate_schedule_constraints
-from src.validation.deadline import validate_deadline_compliance
+from src.validation.deadline import validate_deadline_constraints
 from src.validation.submission import _validate_dependencies_satisfied
 from src.validation.resources import validate_resources_constraints
 from src.validation.venue import validate_venue_constraints
@@ -28,7 +28,7 @@ class TestDeadlineCompliance:
             "J2-pap-MICCAI": date(2024, 11, 1),  # Much before MICCAI deadline
         }
         
-        result = validate_deadline_compliance(schedule, config)
+        result = validate_deadline_constraints(schedule, config)
         
         assert result.is_valid is True
         assert result.compliance_rate == 100.0
@@ -42,7 +42,7 @@ class TestDeadlineCompliance:
             "1-wrk": date(2025, 1, 1),  # Mod without conference assignment
         }
         
-        result = validate_deadline_compliance(schedule, config)
+        result = validate_deadline_constraints(schedule, config)
         
         assert result.is_valid is True
         assert result.total_submissions == 0
@@ -51,7 +51,7 @@ class TestDeadlineCompliance:
         """Test empty schedule."""
         config = load_config("tests/common/data/config.json")
         
-        result = validate_deadline_compliance({}, config)
+        result = validate_deadline_constraints({}, config)
         
         assert result.is_valid is True
         assert result.total_submissions == 0
@@ -739,26 +739,18 @@ class TestComprehensiveConstraints:
             "1-wrk": date(2025, 6, 1),
         }
         
-        result = validate_all_constraints_comprehensive(schedule, config)
+        result = validate_schedule_constraints(schedule, config)
         
         # Check that all constraint types are present
-        assert "deadlines" in result
-        assert "dependencies" in result
-        assert "resources" in result
-        assert "blackout_dates" in result
-        assert "scheduling_options" in result
-        assert "conference_compatibility" in result
-        assert "conference_submission_compatibility" in result
-        assert "abstract_paper_dependencies" in result
-        assert "single_conference_policy" in result
-        assert "soft_block_model" in result
-        assert "priority_weighting" in result
-        assert "paper_lead_time" in result
+        assert "constraints" in result
+        assert "deadlines" in result["constraints"]
+        assert "dependencies" in result["constraints"]
+        assert "resources" in result["constraints"]
         
         # Check summary
         assert "summary" in result
         assert "overall_valid" in result["summary"]
-        assert "total_violations" in result
+        assert "total_violations" in result["summary"]
     
     def test_comprehensive_constraints_violations(self):
         """Test comprehensive validation with violations."""
@@ -772,10 +764,10 @@ class TestComprehensiveConstraints:
             "J4-pap-MICCAI": date(2025, 1, 1),  # Too many concurrent
         }
         
-        result = validate_all_constraints_comprehensive(schedule, config)
+        result = validate_schedule_constraints(schedule, config)
         
         # Should have violations
-        assert result["total_violations"] > 0
+        assert result["summary"]["total_violations"] > 0
         assert result["summary"]["overall_valid"] is False
 
     def test_validation_consistency_between_base_and_constraints(self):

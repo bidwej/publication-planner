@@ -5,7 +5,7 @@ from datetime import date, timedelta
 import statistics
 
 from core.models import Config
-from src.validation.deadline import validate_deadline_compliance
+from src.validation.deadline import validate_deadline_constraints
 from src.validation.schedule import validate_schedule_constraints
 from src.validation.resources import validate_resources_constraints
 from core.constants import (

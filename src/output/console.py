@@ -8,7 +8,7 @@ import statistics
 from pathlib import Path
 from core.models import Config, SchedulerStrategy
 from core.constants import DISPLAY_CONSTANTS
-from src.validation.deadline import validate_deadline_compliance
+from src.validation.deadline import validate_deadline_constraints
 from src.validation.schedule import validate_schedule_constraints
 from scoring.penalty import calculate_penalty_score
 from scoring.efficiency import calculate_efficiency_score
@@ -131,7 +131,7 @@ def print_metrics_summary(schedule: Dict[str, date], config: Config) -> None:
     penalty_breakdown = calculate_penalty_score(schedule, config)
     quality_score = calculate_quality_score(schedule, config)
     efficiency_score = calculate_efficiency_score(schedule, config)
-    deadline_validation = validate_deadline_compliance(schedule, config)
+    deadline_validation = validate_deadline_constraints(schedule, config)
     
     print(f"Penalty score: ${penalty_breakdown.total_penalty:.2f}")
     print(f"Quality score: {quality_score:.3f}")
