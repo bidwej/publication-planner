@@ -364,3 +364,75 @@ class TestBacktrackingScheduler:
         
         # This test should help us understand the issue
         assert latest_start > date.today(), "Latest start should be in the future"
+
+    def test_debug_validation_failure(self) -> None:
+        """Debug test to see which validation is failing."""
+        # Create mock submission with all required fields and future dates
+        submission = create_mock_submission(
+            "sub1", "Test Paper", SubmissionType.PAPER, "conf1",
+            draft_window_months=3,
+            penalty_cost_per_day=100.0,
+            engineering=True,
+            earliest_start_date=date(2026, 1, 1)  # Use future date in 2026
+        )
+        
+        # Create mock conference with future deadline
+        conference = create_mock_conference(
+            "conf1", "Test Conference", 
+            {SubmissionType.PAPER: date(2026, 6, 1)}  # Use future deadline in 2026
+        )
+        
+        # Create config with working days disabled
+        config = create_mock_config(
+            [submission], 
+            [conference],
+            scheduling_options={"enable_working_days_only": False}
+        )
+        
+        # Test each validation step individually
+        from src.validation.submission import validate_submission_constraints
+        from src.validation.deadline import validate_deadline_constraints
+        from src.validation.resources import validate_resources_constraints
+        from src.validation.venue import validate_venue_constraints
+        from src.validation.schedule import validate_schedule_constraints
+        
+        test_date = date(2026, 3, 1)  # A date that gives enough lead time (3 months before deadline)
+        empty_schedule = {}
+        
+        # Test submission constraints
+        sub_valid = validate_submission_constraints(submission, test_date, empty_schedule, config)
+        print(f"Submission validation: {sub_valid}")
+        
+        # Test deadline constraints
+        temp_schedule = {submission.id: test_date}
+        deadline_result = validate_deadline_constraints(temp_schedule, config)
+        print(f"Deadline validation: {deadline_result.is_valid}")
+        
+        # Test resource constraints
+        resource_result = validate_resources_constraints(temp_schedule, config)
+        print(f"Resource validation: {resource_result.is_valid}")
+        
+        # Test venue constraints
+        venue_result = validate_venue_constraints(temp_schedule, config)
+        print(f"Venue validation: {venue_result['is_valid']}")
+        
+        # Test schedule constraints
+        schedule_result = validate_schedule_constraints(temp_schedule, config)
+        print(f"Schedule validation: {schedule_result['summary']['overall_valid']}")
+        print(f"Schedule violations: {schedule_result['summary']['total_violations']}")
+        print(f"Schedule compliance rate: {schedule_result['summary']['compliance_rate']}")
+        
+        # Print detailed constraint results
+        if 'constraints' in schedule_result:
+            for constraint_name, constraint_result in schedule_result['constraints'].items():
+                if isinstance(constraint_result, dict) and 'is_valid' in constraint_result:
+                    print(f"  {constraint_name}: {constraint_result['is_valid']}")
+                    if 'violations' in constraint_result and constraint_result['violations']:
+                        print(f"    Violations: {constraint_result['violations']}")
+        
+        # This test should help us understand which validation is failing
+        assert sub_valid, "Submission validation should pass"
+        assert deadline_result.is_valid, "Deadline validation should pass"
+        assert resource_result.is_valid, "Resource validation should pass"
+        assert venue_result["is_valid"], "Venue validation should pass"
+        assert schedule_result["summary"]["overall_valid"], "Schedule validation should pass"

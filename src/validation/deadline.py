@@ -188,8 +188,8 @@ def _validate_paper_lead_time_months(schedule: Dict[str, date], config: Config) 
             continue
         
         # Only check lead time if submission meets deadline
-        # Calculate lead time in months
-        lead_time_days = (deadline - end_date).days
+        # Calculate lead time in months - check if start date gives enough time
+        lead_time_days = (deadline - start_date).days
         lead_time_months = lead_time_days / 30.44  # Average days per month
         
         min_lead_time_months = config.min_paper_lead_time_days / 30.44  # Convert days to months

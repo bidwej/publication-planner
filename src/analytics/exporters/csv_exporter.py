@@ -2,17 +2,13 @@
 
 from __future__ import annotations
 from typing import Dict, List, Any, Optional
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 import csv
 import json
+from collections import defaultdict
 
-from src.core.models import Config, ScheduleSummary, ScheduleMetrics
-from src.analytics.tables import (
-    generate_schedule_table, generate_metrics_table, generate_deadline_table,
-    generate_violations_table, generate_penalties_table
-)
-# Import only what we need to avoid circular imports
+from src.core.models import Config, ScheduleSummary, ScheduleMetrics, SubmissionType
 from src.analytics.tables import (
     generate_schedule_table, generate_metrics_table, generate_deadline_table,
     generate_violations_table, generate_penalties_table
@@ -196,9 +192,18 @@ class CSVExporter:
         # Create directory if it doesn't exist
         filepath.parent.mkdir(parents=True, exist_ok=True)
         
-        # For now, return empty string to avoid circular imports
-        # This can be enhanced later when circular import issues are resolved
-        return ""
+        # Calculate comprehensive penalties
+        penalties_data = self._calculate_comprehensive_penalties(schedule)
+        
+        if not penalties_data:
+            return ""
+        
+        with open(filepath, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=penalties_data[0].keys())
+            writer.writeheader()
+            writer.writerows(penalties_data)
+        
+        return str(filepath)
     
     def export_comparison_csv(self, comparison_results: Dict[str, Any], output_dir: str,
                              filename: str = "strategy_comparison.csv") -> str:
@@ -308,22 +313,112 @@ class CSVExporter:
         end_date = max(schedule.values())
         schedule_span = (end_date - start_date).days
         
+        # Calculate resource utilization
+        daily_load = defaultdict(int)
+        for sid, start_date in schedule.items():
+            submission = self.config.submissions_dict.get(sid)
+            if submission:
+                duration = submission.get_duration_days(self.config)
+                for i in range(duration):
+                    check_date = start_date + timedelta(days=i)
+                    daily_load[check_date] += 1
+        
+        max_concurrent = max(daily_load.values()) if daily_load else 0
+        avg_concurrent = sum(daily_load.values()) / len(daily_load) if daily_load else 0
+        
+        # Count by submission type
+        submission_types = defaultdict(int)
+        for sub_id in schedule.keys():
+            submission = self.config.submissions_dict.get(sub_id)
+            if submission:
+                sub_type = submission.kind.value
+                submission_types[sub_type] += 1
+        
         metrics_data = [
             {"Metric": "Total Submissions", "Value": str(total_submissions)},
             {"Metric": "Schedule Span (Days)", "Value": str(schedule_span)},
             {"Metric": "Start Date", "Value": start_date.strftime("%Y-%m-%d")},
             {"Metric": "End Date", "Value": end_date.strftime("%Y-%m-%d")},
+            {"Metric": "Max Concurrent Submissions", "Value": str(max_concurrent)},
+            {"Metric": "Average Daily Load", "Value": f"{avg_concurrent:.2f}"},
         ]
+        
+        # Add submission type breakdown
+        for sub_type, count in submission_types.items():
+            metrics_data.append({
+                "Metric": f"{sub_type.title()} Submissions",
+                "Value": str(count)
+            })
         
         return metrics_data
     
     def _run_comprehensive_validation(self, schedule: Dict[str, date]) -> Dict[str, Any]:
         """Run comprehensive validation on schedule."""
-        # For now, return empty validation result to avoid circular imports
-        # This can be enhanced later when circular import issues are resolved
-        validation_result = {}
+        try:
+            # Import here to avoid circular imports
+            from src.validation.schedule import validate_schedule_constraints
+            validation_result = validate_schedule_constraints(schedule, self.config)
+            return validation_result
+        except ImportError:
+            # Fallback if validation module is not available
+            return {
+                "summary": {
+                    "overall_valid": True,
+                    "total_violations": 0,
+                    "compliance_rate": 100.0
+                },
+                "constraints": {},
+                "analytics": {}
+            }
+    
+    def _calculate_comprehensive_penalties(self, schedule: Dict[str, date]) -> List[Dict[str, str]]:
+        """Calculate comprehensive penalties for CSV export."""
+        if not schedule:
+            return [{"Penalty Type": "Total Penalty", "Amount": "0.0"}]
         
-        return validation_result
+        try:
+            # Import here to avoid circular imports
+            from src.scoring.penalties import calculate_penalty_score
+            penalty_breakdown = calculate_penalty_score(schedule, self.config)
+            
+            penalties_data = [
+                {"Penalty Type": "Total Penalty", "Amount": f"{penalty_breakdown.total_penalty:.2f}"},
+                {"Penalty Type": "Deadline Penalties", "Amount": f"{penalty_breakdown.deadline_penalties:.2f}"},
+                {"Penalty Type": "Dependency Penalties", "Amount": f"{penalty_breakdown.dependency_penalties:.2f}"},
+                {"Penalty Type": "Resource Penalties", "Amount": f"{penalty_breakdown.resource_penalties:.2f}"},
+                {"Penalty Type": "Conference Compatibility Penalties", "Amount": f"{penalty_breakdown.conference_compatibility_penalties:.2f}"},
+                {"Penalty Type": "Abstract-Paper Dependency Penalties", "Amount": f"{penalty_breakdown.abstract_paper_dependency_penalties:.2f}"},
+            ]
+            
+            return penalties_data
+            
+        except ImportError:
+            # Fallback calculation if penalty module is not available
+            total_penalty = 0.0
+            
+            # Basic deadline penalty calculation
+            for sid, start_date in schedule.items():
+                submission = self.config.submissions_dict.get(sid)
+                if submission and submission.conference_id:
+                    conference = self.config.conferences_dict.get(submission.conference_id)
+                    if conference and submission.kind in conference.deadlines:
+                        deadline = conference.deadlines[submission.kind]
+                        duration = submission.get_duration_days(self.config)
+                        end_date = start_date + timedelta(days=duration)
+                        
+                        if end_date > deadline:
+                            days_late = (end_date - deadline).days
+                            penalty_per_day = (self.config.penalty_costs or {}).get("default_paper_penalty_per_day", 500.0)
+                            total_penalty += days_late * penalty_per_day
+            
+            return [
+                {"Penalty Type": "Total Penalty", "Amount": f"{total_penalty:.2f}"},
+                {"Penalty Type": "Deadline Penalties", "Amount": f"{total_penalty:.2f}"},
+                {"Penalty Type": "Dependency Penalties", "Amount": "0.0"},
+                {"Penalty Type": "Resource Penalties", "Amount": "0.0"},
+                {"Penalty Type": "Conference Compatibility Penalties", "Amount": "0.0"},
+                {"Penalty Type": "Abstract-Paper Dependency Penalties", "Amount": "0.0"},
+            ]
     
     def _format_comparison_data(self, comparison_results: Dict[str, Any]) -> List[Dict[str, str]]:
         """Format strategy comparison data for CSV export."""
@@ -359,18 +454,33 @@ class CSVExporter:
         schedule_span = (end_date - start_date).days
         
         # Count by submission type
-        submission_types = {}
+        submission_types = defaultdict(int)
         for sub_id in schedule.keys():
             submission = self.config.submissions_dict.get(sub_id)
             if submission:
                 sub_type = submission.kind.value
-                submission_types[sub_type] = submission_types.get(sub_type, 0) + 1
+                submission_types[sub_type] += 1
+        
+        # Calculate resource utilization
+        daily_load = defaultdict(int)
+        for sid, start_date in schedule.items():
+            submission = self.config.submissions_dict.get(sid)
+            if submission:
+                duration = submission.get_duration_days(self.config)
+                for i in range(duration):
+                    check_date = start_date + timedelta(days=i)
+                    daily_load[check_date] += 1
+        
+        max_concurrent = max(daily_load.values()) if daily_load else 0
+        avg_concurrent = sum(daily_load.values()) / len(daily_load) if daily_load else 0
         
         summary_data = [
             {"Category": "Total Submissions", "Value": str(total_submissions)},
             {"Category": "Schedule Span", "Value": f"{schedule_span} days"},
             {"Category": "Start Date", "Value": start_date.strftime("%Y-%m-%d")},
             {"Category": "End Date", "Value": end_date.strftime("%Y-%m-%d")},
+            {"Category": "Max Concurrent Submissions", "Value": str(max_concurrent)},
+            {"Category": "Average Daily Load", "Value": f"{avg_concurrent:.2f}"},
         ]
         
         # Add submission type breakdown

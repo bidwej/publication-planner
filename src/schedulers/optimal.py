@@ -33,7 +33,8 @@ class OptimalScheduler(BaseScheduler):
         schedule, topo, start_date, end_date = self._run_common_scheduling_setup()
         
         # Check if MILP is feasible for this problem size
-        if len(self.submissions) > 20:
+        # Increased limit to handle realistic academic scheduling problems
+        if len(self.submissions) > 100:
             print(f"MILP optimization: Too many submissions ({len(self.submissions)}) for MILP, falling back to greedy")
             from src.schedulers.greedy import GreedyScheduler
             greedy_scheduler = GreedyScheduler(self.config)

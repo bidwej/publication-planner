@@ -460,32 +460,44 @@ class BaseScheduler(ABC):
     
     def _get_scheduling_window(self) -> tuple[date, date]:
         """Get the scheduling window (start and end dates) for all submissions."""
-        # Collect all relevant dates
+        # Start with today as the minimum start date
+        today = date.today()
+        start_date = today
+        
+        # Collect all relevant dates for end date calculation
         dates = []
         
-        # Add explicit earliest start dates
+        # Add explicit earliest start dates (but don't allow past dates)
         for submission in self.submissions.values():
             if submission.earliest_start_date:
-                dates.append(submission.earliest_start_date)
+                # Only consider future dates
+                if submission.earliest_start_date >= today:
+                    dates.append(submission.earliest_start_date)
             else:
                 # Calculate implicit earliest start date
-                dates.append(self._calculate_earliest_start_date(submission))
+                calculated_start = self._calculate_earliest_start_date(submission)
+                if calculated_start >= today:
+                    dates.append(calculated_start)
         
-        # Add conference deadlines
+        # Add conference deadlines (only future ones)
         for conference in self.conferences.values():
-            dates.extend(conference.deadlines.values())
+            for deadline in conference.deadlines.values():
+                if deadline >= today:
+                    dates.append(deadline)
         
-        # Add today's date as fallback
-        dates.append(date.today())
-        
-        # Calculate window
-        start_date = min(dates)
+        # If we have future dates, use the earliest one as start
+        if dates:
+            earliest_future_date = min(dates)
+            # Use the later of today or the earliest future date
+            start_date = max(today, earliest_future_date)
         
         # Calculate end date based on actual conference deadlines
         if self.conferences:
             latest_deadlines = []
             for conf in self.conferences.values():
-                latest_deadlines.extend(conf.deadlines.values())
+                for deadline in conf.deadlines.values():
+                    if deadline >= today:  # Only consider future deadlines
+                        latest_deadlines.append(deadline)
             if latest_deadlines:
                 latest_deadline = max(latest_deadlines)
                 end_date = latest_deadline + timedelta(days=SCHEDULING_CONSTANTS.conference_response_time_days)
