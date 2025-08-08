@@ -5,12 +5,12 @@ from typing import Dict, Any, List
 from pathlib import Path
 from dataclasses import replace
 from datetime import date
-from core.config import load_config
-from core.models import Config, SchedulerStrategy, ValidationResult, ScoringResult, ScheduleResult, ScheduleSummary, ScheduleMetrics
-from core.constants import QUALITY_CONSTANTS
-from scoring.quality import calculate_quality_score
-from scoring.penalty import calculate_penalty_score
-from scoring.efficiency import calculate_efficiency_score, calculate_efficiency_resource, calculate_efficiency_timeline
+from src.core.config import load_config
+from src.core.models import Config, SchedulerStrategy, ValidationResult, ScoringResult, ScheduleResult, ScheduleSummary, ScheduleMetrics
+from src.core.constants import QUALITY_CONSTANTS
+from src.scoring.quality import calculate_quality_score
+from src.scoring.penalties import calculate_penalty_score
+from src.scoring.efficiency import calculate_efficiency_score, calculate_efficiency_resource, calculate_efficiency_timeline
 from src.validation.schedule import validate_schedule_constraints
 from src.schedulers.base import BaseScheduler
 # Import scheduler implementations to register them

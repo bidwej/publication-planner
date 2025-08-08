@@ -287,8 +287,9 @@ class BaseScheduler(ABC):
                 
                 # Check if conference requires abstract before paper
                 if conf.requires_abstract_before_paper():
-                    # Generate abstract ID
-                    abstract_id = generate_abstract_id(submission_id, submission.conference_id)
+                    # Generate abstract ID using simplified format
+                    base_paper_id = submission_id.split('-')[0]  # Get base paper ID (e.g., "J1" from "J1-pap-icml")
+                    abstract_id = f"{base_paper_id}-abs"
                     
                     # Check if abstract already exists
                     if abstract_id not in submissions_dict:
@@ -297,6 +298,9 @@ class BaseScheduler(ABC):
                             submission, submission.conference_id, 
                             self.config.penalty_costs or {}
                         )
+                        
+                        # Update abstract ID to use simplified format
+                        abstract_submission.id = abstract_id
                         
                         # Add to config submissions
                         self.config.submissions.append(abstract_submission)
@@ -314,49 +318,33 @@ class BaseScheduler(ABC):
             print(f"Created {len(papers_needing_abstracts)} abstract submissions for papers: {papers_needing_abstracts}")
     
     def _assign_conferences(self, schedule: Dict[str, date]) -> Dict[str, date]:
-        """Assign conferences to papers based on candidate_conferences and availability."""
-        submissions_dict = self.config.submissions_dict
-        conferences_dict = self.config.conferences_dict
-        
-        # Find papers that need conference assignment (generic papers without conference_id)
-        papers_needing_assignment = []
-        for submission_id, submission in submissions_dict.items():
-            if (submission.kind == SubmissionType.PAPER and 
-                not submission.conference_id and 
-                submission.candidate_conferences):
-                papers_needing_assignment.append(submission_id)
-        
-        # Simple assignment: pick first available conference from family
-        for paper_id in papers_needing_assignment:
-            submission = submissions_dict[paper_id]
+        """Assign conferences to submissions that don't have them."""
+        for sub_id, start_date in schedule.items():
+            submission = self.submissions[sub_id]
             
-            # Find compatible conferences from the family
-            compatible_conferences = []
-            for conf_id, conference in conferences_dict.items():
-                # Check if conference name matches any of the candidate conferences
-                if (submission.candidate_conferences and 
-                    conference.name in submission.candidate_conferences):
-                    
-                    # Check conference compatibility matrix from README
-                    is_compatible = self._check_conference_compatibility(submission, conference)
-                    if is_compatible:
-                        compatible_conferences.append(conf_id)
-            
-            # Assign to first compatible conference with available deadline
-            for conf_id in compatible_conferences:
-                conference = conferences_dict[conf_id]
-                if submission.kind in conference.deadlines:
-                    # Update the submission with the assigned conference
-                    submission.conference_id = conf_id
-                    # Update schedule to reflect conference assignment
-                    if paper_id in schedule:
-                        # Revalidate the schedule with the new conference assignment
-                        if self._validate_all_constraints(submission, schedule[paper_id], schedule):
+            # Skip if already has conference
+            if submission.conference_id:
+                continue
+                
+            # For work items (abstracts), assign from candidates
+            if submission.kind == SubmissionType.ABSTRACT and submission.candidate_conferences:
+                # Assign to first compatible candidate
+                for conf_id in submission.candidate_conferences:
+                    if conf_id in self.conferences:
+                        conf = self.conferences[conf_id]
+                        if conf.accepts_submission_type(SubmissionType.ABSTRACT):
+                            submission.conference_id = conf_id
                             break
-                        else:
-                            # If validation fails, remove the conference assignment
-                            submission.conference_id = None
-                    break
+            
+            # For papers, assign from candidates
+            elif submission.kind == SubmissionType.PAPER and submission.candidate_conferences:
+                # Assign to first compatible candidate
+                for conf_id in submission.candidate_conferences:
+                    if conf_id in self.conferences:
+                        conf = self.conferences[conf_id]
+                        if conf.accepts_submission_type(SubmissionType.PAPER):
+                            submission.conference_id = conf_id
+                            break
         
         return schedule
     

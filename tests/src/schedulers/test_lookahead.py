@@ -189,9 +189,9 @@ class TestLookaheadScheduler:
         
         scheduler = LookaheadGreedyScheduler(config)
         
-        # Should handle gracefully without raising an error
-        result = scheduler.schedule()
-        assert isinstance(result, dict)
+        # Should raise ValueError due to invalid conference reference
+        with pytest.raises(ValueError, match="Submission paper1 references unknown conference nonexistent_conf"):
+            scheduler.schedule()
 
     def test_schedule_with_priority_ordering(self):
         """Test scheduling with priority ordering."""

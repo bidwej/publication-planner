@@ -6,12 +6,13 @@ This script loads configuration data and generates a schedule using the schedule
 """
 
 import argparse
+import os
+import sys
+from pathlib import Path
 from typing import Dict, Optional
 from datetime import date
-from pathlib import Path
 
 # Add the src directory to the path
-import os
 os.environ['PYTHONPATH'] = str(Path(__file__).parent / "src") + os.pathsep + os.environ.get('PYTHONPATH', '')
 
 # Import after adding src to path - pylint: disable=wrong-import-position
@@ -20,14 +21,18 @@ from core.models import SchedulerStrategy
 from schedulers.base import BaseScheduler
 from output.console import print_schedule_analysis, print_strategy_comparison, print_available_strategies
 
-# Import all schedulers to register them
-from schedulers.greedy import GreedyScheduler
-from schedulers.stochastic import StochasticGreedyScheduler
-from schedulers.lookahead import LookaheadGreedyScheduler
-from schedulers.backtracking import BacktrackingGreedyScheduler
-from schedulers.random import RandomScheduler
-from schedulers.heuristic import HeuristicScheduler
+# Import all schedulers to register them with the factory
+import schedulers.greedy
+import schedulers.stochastic
+import schedulers.lookahead
+import schedulers.backtracking
+import schedulers.random
+import schedulers.heuristic
+import schedulers.optimal
+
+# Manual registration as backup for optimal scheduler
 from schedulers.optimal import OptimalScheduler
+BaseScheduler._strategy_registry[SchedulerStrategy.OPTIMAL] = OptimalScheduler
 # Advanced scheduler removed as per requirements
 
 

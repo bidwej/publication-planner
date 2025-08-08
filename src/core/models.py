@@ -235,29 +235,27 @@ class Conference:
 
 # Utility functions for abstract-paper dependencies
 def generate_abstract_id(paper_id: str, conference_id: str) -> str:
-    """Generate consistent abstract ID from paper ID and conference ID."""
-    # Remove any existing suffixes to get base paper ID
-    base_paper_id = paper_id.replace('-pap-', '-').split('-')[0]
-    return f"{base_paper_id}-abs-{conference_id}"
+    """Generate abstract ID for paper."""
+    return f"{paper_id}-abs"  # Simplified, no conference in ID
 
 
 def create_abstract_submission(paper: Submission, conference_id: str, 
                              penalty_costs: Dict[str, float]) -> Submission:
-    """Create an abstract submission for a paper at a specific conference."""
+    """Create abstract submission as work item."""
     abstract_id = generate_abstract_id(paper.id, conference_id)
     
     return Submission(
         id=abstract_id,
         title=f"Abstract for {paper.title}",
         kind=SubmissionType.ABSTRACT,
-        conference_id=conference_id,
-        depends_on=paper.depends_on.copy() if paper.depends_on else [],  # Same dependencies as paper
-        draft_window_months=0,  # Abstracts are quick
+        conference_id=None,  # Work item, no conference assignment
+        depends_on=[],  # No dependencies
+        draft_window_months=1,
         lead_time_from_parents=0,
-        penalty_cost_per_day=penalty_costs.get("default_mod_penalty_per_day", 0.0),
+        penalty_cost_per_day=penalty_costs.get("default_mod_penalty_per_day", 1000.0),
         engineering=paper.engineering,
         earliest_start_date=paper.earliest_start_date,
-        candidate_conferences=[conference_id],  # Specific to this conference
+        candidate_conferences=[conference_id]  # Store as candidate
     )
 
 
@@ -403,8 +401,9 @@ class Config:
             if submission.kind == SubmissionType.PAPER and submission.conference_id:
                 conference = conference_dict.get(submission.conference_id)
                 if conference and conference.requires_abstract_before_paper():
-                    # Check if required abstract exists
-                    abstract_id = generate_abstract_id(submission.id, submission.conference_id)
+                    # Check if required abstract exists using simplified format
+                    base_paper_id = submission.id.split('-')[0]  # Get base paper ID
+                    abstract_id = f"{base_paper_id}-abs"
                     if abstract_id not in submission_dict:
                         errors.append(f"Paper {submission.id} requires abstract {abstract_id} for conference {submission.conference_id}")
                     else:
@@ -412,6 +411,9 @@ class Config:
                         abstract = submission_dict[abstract_id]
                         if abstract_id not in (submission.depends_on or []):
                             errors.append(f"Paper {submission.id} must depend on its abstract {abstract_id}")
+                        # Check if abstract has the paper's conference as a candidate
+                        if submission.conference_id not in (abstract.candidate_conferences or []):
+                            errors.append(f"Abstract {abstract_id} must have conference {submission.conference_id} as candidate")
 
         return errors
 
@@ -478,13 +480,16 @@ class Config:
                 
                 conference = conference_dict[submission.conference_id]
                 if conference.requires_abstract_before_paper():
-                    abstract_id = generate_abstract_id(submission.id, submission.conference_id)
+                    # Use simplified abstract ID format
+                    base_paper_id = submission.id.split('-')[0]
+                    abstract_id = f"{base_paper_id}-abs"
                     if abstract_id not in submission_dict:
                         papers_needing_abstracts.append((submission, abstract_id))
         
         # Create missing abstracts
         for paper, abstract_id in papers_needing_abstracts:
             abstract = create_abstract_submission(paper, paper.conference_id, penalty_costs)
+            abstract.id = abstract_id  # Use simplified ID
             self.submissions.append(abstract)
             submission_dict[abstract_id] = abstract
             

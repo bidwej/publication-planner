@@ -14,6 +14,69 @@ from src.core.models import (
 # parse_date is already imported from dateutil.parser above
 
 
+def _map_conference_data(json_data: Dict) -> Dict:
+    """Map JSON conference data to model fields."""
+    return {
+        "id": json_data["name"].lower().replace(" ", "_").replace("-", "_"),
+        "name": json_data["name"],
+        "conf_type": ConferenceType(json_data["conference_type"]),
+        "recurrence": ConferenceRecurrence(json_data["recurrence"]),
+        "deadlines": _build_deadlines_dict(json_data),
+        "submission_types": None  # Auto-determined
+    }
+
+
+def _build_deadlines_dict(conf_data: Dict) -> Dict[SubmissionType, date]:
+    """Build deadlines dict from JSON data."""
+    deadlines = {}
+    if conf_data.get("full_paper_deadline"):
+        deadlines[SubmissionType.PAPER] = parse_date(conf_data["full_paper_deadline"]).date()
+    if conf_data.get("abstract_deadline"):
+        deadlines[SubmissionType.ABSTRACT] = parse_date(conf_data["abstract_deadline"]).date()
+    return deadlines
+
+
+def _map_paper_data(json_data: Dict) -> Dict:
+    """Map JSON paper data to model fields."""
+    # Map mod_dependencies to depends_on
+    depends_on = []
+    if "mod_dependencies" in json_data:
+        for mod_id in json_data["mod_dependencies"]:
+            depends_on.append(f"mod_{mod_id}")
+    
+    # Add parent_papers to depends_on
+    if "parent_papers" in json_data:
+        depends_on.extend(json_data["parent_papers"])
+    
+    return {
+        "id": json_data["id"],
+        "title": json_data["title"],
+        "kind": SubmissionType.PAPER,
+        "conference_id": None,  # Will be assigned later
+        "depends_on": depends_on if depends_on else None,
+        "draft_window_months": json_data.get("draft_window_months", 3),
+        "lead_time_from_parents": json_data.get("lead_time_from_parents", 0),
+        "candidate_conferences": json_data.get("candidate_conferences", [])
+    }
+
+
+def _map_mod_data(json_data: Dict) -> Dict:
+    """Map JSON mod data to model fields."""
+    return {
+        "id": f"mod_{json_data['id']}",
+        "title": json_data["title"],
+        "kind": SubmissionType.ABSTRACT,  # Mods are work items (abstracts)
+        "conference_id": None,  # Work items don't have conference assignment
+        "depends_on": None,
+        "draft_window_months": 1,  # Short duration for work items
+        "lead_time_from_parents": 0,
+        "penalty_cost_per_day": json_data.get("penalty_cost_per_month", 1000.0) / 30.0,
+        "engineering": False,  # Default to medical
+        "earliest_start_date": parse_date(json_data["est_data_ready"]).date() if json_data.get("est_data_ready") else None,
+        "candidate_conferences": []  # No candidate conferences for work items
+    }
+
+
 def load_config(config_path: str) -> Config:
     """Load configuration from JSON file."""
     try:
@@ -26,14 +89,15 @@ def load_config(config_path: str) -> Config:
         with open(config_file, "r", encoding="utf-8") as f:
             config_data = json.load(f)
         
-        # Load data files
+        # Load data files - use config file directory as base
+        config_dir = config_file.parent
         data_files = config_data.get("data_files", {})
-        conferences_path = Path("data") / data_files.get("conferences", "conferences.json")
-        mods_path = Path("data") / data_files.get("mods", "mods.json")
-        papers_path = Path("data") / data_files.get("papers", "papers.json")
-        blackouts_path = Path("data") / data_files.get("blackouts", "blackout.json")
+        conferences_path = config_dir / data_files.get("conferences", "data/conferences.json")
+        mods_path = config_dir / data_files.get("mods", "data/mods.json")
+        papers_path = config_dir / data_files.get("papers", "data/papers.json")
+        blackouts_path = config_dir / data_files.get("blackouts", "data/blackout.json")
         
-        # Load conferences
+        # Load conferences with proper field mapping
         conferences = _load_conferences(conferences_path)
         
         # Load submissions with proper abstract-paper dependencies
@@ -148,7 +212,7 @@ def _load_recurring_holidays(recurring_holidays: List[Dict]) -> List[date]:
 
 
 def _load_conferences(path: Path) -> List[Conference]:
-    """Load conferences from JSON file."""
+    """Load conferences from JSON file with proper field mapping."""
     conferences = []
     
     if not path.exists():
@@ -160,22 +224,9 @@ def _load_conferences(path: Path) -> List[Conference]:
         
         for conf_data in data:
             try:
-                # Parse deadlines
-                deadlines = {}
-                if conf_data.get("abstract_deadline"):
-                    deadlines[SubmissionType.ABSTRACT] = parse_date(conf_data["abstract_deadline"]).date()
-                if conf_data.get("full_paper_deadline"):
-                    deadlines[SubmissionType.PAPER] = parse_date(conf_data["full_paper_deadline"]).date()
-                if conf_data.get("poster_deadline"):
-                    deadlines[SubmissionType.POSTER] = parse_date(conf_data["poster_deadline"]).date()
-                
-                conference = Conference(
-                    id=conf_data["name"],
-                    name=conf_data["name"],
-                    conf_type=ConferenceType(conf_data.get("conference_type", "ENGINEERING")),
-                    recurrence=ConferenceRecurrence(conf_data.get("recurrence", "annual")),
-                    deadlines=deadlines
-                )
+                # Use the mapping function to transform JSON data to model fields
+                mapped_data = _map_conference_data(conf_data)
+                conference = Conference(**mapped_data)
                 conferences.append(conference)
                 
             except (KeyError, ValueError) as e:
@@ -268,7 +319,7 @@ def _load_submissions_with_abstracts(
 
 
 def _load_mods(path: Path) -> List[Submission]:
-    """Load mods (work items) from JSON file."""
+    """Load mods from JSON file with proper field mapping."""
     mods = []
     
     if not path.exists():
@@ -280,26 +331,9 @@ def _load_mods(path: Path) -> List[Submission]:
         
         for mod_data in data:
             try:
-                # Infer engineering flag from candidate conferences if not explicitly set
-                engineering = mod_data.get("engineering", False)
-                if not engineering and mod_data.get("candidate_conferences"):
-                    # Check if any candidate conferences are engineering conferences
-                    # This would need to be done after conferences are loaded
-                    # For now, we'll use the explicit engineering flag
-                    pass
-                
-                mod = Submission(
-                    id=f"{mod_data['id']}-wrk",
-                    title=mod_data.get("title", f"Mod {mod_data['id']}"),
-                    kind=SubmissionType.ABSTRACT,  # Mods are work items (abstracts)
-                    conference_id=None,  # Mods don't have conferences initially
-                    depends_on=[],
-                    draft_window_months=0,
-                    lead_time_from_parents=0,
-                    penalty_cost_per_day=0.0,
-                    engineering=engineering,
-                    earliest_start_date=parse_date(mod_data.get("est_data_ready", "2025-06-01")).date() if mod_data.get("est_data_ready") else None,
-                )
+                # Use the mapping function to transform JSON data to model fields
+                mapped_data = _map_mod_data(mod_data)
+                mod = Submission(**mapped_data)
                 mods.append(mod)
                 
             except (KeyError, ValueError) as e:
@@ -313,7 +347,7 @@ def _load_mods(path: Path) -> List[Submission]:
 
 
 def _load_papers(path: Path) -> List[Submission]:
-    """Load papers from JSON file."""
+    """Load papers from JSON file with proper field mapping."""
     papers = []
     
     if not path.exists():
@@ -325,28 +359,9 @@ def _load_papers(path: Path) -> List[Submission]:
         
         for paper_data in data:
             try:
-                # Convert mod dependencies to submission IDs
-                mod_deps = [f"{mod_id}-wrk" for mod_id in paper_data.get("mod_dependencies", [])]
-                
-                # Convert parent paper dependencies
-                parent_deps = paper_data.get("parent_papers", [])
-                
-                # Combine all dependencies
-                all_deps = mod_deps + parent_deps
-                
-                paper = Submission(
-                    id=paper_data["id"],
-                    title=paper_data.get("title", f"Paper {paper_data['id']}"),
-                    kind=SubmissionType.PAPER,
-                    conference_id=None,  # Will be assigned during config loading
-                    depends_on=all_deps,
-                    draft_window_months=paper_data.get("draft_window_months", 3),
-                    lead_time_from_parents=paper_data.get("lead_time_from_parents", 0),
-                    penalty_cost_per_day=paper_data.get("penalty_cost", 0.0),
-                    engineering=paper_data.get("engineering", False),
-                    earliest_start_date=None,  # Will be calculated based on dependencies
-                    candidate_conferences=paper_data.get("candidate_conferences", []),
-                )
+                # Use the mapping function to transform JSON data to model fields
+                mapped_data = _map_paper_data(paper_data)
+                paper = Submission(**mapped_data)
                 papers.append(paper)
                 
             except (KeyError, ValueError) as e:

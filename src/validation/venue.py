@@ -3,7 +3,7 @@
 from typing import Dict, Any
 from datetime import date
 
-from src.core.models import Config, Submission, ConferenceType
+from src.core.models import Config, Submission, ConferenceType, Conference
 from src.core.constants import QUALITY_CONSTANTS
 from src.core.models import SubmissionType
 
@@ -225,22 +225,33 @@ def _validate_single_conference_policy(schedule: Dict[str, date], config: Config
     }
 
 
-def _validate_venue_compatibility(submissions: Dict[str, Submission], conferences: Dict[str, Any]) -> None:
-    """Validate venue compatibility between submissions and conferences."""
-    for sid, sub in submissions.items():
-        if not sub.conference_id:
-            continue
-        
-        # Check if conference exists
-        if sub.conference_id not in conferences:
-            raise ValueError(f"Submission {sid} references unknown conference {sub.conference_id}")
-        
-        conf = conferences[sub.conference_id]
-        
-        # Check if conference accepts this submission type
-        if not conf.accepts_submission_type(sub.kind):
-            raise ValueError(f"Submission {sid} ({sub.kind.value}) not accepted by conference {sub.conference_id}")
-        
-        # Check if submission type is compatible with conference type
-        if sub.kind == SubmissionType.ABSTRACT and conf.conf_type == ConferenceType.ENGINEERING:
-            raise ValueError(f"Abstract {sid} not compatible with engineering conference {sub.conference_id}")
+def _validate_venue_compatibility(submissions: Dict[str, Submission], 
+                                conferences: Dict[str, Conference]) -> None:
+    """Validate venue compatibility with proper work item handling."""
+    for sub_id, submission in submissions.items():
+        if submission.kind == SubmissionType.ABSTRACT:
+            # Abstracts are work items, validate against candidate conferences
+            if submission.candidate_conferences:
+                for conf_id in submission.candidate_conferences:
+                    if conf_id in conferences:
+                        conf = conferences[conf_id]
+                        if not conf.accepts_submission_type(SubmissionType.ABSTRACT):
+                            raise ValueError(f"Abstract {sub_id} not compatible with conference {conf_id}")
+            # Work items without candidate conferences are valid
+        elif submission.kind == SubmissionType.PAPER:
+            # Papers should have conference_id or candidate_conferences
+            if submission.conference_id:
+                if submission.conference_id not in conferences:
+                    raise ValueError(f"Paper {sub_id} references unknown conference {submission.conference_id}")
+                conf = conferences[submission.conference_id]
+                if not conf.accepts_submission_type(SubmissionType.PAPER):
+                    raise ValueError(f"Paper {sub_id} not compatible with conference {submission.conference_id}")
+            elif submission.candidate_conferences:
+                # Validate against candidate conferences
+                for conf_id in submission.candidate_conferences:
+                    if conf_id in conferences:
+                        conf = conferences[conf_id]
+                        if not conf.accepts_submission_type(SubmissionType.PAPER):
+                            raise ValueError(f"Paper {sub_id} not compatible with conference {conf_id}")
+            else:
+                raise ValueError(f"Paper {sub_id} must have either conference_id or candidate_conferences")
