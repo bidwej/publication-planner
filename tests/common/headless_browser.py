@@ -300,7 +300,7 @@ class ServerStartupError(HeadlessBrowserError):
 class ScreenshotCaptureError(HeadlessBrowserError):
     """Exception raised when screenshot capture fails."""
 
-def is_server_running(url: str, timeout: int = 2) -> bool:
+def is_server_running(url: str, timeout: int = 1) -> bool:
     """Check if a web server is running at the given URL."""
     try:
         response = requests.get(url, timeout=timeout)
@@ -312,7 +312,7 @@ def is_server_running(url: str, timeout: int = 2) -> bool:
         logger.error("Unexpected error checking server %s: %s", url, e)
         return False
 
-def start_web_server(script_path: str, port: int, max_wait: int = 10) -> Optional[subprocess.Popen]:
+def start_web_server(script_path: str, port: int, max_wait: int = 3) -> Optional[subprocess.Popen]:
     """Start a web server using the given script and wait for it to be ready."""
     logger.info("[START] Starting web server on port %d", port)
     
@@ -326,32 +326,27 @@ def start_web_server(script_path: str, port: int, max_wait: int = 10) -> Optiona
             sys.executable, script_path
         ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
-        # Wait for server to start
-        logger.info("[WAIT] Waiting for server to start")
+        # Wait for server to start with very short timeout
+        logger.info("[WAIT] Waiting for server to start (max %d seconds)", max_wait)
         url = f"http://127.0.0.1:{port}"
         
-        for i in range(max_wait):
+        for i in range(max_wait * 2):  # Check twice per second
             if is_server_running(url):
                 logger.info("[OK] Server is running at %s!", url)
                 return process
-            time.sleep(1)
-            logger.info("   Waiting (%d/%d)", i+1, max_wait)
+            time.sleep(0.5)  # Check every 0.5 seconds
+            if (i + 1) % 2 == 0:  # Log every second
+                logger.info("   Waiting (%d/%d seconds)", (i + 1) // 2, max_wait)
         
-        # If we get here, server didn't start
-        error_msg = f"Server failed to start within {max_wait} seconds"
-        logger.error(error_msg)
-        
-        # Try to get error output from the process
+        # If we get here, server didn't start - kill it immediately
+        logger.error("Server failed to start within %d seconds - killing process", max_wait)
         try:
-            stdout, stderr = process.communicate(timeout=1)
-            if stderr:
-                logger.error("Server stderr: %s", stderr.decode())
-            if stdout:
-                logger.info("Server stdout: %s", stdout.decode())
-        except subprocess.TimeoutExpired:
             process.kill()
+            process.wait(timeout=1)  # Very short timeout for cleanup
+        except subprocess.TimeoutExpired:
+            pass  # Process already killed
         
-        raise ServerStartupError(error_msg)
+        raise ServerStartupError(f"Server failed to start within {max_wait} seconds")
         
     except subprocess.SubprocessError as e:
         error_msg = f"Error starting server: {e}"
@@ -433,12 +428,12 @@ async def capture_web_page_screenshot(
             logger.info("[SEARCH] Capturing screenshot from %s", url)
             
             try:
-                # Navigate to the page
-                await page.goto(url, timeout=30000)  # 30 second timeout
+                # Navigate to the page with shorter timeout
+                await page.goto(url, timeout=15000)  # 15 second timeout
                 logger.info("[OK] Loaded page")
                 
-                # Wait for page to load
-                await page.wait_for_load_state('networkidle', timeout=30000)
+                # Wait for page to load with shorter timeout
+                await page.wait_for_load_state('networkidle', timeout=15000)
                 
                 # Wait for specific selector if provided
                 if wait_for_selector:
@@ -450,9 +445,10 @@ async def capture_web_page_screenshot(
                     except Exception as e:
                         logger.warning("[WARNING]  Error waiting for selector %s: %s", wait_for_selector, e)
                 
-                # Extra wait for dynamic content
+                # Extra wait for dynamic content (capped at 3 seconds)
                 if extra_wait > 0:
-                    await page.wait_for_timeout(extra_wait)
+                    actual_wait = min(extra_wait, 3000)  # Cap at 3 seconds
+                    await page.wait_for_timeout(actual_wait)
                 
                 # Take screenshot
                 await page.screenshot(path=output_path, full_page=full_page)
@@ -678,7 +674,7 @@ async def capture_timeline_screenshots(
     Args:
         base_url: Base URL of the timeline app
         output_dir: Directory to save screenshots
-        script_path: Path to script to start timeline server
+        script_path: Path to script to start timeline server (not used if server already running)
         port: Port number for timeline server
     
     Returns:
@@ -707,33 +703,31 @@ async def capture_timeline_screenshots(
         logger.error("Failed to create output directory %s: %s", output_dir, e)
         return False
     
-    # Start server if not running
+    # Check if server is running, if not, just return False
     if not is_server_running(base_url):
-        process = start_web_server(script_path, port)
-        if not process:
-            logger.error("[ERROR] Failed to start timeline server")
-            return False
-    else:
-        process = None
-        logger.info("[OK] Timeline server is already running!")
+        logger.error("[ERROR] Timeline server is not running at %s", base_url)
+        logger.info("[TIP] Start the server manually: python run_web_charts.py --mode timeline")
+        return False
+    
+    logger.info("[OK] Timeline server is running at %s", base_url)
     
     try:
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
             page = await browser.new_page()
             
-            # Navigate to the timeline app
-            await page.goto(base_url)
-            await page.wait_for_load_state('networkidle')
-            await page.wait_for_timeout(2000)  # Wait for page to fully load
+            # Navigate to the timeline app with short timeout
+            await page.goto(base_url, timeout=10000)  # 10 second timeout
+            await page.wait_for_load_state('networkidle', timeout=10000)  # 10 second timeout
+            await page.wait_for_timeout(1000)  # Short wait for page to load
             
             # Click the generate button to create the timeline
             try:
-                generate_btn = await page.wait_for_selector('#generate-btn', timeout=5000)
+                generate_btn = await page.wait_for_selector('#generate-btn', timeout=3000)  # 3 second timeout
                 if generate_btn:
                     await generate_btn.click()
                     logger.info("[OK] Clicked generate button")
-                    await page.wait_for_timeout(3000)  # Wait for chart to generate
+                    await page.wait_for_timeout(2000)  # Short wait for chart to generate
                 else:
                     logger.warning("[WARNING] Generate button not found")
             except Exception as e:
@@ -750,17 +744,3 @@ async def capture_timeline_screenshots(
     except Exception as e:
         logger.error("[ERROR] Error capturing timeline screenshot: %s", e)
         return False
-        
-    finally:
-        # Stop server if we started it
-        if process:
-            logger.info("[STOP] Stopping timeline server")
-            try:
-                process.terminate()
-                process.wait(timeout=5)
-                logger.info("[OK] Timeline server stopped.")
-            except subprocess.TimeoutExpired:
-                logger.warning("[WARNING] Timeline server didn't stop gracefully, forcing kill")
-                process.kill()
-            except Exception as e:
-                logger.warning("[WARNING] Error stopping timeline server: %s", e)

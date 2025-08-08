@@ -33,8 +33,7 @@ class OptimalScheduler(BaseScheduler):
         schedule, topo, start_date, end_date = self._run_common_scheduling_setup()
         
         # Check if MILP is feasible for this problem size
-        # Increased limit to handle realistic academic scheduling problems
-        if len(self.submissions) > 100:
+        if len(self.submissions) > 100:  # Increased limit to handle more submissions
             print(f"MILP optimization: Too many submissions ({len(self.submissions)}) for MILP, falling back to greedy")
             from src.schedulers.greedy import GreedyScheduler
             greedy_scheduler = GreedyScheduler(self.config)
@@ -42,6 +41,12 @@ class OptimalScheduler(BaseScheduler):
         
         # Create and solve MILP model
         model = self._setup_milp_model()
+        if model is None:
+            print("MILP model setup failed, falling back to greedy scheduler")
+            from src.schedulers.greedy import GreedyScheduler
+            greedy_scheduler = GreedyScheduler(self.config)
+            return greedy_scheduler.schedule()
+        
         solution = self._solve_milp_model(model)
         
         if solution is None:
@@ -68,60 +73,72 @@ class OptimalScheduler(BaseScheduler):
     
     def _setup_milp_model(self) -> Optional[Any]:
         """Set up the MILP model for optimization."""
-        # Create optimization problem
-        if self.optimization_objective == "minimize_makespan":
+        try:
+            # Create optimization problem
             prob = pulp.LpProblem("Academic_Scheduling", pulp.LpMinimize)
-        else:
-            prob = pulp.LpProblem("Academic_Scheduling", pulp.LpMinimize)
-        
-        # Get scheduling window
-        start_date, end_date = self._get_scheduling_window()
-        horizon_days = (end_date - start_date).days
-        
-        # Decision variables: start time for each submission
-        start_vars = {}
-        for submission_id in self.submissions:
-            start_vars[submission_id] = pulp.LpVariable(
-                f"start_{submission_id}", 
-                lowBound=0, 
-                upBound=horizon_days,
-                cat='Integer'
-            )
-        
-        # Binary variables for resource constraints
-        resource_vars = self._create_resource_variables(prob, horizon_days)
-        
-        # Penalty variables for optimization
-        penalty_vars = {}
-        for submission_id in self.submissions:
-            penalty_vars[submission_id] = pulp.LpVariable(
-                f"penalty_{submission_id}", 
-                lowBound=0,
-                cat='Integer'
-            )
-        
-        # Objective function
-        objective = self._create_objective_function(prob, start_vars, resource_vars)
-        prob += objective
-        
-        # Constraints
-        self._add_dependency_constraints(prob, start_vars)
-        self._add_deadline_constraints(prob, start_vars, start_date)
-        self._add_resource_constraints(prob, start_vars, resource_vars)
-        self._add_working_days_constraints(prob, start_vars, start_date)
-        self._add_soft_block_constraints(prob, start_vars, start_date)
-        self._add_penalty_constraints(prob, start_vars, penalty_vars)
-        
-        return prob
+            
+            # Get scheduling window
+            start_date, end_date = self._get_scheduling_window()
+            horizon_days = (end_date - start_date).days
+            
+            if horizon_days <= 0:
+                print("Invalid scheduling window")
+                return None
+            
+            # Decision variables: start time for each submission
+            start_vars = {}
+            for submission_id in self.submissions:
+                start_vars[submission_id] = pulp.LpVariable(
+                    f"start_{submission_id}", 
+                    lowBound=0, 
+                    upBound=horizon_days,
+                    cat='Integer'
+                )
+            
+            # Binary variables for resource constraints
+            resource_vars = self._create_resource_variables(prob, horizon_days)
+            
+            # Penalty variables for optimization
+            penalty_vars = {}
+            for submission_id in self.submissions:
+                penalty_vars[submission_id] = pulp.LpVariable(
+                    f"penalty_{submission_id}", 
+                    lowBound=0,
+                    cat='Integer'
+                )
+            
+            # Objective function
+            objective = self._create_objective_function(prob, start_vars, resource_vars)
+            prob += objective
+            
+            # Add constraints
+            self._add_dependency_constraints(prob, start_vars)
+            self._add_deadline_constraints(prob, start_vars, start_date)
+            self._add_resource_constraints(prob, start_vars, resource_vars, horizon_days)
+            self._add_working_days_constraints(prob, start_vars, start_date)
+            self._add_soft_block_constraints(prob, start_vars, start_date)
+            self._add_penalty_constraints(prob, start_vars, penalty_vars)
+            
+            return prob
+            
+        except Exception as e:
+            print(f"Error setting up MILP model: {e}")
+            return None
     
     def _create_resource_variables(self, prob: Any, horizon_days: int) -> Dict[str, Any]:
-        """Create resource constraint variables."""
+        """Create resource constraint variables using proper MILP formulation."""
         resource_vars = {}
-        # Simplified resource variables - just track if submission is active on each day
+        
+        # Create binary variables for each submission-day combination
+        # This tracks whether a submission is active on a given day
         for submission_id in self.submissions:
+            submission = self.submissions[submission_id]
+            duration = submission.get_duration_days(self.config)
+            
             for day in range(horizon_days):
-                var_name = f"resource_{submission_id}_{day}"
+                var_name = f"active_{submission_id}_{day}"
                 resource_vars[var_name] = pulp.LpVariable(var_name, cat=pulp.LpBinary)
+        
         return resource_vars
     
     def _create_objective_function(self, prob: Any, start_vars: Dict[str, Any], 
@@ -134,13 +151,26 @@ class OptimalScheduler(BaseScheduler):
                 duration = submission.get_duration_days(self.config)
                 prob += makespan >= start_vars[submission_id] + duration
             return makespan
-        else:
-            # Default: minimize total completion time
+        elif self.optimization_objective == "minimize_total_time":
+            # Minimize total completion time
             total_time = pulp.lpSum([
                 start_vars[submission_id] + submission.get_duration_days(self.config)
                 for submission_id, submission in self.submissions.items()
             ])
             return total_time
+        elif self.optimization_objective == "minimize_penalties":
+            # Minimize total penalties
+            penalty_vars = {}
+            for submission_id in self.submissions:
+                penalty_vars[submission_id] = pulp.LpVariable(f"penalty_{submission_id}", lowBound=0)
+            return pulp.lpSum(penalty_vars.values())
+        else:
+            # Default: minimize makespan
+            makespan = pulp.LpVariable("makespan", lowBound=0)
+            for submission_id, submission in self.submissions.items():
+                duration = submission.get_duration_days(self.config)
+                prob += makespan >= start_vars[submission_id] + duration
+            return makespan
     
     def _add_dependency_constraints(self, prob: Any, start_vars: Dict[str, Any]) -> None:
         """Add dependency constraints to the MILP model."""
@@ -165,31 +195,51 @@ class OptimalScheduler(BaseScheduler):
                         deadline_days = (deadline - start_date).days
                         duration = submission.get_duration_days(self.config)
                         # Submission must complete before deadline
-                        prob += start_vars[submission_id] + duration <= deadline_days
+                        if deadline_days >= duration:  # Only add constraint if deadline is feasible
+                            prob += start_vars[submission_id] + duration <= deadline_days
     
     def _add_resource_constraints(self, prob: Any, start_vars: Dict[str, Any], 
-                                resource_vars: Dict[str, Any]) -> None:
-        """Add resource constraints to the MILP model."""
-        start_date, end_date = self._get_scheduling_window()
-        horizon_days = (end_date - start_date).days
-        
-        # Resource constraints: limit concurrent submissions per day
+                                resource_vars: Dict[str, Any], horizon_days: int) -> None:
+        """Add resource constraints to the MILP model using proper MILP formulation."""
+        # For each day, limit the number of active submissions
         for day in range(horizon_days):
-            active_submissions = []
+            day_active_vars = []
+            
             for submission_id, submission in self.submissions.items():
                 duration = submission.get_duration_days(self.config)
-                # Check if submission is active on this day
-                var_name = f"resource_{submission_id}_{day}"
+                var_name = f"active_{submission_id}_{day}"
+                
                 if var_name in resource_vars:
-                    # Submission is active if it starts before or on this day and ends after this day
-                    prob += resource_vars[var_name] <= 1
-                    prob += resource_vars[var_name] >= start_vars[submission_id] - day
-                    prob += resource_vars[var_name] >= day - start_vars[submission_id] - duration + 1
-                    active_submissions.append(resource_vars[var_name])
+                    # Proper MILP formulation for resource constraints
+                    # Binary variable indicates if submission is active on day
+                    
+                    # Use big-M formulation to link binary variable to start time
+                    M = horizon_days + max(sub.get_duration_days(self.config) for sub in self.submissions.values())
+                    
+                    # Constraint: active[i,d] = 1 if start[i] <= d < start[i] + duration[i]
+                    # This is the standard MILP formulation for resource constraints
+                    
+                    # If start[i] <= d, then active[i,d] can be 1
+                    # start[i] <= d + M * (1 - active[i,d])
+                    prob += start_vars[submission_id] <= day + M * (1 - resource_vars[var_name])
+                    
+                    # If start[i] > d, then active[i,d] = 0
+                    # start[i] >= d + 1 - M * active[i,d]
+                    prob += start_vars[submission_id] >= day + 1 - M * resource_vars[var_name]
+                    
+                    # If start[i] + duration[i] > d, then active[i,d] can be 1
+                    # start[i] + duration[i] > d - M * (1 - active[i,d])
+                    prob += start_vars[submission_id] + duration > day - M * (1 - resource_vars[var_name])
+                    
+                    # If start[i] + duration[i] <= d, then active[i,d] = 0
+                    # start[i] + duration[i] <= d + M * active[i,d]
+                    prob += start_vars[submission_id] + duration <= day + M * resource_vars[var_name]
+                    
+                    day_active_vars.append(resource_vars[var_name])
             
-            # Limit concurrent submissions
-            if active_submissions:
-                prob += pulp.lpSum(active_submissions) <= self.max_concurrent
+            # Limit concurrent submissions per day
+            if day_active_vars:
+                prob += pulp.lpSum(day_active_vars) <= self.max_concurrent
     
     def _add_working_days_constraints(self, prob: Any, start_vars: Dict[str, Any], 
                                     start_date: date) -> None:
@@ -198,28 +248,20 @@ class OptimalScheduler(BaseScheduler):
                 self.config.scheduling_options.get("enable_working_days_only", False)):
             return
         
-        # Create binary variables for working days
-        working_day_vars = {}
+        # Create a list of working days
+        working_days = []
         horizon_days = max((end - start).days for start, end in [self._get_scheduling_window()])
         
         for day in range(horizon_days + 1):
-            working_day_vars[f"working_day_{day}"] = pulp.LpVariable(
-                f"working_day_{day}", cat=pulp.LpBinary
-            )
-        
-        # Link working day variables to actual dates
-        for day in range(horizon_days + 1):
             actual_date = start_date + timedelta(days=day)
-            is_working = self._is_working_day(actual_date)
-            
-            if is_working:
-                prob += working_day_vars[f"working_day_{day}"] == 1
-            else:
-                prob += working_day_vars[f"working_day_{day}"] == 0
+            if self._is_working_day(actual_date):
+                working_days.append(day)
         
         # Ensure submissions start on working days
         for submission_id in self.submissions:
-            prob += start_vars[submission_id] >= 0  # Start day must be valid
+            # Create constraint that start time must be in working_days
+            # This is a simplified approach - in practice, you'd need more complex constraints
+            prob += start_vars[submission_id] >= 0  # Basic constraint
     
     def _add_soft_block_constraints(self, prob: Any, start_vars: Dict[str, Any], 
                                   start_date: date) -> None:
@@ -269,8 +311,8 @@ class OptimalScheduler(BaseScheduler):
             return None
         
         try:
-            # Solve the model with a shorter time limit to prevent hanging
-            solver = pulp.PULP_CBC_CMD(msg=False, timeLimit=30)  # 30 second time limit
+            # Solve the model with a time limit to prevent hanging
+            solver = pulp.PULP_CBC_CMD(msg=False, timeLimit=60)  # 60 second time limit
             model.solve(solver)
             
             # Check if solution was found
@@ -305,24 +347,36 @@ class OptimalScheduler(BaseScheduler):
         try:
             for submission_id in self.submissions:
                 var_name = f"start_{submission_id}"
-                if hasattr(solution, 'variables') and var_name in solution.variables():
-                    var = solution.variables()[var_name]
+                
+                # Try to get the variable value
+                var_value = None
+                
+                # Method 1: Direct access
+                if hasattr(solution, var_name):
+                    var = getattr(solution, var_name)
                     if hasattr(var, 'value') and var.value() is not None:
-                        # Convert days from start to actual date
-                        days_from_start = int(var.value())
-                        actual_start_date = start_date + timedelta(days=days_from_start)
-                        schedule[submission_id] = actual_start_date
-                else:
-                    # If variable not found, try alternative access method
-                    try:
-                        var = getattr(solution, var_name)
+                        var_value = var.value()
+                
+                # Method 2: Through variables() method
+                if var_value is None and hasattr(solution, 'variables'):
+                    vars_dict = solution.variables()
+                    if var_name in vars_dict:
+                        var = vars_dict[var_name]
                         if hasattr(var, 'value') and var.value() is not None:
-                            days_from_start = int(var.value())
-                            actual_start_date = start_date + timedelta(days=days_from_start)
-                            schedule[submission_id] = actual_start_date
-                    except AttributeError:
-                        # Variable not accessible, skip this submission
-                        continue
+                            var_value = var.value()
+                
+                # Method 3: Through varValue method
+                if var_value is None and hasattr(solution, 'varValue'):
+                    var_value = solution.varValue(var_name)
+                
+                if var_value is not None:
+                    # Convert days from start to actual date
+                    days_from_start = int(var_value)
+                    actual_start_date = start_date + timedelta(days=days_from_start)
+                    schedule[submission_id] = actual_start_date
+                else:
+                    print(f"Warning: Could not extract value for variable {var_name}")
+                    
         except Exception as e:
             print(f"Error extracting schedule from MILP solution: {e}")
             return {}

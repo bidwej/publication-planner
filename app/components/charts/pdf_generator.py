@@ -27,7 +27,7 @@ class TimelinePDFGenerator:
         
         # Create custom styles
         self.styles.add(ParagraphStyle(
-            name='Title',
+            name='TimelineTitle',
             parent=self.styles['Heading1'],
             fontSize=24,
             spaceAfter=30,
@@ -35,7 +35,7 @@ class TimelinePDFGenerator:
         ))
         
         self.styles.add(ParagraphStyle(
-            name='Subtitle',
+            name='TimelineSubtitle',
             parent=self.styles['Heading2'],
             fontSize=16,
             spaceAfter=20,
@@ -43,7 +43,7 @@ class TimelinePDFGenerator:
         ))
         
         self.styles.add(ParagraphStyle(
-            name='BodyText',
+            name='TimelineBodyText',
             parent=self.styles['Normal'],
             fontSize=12,
             spaceAfter=12
@@ -107,13 +107,13 @@ class TimelinePDFGenerator:
         story = []
         
         # Title
-        story.append(Paragraph("Paper Submission Timeline Report", self.styles['Title']))
+        story.append(Paragraph("Paper Submission Timeline Report", self.styles['TimelineTitle']))
         story.append(Spacer(1, 20))
         
         # Subtitle with date
         story.append(Paragraph(
             f"Generated on {date.today().strftime('%B %d, %Y')}",
-            self.styles['Subtitle']
+            self.styles['TimelineSubtitle']
         ))
         story.append(Spacer(1, 30))
         
@@ -197,7 +197,7 @@ class TimelinePDFGenerator:
             "Color coding indicates the type of submission (engineering vs medical) and "
             "whether it's a paper or work item. Light gray bands represent blackout periods "
             "and time intervals for better readability.",
-            self.styles['BodyText']
+            self.styles['TimelineBodyText']
         ))
         
         return story
@@ -210,7 +210,7 @@ class TimelinePDFGenerator:
         story.append(Spacer(1, 12))
         
         if not schedule:
-            story.append(Paragraph("No schedule data available.", self.styles['BodyText']))
+            story.append(Paragraph("No schedule data available.", self.styles['TimelineBodyText']))
             return story
         
         # Sort schedule by date
