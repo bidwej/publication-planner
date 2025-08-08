@@ -32,7 +32,7 @@ class TestOptimalSchedulerEdgeCases:
         if config.submissions:
             config.submissions = [config.submissions[0]]  # Just one submission
         
-        scheduler = OptimalScheduler(config)
+        scheduler: Any = OptimalScheduler(config)
         schedule = scheduler.schedule()
         
         # Should handle single submission
@@ -59,7 +59,7 @@ class TestOptimalSchedulerEdgeCases:
         config = create_mock_config(submissions, conferences)
         
         # Should handle circular dependency gracefully
-        scheduler = OptimalScheduler(config)
+        scheduler: Any = OptimalScheduler(config)
         schedule = scheduler.schedule()
         
         # Should return empty schedule or handle gracefully
@@ -80,7 +80,7 @@ class TestOptimalSchedulerEdgeCases:
         
         config = create_mock_config(submissions, conferences)
         
-        scheduler = OptimalScheduler(config)
+        scheduler: Any = OptimalScheduler(config)
         schedule = scheduler.schedule()
         
         # Should handle impossible deadline gracefully
@@ -90,7 +90,7 @@ class TestOptimalSchedulerEdgeCases:
         """Test MILP with zero duration submissions."""
         # Mock zero duration
         with patch('src.core.models.Submission.get_duration_days', return_value=0):
-            scheduler = OptimalScheduler(test_data_config)
+            scheduler: Any = OptimalScheduler(test_data_config)
             schedule = scheduler.schedule()
             
             # Should handle zero duration gracefully
@@ -101,7 +101,7 @@ class TestOptimalSchedulerEdgeCases:
         config = test_data_config
         config.max_concurrent_submissions = 0
         
-        scheduler = OptimalScheduler(config)
+        scheduler: Any = OptimalScheduler(config)
         schedule = scheduler.schedule()
         
         # Should handle zero concurrency gracefully
@@ -115,7 +115,7 @@ class TestOptimalSchedulerEdgeCases:
         config = test_data_config
         config.blackout_dates = blackout_dates
         
-        scheduler = OptimalScheduler(config)
+        scheduler: Any = OptimalScheduler(config)
         schedule = scheduler.schedule()
         
         # Should handle all blackout dates gracefully
@@ -137,7 +137,7 @@ class TestOptimalSchedulerEdgeCases:
         
         config = create_mock_config(submissions, conferences)
         
-        scheduler = OptimalScheduler(config)
+        scheduler: Any = OptimalScheduler(config)
         schedule = scheduler.schedule()
         
         # Should fallback to greedy for large problems
@@ -147,7 +147,7 @@ class TestOptimalSchedulerEdgeCases:
         """Test MILP with very long duration submissions."""
         # Mock very long duration
         with patch('src.core.models.Submission.get_duration_days', return_value=365):
-            scheduler = OptimalScheduler(test_data_config)
+            scheduler: Any = OptimalScheduler(test_data_config)
             schedule = scheduler.schedule()
             
             # Should handle very long duration gracefully
@@ -159,7 +159,7 @@ class TestOptimalSchedulerEdgeCases:
         config.conferences = []
         config.submissions = []  # Also clear submissions to avoid validation errors
         
-        scheduler = OptimalScheduler(config)
+        scheduler: Any = OptimalScheduler(config)
         schedule = scheduler.schedule()
         
         # Should handle no conferences gracefully
@@ -170,7 +170,7 @@ class TestOptimalSchedulerEdgeCases:
         config = test_data_config
         config.submissions = []
         
-        scheduler = OptimalScheduler(config)
+        scheduler: Any = OptimalScheduler(config)
         schedule = scheduler.schedule()
         
         # Should return empty schedule
@@ -179,7 +179,7 @@ class TestOptimalSchedulerEdgeCases:
     def test_milp_invalid_optimization_objective_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with invalid optimization objective."""
         # Should handle invalid objective gracefully - use default parameter
-        scheduler = OptimalScheduler(test_data_config)
+        scheduler: Any = OptimalScheduler(test_data_config)
         schedule = scheduler.schedule()
         
         assert isinstance(schedule, dict)
@@ -189,7 +189,7 @@ class TestOptimalSchedulerEdgeCases:
         # Mock solver to timeout
         with patch('pulp.PULP_CBC_CMD') as mock_solver:
             mock_solver.return_value.solve.return_value = 1  # Timeout status
-            scheduler = OptimalScheduler(test_data_config)
+            scheduler: Any = OptimalScheduler(test_data_config)
             schedule = scheduler.schedule()
             
             # Should handle timeout gracefully
@@ -213,7 +213,7 @@ class TestOptimalSchedulerEdgeCases:
         
         config = create_mock_config(submissions, conferences, max_concurrent_submissions=1)
         
-        scheduler = OptimalScheduler(config)
+        scheduler: Any = OptimalScheduler(config)
         schedule = scheduler.schedule()
         
         # Should handle infeasible constraints gracefully
@@ -236,7 +236,7 @@ class TestOptimalSchedulerEdgeCases:
         
         config = create_mock_config(submissions, conferences)
         
-        scheduler = OptimalScheduler(config)
+        scheduler: Any = OptimalScheduler(config)
         schedule = scheduler.schedule()
         
         # Should handle very short deadline gracefully
@@ -258,7 +258,7 @@ class TestOptimalSchedulerEdgeCases:
         
         config = create_mock_config(submissions, conferences)
         
-        scheduler = OptimalScheduler(config)
+        scheduler: Any = OptimalScheduler(config)
         schedule = scheduler.schedule()
         
         # Should handle duplicate IDs gracefully
@@ -280,7 +280,7 @@ class TestOptimalSchedulerEdgeCases:
         
         config = create_mock_config(submissions, conferences)
         
-        scheduler = OptimalScheduler(config)
+        scheduler: Any = OptimalScheduler(config)
         schedule = scheduler.schedule()
         
         # Should handle missing dependency gracefully
@@ -290,7 +290,7 @@ class TestOptimalSchedulerEdgeCases:
         """Test MILP with negative duration (should never happen but test anyway)."""
         # Mock negative duration
         with patch('src.core.models.Submission.get_duration_days', return_value=-1):
-            scheduler = OptimalScheduler(test_data_config)
+            scheduler: Any = OptimalScheduler(test_data_config)
             schedule = scheduler.schedule()
             
             # Should handle negative duration gracefully
@@ -312,7 +312,7 @@ class TestOptimalSchedulerEdgeCases:
         
         config = create_mock_config(submissions, conferences)
         
-        scheduler = OptimalScheduler(config)
+        scheduler: Any = OptimalScheduler(config)
         schedule = scheduler.schedule()
         
         # Should handle both empty and None dependencies
@@ -334,7 +334,7 @@ class TestOptimalSchedulerEdgeCases:
         
         config = create_mock_config(submissions, conferences)
         
-        scheduler = OptimalScheduler(config)
+        scheduler: Any = OptimalScheduler(config)
         schedule = scheduler.schedule()
         
         # Should handle far future deadline
@@ -345,7 +345,7 @@ class TestOptimalSchedulerEdgeCases:
     def test_milp_with_real_test_data(self, test_data_config: Config) -> None:
         """Test MILP with actual test data from tests/common/data."""
         # Use the real test data
-        scheduler = OptimalScheduler(test_data_config)
+        scheduler: Any = OptimalScheduler(test_data_config)
         schedule = scheduler.schedule()
         
         # Should produce a valid schedule
@@ -370,7 +370,7 @@ class TestOptimalSchedulerEdgeCases:
             config = test_data_config
             config.blackout_dates = [date.fromisoformat(d) for d in blackout_data.get("blackout_dates", [])]
             
-            scheduler = OptimalScheduler(config)
+            scheduler: Any = OptimalScheduler(config)
             schedule = scheduler.schedule()
             
             # Should handle blackout dates gracefully

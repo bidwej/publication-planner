@@ -5,28 +5,30 @@ from datetime import date
 
 from core.models import SubmissionType, ConferenceType, Submission, Config
 from schedulers.heuristic import HeuristicScheduler
+from typing import Dict, List, Any, Optional
+
 
 
 class TestHeuristicScheduler:
     """Test the HeuristicScheduler class."""
 
-    def test_heuristic_scheduler_initialization(self, empty_config):
+    def test_heuristic_scheduler_initialization(self, empty_config) -> None:
         """Test heuristic scheduler initialization."""
-        scheduler = HeuristicScheduler(empty_config)
+        scheduler: Any = HeuristicScheduler(empty_config)
         
         assert scheduler.config == empty_config
         assert hasattr(scheduler, 'schedule')
 
-    def test_schedule_empty_submissions(self, empty_config):
+    def test_schedule_empty_submissions(self, empty_config) -> None:
         """Test scheduling with empty submissions."""
-        scheduler = HeuristicScheduler(empty_config)
+        scheduler: Any = HeuristicScheduler(empty_config)
         
         # Empty submissions should return empty schedule
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         assert isinstance(result, dict)
         assert len(result) == 0
 
-    def test_schedule_single_paper(self):
+    def test_schedule_single_paper(self) -> None:
         """Test scheduling with single paper."""
         from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
@@ -43,16 +45,16 @@ class TestHeuristicScheduler:
         
         config = create_mock_config([submission], [conference])
         
-        scheduler = HeuristicScheduler(config)
+        scheduler: Any = HeuristicScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) == 1
         assert "paper1" in result
         assert isinstance(result["paper1"], date)
 
-    def test_schedule_multiple_papers(self):
+    def test_schedule_multiple_papers(self) -> None:
         """Test scheduling with multiple papers."""
         from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
@@ -79,9 +81,9 @@ class TestHeuristicScheduler:
         
         config = create_mock_config([submission1, submission2], [conference1, conference2])
         
-        scheduler = HeuristicScheduler(config)
+        scheduler: Any = HeuristicScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) >= 1  # At least one submission should be scheduled
@@ -92,7 +94,7 @@ class TestHeuristicScheduler:
         if "paper2" in result:
             assert isinstance(result["paper2"], date)
 
-    def test_heuristic_algorithm_behavior(self):
+    def test_heuristic_algorithm_behavior(self) -> None:
         """Test the heuristic algorithm behavior."""
         from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
@@ -118,9 +120,9 @@ class TestHeuristicScheduler:
         
         config = create_mock_config([submission1, submission2], [conference1, conference2])
         
-        scheduler = HeuristicScheduler(config)
+        scheduler: Any = HeuristicScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) >= 1  # At least one submission should be scheduled
@@ -130,7 +132,7 @@ class TestHeuristicScheduler:
         if "paper2" in result:
             assert isinstance(result["paper2"], date)
 
-    def test_schedule_with_constraints(self):
+    def test_schedule_with_constraints(self) -> None:
         """Test scheduling with constraints."""
         from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
@@ -147,9 +149,9 @@ class TestHeuristicScheduler:
         config = create_mock_config([submission], [conference])
         config.blackout_dates = [date(2024, 5, 15), date(2024, 5, 16)]
         
-        scheduler = HeuristicScheduler(config)
+        scheduler: Any = HeuristicScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) == 1
@@ -159,10 +161,10 @@ class TestHeuristicScheduler:
         scheduled_date = result["paper1"]
         assert scheduled_date not in config.blackout_dates
 
-    def test_error_handling_invalid_paper(self):
+    def test_error_handling_invalid_paper(self) -> None:
         """Test error handling with invalid paper data."""
         # Create a submission with invalid conference reference
-        invalid_submission = Submission(
+        invalid_submission: Submission = Submission(
             id="paper1",
             title="Invalid Paper",
             kind=SubmissionType.PAPER,
@@ -174,7 +176,7 @@ class TestHeuristicScheduler:
             engineering=False
         )
         
-        config = Config(
+        config: Config = Config(
             submissions=[invalid_submission],
             conferences=[],  # No conferences defined
             min_abstract_lead_time_days=30,
@@ -182,12 +184,12 @@ class TestHeuristicScheduler:
             max_concurrent_submissions=3
         )
         
-        scheduler = HeuristicScheduler(config)
+        scheduler: Any = HeuristicScheduler(config)
         
         with pytest.raises(ValueError, match="Submission paper1 references unknown conference nonexistent_conf"):
             scheduler.schedule()
 
-    def test_schedule_with_priority_ordering(self):
+    def test_schedule_with_priority_ordering(self) -> None:
         """Test scheduling with priority ordering."""
         from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
@@ -212,9 +214,9 @@ class TestHeuristicScheduler:
         
         config = create_mock_config([submission1, submission2], [conference1, conference2])
         
-        scheduler = HeuristicScheduler(config)
+        scheduler: Any = HeuristicScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) >= 1  # At least one submission should be scheduled
@@ -224,7 +226,7 @@ class TestHeuristicScheduler:
         if "paper2" in result:
             assert isinstance(result["paper2"], date)
 
-    def test_schedule_with_deadline_compliance(self):
+    def test_schedule_with_deadline_compliance(self) -> None:
         """Test scheduling with deadline compliance."""
         from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
@@ -240,9 +242,9 @@ class TestHeuristicScheduler:
         
         config = create_mock_config([submission], [conference])
         
-        scheduler = HeuristicScheduler(config)
+        scheduler: Any = HeuristicScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) == 1
@@ -253,7 +255,7 @@ class TestHeuristicScheduler:
         deadline = conference.deadlines[SubmissionType.PAPER]
         assert scheduled_date <= deadline
 
-    def test_schedule_with_resource_optimization(self):
+    def test_schedule_with_resource_optimization(self) -> None:
         """Test scheduling with resource optimization."""
         from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
@@ -278,9 +280,9 @@ class TestHeuristicScheduler:
         config = create_mock_config([submission1, submission2, submission3], [conference])
         config.max_concurrent_submissions = 2
         
-        scheduler = HeuristicScheduler(config)
+        scheduler: Any = HeuristicScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) >= 1  # At least one submission should be scheduled

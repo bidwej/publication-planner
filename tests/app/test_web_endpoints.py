@@ -1,3 +1,5 @@
+from typing import Dict, List, Any, Optional
+
 """
 Tests for web application endpoints and API functionality.
 """

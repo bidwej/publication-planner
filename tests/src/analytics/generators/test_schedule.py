@@ -59,9 +59,9 @@ class TestSaveAllOutputs:
         metrics: Mock = Mock(spec=ScheduleSummary)
         metrics.total_submissions = 2
         metrics.schedule_span = 30
-        metrics.penalty_score = 0.0
-        metrics.quality_score = 85.0
-        metrics.efficiency_score = 75.0
+        metrics.penalty_score: float = 0.0
+        metrics.quality_score: float = 85.0
+        metrics.efficiency_score: float = 75.0
         metrics.deadline_compliance = 100.0
         metrics.resource_utilization = 80.0
         

@@ -90,6 +90,15 @@ class OptimalScheduler(BaseScheduler):
         # Binary variables for resource constraints
         resource_vars = self._create_resource_variables(prob, horizon_days)
         
+        # Penalty variables for optimization
+        penalty_vars = {}
+        for submission_id in self.submissions:
+            penalty_vars[submission_id] = pulp.LpVariable(
+                f"penalty_{submission_id}", 
+                lowBound=0,
+                cat='Integer'
+            )
+        
         # Objective function
         objective = self._create_objective_function(prob, start_vars, resource_vars)
         prob += objective
@@ -100,6 +109,7 @@ class OptimalScheduler(BaseScheduler):
         self._add_resource_constraints(prob, start_vars, resource_vars)
         self._add_working_days_constraints(prob, start_vars, start_date)
         self._add_soft_block_constraints(prob, start_vars, start_date)
+        self._add_penalty_constraints(prob, start_vars, penalty_vars)
         
         return prob
     

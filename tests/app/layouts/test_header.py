@@ -2,19 +2,21 @@
 
 from dash import html
 from layouts.header import create_header
+from typing import Dict, List, Any, Optional
+
 
 
 class TestHeaderLayout:
     """Test cases for header layout component."""
     
-    def test_create_header_returns_header_element(self):
+    def test_create_header_returns_header_element(self) -> None:
         """Test that create_header returns a header element."""
         header = create_header()
         
         assert isinstance(header, html.Header)
         assert header.className == "app-header"
     
-    def test_header_contains_brand_section(self):
+    def test_header_contains_brand_section(self) -> None:
         """Test that header contains the brand section with logo and title."""
         header = create_header()
         
@@ -46,7 +48,7 @@ class TestHeaderLayout:
         assert brand_children[2].children == "Academic Schedule Optimizer"
         assert brand_children[2].className == "header-subtitle"
     
-    def test_header_contains_navigation_section(self):
+    def test_header_contains_navigation_section(self) -> None:
         """Test that header contains the navigation section."""
         header = create_header()
         
@@ -78,7 +80,7 @@ class TestHeaderLayout:
             else:
                 assert "active" not in link.className
     
-    def test_header_contains_actions_section(self):
+    def test_header_contains_actions_section(self) -> None:
         """Test that header contains the actions section with buttons."""
         header = create_header()
         
@@ -125,7 +127,7 @@ class TestHeaderLayout:
         assert isinstance(settings_btn.children[0], html.I)
         assert settings_btn.children[0].className == "fas fa-cog"
     
-    def test_header_structure_completeness(self):
+    def test_header_structure_completeness(self) -> None:
         """Test that header has all required sections in correct order."""
         header = create_header()
         
@@ -138,7 +140,7 @@ class TestHeaderLayout:
         assert sections[1].className == "header-nav"
         assert sections[2].className == "header-actions"
     
-    def test_header_has_correct_css_classes(self):
+    def test_header_has_correct_css_classes(self) -> None:
         """Test that header and its components have correct CSS classes."""
         header = create_header()
         
@@ -161,7 +163,7 @@ class TestHeaderLayout:
         for button in action_buttons:
             assert "btn" in button.className
     
-    def test_header_button_ids_are_unique(self):
+    def test_header_button_ids_are_unique(self) -> None:
         """Test that header buttons have unique IDs."""
         header = create_header()
         
@@ -177,7 +179,7 @@ class TestHeaderLayout:
         assert "header-save-btn" in button_ids
         assert "header-load-btn" in button_ids
     
-    def test_header_icon_classes_are_valid(self):
+    def test_header_icon_classes_are_valid(self) -> None:
         """Test that header icons use valid FontAwesome classes."""
         header = create_header()
         
@@ -193,7 +195,7 @@ class TestHeaderLayout:
             icon = button.children[0]
             assert icon.className == expected_icons[i]
     
-    def test_header_navigation_links_have_correct_structure(self):
+    def test_header_navigation_links_have_correct_structure(self) -> None:
         """Test that navigation links have correct href and structure."""
         header = create_header()
         
@@ -205,7 +207,7 @@ class TestHeaderLayout:
             assert len(link.children) > 0
             assert "nav-link" in link.className
     
-    def test_header_is_accessible(self):
+    def test_header_is_accessible(self) -> None:
         """Test that header components have proper accessibility attributes."""
         header = create_header()
         

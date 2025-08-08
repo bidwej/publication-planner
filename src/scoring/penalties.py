@@ -42,6 +42,9 @@ def calculate_penalty_score(schedule: Dict[str, date], config: Config) -> Penalt
     single_conference_penalties = _calculate_single_conference_penalties(comprehensive_result, config)
     lead_time_penalties = _calculate_lead_time_penalties(comprehensive_result, config)
     
+    # Calculate slack cost penalties (opportunity costs)
+    slack_cost_penalties = _calculate_slack_cost_penalties(schedule, config)
+    
     # Sum all penalties
     total_penalty = (
         deadline_penalties +
@@ -52,7 +55,8 @@ def calculate_penalty_score(schedule: Dict[str, date], config: Config) -> Penalt
         blackout_penalties +
         soft_block_penalties +
         single_conference_penalties +
-        lead_time_penalties
+        lead_time_penalties +
+        slack_cost_penalties
     )
     
     return PenaltyBreakdown(

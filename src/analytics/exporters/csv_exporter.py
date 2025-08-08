@@ -49,6 +49,9 @@ class CSVExporter:
         """
         filepath = Path(output_dir) / filename
         
+        # Create directory if it doesn't exist
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        
         # Get detailed schedule table
         schedule_data = generate_schedule_table(schedule, self.config)
         
@@ -83,6 +86,9 @@ class CSVExporter:
         """
         filepath = Path(output_dir) / filename
         
+        # Create directory if it doesn't exist
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        
         # Calculate comprehensive metrics
         metrics_data = self._calculate_comprehensive_metrics(schedule)
         
@@ -113,6 +119,9 @@ class CSVExporter:
             Path to saved CSV file
         """
         filepath = Path(output_dir) / filename
+        
+        # Create directory if it doesn't exist
+        filepath.parent.mkdir(parents=True, exist_ok=True)
         
         # Get deadline table
         deadline_data = generate_deadline_table(schedule, self.config)
@@ -147,6 +156,9 @@ class CSVExporter:
             Path to saved CSV file
         """
         filepath = Path(output_dir) / filename
+        
+        # Create directory if it doesn't exist
+        filepath.parent.mkdir(parents=True, exist_ok=True)
         
         # Run comprehensive validation
         validation_result = self._run_comprehensive_validation(schedule)
@@ -183,9 +195,21 @@ class CSVExporter:
         """
         filepath = Path(output_dir) / filename
         
+        # Create directory if it doesn't exist
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        
         # Calculate penalty breakdown
         penalty_result = calculate_penalty_score(schedule, self.config)
-        penalties_data = generate_penalties_table(penalty_result.breakdown)
+        # Convert PenaltyBreakdown to dict for generate_penalties_table
+        penalty_dict = {
+            "total_penalty": penalty_result.total_penalty,
+            "deadline_penalties": penalty_result.deadline_penalties,
+            "dependency_penalties": penalty_result.dependency_penalties,
+            "resource_penalties": penalty_result.resource_penalties,
+            "conference_compatibility_penalties": penalty_result.conference_compatibility_penalties,
+            "abstract_paper_dependency_penalties": penalty_result.abstract_paper_dependency_penalties
+        }
+        penalties_data = generate_penalties_table(penalty_dict)
         
         if not penalties_data:
             return ""
@@ -217,6 +241,9 @@ class CSVExporter:
             Path to saved CSV file
         """
         filepath = Path(output_dir) / filename
+        
+        # Create directory if it doesn't exist
+        filepath.parent.mkdir(parents=True, exist_ok=True)
         
         comparison_data = self._format_comparison_data(comparison_results)
         
@@ -250,6 +277,9 @@ class CSVExporter:
             Path to saved CSV file
         """
         filepath = Path(output_dir) / filename
+        
+        # Create directory if it doesn't exist
+        filepath.parent.mkdir(parents=True, exist_ok=True)
         
         summary_data = self._create_summary_data(schedule)
         

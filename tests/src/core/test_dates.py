@@ -2,16 +2,18 @@
 
 from datetime import date
 from dateutil.parser import parse as parse_date
+from typing import Dict, List, Any, Optional
+
 
 def test_parse_date_basic():
     """Test basic date parsing."""
-    result = parse_date("2025-01-15").date()
+    result: Any = parse_date("2025-01-15").date()
     assert result == date(2025, 1, 15)
 
 def test_parse_date_invalid():
     """Test invalid date parsing."""
     try:
-        result = parse_date("invalid-date").date()
+        result: Any = parse_date("invalid-date").date()
         assert False, "Should have raised ValueError"
     except (ValueError, TypeError):
         pass
@@ -19,7 +21,7 @@ def test_parse_date_invalid():
 def test_parse_date_with_default():
     """Test date parsing with default handling."""
     try:
-        result = parse_date("invalid-date").date()
+        result: Any = parse_date("invalid-date").date()
         assert False, "Should have raised ValueError"
     except (ValueError, TypeError):
         pass
@@ -27,7 +29,7 @@ def test_parse_date_with_default():
 def test_parse_date_none():
     """Test parsing None."""
     try:
-        result = parse_date(None).date()
+        result: Any = parse_date(None).date()
         assert False, "Should have raised TypeError"
     except (TypeError, AttributeError):
         pass
@@ -35,18 +37,18 @@ def test_parse_date_none():
 def test_parse_date_already_date():
     """Test parsing already a date object."""
     input_date = date(2025, 1, 15)
-    result = parse_date(input_date.isoformat()).date()
+    result: Any = parse_date(input_date.isoformat()).date()
     assert result == input_date
 
 def test_parse_date_with_time():
     """Test parsing date with time component."""
-    result = parse_date("2025-01-15T10:30:00").date()
+    result: Any = parse_date("2025-01-15T10:30:00").date()
     assert result == date(2025, 1, 15)
 
 def test_parse_date_invalid_type():
     """Test parsing invalid type."""
     try:
-        result = parse_date(123).date()
+        result: Any = parse_date(123).date()
         assert False, "Should have raised TypeError"
     except (TypeError, AttributeError):
         pass
@@ -69,7 +71,7 @@ def test_parse_date_with_timezone():
 def test_parse_date_empty_string():
     """Test parsing empty string."""
     try:
-        result = parse_date("").date()
+        result: Any = parse_date("").date()
         assert False, "Should have raised ValueError"
     except (ValueError, TypeError):
         pass
@@ -77,7 +79,7 @@ def test_parse_date_empty_string():
 def test_parse_date_whitespace():
     """Test parsing whitespace string."""
     try:
-        result = parse_date("   ").date()
+        result: Any = parse_date("   ").date()
         assert False, "Should have raised ValueError"
     except (ValueError, TypeError):
         pass
@@ -85,7 +87,7 @@ def test_parse_date_whitespace():
 def test_parse_date_long_invalid():
     """Test parsing long invalid string."""
     try:
-        result = parse_date("this is a very long invalid date string").date()
+        result: Any = parse_date("this is a very long invalid date string").date()
         assert False, "Should have raised ValueError"
     except (ValueError, TypeError):
         pass 

@@ -106,6 +106,10 @@ def create_dashboard_app():
             scheduler = BaseScheduler.create_scheduler(SchedulerStrategy(strategy), config)
             schedule = scheduler.schedule()
             
+            # Store the current schedule data
+            global _current_schedule_data
+            _current_schedule_data = schedule
+            
             # Validate the schedule
             validation_result = validate_schedule_comprehensive(schedule, config)
             

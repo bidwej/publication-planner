@@ -1,3 +1,5 @@
+from typing import Dict, List, Any, Optional
+
 """
 Tests for schedule table component.
 """
@@ -69,7 +71,7 @@ class TestScheduleTable:
             'sub3': date(2024, 3, 1)
         }
     
-    def test_create_schedule_table_with_data(self, sample_config, sample_schedule):
+    def test_create_schedule_table_with_data(self, sample_config, sample_schedule) -> None:
         """Test creating schedule table with valid data."""
         table_data = create_schedule_table(sample_schedule, sample_config)
         
@@ -94,23 +96,23 @@ class TestScheduleTable:
         assert first_row['duration'] == '30 days'
         assert first_row['engineering'] == 'Yes'
     
-    def test_create_schedule_table_empty_schedule(self, sample_config):
+    def test_create_schedule_table_empty_schedule(self, sample_config) -> None:
         """Test creating schedule table with empty schedule."""
         table_data = create_schedule_table({}, sample_config)
         
         assert isinstance(table_data, list)
         assert len(table_data) == 0
     
-    def test_create_schedule_table_none_schedule(self, sample_config):
+    def test_create_schedule_table_none_schedule(self, sample_config) -> None:
         """Test creating schedule table with None schedule."""
         table_data = create_schedule_table(None, sample_config)
         
         assert isinstance(table_data, list)
         assert len(table_data) == 0
     
-    def test_create_schedule_table_missing_submission(self, sample_config):
+    def test_create_schedule_table_missing_submission(self, sample_config) -> None:
         """Test creating schedule table with missing submission in config."""
-        schedule = {'sub1': date(2024, 1, 1), 'missing_sub': date(2024, 2, 1)}
+        schedule: Dict[str, date] = {'sub1': date(2024, 1, 1), 'missing_sub': date(2024, 2, 1)}
         
         table_data = create_schedule_table(schedule, sample_config)
         
@@ -118,7 +120,7 @@ class TestScheduleTable:
         assert len(table_data) == 1  # Only sub1 should be included
         assert table_data[0]['id'] == 'sub1'
     
-    def test_create_schedule_table_abstract_submission(self, sample_config, sample_schedule):
+    def test_create_schedule_table_abstract_submission(self, sample_config, sample_schedule) -> None:
         """Test creating schedule table with abstract submission."""
         table_data = create_schedule_table(sample_schedule, sample_config)
         
@@ -130,9 +132,9 @@ class TestScheduleTable:
         assert abstract_row['engineering'] == 'No'
         assert abstract_row['end_date'] == abstract_row['start_date']  # Same day for abstracts
     
-    def test_create_schedule_table_sorting(self, sample_config):
+    def test_create_schedule_table_sorting(self, sample_config) -> None:
         """Test that schedule table is sorted by start date."""
-        schedule = {
+        schedule: Dict[str, date] = {
             'sub3': date(2024, 3, 1),
             'sub1': date(2024, 1, 1),
             'sub2': date(2024, 2, 1)
@@ -177,7 +179,7 @@ class TestViolationsTable:
             }
         }
     
-    def test_create_violations_table_with_data(self, sample_validation_result):
+    def test_create_violations_table_with_data(self, sample_validation_result) -> None:
         """Test creating violations table with valid data."""
         table_data = create_violations_table(sample_validation_result)
         
@@ -196,23 +198,23 @@ class TestViolationsTable:
         assert 'Deadline missed' in first_violation['description']
         assert first_violation['severity'] == 'high'
     
-    def test_create_violations_table_empty_result(self):
+    def test_create_violations_table_empty_result(self) -> None:
         """Test creating violations table with empty validation result."""
         table_data = create_violations_table({})
         
         assert isinstance(table_data, list)
         assert len(table_data) == 0
     
-    def test_create_violations_table_none_result(self):
+    def test_create_violations_table_none_result(self) -> None:
         """Test creating violations table with None validation result."""
         table_data = create_violations_table(None)
         
         assert isinstance(table_data, list)
         assert len(table_data) == 0
     
-    def test_create_violations_table_no_violations(self):
+    def test_create_violations_table_no_violations(self) -> None:
         """Test creating violations table with no violations."""
-        validation_result = {
+        validation_result: Any = {
             'constraints': {
                 'deadline_constraints': {
                     'violations': []
@@ -225,9 +227,9 @@ class TestViolationsTable:
         assert isinstance(table_data, list)
         assert len(table_data) == 0
     
-    def test_create_violations_table_missing_violations_key(self):
+    def test_create_violations_table_missing_violations_key(self) -> None:
         """Test creating violations table with missing violations key."""
-        validation_result = {
+        validation_result: Any = {
             'constraints': {
                 'deadline_constraints': {
                     'some_other_key': []
@@ -258,7 +260,7 @@ class TestMetricsTable:
             }
         }
     
-    def test_create_metrics_table_with_data(self, sample_validation_result):
+    def test_create_metrics_table_with_data(self, sample_validation_result) -> None:
         """Test creating metrics table with valid data."""
         table_data = create_metrics_table(sample_validation_result)
         
@@ -276,23 +278,23 @@ class TestMetricsTable:
         assert first_metric['value'] == '75.5'
         assert first_metric['status'] == 'Good'  # 75.5 is in Good range
     
-    def test_create_metrics_table_empty_result(self):
+    def test_create_metrics_table_empty_result(self) -> None:
         """Test creating metrics table with empty validation result."""
         table_data = create_metrics_table({})
         
         assert isinstance(table_data, list)
         assert len(table_data) == 0
     
-    def test_create_metrics_table_none_result(self):
+    def test_create_metrics_table_none_result(self) -> None:
         """Test creating metrics table with None validation result."""
         table_data = create_metrics_table(None)
         
         assert isinstance(table_data, list)
         assert len(table_data) == 0
     
-    def test_create_metrics_table_missing_scores(self):
+    def test_create_metrics_table_missing_scores(self) -> None:
         """Test creating metrics table with missing scores."""
-        validation_result = {'summary': {'overall_score': 75.6}}
+        validation_result: Any = {'summary': {'overall_score': 75.6}}
         
         table_data = create_metrics_table(validation_result)
         
@@ -304,7 +306,7 @@ class TestMetricsTable:
         assert penalty_metric['value'] == '0.0'
         assert penalty_metric['status'] == 'Poor'
     
-    def test_create_metrics_table_score_status_ranges(self):
+    def test_create_metrics_table_score_status_ranges(self) -> None:
         """Test that score status is correctly assigned based on ranges."""
         test_cases = [
             (95.0, 'Excellent'),
@@ -318,7 +320,7 @@ class TestMetricsTable:
         ]
         
         for score, expected_status in test_cases:
-            validation_result = {
+            validation_result: Any = {
                 'scores': {
                     'penalty_score': score,
                     'quality_score': score,
@@ -353,7 +355,7 @@ class TestAnalyticsTable:
             }
         }
     
-    def test_create_analytics_table_with_data(self, sample_validation_result):
+    def test_create_analytics_table_with_data(self, sample_validation_result) -> None:
         """Test creating analytics table with valid data."""
         table_data = create_analytics_table(sample_validation_result)
         
@@ -371,23 +373,23 @@ class TestAnalyticsTable:
         assert first_entry['metric'] == 'Total Submissions'
         assert first_entry['value'] == '5'
     
-    def test_create_analytics_table_empty_result(self):
+    def test_create_analytics_table_empty_result(self) -> None:
         """Test creating analytics table with empty validation result."""
         table_data = create_analytics_table({})
         
         assert isinstance(table_data, list)
         assert len(table_data) == 0
     
-    def test_create_analytics_table_none_result(self):
+    def test_create_analytics_table_none_result(self) -> None:
         """Test creating analytics table with None validation result."""
         table_data = create_analytics_table(None)
         
         assert isinstance(table_data, list)
         assert len(table_data) == 0
     
-    def test_create_analytics_table_missing_summary(self):
+    def test_create_analytics_table_missing_summary(self) -> None:
         """Test creating analytics table with missing summary."""
-        validation_result = {'scores': {'penalty_score': 75.5}}
+        validation_result: Any = {'scores': {'penalty_score': 75.5}}
         
         table_data = create_analytics_table(validation_result)
         
@@ -398,7 +400,7 @@ class TestAnalyticsTable:
         submissions_entry = next(e for e in table_data if e['metric'] == 'Total Submissions')
         assert submissions_entry['value'] == '0'
     
-    def test_create_analytics_table_all_categories(self, sample_validation_result):
+    def test_create_analytics_table_all_categories(self, sample_validation_result) -> None:
         """Test that all analytics categories are included."""
         table_data = create_analytics_table(sample_validation_result)
         
@@ -424,7 +426,7 @@ class TestAnalyticsTable:
 class TestTableIntegration:
     """Integration tests for table functionality."""
     
-    def test_complete_table_workflow(self):
+    def test_complete_table_workflow(self) -> None:
         """Test complete table generation workflow."""
         # Create realistic test data
         config = Mock(spec=Config)
@@ -452,12 +454,12 @@ class TestTableIntegration:
         config.conferences_dict['conf1'].name = 'IEEE Conference'
         config.conferences_dict['conf2'].name = 'ACM Conference'
         
-        schedule = {
+        schedule: Dict[str, date] = {
             'paper1': date(2024, 1, 1),
             'abstract1': date(2024, 2, 1)
         }
         
-        validation_result = {
+        validation_result: Any = {
             'scores': {
                 'penalty_score': 85.2,
                 'quality_score': 90.1,
@@ -499,7 +501,7 @@ class TestTableIntegration:
         assert isinstance(analytics_table, list)
         assert len(analytics_table) == 6
     
-    def test_table_edge_cases(self):
+    def test_table_edge_cases(self) -> None:
         """Test table edge cases."""
         config = Mock(spec=Config)
         config.submissions_dict = {}

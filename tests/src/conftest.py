@@ -6,6 +6,8 @@ from datetime import date
 from pathlib import Path
 
 from src.core.models import (
+from typing import Dict, List, Any, Optional
+
     Submission, SubmissionType, Config, Conference, ConferenceType, ConferenceRecurrence
 )
 from src.schedulers.greedy import GreedyScheduler
@@ -13,7 +15,7 @@ from src.schedulers.greedy import GreedyScheduler
 
 def create_mock_submission(submission_id, title, submission_type, conference_id, **kwargs):
     """Create a mock submission with all required attributes."""
-    submission = Submission(
+    submission: Submission = Submission(
         id=submission_id,
         title=title,
         kind=submission_type,
@@ -28,7 +30,7 @@ def create_mock_submission(submission_id, title, submission_type, conference_id,
 
 def create_mock_conference(conference_id, name, deadlines):
     """Create a mock conference with all required attributes."""
-    conference = Conference(
+    conference: Conference = Conference(
         id=conference_id,
         name=name,
         conf_type=ConferenceType.MEDICAL,
@@ -40,7 +42,7 @@ def create_mock_conference(conference_id, name, deadlines):
 
 def create_mock_config(submissions, conferences):
     """Create a mock config with all required attributes."""
-    config = Config(
+    config: Config = Config(
         min_abstract_lead_time_days=30,
         min_paper_lead_time_days=90,
         max_concurrent_submissions=3,

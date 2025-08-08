@@ -6,6 +6,8 @@ from pathlib import Path
 from datetime import date
 
 from core.models import SchedulerStrategy
+from typing import Dict, List, Any, Optional
+
 
 # Import scheduler implementations to register them
 from src.schedulers.greedy import GreedyScheduler
@@ -23,7 +25,7 @@ from src.schedulers.base import BaseScheduler
 class TestSchedulerIntegration:
     """Integration tests for scheduler functionality."""
     
-    def test_scheduler_creation_with_all_strategies(self):
+    def test_scheduler_creation_with_all_strategies(self) -> None:
         """Test that all scheduler strategies can be created successfully."""
         from src.schedulers.base import BaseScheduler
         from src.core.models import Config
@@ -44,13 +46,13 @@ class TestSchedulerIntegration:
         
         for strategy in strategies:
             try:
-                scheduler = BaseScheduler.create_scheduler(strategy, config)
+                scheduler: Any = BaseScheduler.create_scheduler(strategy, config)
                 assert scheduler is not None
                 assert hasattr(scheduler, 'schedule')
             except Exception as e:
                 pytest.fail(f"Failed to create scheduler for strategy {strategy}: {e}")
     
-    def test_scheduler_schedule_generation(self):
+    def test_scheduler_schedule_generation(self) -> None:
         """Test that schedulers can generate valid schedules."""
         from src.schedulers.base import BaseScheduler
         from src.core.models import Config
@@ -58,7 +60,7 @@ class TestSchedulerIntegration:
         config = Config.create_default()
         strategy = SchedulerStrategy.GREEDY
         
-        scheduler = BaseScheduler.create_scheduler(strategy, config)
+        scheduler: Any = BaseScheduler.create_scheduler(strategy, config)
         schedule = scheduler.schedule()
         
         # Schedule should be a dictionary
@@ -69,7 +71,7 @@ class TestSchedulerIntegration:
             assert isinstance(start_date, date)
             assert start_date >= date(2020, 1, 1)  # Reasonable start date (using our robust calculation)
     
-    def test_scheduler_error_handling(self):
+    def test_scheduler_error_handling(self) -> None:
         """Test scheduler error handling with invalid configurations."""
         from src.schedulers.base import BaseScheduler
         from src.core.models import Config
@@ -79,13 +81,13 @@ class TestSchedulerIntegration:
         config.submissions = []  # Empty submissions
         
         strategy = SchedulerStrategy.GREEDY
-        scheduler = BaseScheduler.create_scheduler(strategy, config)
+        scheduler: Any = BaseScheduler.create_scheduler(strategy, config)
         schedule = scheduler.schedule()
         
         # Should return empty schedule for empty config
         assert schedule == {}
     
-    def test_scheduler_strategy_comparison(self):
+    def test_scheduler_strategy_comparison(self) -> None:
         """Test comparing different scheduler strategies."""
         from src.schedulers.base import BaseScheduler
         from src.core.models import Config
@@ -97,7 +99,7 @@ class TestSchedulerIntegration:
         schedules = {}
         
         for strategy in strategies:
-            scheduler = BaseScheduler.create_scheduler(strategy, config)
+            scheduler: Any = BaseScheduler.create_scheduler(strategy, config)
             schedule = scheduler.schedule()
             schedules[strategy] = schedule
             
@@ -108,7 +110,7 @@ class TestSchedulerIntegration:
         # (though with same config, they might be similar)
         assert len(schedules) == len(strategies)
     
-    def test_scheduler_with_complex_constraints(self):
+    def test_scheduler_with_complex_constraints(self) -> None:
         """Test scheduler with complex constraints."""
         from datetime import date
         from src.schedulers.base import BaseScheduler
@@ -149,7 +151,7 @@ class TestSchedulerIntegration:
             )
         ]
         
-        config = Config(
+        config: Config = Config(
             submissions=submissions,
             conferences=conferences,
             min_paper_lead_time_days=90,
@@ -161,7 +163,7 @@ class TestSchedulerIntegration:
         strategies = [SchedulerStrategy.GREEDY, SchedulerStrategy.HEURISTIC]
         
         for strategy in strategies:
-            scheduler = BaseScheduler.create_scheduler(strategy, config)
+            scheduler: Any = BaseScheduler.create_scheduler(strategy, config)
             schedule = scheduler.schedule()
             
             # Should schedule all submissions
@@ -172,11 +174,11 @@ class TestSchedulerIntegration:
                 assert isinstance(start_date, date)
                 assert start_date >= date(2025, 1, 1)
     
-    def test_scheduler_subprocess_integration(self):
+    def test_scheduler_subprocess_integration(self) -> None:
         """Test scheduler functionality via subprocess calls."""
         try:
             # Test help command
-            result = subprocess.run(
+            result: Any = subprocess.run(
                 ["python", "generate_schedule.py", "--help"],
                 capture_output=True,
                 text=True,
@@ -193,10 +195,10 @@ class TestSchedulerIntegration:
         except Exception as e:
             pytest.fail(f"Scheduler subprocess test failed: {e}")
     
-    def test_scheduler_list_strategies_subprocess(self):
+    def test_scheduler_list_strategies_subprocess(self) -> None:
         """Test list-strategies command via subprocess."""
         try:
-            result = subprocess.run(
+            result: Any = subprocess.run(
                 ["python", "generate_schedule.py", "--list-strategies"],
                 capture_output=True,
                 text=True,

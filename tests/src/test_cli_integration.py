@@ -3,16 +3,18 @@
 import pytest
 import subprocess
 from pathlib import Path
+from typing import Dict, List, Any, Optional
+
 
 
 
 class TestCLIIntegration:
     """Integration tests for command-line interface functionality."""
     
-    def test_cli_help_command(self):
+    def test_cli_help_command(self) -> None:
         """Test CLI help command functionality."""
         try:
-            result = subprocess.run(
+            result: Any = subprocess.run(
                 ["python", "generate_schedule.py", "--help"],
                 capture_output=True,
                 text=True,
@@ -31,10 +33,10 @@ class TestCLIIntegration:
         except Exception as e:
             pytest.fail(f"CLI help test failed: {e}")
     
-    def test_cli_list_strategies_command(self):
+    def test_cli_list_strategies_command(self) -> None:
         """Test CLI list-strategies command functionality."""
         try:
-            result = subprocess.run(
+            result: Any = subprocess.run(
                 ["python", "generate_schedule.py", "--list-strategies"],
                 capture_output=True,
                 text=True,
@@ -50,11 +52,11 @@ class TestCLIIntegration:
         except Exception as e:
             pytest.fail(f"CLI list strategies test failed: {e}")
     
-    def test_cli_argument_validation(self):
+    def test_cli_argument_validation(self) -> None:
         """Test CLI argument validation functionality."""
         # Test with no arguments
         try:
-            result = subprocess.run(
+            result: Any = subprocess.run(
                 ["python", "generate_schedule.py"],
                 capture_output=True,
                 text=True,
@@ -70,10 +72,10 @@ class TestCLIIntegration:
         except Exception as e:
             pytest.fail(f"CLI argument validation test failed: {e}")
     
-    def test_cli_invalid_strategy(self):
+    def test_cli_invalid_strategy(self) -> None:
         """Test CLI with invalid strategy argument."""
         try:
-            result = subprocess.run(
+            result: Any = subprocess.run(
                 ["python", "generate_schedule.py", "--strategy", "invalid_strategy"],
                 capture_output=True,
                 text=True,
@@ -89,10 +91,10 @@ class TestCLIIntegration:
         except Exception as e:
             pytest.fail(f"CLI invalid strategy test failed: {e}")
     
-    def test_cli_conflicting_arguments(self):
+    def test_cli_conflicting_arguments(self) -> None:
         """Test CLI with conflicting arguments."""
         try:
-            result = subprocess.run(
+            result: Any = subprocess.run(
                 ["python", "generate_schedule.py", "--strategy", "greedy", "--compare"],
                 capture_output=True,
                 text=True,
@@ -108,10 +110,10 @@ class TestCLIIntegration:
         except Exception as e:
             pytest.fail(f"CLI conflicting arguments test failed: {e}")
     
-    def test_cli_with_valid_strategy(self):
+    def test_cli_with_valid_strategy(self) -> None:
         """Test CLI with valid strategy argument."""
         try:
-            result = subprocess.run(
+            result: Any = subprocess.run(
                 ["python", "generate_schedule.py", "--strategy", "greedy"],
                 capture_output=True,
                 text=True,
@@ -129,10 +131,10 @@ class TestCLIIntegration:
         except Exception as e:
             pytest.fail(f"CLI valid strategy test failed: {e}")
     
-    def test_cli_compare_mode(self):
+    def test_cli_compare_mode(self) -> None:
         """Test CLI compare mode functionality."""
         try:
-            result = subprocess.run(
+            result: Any = subprocess.run(
                 ["python", "generate_schedule.py", "--compare"],
                 capture_output=True,
                 text=True,
@@ -150,10 +152,10 @@ class TestCLIIntegration:
         except Exception as e:
             pytest.fail(f"CLI compare mode test failed: {e}")
     
-    def test_cli_quiet_mode(self):
+    def test_cli_quiet_mode(self) -> None:
         """Test CLI quiet mode functionality."""
         try:
-            result = subprocess.run(
+            result: Any = subprocess.run(
                 ["python", "generate_schedule.py", "--strategy", "greedy", "--quiet"],
                 capture_output=True,
                 text=True,
@@ -171,10 +173,10 @@ class TestCLIIntegration:
         except Exception as e:
             pytest.fail(f"CLI quiet mode test failed: {e}")
     
-    def test_cli_output_file_handling(self):
+    def test_cli_output_file_handling(self) -> None:
         """Test CLI output file handling functionality."""
         try:
-            result = subprocess.run(
+            result: Any = subprocess.run(
                 ["python", "generate_schedule.py", "--compare", "--output", "test_output.json"],
                 capture_output=True,
                 text=True,
@@ -192,11 +194,11 @@ class TestCLIIntegration:
         except Exception as e:
             pytest.fail(f"CLI output file test failed: {e}")
     
-    def test_cli_error_handling(self):
+    def test_cli_error_handling(self) -> None:
         """Test CLI error handling functionality."""
         # Test with missing config file
         try:
-            result = subprocess.run(
+            result: Any = subprocess.run(
                 ["python", "generate_schedule.py", "--strategy", "greedy", "--config", "non_existent_config.json"],
                 capture_output=True,
                 text=True,
@@ -212,11 +214,11 @@ class TestCLIIntegration:
         except Exception as e:
             pytest.fail(f"CLI error handling test failed: {e}")
     
-    def test_cli_subprocess_integration(self):
+    def test_cli_subprocess_integration(self) -> None:
         """Test CLI subprocess integration functionality."""
         # Test that the script can be run directly
         try:
-            result = subprocess.run(
+            result: Any = subprocess.run(
                 ["python", "generate_schedule.py", "--help"],
                 capture_output=True,
                 text=True,

@@ -4,6 +4,8 @@
 from dash import html, dcc
 from layouts.sidebar import create_sidebar
 from core.models import SchedulerStrategy
+from typing import Dict, List, Any, Optional
+
 
 
 class TestSidebarLayout:
@@ -128,7 +130,7 @@ class TestSidebarLayout:
         assert abstract_lead_slider.value == 30
         assert abstract_lead_slider.className == "config-slider"
     
-    def test_sidebar_contains_options_section(self):
+    def test_sidebar_contains_options_section(self) -> None:
         """Test that sidebar contains the options section with checklists."""
         sidebar = create_sidebar()
         
@@ -186,7 +188,7 @@ class TestSidebarLayout:
         assert eng_checklist.value == []
         assert eng_checklist.className == "option-checklist"
     
-    def test_sidebar_contains_actions_section(self):
+    def test_sidebar_contains_actions_section(self) -> None:
         """Test that sidebar contains the actions section with buttons."""
         sidebar = create_sidebar()
         
@@ -254,7 +256,7 @@ class TestSidebarLayout:
         assert print_btn.children[0].className == "fas fa-print"
         assert print_btn.children[1] == " Print Report"
     
-    def test_sidebar_strategy_dropdown_options(self):
+    def test_sidebar_strategy_dropdown_options(self) -> None:
         """Test that strategy dropdown has all expected options."""
         sidebar = create_sidebar()
         
@@ -284,7 +286,7 @@ class TestSidebarLayout:
         
         assert strategy_dropdown.options == expected_options
     
-    def test_sidebar_slider_marks(self):
+    def test_sidebar_slider_marks(self) -> None:
         """Test that sliders have correct marks."""
         sidebar = create_sidebar()
         
@@ -315,7 +317,7 @@ class TestSidebarLayout:
         expected_marks = {0: '0', 15: '15', 30: '30', 45: '45', 60: '60'}
         assert abstract_lead_slider.marks == expected_marks
     
-    def test_sidebar_checklist_options(self):
+    def test_sidebar_checklist_options(self) -> None:
         """Test that checklists have correct options."""
         sidebar = create_sidebar()
         
@@ -349,7 +351,7 @@ class TestSidebarLayout:
         assert eng_checklist.options == expected_options
         assert eng_checklist.value == []
     
-    def test_sidebar_button_ids_are_unique(self):
+    def test_sidebar_button_ids_are_unique(self) -> None:
         """Test that sidebar buttons have unique IDs."""
         sidebar = create_sidebar()
         
@@ -379,7 +381,7 @@ class TestSidebarLayout:
         for expected_id in expected_ids:
             assert expected_id in button_ids
     
-    def test_sidebar_component_ids_are_unique(self):
+    def test_sidebar_component_ids_are_unique(self) -> None:
         """Test that all sidebar components have unique IDs."""
         sidebar = create_sidebar()
         
@@ -416,7 +418,7 @@ class TestSidebarLayout:
         for expected_id in expected_ids:
             assert expected_id in component_ids
     
-    def test_sidebar_has_correct_css_classes(self):
+    def test_sidebar_has_correct_css_classes(self) -> None:
         """Test that sidebar and its components have correct CSS classes."""
         sidebar = create_sidebar()
         
@@ -439,7 +441,7 @@ class TestSidebarLayout:
                     assert 'btn' in grandchild.className
                     assert 'btn-full' in grandchild.className
     
-    def test_sidebar_icon_classes_are_valid(self):
+    def test_sidebar_icon_classes_are_valid(self) -> None:
         """Test that sidebar icons use valid FontAwesome classes."""
         sidebar = create_sidebar()
         

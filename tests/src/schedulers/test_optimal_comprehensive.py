@@ -9,12 +9,14 @@ from src.core.config import load_config
 from src.core.models import SchedulerStrategy, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
 from src.schedulers.optimal import OptimalScheduler
 from src.schedulers.base import BaseScheduler
+from typing import Dict, List, Any, Optional
+
 
 
 class TestOptimalSchedulerComprehensive:
     """Comprehensive tests for MILP optimization with real constraints."""
     
-    def test_milp_with_dependencies(self):
+    def test_milp_with_dependencies(self) -> None:
         """Test MILP optimization with submission dependencies."""
         # Create test data with dependencies
         submissions = [
@@ -49,7 +51,7 @@ class TestOptimalSchedulerComprehensive:
         config.min_paper_lead_time_days = 30  # Reduce lead time for test
         
         # Test MILP optimization
-        scheduler = OptimalScheduler(config)
+        scheduler: Any = OptimalScheduler(config)
         schedule = scheduler.schedule()
         
         # Verify dependencies are respected (may fall back to greedy)
@@ -72,7 +74,7 @@ class TestOptimalSchedulerComprehensive:
             paper2_end = paper2_start + timedelta(days=paper2_duration)
             assert paper3_start >= paper2_end
     
-    def test_milp_with_deadlines(self):
+    def test_milp_with_deadlines(self) -> None:
         """Test MILP optimization with strict deadlines."""
         # Create test data with reasonable deadlines
         submissions = [
@@ -108,7 +110,7 @@ class TestOptimalSchedulerComprehensive:
         config.min_paper_lead_time_days = 30  # Reduce lead time for test
         
         # Test MILP optimization
-        scheduler = OptimalScheduler(config)
+        scheduler: Any = OptimalScheduler(config)
         schedule = scheduler.schedule()
         
         # Verify at least one paper is scheduled (may fall back to greedy)
@@ -127,7 +129,7 @@ class TestOptimalSchedulerComprehensive:
             paper2_end = paper2_start + timedelta(days=paper2_duration)
             assert paper2_end <= date(2025, 12, 31)
     
-    def test_milp_with_blackout_dates(self):
+    def test_milp_with_blackout_dates(self) -> None:
         """Test MILP optimization with blackout dates."""
         # Create test data with blackout dates
         submissions = [
@@ -156,7 +158,7 @@ class TestOptimalSchedulerComprehensive:
         config.scheduling_options["enable_working_days_only"] = True  # Enable working days
         
         # Test MILP optimization
-        scheduler = OptimalScheduler(config)
+        scheduler: Any = OptimalScheduler(config)
         schedule = scheduler.schedule()
         
         # Verify paper is scheduled
@@ -166,7 +168,7 @@ class TestOptimalSchedulerComprehensive:
         paper1_start = schedule["paper1"]
         assert paper1_start not in config.blackout_dates
     
-    def test_milp_with_soft_block_constraints(self):
+    def test_milp_with_soft_block_constraints(self) -> None:
         """Test MILP optimization with soft block constraints."""
         # Create test data with soft block constraints
         submissions = [
@@ -199,7 +201,7 @@ class TestOptimalSchedulerComprehensive:
         config.min_paper_lead_time_days = 30  # Reduce lead time for test
         
         # Test MILP optimization
-        scheduler = OptimalScheduler(config)
+        scheduler: Any = OptimalScheduler(config)
         schedule = scheduler.schedule()
         
         # Verify at least one paper is scheduled (may fall back to greedy)
@@ -220,7 +222,7 @@ class TestOptimalSchedulerComprehensive:
                 days_diff = abs((paper2_start - paper2_earliest).days)
                 assert days_diff <= 60  # Within ±2 months
     
-    def test_milp_with_resource_constraints(self):
+    def test_milp_with_resource_constraints(self) -> None:
         """Test MILP optimization with resource constraints (max concurrent)."""
         # Create test data with multiple submissions
         submissions = [
@@ -246,7 +248,7 @@ class TestOptimalSchedulerComprehensive:
         config.max_concurrent_submissions = 2  # Only 2 concurrent submissions allowed
         
         # Test MILP optimization
-        scheduler = OptimalScheduler(config)
+        scheduler: Any = OptimalScheduler(config)
         schedule = scheduler.schedule()
         
         # Verify resource constraints are respected
@@ -271,7 +273,7 @@ class TestOptimalSchedulerComprehensive:
         for day, count in active_submissions.items():
             assert count <= config.max_concurrent_submissions, f"Day {day} has {count} active submissions, max allowed is {config.max_concurrent_submissions}"
     
-    def test_milp_with_complex_scenario(self):
+    def test_milp_with_complex_scenario(self) -> None:
         """Test MILP optimization with a complex real-world scenario."""
         # Create a complex scenario with dependencies, deadlines, and constraints
         submissions = [
@@ -326,7 +328,7 @@ class TestOptimalSchedulerComprehensive:
         ]
         
         # Test MILP optimization
-        scheduler = OptimalScheduler(config)
+        scheduler: Any = OptimalScheduler(config)
         schedule = scheduler.schedule()
         
         # Verify all constraints are respected
@@ -361,7 +363,7 @@ class TestOptimalSchedulerComprehensive:
             earliest_start = date(2025, 7, 1)
             assert earliest_start - timedelta(days=60) <= paper3_start <= earliest_start + timedelta(days=60)
     
-    def test_milp_optimality_verification(self):
+    def test_milp_optimality_verification(self) -> None:
         """Test that MILP actually produces optimal solutions."""
         # Create a simple scenario where optimal solution is obvious
         submissions = [
@@ -390,7 +392,7 @@ class TestOptimalSchedulerComprehensive:
         config.conferences = conferences
         
         # Test MILP optimization
-        scheduler = OptimalScheduler(config)
+        scheduler: Any = OptimalScheduler(config)
         schedule = scheduler.schedule()
         
         # Verify MILP produces a valid schedule

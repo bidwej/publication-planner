@@ -2,19 +2,21 @@
 
 from dash import html, dcc
 from layouts.main_content import create_main_content
+from typing import Dict, List, Any, Optional
+
 
 
 class TestMainContentLayout:
     """Test cases for main content layout component."""
     
-    def test_create_main_content_returns_main_element(self):
+    def test_create_main_content_returns_main_element(self) -> None:
         """Test that create_main_content returns a main element."""
         main_content = create_main_content()
         
         assert isinstance(main_content, html.Main)
         assert main_content.className == "main-content"
     
-    def test_main_content_contains_dashboard_header(self):
+    def test_main_content_contains_dashboard_header(self) -> None:
         """Test that main content contains the dashboard header section."""
         main_content = create_main_content()
         
@@ -40,7 +42,7 @@ class TestMainContentLayout:
         assert dashboard_description.children == "Generate and analyze academic paper schedules with interactive visualizations."
         assert dashboard_description.className == "dashboard-description"
     
-    def test_main_content_contains_metrics_section(self):
+    def test_main_content_contains_metrics_section(self) -> None:
         """Test that main content contains the summary metrics section."""
         main_content = create_main_content()
         
@@ -66,7 +68,7 @@ class TestMainContentLayout:
         assert metrics_container.id == "summary-metrics"
         assert metrics_container.className == "metrics-container"
     
-    def test_main_content_contains_charts_row(self):
+    def test_main_content_contains_charts_row(self) -> None:
         """Test that main content contains the charts row with gantt and metrics charts."""
         main_content = create_main_content()
         
@@ -114,7 +116,7 @@ class TestMainContentLayout:
         assert metrics_chart.id == "metrics-chart"
         assert metrics_chart.className == "chart-container"
     
-    def test_main_content_contains_tables_row(self):
+    def test_main_content_contains_tables_row(self) -> None:
         """Test that main content contains the tables row with schedule and violations tables."""
         main_content = create_main_content()
         
@@ -198,7 +200,7 @@ class TestMainContentLayout:
         assert violations_loading.id == "loading-violations-table"
         assert violations_loading.type == "default"
     
-    def test_main_content_contains_analytics_section(self):
+    def test_main_content_contains_analytics_section(self) -> None:
         """Test that main content contains the analytics section."""
         main_content = create_main_content()
         
@@ -272,7 +274,7 @@ class TestMainContentLayout:
         assert quality_content.id == "quality-analytics"
         assert quality_content.className == "analytics-content"
     
-    def test_main_content_schedule_filter_options(self):
+    def test_main_content_schedule_filter_options(self) -> None:
         """Test that schedule filter dropdown has correct options."""
         main_content = create_main_content()
         
@@ -312,7 +314,7 @@ class TestMainContentLayout:
         assert filter_dropdown.options == expected_options
         assert filter_dropdown.value == "all"
     
-    def test_main_content_graph_configurations(self):
+    def test_main_content_graph_configurations(self) -> None:
         """Test that graphs have correct configurations."""
         main_content = create_main_content()
         
@@ -356,7 +358,7 @@ class TestMainContentLayout:
         assert metrics_chart.config['toImageButtonOptions']['width'] == 600
         assert metrics_chart.config['toImageButtonOptions']['scale'] == 2
     
-    def test_main_content_loading_components(self):
+    def test_main_content_loading_components(self) -> None:
         """Test that loading components have correct structure."""
         main_content = create_main_content()
         
@@ -396,7 +398,7 @@ class TestMainContentLayout:
         assert isinstance(violations_children[1], html.Div)
         assert violations_children[1].id == "violations-table-container"
     
-    def test_main_content_component_ids_are_unique(self):
+    def test_main_content_component_ids_are_unique(self) -> None:
         """Test that all main content components have unique IDs."""
         main_content = create_main_content()
         
@@ -437,7 +439,7 @@ class TestMainContentLayout:
         for expected_id in expected_ids:
             assert expected_id in component_ids
     
-    def test_main_content_has_correct_css_classes(self):
+    def test_main_content_has_correct_css_classes(self) -> None:
         """Test that main content and its components have correct CSS classes."""
         main_content = create_main_content()
         
@@ -471,7 +473,7 @@ class TestMainContentLayout:
         for analytics_card in analytics_cards:
             assert analytics_card.className == "analytics-card"
     
-    def test_main_content_button_icon_classes_are_valid(self):
+    def test_main_content_button_icon_classes_are_valid(self) -> None:
         """Test that main content button icons use valid FontAwesome classes."""
         main_content = create_main_content()
         
@@ -498,7 +500,7 @@ class TestMainContentLayout:
         icon = export_btn.children[0]
         assert icon.className == "fas fa-download"
     
-    def test_main_content_structure_completeness(self):
+    def test_main_content_structure_completeness(self) -> None:
         """Test that main content has all required sections in correct order."""
         main_content = create_main_content()
         

@@ -20,6 +20,7 @@ from core.config import load_config
 from core.models import SchedulerStrategy
 from schedulers.base import BaseScheduler
 from src.analytics.console import print_schedule_analysis, print_strategy_comparison, print_available_strategies
+from src.analytics.exporters.csv_exporter import CSVExporter
 
 # Import all schedulers to register them with the factory
 import schedulers.greedy
@@ -36,7 +37,7 @@ BaseScheduler._strategy_registry[SchedulerStrategy.OPTIMAL] = OptimalScheduler
 # Advanced scheduler removed as per requirements
 
 
-def generate_schedule(config, strategy: SchedulerStrategy, verbose: bool = True) -> Dict[str, date]:
+def generate_schedule(config, strategy: SchedulerStrategy, verbose: bool = True, csv_dir: Optional[str] = None) -> Dict[str, date]:
     """Generate a schedule for the given strategy."""
     try:
         scheduler = BaseScheduler.create_scheduler(strategy, config)
@@ -44,6 +45,16 @@ def generate_schedule(config, strategy: SchedulerStrategy, verbose: bool = True)
         
         if verbose:
             print_schedule_analysis(schedule, config, strategy.value)
+        
+        # Export CSV if directory specified
+        if csv_dir and schedule:
+            csv_exporter = CSVExporter(config)
+            csv_files = csv_exporter.export_all_csv(schedule, csv_dir)
+            if verbose:
+                print(f"\nCSV files exported to {csv_dir}:")
+                for file_type, filepath in csv_files.items():
+                    if filepath:
+                        print(f"  - {file_type}: {filepath}")
         
         return schedule
     except Exception as e:
@@ -87,6 +98,7 @@ Examples:
     parser.add_argument('--config', '-c', type=str, default='data/config.json', help='Path to configuration file')
     parser.add_argument('--compare', '-C', action='store_true', help='Compare all available strategies')
     parser.add_argument('--output', '-o', type=str, help='Output file for comparison results')
+    parser.add_argument('--csv-dir', type=str, help='Directory to save CSV exports')
     parser.add_argument('--list-strategies', '-l', action='store_true', help='List all available strategies')
     parser.add_argument('--quiet', '-q', action='store_true', help='Suppress verbose output')
     
@@ -118,7 +130,7 @@ def main():
         else:
             try:
                 strategy = SchedulerStrategy(args.strategy.lower())
-                generate_schedule(config, strategy, verbose=not args.quiet)
+                generate_schedule(config, strategy, verbose=not args.quiet, csv_dir=args.csv_dir)
             except ValueError:
                 print("Unknown strategy: %s", args.strategy)
                 print("Available strategies: %s", [s.value for s in SchedulerStrategy])

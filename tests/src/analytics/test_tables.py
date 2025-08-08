@@ -2,6 +2,8 @@
 
 from datetime import date
 from src.analytics.tables import (
+from typing import Dict, List, Any, Optional
+
     generate_simple_monthly_table, 
     generate_schedule_summary_table, 
     generate_deadline_table,
@@ -21,7 +23,7 @@ from src.analytics.tables import (
 class TestGenerateSimpleMonthlyTable:
     """Test simple monthly table generation."""
     
-    def test_empty_schedule(self, config):
+    def test_empty_schedule(self, config) -> None:
         """Test table generation with empty schedule."""
         table = generate_simple_monthly_table(config)
         
@@ -29,28 +31,28 @@ class TestGenerateSimpleMonthlyTable:
         # Should have some structure even with empty schedule
         assert len(table) >= 0
     
-    def test_single_submission(self, config):
+    def test_single_submission(self, config) -> None:
         """Test table generation with single submission."""
         table = generate_simple_monthly_table(config)
         
         assert isinstance(table, list)
         assert len(table) >= 0
     
-    def test_multiple_submissions(self, config):
+    def test_multiple_submissions(self, config) -> None:
         """Test table generation with multiple submissions."""
         table = generate_simple_monthly_table(config)
         
         assert isinstance(table, list)
         assert len(table) >= 0
     
-    def test_spread_out_schedule(self, config):
+    def test_spread_out_schedule(self, config) -> None:
         """Test table generation with spread out schedule."""
         table = generate_simple_monthly_table(config)
         
         assert isinstance(table, list)
         assert len(table) >= 0
     
-    def test_table_structure(self, config):
+    def test_table_structure(self, config) -> None:
         """Test that table has expected structure."""
         table = generate_simple_monthly_table(config)
         
@@ -63,26 +65,26 @@ class TestGenerateSimpleMonthlyTable:
 class TestGenerateScheduleSummaryTable:
     """Test schedule summary table generation."""
     
-    def test_empty_schedule(self, config):
+    def test_empty_schedule(self, config) -> None:
         """Test summary table generation with empty schedule."""
-        schedule = {}
+        schedule: Dict[str, date] = {}
         table = generate_schedule_summary_table(schedule, config)
         
         assert isinstance(table, list)
         # Should have some structure even with empty schedule
         assert len(table) >= 0
     
-    def test_single_submission(self, config):
+    def test_single_submission(self, config) -> None:
         """Test summary table generation with single submission."""
-        schedule = {"test-pap": date(2025, 1, 15)}
+        schedule: Dict[str, date] = {"test-pap": date(2025, 1, 15)}
         table = generate_schedule_summary_table(schedule, config)
         
         assert isinstance(table, list)
         assert len(table) >= 0
     
-    def test_multiple_submissions(self, config):
+    def test_multiple_submissions(self, config) -> None:
         """Test summary table generation with multiple submissions."""
-        schedule = {
+        schedule: Dict[str, date] = {
             "paper1": date(2025, 1, 1),
             "paper2": date(2025, 2, 15),
             "paper3": date(2025, 6, 1)
@@ -96,26 +98,26 @@ class TestGenerateScheduleSummaryTable:
 class TestGenerateDeadlineTable:
     """Test deadline table generation."""
     
-    def test_empty_schedule(self, config):
+    def test_empty_schedule(self, config) -> None:
         """Test deadline table generation with empty schedule."""
-        schedule = {}
+        schedule: Dict[str, date] = {}
         table = generate_deadline_table(schedule, config)
         
         assert isinstance(table, list)
         # Should have some structure even with empty schedule
         assert len(table) >= 0
     
-    def test_single_submission(self, config):
+    def test_single_submission(self, config) -> None:
         """Test deadline table generation with single submission."""
-        schedule = {"test-pap": date(2025, 1, 15)}
+        schedule: Dict[str, date] = {"test-pap": date(2025, 1, 15)}
         table = generate_deadline_table(schedule, config)
         
         assert isinstance(table, list)
         assert len(table) >= 0
     
-    def test_multiple_submissions(self, config):
+    def test_multiple_submissions(self, config) -> None:
         """Test deadline table generation with multiple submissions."""
-        schedule = {
+        schedule: Dict[str, date] = {
             "paper1": date(2025, 1, 1),
             "paper2": date(2025, 2, 15),
             "paper3": date(2025, 6, 1)
@@ -129,25 +131,25 @@ class TestGenerateDeadlineTable:
 class TestFormatScheduleTable:
     """Test formatted schedule table generation."""
     
-    def test_empty_schedule(self, config):
+    def test_empty_schedule(self, config) -> None:
         """Test formatted table generation with empty schedule."""
-        schedule = {}
+        schedule: Dict[str, date] = {}
         table = format_schedule_table(schedule, config)
         
         assert isinstance(table, list)
         assert len(table) == 0
     
-    def test_single_submission(self, config):
+    def test_single_submission(self, config) -> None:
         """Test formatted table generation with single submission."""
-        schedule = {"test-pap": date(2025, 1, 15)}
+        schedule: Dict[str, date] = {"test-pap": date(2025, 1, 15)}
         table = format_schedule_table(schedule, config)
         
         assert isinstance(table, list)
         assert len(table) >= 0
     
-    def test_table_structure(self, config):
+    def test_table_structure(self, config) -> None:
         """Test that formatted table has expected structure."""
-        schedule = {"test-pap": date(2025, 1, 15)}
+        schedule: Dict[str, date] = {"test-pap": date(2025, 1, 15)}
         table = format_schedule_table(schedule, config)
         
         if table:
@@ -160,7 +162,7 @@ class TestFormatScheduleTable:
 class TestFormatMetricsTable:
     """Test metrics table formatting."""
     
-    def test_metrics_table_structure(self, mock_schedule_summary):
+    def test_metrics_table_structure(self, mock_schedule_summary) -> None:
         """Test that metrics table has expected structure."""
         table = format_metrics_table(mock_schedule_summary)
         
@@ -176,17 +178,17 @@ class TestFormatMetricsTable:
 class TestFormatDeadlineTable:
     """Test deadline table formatting."""
     
-    def test_empty_schedule(self, config):
+    def test_empty_schedule(self, config) -> None:
         """Test deadline formatting with empty schedule."""
-        schedule = {}
+        schedule: Dict[str, date] = {}
         table = format_deadline_table(schedule, config)
         
         assert isinstance(table, list)
         assert len(table) == 0
     
-    def test_single_submission(self, config):
+    def test_single_submission(self, config) -> None:
         """Test deadline formatting with single submission."""
-        schedule = {"test-pap": date(2025, 1, 15)}
+        schedule: Dict[str, date] = {"test-pap": date(2025, 1, 15)}
         table = format_deadline_table(schedule, config)
         
         assert isinstance(table, list)
@@ -196,25 +198,25 @@ class TestFormatDeadlineTable:
 class TestCreateScheduleTable:
     """Test web-specific schedule table creation."""
     
-    def test_empty_schedule(self, config):
+    def test_empty_schedule(self, config) -> None:
         """Test web table creation with empty schedule."""
-        schedule = {}
+        schedule: Dict[str, date] = {}
         table = create_schedule_table(schedule, config)
         
         assert isinstance(table, list)
         assert len(table) == 0
     
-    def test_single_submission(self, config):
+    def test_single_submission(self, config) -> None:
         """Test web table creation with single submission."""
-        schedule = {"test-pap": date(2025, 1, 15)}
+        schedule: Dict[str, date] = {"test-pap": date(2025, 1, 15)}
         table = create_schedule_table(schedule, config)
         
         assert isinstance(table, list)
         assert len(table) >= 0
     
-    def test_table_structure(self, config):
+    def test_table_structure(self, config) -> None:
         """Test that web table has expected structure."""
-        schedule = {"test-pap": date(2025, 1, 15)}
+        schedule: Dict[str, date] = {"test-pap": date(2025, 1, 15)}
         table = create_schedule_table(schedule, config)
         
         if table:
@@ -227,17 +229,17 @@ class TestCreateScheduleTable:
 class TestCreateViolationsTable:
     """Test violations table creation."""
     
-    def test_empty_validation_result(self):
+    def test_empty_validation_result(self) -> None:
         """Test violations table with empty validation result."""
-        validation_result = {}
+        validation_result: Any = {}
         table = create_violations_table(validation_result)
         
         assert isinstance(table, list)
         assert len(table) == 0
     
-    def test_with_violations(self):
+    def test_with_violations(self) -> None:
         """Test violations table with actual violations."""
-        validation_result = {
+        validation_result: Any = {
             'constraints': {
                 'deadline_constraint': {
                     'violations': [
@@ -266,18 +268,18 @@ class TestCreateViolationsTable:
 class TestCreateMetricsTable:
     """Test metrics table creation."""
     
-    def test_empty_validation_result(self):
+    def test_empty_validation_result(self) -> None:
         """Test metrics table with empty validation result."""
-        validation_result = {}
+        validation_result: Any = {}
         table = create_metrics_table(validation_result)
         
         assert isinstance(table, list)
         assert len(table) == 0  # Should return empty list when no data
         # No rows to check when empty
     
-    def test_with_scores(self):
+    def test_with_scores(self) -> None:
         """Test metrics table with actual scores."""
-        validation_result = {
+        validation_result: Any = {
             'scores': {
                 'penalty_score': 85.5,
                 'quality_score': 92.3,
@@ -301,18 +303,18 @@ class TestCreateMetricsTable:
 class TestCreateAnalyticsTable:
     """Test analytics table creation."""
     
-    def test_empty_validation_result(self):
+    def test_empty_validation_result(self) -> None:
         """Test analytics table with empty validation result."""
-        validation_result = {}
+        validation_result: Any = {}
         table = create_analytics_table(validation_result)
         
         assert isinstance(table, list)
         assert len(table) == 0  # Should return empty list when no data
         # No rows to check when empty
     
-    def test_with_summary(self):
+    def test_with_summary(self) -> None:
         """Test analytics table with actual summary."""
-        validation_result = {
+        validation_result: Any = {
             'summary': {
                 'total_submissions': 10,
                 'duration_days': 45,
@@ -336,9 +338,9 @@ class TestCreateAnalyticsTable:
 class TestFileIOFunctions:
     """Test file I/O functions."""
     
-    def test_save_schedule_json(self, tmp_path):
+    def test_save_schedule_json(self, tmp_path) -> None:
         """Test saving schedule as JSON."""
-        schedule = {"test-pap": "2025-01-15"}
+        schedule: Dict[str, date] = {"test-pap": "2025-01-15"}
         output_dir = str(tmp_path)
         
         filepath = save_schedule_json(schedule, output_dir)
@@ -346,7 +348,7 @@ class TestFileIOFunctions:
         assert filepath.endswith("schedule.json")
         assert filepath.startswith(str(tmp_path))
     
-    def test_save_table_csv(self, tmp_path):
+    def test_save_table_csv(self, tmp_path) -> None:
         """Test saving table as CSV."""
         table_data = [
             {"ID": "1", "Title": "Test Paper", "Type": "Paper"},
@@ -359,7 +361,7 @@ class TestFileIOFunctions:
         assert filepath.endswith("test_table.csv")
         assert filepath.startswith(str(tmp_path))
     
-    def test_save_empty_table_csv(self, tmp_path):
+    def test_save_empty_table_csv(self, tmp_path) -> None:
         """Test saving empty table as CSV."""
         table_data = []
         output_dir = str(tmp_path)
@@ -368,7 +370,7 @@ class TestFileIOFunctions:
         
         assert filepath == ""
     
-    def test_get_output_summary(self):
+    def test_get_output_summary(self) -> None:
         """Test output summary generation."""
         saved_files = {
             "schedule": "/path/to/schedule.json",
@@ -380,7 +382,7 @@ class TestFileIOFunctions:
         assert "schedule.json" in summary
         assert "metrics.json" in summary
     
-    def test_get_empty_output_summary(self):
+    def test_get_empty_output_summary(self) -> None:
         """Test output summary with no files."""
         saved_files = {}
         
@@ -392,7 +394,7 @@ class TestFileIOFunctions:
 class TestTableFormats:
     """Test different table formats."""
     
-    def test_monthly_format(self, config):
+    def test_monthly_format(self, config) -> None:
         """Test monthly table format."""
         table = generate_simple_monthly_table(config)
         
@@ -400,9 +402,9 @@ class TestTableFormats:
         # Should have entries for each month
         assert len(table) >= 0
     
-    def test_summary_format(self, config):
+    def test_summary_format(self, config) -> None:
         """Test summary table format."""
-        schedule = {
+        schedule: Dict[str, date] = {
             "paper1": date(2025, 1, 1),
             "paper2": date(2025, 2, 1),
             "paper3": date(2025, 3, 1)
@@ -413,9 +415,9 @@ class TestTableFormats:
         # Should have summary information for each submission
         assert len(table) >= 0
     
-    def test_table_with_conferences(self, config):
+    def test_table_with_conferences(self, config) -> None:
         """Test table generation with conference information."""
-        schedule = {
+        schedule: Dict[str, date] = {
             "conf1-pap": date(2025, 1, 1),
             "conf2-pap": date(2025, 2, 1),
             "conf3-pap": date(2025, 3, 1)
@@ -425,9 +427,9 @@ class TestTableFormats:
         assert isinstance(table, list)
         assert len(table) >= 0
     
-    def test_table_with_dependencies(self, config):
+    def test_table_with_dependencies(self, config) -> None:
         """Test table generation with dependency information."""
-        schedule = {
+        schedule: Dict[str, date] = {
             "parent-pap": date(2025, 1, 1),
             "child-pap": date(2025, 2, 1)
         }

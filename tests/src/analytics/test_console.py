@@ -4,6 +4,8 @@ import pytest
 from datetime import date
 from unittest.mock import patch
 from src.analytics.console import (
+from typing import Dict, List, Any, Optional
+
     print_schedule_summary,
     print_deadline_status,
     print_utilization_summary,
@@ -105,7 +107,7 @@ class TestConsoleOutput:
         }
     
     @patch('builtins.print')
-    def test_print_schedule_summary(self, mock_print, sample_schedule, sample_config):
+    def test_print_schedule_summary(self, mock_print, sample_schedule, sample_config) -> None:
         """Test printing schedule summary."""
         print_schedule_summary(sample_schedule, sample_config)
         
@@ -128,9 +130,9 @@ class TestConsoleOutput:
         assert "Papers: 2" in printed_text  # Fixed: J1-pap and J2-pap are papers
     
     @patch('builtins.print')
-    def test_print_schedule_summary_empty(self, mock_print, sample_config):
+    def test_print_schedule_summary_empty(self, mock_print, sample_config) -> None:
         """Test printing schedule summary with empty schedule."""
-        empty_schedule = {}
+        empty_schedule: Dict[str, date] = {}
         print_schedule_summary(empty_schedule, sample_config)
         
         # Should print "No schedule generated"
@@ -145,7 +147,7 @@ class TestConsoleOutput:
         assert "No schedule generated" in printed_text
     
     @patch('builtins.print')
-    def test_print_deadline_status(self, mock_print, sample_schedule, sample_config):
+    def test_print_deadline_status(self, mock_print, sample_schedule, sample_config) -> None:
         """Test printing deadline status."""
         print_deadline_status(sample_schedule, sample_config)
         
@@ -166,19 +168,19 @@ class TestConsoleOutput:
         assert "On time:" in printed_text or "Late:" in printed_text
     
     @patch('builtins.print')
-    def test_print_deadline_status_empty(self, mock_print, sample_config):
+    def test_print_deadline_status_empty(self, mock_print, sample_config) -> None:
         """Test printing deadline status with empty schedule."""
-        empty_schedule = {}
+        empty_schedule: Dict[str, date] = {}
         print_deadline_status(empty_schedule, sample_config)
         
         # Should not print anything for empty schedule
         assert mock_print.call_count == 0
     
     @patch('builtins.print')
-    def test_print_deadline_status_late_submissions(self, mock_print, sample_config):
+    def test_print_deadline_status_late_submissions(self, mock_print, sample_config) -> None:
         """Test printing deadline status with late submissions."""
         # Create a schedule with late submissions
-        late_schedule = {
+        late_schedule: Dict[str, date] = {
             "J1-pap": date(2025, 2, 1),  # After deadline
             "J2-pap": date(2025, 4, 1)   # After deadline
         }
@@ -200,7 +202,7 @@ class TestConsoleOutput:
         assert "LATE:" in printed_text
     
     @patch('builtins.print')
-    def test_print_utilization_summary(self, mock_print, sample_schedule, sample_config):
+    def test_print_utilization_summary(self, mock_print, sample_schedule, sample_config) -> None:
         """Test printing utilization summary."""
         print_utilization_summary(sample_schedule, sample_config)
         
@@ -220,16 +222,16 @@ class TestConsoleOutput:
         assert "Max concurrent submissions:" in printed_text  # Fixed: actual output
     
     @patch('builtins.print')
-    def test_print_utilization_summary_empty(self, mock_print, sample_config):
+    def test_print_utilization_summary_empty(self, mock_print, sample_config) -> None:
         """Test printing utilization summary with empty schedule."""
-        empty_schedule = {}
+        empty_schedule: Dict[str, date] = {}
         print_utilization_summary(empty_schedule, sample_config)
         
         # Should not print anything for empty schedule
         assert mock_print.call_count == 0
     
     @patch('builtins.print')
-    def test_print_metrics_summary(self, mock_print, sample_schedule, sample_config):
+    def test_print_metrics_summary(self, mock_print, sample_schedule, sample_config) -> None:
         """Test printing metrics summary."""
         print_metrics_summary(sample_schedule, sample_config)
         
@@ -249,22 +251,22 @@ class TestConsoleOutput:
         assert "Metrics Summary" in printed_text
     
     @patch('builtins.print')
-    def test_print_metrics_summary_empty(self, mock_print, sample_config):
+    def test_print_metrics_summary_empty(self, mock_print, sample_config) -> None:
         """Test printing metrics summary with empty schedule."""
-        empty_schedule = {}
+        empty_schedule: Dict[str, date] = {}
         print_metrics_summary(empty_schedule, sample_config)
         
         # Should still print something for empty schedule
         assert mock_print.call_count > 0
     
-    def test_format_table(self):
+    def test_format_table(self) -> None:
         """Test table formatting."""
         data = [
             {"id": "J1", "title": "Paper 1", "date": "2024-11-01"},
             {"id": "J2", "title": "Paper 2", "date": "2024-12-01"}
         ]
         
-        result = format_table(data, "Test Table")
+        result: Any = format_table(data, "Test Table")
         
         assert isinstance(result, str)
         assert "Test Table" in result
@@ -273,31 +275,31 @@ class TestConsoleOutput:
         assert "Paper 1" in result
         assert "Paper 2" in result
     
-    def test_format_table_empty(self):
+    def test_format_table_empty(self) -> None:
         """Test table formatting with empty data."""
         data = []
-        result = format_table(data, "Empty Table")
+        result: Any = format_table(data, "Empty Table")
         
         assert isinstance(result, str)
         assert "Empty Table" in result
     
-    def test_format_table_single_row(self):
+    def test_format_table_single_row(self) -> None:
         """Test table formatting with single row."""
         data = [{"id": "J1", "title": "Single Paper"}]
-        result = format_table(data, "Single Row Table")
+        result: Any = format_table(data, "Single Row Table")
         
         assert isinstance(result, str)
         assert "J1" in result
         assert "Single Paper" in result
     
-    def test_format_table_with_different_column_types(self):
+    def test_format_table_with_different_column_types(self) -> None:
         """Test table formatting with different data types."""
         data = [
             {"id": "J1", "count": 5, "active": True, "date": date(2024, 11, 1)},
             {"id": "J2", "count": 3, "active": False, "date": date(2024, 12, 1)}
         ]
         
-        result = format_table(data, "Mixed Data Table")
+        result: Any = format_table(data, "Mixed Data Table")
         
         assert isinstance(result, str)
         assert "J1" in result
@@ -308,9 +310,9 @@ class TestConsoleOutput:
         assert "False" in result
     
     @patch('builtins.print')
-    def test_print_schedule_summary_with_mixed_types(self, mock_print, sample_config):
+    def test_print_schedule_summary_with_mixed_types(self, mock_print, sample_config) -> None:
         """Test printing schedule summary with mixed submission types."""
-        mixed_schedule = {
+        mixed_schedule: Dict[str, date] = {
             "J1-pap": date(2024, 11, 1),
             "J1-abs": date(2024, 10, 1),
             "J2-pap": date(2024, 12, 1)
@@ -335,10 +337,10 @@ class TestConsoleOutput:
         assert "Papers: 2" in printed_text
     
     @patch('builtins.print')
-    def test_print_deadline_status_no_deadlines(self, mock_print, sample_config):
+    def test_print_deadline_status_no_deadlines(self, mock_print, sample_config) -> None:
         """Test printing deadline status when no deadlines are configured."""
         # Create config without deadlines
-        no_deadline_config = Config(
+        no_deadline_config: Config = Config(
             submissions=sample_config.submissions,
             conferences=[],
             min_abstract_lead_time_days=30,
@@ -352,7 +354,7 @@ class TestConsoleOutput:
             data_files={}
         )
         
-        schedule = {"J1-pap": date(2024, 11, 1)}
+        schedule: Dict[str, date] = {"J1-pap": date(2024, 11, 1)}
         print_deadline_status(schedule, no_deadline_config)
         
         # Should print "No submissions with deadlines found"
@@ -366,14 +368,14 @@ class TestConsoleOutput:
                         printed_text += str(value)
         assert "No submissions with deadlines found" in printed_text
     
-    def test_format_table_with_none_values(self):
+    def test_format_table_with_none_values(self) -> None:
         """Test table formatting with None values."""
         data = [
             {"id": "J1", "title": "Paper 1", "date": None},
             {"id": "J2", "title": None, "date": "2024-12-01"}
         ]
         
-        result = format_table(data, "None Values Table")
+        result: Any = format_table(data, "None Values Table")
         
         assert isinstance(result, str)
         assert "J1" in result

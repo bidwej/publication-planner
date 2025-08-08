@@ -5,6 +5,7 @@ from datetime import date, timedelta
 
 from src.core.models import Config, Submission, ConstraintValidationResult
 from src.core.constants import QUALITY_CONSTANTS
+from src.core.models import SubmissionType
 
 from .deadline import validate_deadline_constraints
 from .resources import validate_resources_constraints
@@ -30,11 +31,32 @@ def validate_schedule_constraints(schedule: Dict[str, date], config: Config) -> 
     # Get additional analytics
     analytics = _analyze_schedule_with_scoring(schedule, config)
     
+    # Get additional validation results that penalty functions expect
+    from .deadline import _validate_blackout_dates, _validate_paper_lead_time_months
+    from .venue import _validate_conference_compatibility, _validate_single_conference_policy
+    
+    blackout_result = _validate_blackout_dates(schedule, config)
+    lead_time_result = _validate_paper_lead_time_months(schedule, config)
+    conference_compatibility_result = _validate_conference_compatibility(schedule, config)
+    single_conference_result = _validate_single_conference_policy(schedule, config)
+    
+    # Create soft block model validation (simplified)
+    soft_block_result = _validate_soft_block_model(schedule, config)
+    
+    # Create abstract-paper dependency validation
+    abstract_paper_result = _validate_abstract_paper_dependencies(schedule, config)
+    
     # Combine results
     all_violations = (
         structured_result.deadlines.violations +
         structured_result.dependencies.violations +
-        structured_result.resources.violations
+        structured_result.resources.violations +
+        blackout_result.get("violations", []) +
+        lead_time_result.get("violations", []) +
+        conference_compatibility_result.get("violations", []) +
+        single_conference_result.get("violations", []) +
+        soft_block_result.get("violations", []) +
+        abstract_paper_result.get("violations", [])
     )
     
     # Determine overall validity
@@ -44,13 +66,25 @@ def validate_schedule_constraints(schedule: Dict[str, date], config: Config) -> 
     total_checks = (
         structured_result.deadlines.total_submissions +
         structured_result.dependencies.total_dependencies +
-        structured_result.resources.total_days
+        structured_result.resources.total_days +
+        blackout_result.get("total_submissions", 0) +
+        lead_time_result.get("total_papers", 0) +
+        conference_compatibility_result.get("total_submissions", 0) +
+        single_conference_result.get("total_submissions", 0) +
+        soft_block_result.get("total_submissions", 0) +
+        abstract_paper_result.get("total_dependencies", 0)
     )
     
     compliant_checks = (
         structured_result.deadlines.compliant_submissions +
         structured_result.dependencies.satisfied_dependencies +
-        structured_result.resources.total_days - len([v for v in structured_result.resources.violations])
+        structured_result.resources.total_days - len([v for v in structured_result.resources.violations]) +
+        blackout_result.get("compliant_submissions", 0) +
+        lead_time_result.get("compliant_papers", 0) +
+        conference_compatibility_result.get("compliant_submissions", 0) +
+        single_conference_result.get("compliant_submissions", 0) +
+        soft_block_result.get("compliant_submissions", 0) +
+        abstract_paper_result.get("satisfied_dependencies", 0)
     )
     
     overall_compliance_rate = (compliant_checks / total_checks * QUALITY_CONSTANTS.percentage_multiplier) if total_checks > 0 else QUALITY_CONSTANTS.perfect_compliance_rate
@@ -76,7 +110,13 @@ def validate_schedule_constraints(schedule: Dict[str, date], config: Config) -> 
                 "is_valid": structured_result.resources.is_valid,
                 "violations": structured_result.resources.violations,
                 "max_observed": structured_result.resources.max_observed
-            }
+            },
+            "blackout_dates": blackout_result,
+            "paper_lead_time": lead_time_result,
+            "conference_compatibility": conference_compatibility_result,
+            "single_conference_policy": single_conference_result,
+            "soft_block_model": soft_block_result,
+            "abstract_paper_dependencies": abstract_paper_result
         },
         "analytics": analytics.get("schedule_analysis", {})
     }
@@ -325,3 +365,105 @@ def _validate_schedule_constraints_structured(schedule: Dict[str, date], config:
         resources=resource_result,
         is_valid=is_valid
     )
+
+
+def _validate_soft_block_model(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+    """Validate soft block model constraints (PCCP)."""
+    violations = []
+    total_submissions = 0
+    compliant_submissions = 0
+    
+    for sid, start_date in schedule.items():
+        sub = config.submissions_dict.get(sid)
+        if not sub or not sub.earliest_start_date:
+            continue
+        
+        total_submissions += 1
+        
+        # Check if submission is within ±2 months (60 days) of earliest start date
+        days_diff = abs((start_date - sub.earliest_start_date).days)
+        
+        if days_diff > 60:
+            violations.append({
+                "submission_id": sid,
+                "description": f"Submission scheduled {days_diff} days from earliest start date (max 60 days)",
+                "severity": "medium",
+                "days_violation": days_diff - 60,
+                "earliest_start_date": sub.earliest_start_date,
+                "scheduled_date": start_date
+            })
+        else:
+            compliant_submissions += 1
+    
+    is_valid = len(violations) == 0
+    
+    return {
+        "is_valid": is_valid,
+        "violations": violations,
+        "summary": f"{compliant_submissions}/{total_submissions} submissions within soft block constraints",
+        "total_submissions": total_submissions,
+        "compliant_submissions": compliant_submissions
+    }
+
+
+def _validate_abstract_paper_dependencies(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+    """Validate abstract-paper dependency relationships."""
+    violations = []
+    total_dependencies = 0
+    satisfied_dependencies = 0
+    
+    for sid, start_date in schedule.items():
+        sub = config.submissions_dict.get(sid)
+        if not sub or sub.kind != SubmissionType.PAPER:
+            continue
+        
+        # Find corresponding abstract for this paper
+        paper_base_id = sid.split('-pap-')[0] if '-pap-' in sid else None
+        conference_id = sid.split('-pap-')[1] if '-pap-' in sid else None
+        
+        if not paper_base_id or not conference_id:
+            continue
+        
+        abstract_id = f"{paper_base_id}-abs-{conference_id}"
+        
+        if abstract_id in schedule:
+            total_dependencies += 1
+            
+            # Check if abstract is completed before paper starts
+            abstract_start = schedule[abstract_id]
+            abstract_sub = config.submissions_dict.get(abstract_id)
+            
+            if abstract_sub:
+                abstract_duration = abstract_sub.get_duration_days(config)
+                abstract_end = abstract_start + timedelta(days=abstract_duration)
+                
+                if start_date < abstract_end:
+                    days_violation = (abstract_end - start_date).days
+                    violations.append({
+                        "submission_id": sid,
+                        "description": f"Paper starts before abstract completes",
+                        "severity": "high",
+                        "days_violation": days_violation,
+                        "abstract_id": abstract_id,
+                        "issue": "timing_violation"
+                    })
+                else:
+                    satisfied_dependencies += 1
+            else:
+                violations.append({
+                    "submission_id": sid,
+                    "description": f"Abstract {abstract_id} not found in submissions",
+                    "severity": "high",
+                    "abstract_id": abstract_id,
+                    "issue": "missing_dependency"
+                })
+    
+    is_valid = len(violations) == 0
+    
+    return {
+        "is_valid": is_valid,
+        "violations": violations,
+        "summary": f"{satisfied_dependencies}/{total_dependencies} abstract-paper dependencies satisfied",
+        "total_dependencies": total_dependencies,
+        "satisfied_dependencies": satisfied_dependencies
+    }

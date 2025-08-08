@@ -3,12 +3,14 @@
 import pytest
 import json
 from unittest.mock import Mock
+from typing import Dict, List, Any, Optional
+
 
 
 @pytest.fixture
 def mock_dash_app():
     """Fixture to provide a mock Dash app for testing."""
-    mock_app = Mock()
+    mock_app: Mock = Mock()
     mock_app.layout = Mock()
     mock_app.callback = Mock()
     mock_app.run_server = Mock()

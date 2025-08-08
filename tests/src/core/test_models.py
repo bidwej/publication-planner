@@ -258,7 +258,7 @@ class TestConference:
     
     def test_conference_creation(self) -> None:
         """Test basic conference creation."""
-        conference = Conference(
+        conference: Conference = Conference(
             id="conf1",
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,
@@ -274,7 +274,7 @@ class TestConference:
     
     def test_conference_with_single_deadline(self) -> None:
         """Test conference with single deadline."""
-        conference = Conference(
+        conference: Conference = Conference(
             id="conf1",
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,
@@ -289,7 +289,7 @@ class TestConference:
     
     def test_conference_validation_valid(self) -> None:
         """Test conference validation with valid data."""
-        conference = Conference(
+        conference: Conference = Conference(
             id="conf1",
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,
@@ -297,12 +297,12 @@ class TestConference:
             deadlines={SubmissionType.PAPER: date(2024, 6, 1)}
         )
         
-        errors = conference.validate()
+        errors: List[str] = conference.validate()
         assert len(errors) == 0
     
     def test_conference_validation_invalid(self) -> None:
         """Test conference validation with invalid data."""
-        conference = Conference(
+        conference: Conference = Conference(
             id="",
             name="",
             conf_type=ConferenceType.MEDICAL,
@@ -310,7 +310,7 @@ class TestConference:
             deadlines={}
         )
         
-        errors = conference.validate()
+        errors: List[str] = conference.validate()
         assert len(errors) > 0
         assert any("Missing conference ID" in error for error in errors)
         assert any("Missing conference name" in error for error in errors)
@@ -322,14 +322,14 @@ class TestConfig:
     
     def test_config_creation(self) -> None:
         """Test basic config creation."""
-        submission = Submission(
+        submission: Submission = Submission(
             id="test-pap",
             title="Test Paper",
             kind=SubmissionType.PAPER,
             conference_id="conf1"
         )
         
-        conference = Conference(
+        conference: Conference = Conference(
             id="conf1",
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,
@@ -337,7 +337,7 @@ class TestConfig:
             deadlines={SubmissionType.PAPER: date(2024, 6, 1)}
         )
         
-        config = Config(
+        config: Config = Config(
             submissions=[submission],
             conferences=[conference],
             min_abstract_lead_time_days=30,
@@ -353,14 +353,14 @@ class TestConfig:
     
     def test_config_validation_valid(self) -> None:
         """Test config validation with valid data."""
-        submission = Submission(
+        submission: Submission = Submission(
             id="test-pap",
             title="Test Paper",
             kind=SubmissionType.PAPER,
             conference_id="conf1"
         )
         
-        conference = Conference(
+        conference: Conference = Conference(
             id="conf1",
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,
@@ -368,7 +368,7 @@ class TestConfig:
             deadlines={SubmissionType.PAPER: date(2024, 6, 1)}
         )
         
-        config = Config(
+        config: Config = Config(
             submissions=[submission],
             conferences=[conference],
             min_abstract_lead_time_days=30,
@@ -376,13 +376,13 @@ class TestConfig:
             max_concurrent_submissions=3
         )
         
-        errors = config.validate()
+        errors: List[str] = config.validate()
         assert len(errors) == 0
     
     def test_config_validation_invalid(self) -> None:
         """Test config validation with invalid data."""
         # Test empty submissions
-        conference = Conference(
+        conference: Conference = Conference(
             id="conf1",
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,
@@ -390,7 +390,7 @@ class TestConfig:
             deadlines={SubmissionType.PAPER: date(2024, 6, 1)}
         )
         
-        config = Config(
+        config: Config = Config(
             submissions=[],
             conferences=[conference],
             min_abstract_lead_time_days=30,
@@ -398,19 +398,19 @@ class TestConfig:
             max_concurrent_submissions=3
         )
         
-        errors = config.validate()
+        errors: List[str] = config.validate()
         assert any("No submissions defined" in error for error in errors)
     
     def test_config_computed_properties(self) -> None:
         """Test config computed properties."""
-        submission = Submission(
+        submission: Submission = Submission(
             id="test-pap",
             title="Test Paper",
             kind=SubmissionType.PAPER,
             conference_id="conf1"
         )
         
-        conference = Conference(
+        conference: Conference = Conference(
             id="conf1",
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,
@@ -418,7 +418,7 @@ class TestConfig:
             deadlines={SubmissionType.PAPER: date(2024, 6, 1)}
         )
         
-        config = Config(
+        config: Config = Config(
             submissions=[submission],
             conferences=[conference],
             min_abstract_lead_time_days=30,
@@ -434,7 +434,7 @@ class TestConfig:
     def test_config_abstract_paper_dependency_validation(self) -> None:
         """Test config validation of abstract-paper dependencies."""
         # Create conference that requires abstracts
-        conference = Conference(
+        conference: Conference = Conference(
             id="conf1",
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,
@@ -453,7 +453,7 @@ class TestConfig:
             conference_id="conf1"
         )
         
-        config = Config(
+        config: Config = Config(
             submissions=[paper],
             conferences=[conference],
             min_abstract_lead_time_days=30,
@@ -462,13 +462,13 @@ class TestConfig:
         )
         
         # Should have validation error for missing abstract
-        errors = config.validate()
+        errors: List[str] = config.validate()
         assert any("requires abstract" in error for error in errors)
     
     def test_config_ensure_abstract_paper_dependencies(self) -> None:
         """Test automatic creation of abstract dependencies."""
         # Create conference that requires abstracts
-        conference = Conference(
+        conference: Conference = Conference(
             id="conf1",
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,
@@ -487,7 +487,7 @@ class TestConfig:
             conference_id="conf1"
         )
         
-        config = Config(
+        config: Config = Config(
             submissions=[paper],
             conferences=[conference],
             min_abstract_lead_time_days=30,
@@ -517,7 +517,7 @@ class TestConfig:
     def test_config_edge_cases(self) -> None:
         """Test config edge cases and error conditions."""
         # Test with empty submissions and conferences
-        empty_config = Config(
+        empty_config: Config = Config(
             submissions=[],
             conferences=[],
             min_abstract_lead_time_days=30,
@@ -526,11 +526,11 @@ class TestConfig:
         )
         
         # Should not crash with empty data
-        errors = empty_config.validate()
+        errors: List[str] = empty_config.validate()
         assert isinstance(errors, list)
         
         # Test with extreme penalty values
-        extreme_config = Config(
+        extreme_config: Config = Config(
             submissions=[],
             conferences=[],
             min_abstract_lead_time_days=30,
@@ -546,18 +546,18 @@ class TestConfig:
         )
         
         # Should handle extreme values without crashing
-        errors = extreme_config.validate()
+        errors: List[str] = extreme_config.validate()
         assert isinstance(errors, list)
         
         # Test with malformed submission data
-        malformed_submission = Submission(
+        malformed_submission: Submission = Submission(
             id="malformed",
             title="",  # Empty title
             kind=SubmissionType.PAPER,
             conference_id="nonexistent_conf"
         )
         
-        malformed_config = Config(
+        malformed_config: Config = Config(
             submissions=[malformed_submission],
             conferences=[],
             min_abstract_lead_time_days=30,
@@ -566,12 +566,12 @@ class TestConfig:
         )
         
         # Should detect malformed data
-        errors = malformed_config.validate()
+        errors: List[str] = malformed_config.validate()
         assert len(errors) > 0
         assert any("nonexistent" in error.lower() for error in errors)
         
         # Test with invalid lead times
-        invalid_config = Config(
+        invalid_config: Config = Config(
             submissions=[],
             conferences=[],
             min_abstract_lead_time_days=-10,  # Invalid negative value
@@ -580,7 +580,7 @@ class TestConfig:
         )
         
         # Should detect invalid configuration
-        errors = invalid_config.validate()
+        errors: List[str] = invalid_config.validate()
         assert len(errors) > 0
 
     def test_config_abstract_paper_dependencies_edge_cases(self) -> None:
@@ -601,7 +601,7 @@ class TestConfig:
             conference_id="conf_no_abstract"
         )
         
-        config = Config(
+        config: Config = Config(
             submissions=[paper],
             conferences=[conference_no_abstract],
             min_abstract_lead_time_days=30,
@@ -610,7 +610,7 @@ class TestConfig:
         )
         
         # Should not require abstract for paper-only conference
-        errors = config.validate()
+        errors: List[str] = config.validate()
         assert not any("requires abstract" in error for error in errors)
         
         # Test with paper that already has abstract
@@ -703,7 +703,7 @@ class TestConfig:
         )
         
         # Should detect circular dependencies
-        errors = config_circular.validate()
+        errors: List[str] = config_circular.validate()
         assert len(errors) > 0
         
         # Test with submissions that depend on non-existent submissions
@@ -723,7 +723,7 @@ class TestConfig:
         )
         
         # Should detect missing dependencies
-        errors = config_orphan.validate()
+        errors: List[str] = config_orphan.validate()
         assert len(errors) > 0
         assert any("nonexistent" in error.lower() for error in errors)
         
@@ -753,7 +753,7 @@ class TestConfig:
         )
         
         # Should validate conference compatibility
-        errors = config_mismatch.validate()
+        errors: List[str] = config_mismatch.validate()
         # Note: This might not be an error depending on business rules
         # but should be validated
 
@@ -825,7 +825,7 @@ class TestUnifiedModels:
             timeline_efficiency=0.9
         )
         
-        scoring_result = ScoringResult(
+        scoring_result: Any = ScoringResult(
             penalty_score=100.0,
             quality_score=85.0,
             efficiency_score=90.0,
@@ -842,7 +842,7 @@ class TestUnifiedModels:
 
     def test_schedule_result_creation(self) -> None:
         """Test schedule result creation."""
-        schedule = {"paper1": date(2024, 5, 1), "paper2": date(2024, 7, 1)}
+        schedule: Dict[str, date] = {"paper1": date(2024, 5, 1), "paper2": date(2024, 7, 1)}
         
         summary = ScheduleSummary(
             total_submissions=2,
@@ -887,7 +887,7 @@ class TestUnifiedModels:
             timeline_efficiency=0.9
         )
         
-        scoring_result = ScoringResult(
+        scoring_result: Any = ScoringResult(
             penalty_score=100.0,
             quality_score=85.0,
             efficiency_score=90.0,
@@ -897,7 +897,7 @@ class TestUnifiedModels:
             overall_score=91.67
         )
         
-        validation_result = ValidationResult(
+        validation_result: Any = ValidationResult(
             is_valid=True,
             violations=[],
             deadline_validation=DeadlineValidation(
@@ -927,7 +927,7 @@ class TestUnifiedModels:
             summary="Schedule is valid"
         )
         
-        schedule_result = ScheduleResult(
+        schedule_result: Any = ScheduleResult(
             schedule=schedule,
             summary=summary,
             metrics=metrics,

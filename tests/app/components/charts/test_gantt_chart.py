@@ -6,6 +6,8 @@ from datetime import date
 import plotly.graph_objects as go
 
 from app.components.charts.gantt_chart import create_gantt_chart
+from typing import Dict, List, Any, Optional
+
 
 
 class TestGanttChart:
@@ -49,36 +51,36 @@ class TestGanttChart:
             }
         )
     
-    def test_create_gantt_chart_basic(self, sample_schedule, sample_config):
+    def test_create_gantt_chart_basic(self, sample_schedule, sample_config) -> None:
         """Test basic gantt chart creation."""
         fig = create_gantt_chart(sample_schedule, sample_config)
         
         assert isinstance(fig, go.Figure)
         assert fig.layout is not None
     
-    def test_create_gantt_chart_empty_schedule(self, sample_config):
+    def test_create_gantt_chart_empty_schedule(self, sample_config) -> None:
         """Test gantt chart creation with empty schedule."""
-        empty_schedule = {}
+        empty_schedule: Dict[str, date] = {}
         fig = create_gantt_chart(empty_schedule, sample_config)
         
         assert isinstance(fig, go.Figure)
         assert fig.layout is not None
     
-    def test_create_gantt_chart_with_engineering_papers(self, sample_schedule, sample_config):
+    def test_create_gantt_chart_with_engineering_papers(self, sample_schedule, sample_config) -> None:
         """Test gantt chart creation with engineering papers."""
         fig = create_gantt_chart(sample_schedule, sample_config)
         
         # Check that engineering papers are properly colored
         assert isinstance(fig, go.Figure)
     
-    def test_create_gantt_chart_with_abstracts(self, sample_schedule, sample_config):
+    def test_create_gantt_chart_with_abstracts(self, sample_schedule, sample_config) -> None:
         """Test gantt chart creation with abstracts."""
         fig = create_gantt_chart(sample_schedule, sample_config)
         
         # Check that abstracts are properly handled
         assert isinstance(fig, go.Figure)
     
-    def test_create_gantt_chart_layout_properties(self, sample_schedule, sample_config):
+    def test_create_gantt_chart_layout_properties(self, sample_schedule, sample_config) -> None:
         """Test gantt chart layout properties."""
         fig = create_gantt_chart(sample_schedule, sample_config)
         

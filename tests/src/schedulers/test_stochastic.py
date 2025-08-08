@@ -7,28 +7,30 @@ import pytest
 from src.core.models import SubmissionType, ConferenceType, Submission, Config
 from src.schedulers.stochastic import StochasticGreedyScheduler
 from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
+from typing import Dict, List, Any, Optional
+
 
 
 class TestStochasticScheduler:
     """Test the stochastic scheduler functionality."""
 
-    def test_stochastic_scheduler_initialization(self, empty_config):
+    def test_stochastic_scheduler_initialization(self, empty_config) -> None:
         """Test stochastic scheduler initialization."""
-        scheduler = StochasticGreedyScheduler(empty_config)
+        scheduler: Any = StochasticGreedyScheduler(empty_config)
         
         assert scheduler.config == empty_config
         assert hasattr(scheduler, 'schedule')
         assert hasattr(scheduler, 'randomness_factor')
 
-    def test_schedule_empty_submissions(self, empty_config):
+    def test_schedule_empty_submissions(self, empty_config) -> None:
         """Test scheduling with empty submissions."""
-        scheduler = StochasticGreedyScheduler(empty_config)
+        scheduler: Any = StochasticGreedyScheduler(empty_config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         assert isinstance(result, dict)
         assert len(result) == 0
 
-    def test_schedule_single_paper(self):
+    def test_schedule_single_paper(self) -> None:
         """Test scheduling with a single paper."""
         # Create mock submission
         submission = create_mock_submission(
@@ -43,16 +45,16 @@ class TestStochasticScheduler:
         
         config = create_mock_config([submission], [conference])
         
-        scheduler = StochasticGreedyScheduler(config)
+        scheduler: Any = StochasticGreedyScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) == 1
         assert "paper1" in result
         assert isinstance(result["paper1"], date)
 
-    def test_schedule_multiple_papers(self):
+    def test_schedule_multiple_papers(self) -> None:
         """Test scheduling with multiple papers."""
         # Create mock submissions
         submission1 = create_mock_submission(
@@ -77,9 +79,9 @@ class TestStochasticScheduler:
         
         config = create_mock_config([submission1, submission2], [conference1, conference2])
         
-        scheduler = StochasticGreedyScheduler(config)
+        scheduler: Any = StochasticGreedyScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) >= 1  # At least one submission should be scheduled
@@ -90,7 +92,7 @@ class TestStochasticScheduler:
         if "paper2" in result:
             assert isinstance(result["paper2"], date)
 
-    def test_stochastic_algorithm_behavior(self):
+    def test_stochastic_algorithm_behavior(self) -> None:
         """Test the stochastic algorithm behavior."""
         # Create mock submissions with different characteristics
         submission1 = create_mock_submission(
@@ -114,16 +116,16 @@ class TestStochasticScheduler:
         
         config = create_mock_config([submission1, submission2], [conference1, conference2])
         
-        scheduler = StochasticGreedyScheduler(config)
+        scheduler: Any = StochasticGreedyScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) == 2
         assert "paper1" in result
         assert "paper2" in result
 
-    def test_schedule_with_constraints(self):
+    def test_schedule_with_constraints(self) -> None:
         """Test scheduling with constraints."""
         # Create mock submission with constraints
         submission = create_mock_submission(
@@ -137,19 +139,19 @@ class TestStochasticScheduler:
         
         config = create_mock_config([submission], [conference])
         
-        scheduler = StochasticGreedyScheduler(config)
+        scheduler: Any = StochasticGreedyScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) == 1
         assert "paper1" in result
         assert isinstance(result["paper1"], date)
 
-    def test_error_handling_invalid_paper(self):
+    def test_error_handling_invalid_paper(self) -> None:
         """Test error handling with invalid paper data."""
         # Create a submission with invalid conference reference
-        invalid_submission = Submission(
+        invalid_submission: Submission = Submission(
             id="paper1",
             title="Invalid Paper",
             kind=SubmissionType.PAPER,
@@ -161,7 +163,7 @@ class TestStochasticScheduler:
             engineering=False
         )
         
-        config = Config(
+        config: Config = Config(
             submissions=[invalid_submission],
             conferences=[],  # No conferences defined
             min_abstract_lead_time_days=30,
@@ -169,12 +171,12 @@ class TestStochasticScheduler:
             max_concurrent_submissions=3
         )
         
-        scheduler = StochasticGreedyScheduler(config)
+        scheduler: Any = StochasticGreedyScheduler(config)
         
         with pytest.raises(ValueError, match="Submission paper1 references unknown conference nonexistent_conf"):
             scheduler.schedule()
 
-    def test_schedule_with_priority_ordering(self):
+    def test_schedule_with_priority_ordering(self) -> None:
         """Test scheduling with priority ordering."""
         # Create mock submissions with different priorities
         submission1 = create_mock_submission(
@@ -199,9 +201,9 @@ class TestStochasticScheduler:
         
         config = create_mock_config([submission1, submission2], [conference1, conference2])
         
-        scheduler = StochasticGreedyScheduler(config)
+        scheduler: Any = StochasticGreedyScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) >= 1  # At least one submission should be scheduled
@@ -211,7 +213,7 @@ class TestStochasticScheduler:
         if "paper2" in result:
             assert isinstance(result["paper2"], date)
 
-    def test_schedule_with_deadline_compliance(self):
+    def test_schedule_with_deadline_compliance(self) -> None:
         """Test scheduling with deadline compliance."""
         # Create mock submission with tight deadline
         submission = create_mock_submission(
@@ -225,9 +227,9 @@ class TestStochasticScheduler:
         
         config = create_mock_config([submission], [conference])
         
-        scheduler = StochasticGreedyScheduler(config)
+        scheduler: Any = StochasticGreedyScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) == 1

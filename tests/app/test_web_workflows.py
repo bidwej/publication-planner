@@ -133,7 +133,7 @@ class TestWebAppWorkflows:
             )
         ]
         
-        config = Config(
+        config: Config = Config(
             submissions=submissions,
             conferences=conferences,
             min_paper_lead_time_days=90,
@@ -153,7 +153,7 @@ class TestWebAppWorkflows:
         assert config.conferences_dict["conf1"] == config.conferences[0]
         
         # Test that config validation passes
-        validation_errors = config.validate()
+        validation_errors: List[str] = config.validate()
         assert len(validation_errors) == 0
     
     def test_app_external_stylesheets(self, dashboard_app: dash.Dash) -> None:
@@ -200,7 +200,7 @@ class TestWebAppWorkflows:
         assert config is not None
         
         # Test config validation
-        validation_errors = config.validate()
+        validation_errors: List[str] = config.validate()
         assert len(validation_errors) == 0
         
         # Test that we can access config properties
@@ -208,8 +208,8 @@ class TestWebAppWorkflows:
         assert hasattr(config, 'conferences_dict')
         
         # Test schedule validation (without actual scheduling)
-        sample_schedule = {"paper1": date(2024, 1, 15)}
-        validation_result = validate_schedule_comprehensive(sample_schedule, config)
+        sample_schedule: Dict[str, date] = {"paper1": date(2024, 1, 15)}
+        validation_result: Any = validate_schedule_comprehensive(sample_schedule, config)
         assert validation_result is not None
     
     def test_web_app_data_flow(self, dashboard_app: dash.Dash, sample_config) -> None:
@@ -219,7 +219,7 @@ class TestWebAppWorkflows:
         assert config is not None
         
         # Create sample schedule
-        sample_schedule = {
+        sample_schedule: Dict[str, date] = {
             "submission_1": date(2024, 1, 15),
             "submission_2": date(2024, 2, 1),
             "submission_3": date(2024, 3, 15)
@@ -250,7 +250,7 @@ class TestWebAppWorkflows:
         assert config is not None  # Should return default config
         
         # Test with invalid schedule
-        invalid_schedule = {"invalid_id": "invalid_date"}  # Invalid date string for error testing
+        invalid_schedule: Dict[str, date] = {"invalid_id": "invalid_date"}  # Invalid date string for error testing
         config = Mock(spec=Config)
         
         # Should handle gracefully
@@ -306,7 +306,7 @@ class TestWebAppWorkflows:
         assert config is not None
         
         # Create sample schedule
-        sample_schedule = {
+        sample_schedule: Dict[str, date] = {
             "submission_1": date(2024, 1, 15),
             "submission_2": date(2024, 2, 1)
         }
@@ -331,7 +331,7 @@ class TestWebAppWorkflows:
         assert config is not None
         
         # Test config validation
-        validation_errors = config.validate()
+        validation_errors: List[str] = config.validate()
         assert len(validation_errors) == 0
         
         # Test that we can access config properties

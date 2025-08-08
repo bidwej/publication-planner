@@ -7,53 +7,55 @@ import pytest
 from src.core.models import SubmissionType
 from src.schedulers.greedy import GreedyScheduler
 from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
+from typing import Dict, List, Any, Optional
+
 
 
 class TestScheduler:
     """Test the base scheduler functionality."""
 
-    def test_scheduler_initialization(self, empty_config):
+    def test_scheduler_initialization(self, empty_config) -> None:
         """Test scheduler initialization."""
-        scheduler = GreedyScheduler(empty_config)
+        scheduler: Any = GreedyScheduler(empty_config)
         
         assert scheduler.config == empty_config
         assert hasattr(scheduler, 'schedule')
 
-    def test_scheduler_with_empty_config(self, empty_config):
+    def test_scheduler_with_empty_config(self, empty_config) -> None:
         """Test scheduler with empty config."""
-        scheduler = GreedyScheduler(empty_config)
+        scheduler: Any = GreedyScheduler(empty_config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         assert isinstance(result, dict)
         assert len(result) == 0
 
-    def test_scheduler_with_sample_data(self, sample_config):
+    def test_scheduler_with_sample_data(self, sample_config) -> None:
         """Test scheduler with sample data."""
-        scheduler = GreedyScheduler(sample_config)
+        scheduler: Any = GreedyScheduler(sample_config)
         
         assert scheduler.config == sample_config
         assert len(scheduler.config.submissions) > 0
         assert len(scheduler.config.conferences) > 0
 
-    def test_schedule_method(self, sample_config):
+    def test_schedule_method(self, sample_config) -> None:
         """Test the schedule method."""
-        scheduler = GreedyScheduler(sample_config)
+        scheduler: Any = GreedyScheduler(sample_config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) > 0
 
-    def test_schedule_with_no_submissions(self, empty_config):
+    def test_schedule_with_no_submissions(self, empty_config) -> None:
         """Test scheduling with no submissions."""
-        scheduler = GreedyScheduler(empty_config)
+        scheduler: Any = GreedyScheduler(empty_config)
         
         # Should return empty schedule for no submissions
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         assert isinstance(result, dict)
         assert len(result) == 0
 
-    def test_schedule_with_no_valid_dates(self):
+    def test_schedule_with_no_valid_dates(self) -> None:
         """Test scheduling with no valid dates."""
         # Create submission with impossible constraints
         submission = create_mock_submission(
@@ -68,14 +70,14 @@ class TestScheduler:
         
         config = create_mock_config([submission], [conference])
         
-        scheduler = GreedyScheduler(config)
+        scheduler: Any = GreedyScheduler(config)
         
         # Should return empty schedule
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         assert isinstance(result, dict)
         assert len(result) == 0
 
-    def test_schedule_with_dependencies(self):
+    def test_schedule_with_dependencies(self) -> None:
         """Test scheduling with dependencies."""
         # Create submissions with dependencies
         submission1 = create_mock_submission(
@@ -94,9 +96,9 @@ class TestScheduler:
         
         config = create_mock_config([submission1, submission2], [conference])
         
-        scheduler = GreedyScheduler(config)
+        scheduler: Any = GreedyScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) >= 1
@@ -106,11 +108,11 @@ class TestScheduler:
         if "paper2" in result:
             assert result["paper2"] > result["paper1"]
 
-    def test_schedule_respects_earliest_start_date(self, sample_config):
+    def test_schedule_respects_earliest_start_date(self, sample_config) -> None:
         """Test that schedule respects earliest start dates."""
-        scheduler = GreedyScheduler(sample_config)
+        scheduler: Any = GreedyScheduler(sample_config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         
@@ -120,11 +122,11 @@ class TestScheduler:
             if submission.earliest_start_date:
                 assert scheduled_date >= submission.earliest_start_date
 
-    def test_schedule_respects_deadlines(self, sample_config):
+    def test_schedule_respects_deadlines(self, sample_config) -> None:
         """Test that schedule respects deadlines."""
-        scheduler = GreedyScheduler(sample_config)
+        scheduler: Any = GreedyScheduler(sample_config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         
@@ -138,11 +140,11 @@ class TestScheduler:
                     end_date = scheduled_date + timedelta(days=sample_config.min_paper_lead_time_days)
                     assert end_date <= deadline
 
-    def test_schedule_respects_concurrency_limit(self, sample_config):
+    def test_schedule_respects_concurrency_limit(self, sample_config) -> None:
         """Test that schedule respects concurrency limits."""
-        scheduler = GreedyScheduler(sample_config)
+        scheduler: Any = GreedyScheduler(sample_config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         

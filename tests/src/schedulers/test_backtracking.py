@@ -6,28 +6,30 @@ from unittest.mock import Mock, patch
 from src.core.models import SubmissionType, ConferenceRecurrence, ConferenceType, Submission, Config
 from src.schedulers.backtracking import BacktrackingGreedyScheduler
 from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
+from typing import Dict, List, Any, Optional
+
 
 
 class TestBacktrackingScheduler:
     """Test the BacktrackingScheduler class."""
 
-    def test_backtracking_scheduler_initialization(self, empty_config):
+    def test_backtracking_scheduler_initialization(self, empty_config) -> None:
         """Test backtracking scheduler initialization."""
-        scheduler = BacktrackingGreedyScheduler(empty_config)
+        scheduler: Any = BacktrackingGreedyScheduler(empty_config)
         
         assert scheduler.config == empty_config
         assert hasattr(scheduler, 'schedule')
 
-    def test_schedule_empty_submissions(self, empty_config):
+    def test_schedule_empty_submissions(self, empty_config) -> None:
         """Test scheduling with empty submissions."""
-        scheduler = BacktrackingGreedyScheduler(empty_config)
+        scheduler: Any = BacktrackingGreedyScheduler(empty_config)
         
         # Empty submissions should return empty schedule
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         assert isinstance(result, dict)
         assert len(result) == 0
 
-    def test_schedule_single_paper(self):
+    def test_schedule_single_paper(self) -> None:
         """Test scheduling with single paper."""
         # Create mock submission
         submission = create_mock_submission(
@@ -42,16 +44,16 @@ class TestBacktrackingScheduler:
         
         config = create_mock_config([submission], [conference])
         
-        scheduler = BacktrackingGreedyScheduler(config)
+        scheduler: Any = BacktrackingGreedyScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) == 1
         assert "sub1" in result
         assert isinstance(result["sub1"], date)
 
-    def test_schedule_multiple_papers(self):
+    def test_schedule_multiple_papers(self) -> None:
         """Test scheduling with multiple papers."""
         # Create mock submissions
         submission1 = create_mock_submission(
@@ -76,9 +78,9 @@ class TestBacktrackingScheduler:
         
         config = create_mock_config([submission1, submission2], [conference1, conference2])
         
-        scheduler = BacktrackingGreedyScheduler(config)
+        scheduler: Any = BacktrackingGreedyScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) >= 1  # At least one submission should be scheduled
@@ -89,7 +91,7 @@ class TestBacktrackingScheduler:
         if "sub2" in result:
             assert isinstance(result["sub2"], date)
 
-    def test_schedule_with_constraints(self):
+    def test_schedule_with_constraints(self) -> None:
         """Test scheduling with constraints."""
         # Create mock paper with constraints
         submission = create_mock_submission(
@@ -104,9 +106,9 @@ class TestBacktrackingScheduler:
         config = create_mock_config([submission], [conference])
         config.blackout_dates = [date(2024, 5, 15), date(2024, 5, 16)]
         
-        scheduler = BacktrackingGreedyScheduler(config)
+        scheduler: Any = BacktrackingGreedyScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) == 1
@@ -116,7 +118,7 @@ class TestBacktrackingScheduler:
         scheduled_date = result["sub1"]
         assert scheduled_date not in config.blackout_dates
 
-    def test_schedule_with_insufficient_time(self):
+    def test_schedule_with_insufficient_time(self) -> None:
         """Test scheduling when there's insufficient time."""
         # Create mock paper with very short deadline
         submission = create_mock_submission(
@@ -132,14 +134,14 @@ class TestBacktrackingScheduler:
         
         config = create_mock_config([submission], [conference])
         
-        scheduler = BacktrackingGreedyScheduler(config)
+        scheduler: Any = BacktrackingGreedyScheduler(config)
         
         # Should return empty schedule due to insufficient time
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         assert isinstance(result, dict)
         assert len(result) == 0  # No submissions scheduled
 
-    def test_backtracking_algorithm(self):
+    def test_backtracking_algorithm(self) -> None:
         """Test the backtracking algorithm behavior."""
         # Create mock submissions with dependencies
         submission1 = create_mock_submission(
@@ -158,9 +160,9 @@ class TestBacktrackingScheduler:
         
         config = create_mock_config([submission1, submission2], [conference])
         
-        scheduler = BacktrackingGreedyScheduler(config)
+        scheduler: Any = BacktrackingGreedyScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         # May schedule only one submission if dependency can't be satisfied
@@ -171,10 +173,10 @@ class TestBacktrackingScheduler:
         if "sub2" in result:
             assert result["sub2"] > result["sub1"]
 
-    def test_error_handling_invalid_paper(self):
+    def test_error_handling_invalid_paper(self) -> None:
         """Test error handling with invalid paper data."""
         # Create a submission with invalid conference reference
-        invalid_submission = Submission(
+        invalid_submission: Submission = Submission(
             id="sub1",
             title="Invalid Paper",
             kind=SubmissionType.PAPER,
@@ -186,7 +188,7 @@ class TestBacktrackingScheduler:
             engineering=False
         )
         
-        config = Config(
+        config: Config = Config(
             submissions=[invalid_submission],
             conferences=[],  # No conferences defined
             min_abstract_lead_time_days=30,
@@ -194,12 +196,12 @@ class TestBacktrackingScheduler:
             max_concurrent_submissions=3
         )
         
-        scheduler = BacktrackingGreedyScheduler(config)
+        scheduler: Any = BacktrackingGreedyScheduler(config)
         
         with pytest.raises(ValueError, match="Submission sub1 references unknown conference nonexistent_conf"):
             scheduler.schedule()
 
-    def test_schedule_with_priority_ordering(self):
+    def test_schedule_with_priority_ordering(self) -> None:
         """Test scheduling with priority ordering."""
         # Create mock submissions with different priorities
         submission1 = create_mock_submission(
@@ -222,9 +224,9 @@ class TestBacktrackingScheduler:
         
         config = create_mock_config([submission1, submission2], [conference1, conference2])
         
-        scheduler = BacktrackingGreedyScheduler(config)
+        scheduler: Any = BacktrackingGreedyScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) >= 1  # At least one submission should be scheduled
@@ -234,7 +236,7 @@ class TestBacktrackingScheduler:
         if "sub2" in result:
             assert isinstance(result["sub2"], date)
 
-    def test_schedule_with_resource_constraints(self):
+    def test_schedule_with_resource_constraints(self) -> None:
         """Test scheduling with resource constraints."""
         # Create mock submissions that would exceed concurrency limit
         submission1 = create_mock_submission(
@@ -264,9 +266,9 @@ class TestBacktrackingScheduler:
         )
         config.max_concurrent_submissions = 2
         
-        scheduler = BacktrackingGreedyScheduler(config)
+        scheduler: Any = BacktrackingGreedyScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         # May schedule fewer than 4 due to resource constraints

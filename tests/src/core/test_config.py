@@ -7,6 +7,8 @@ from datetime import date
 from dataclasses import asdict, replace
 from unittest.mock import patch
 from src.core.config import (
+from typing import Dict, List, Any, Optional
+
     load_config, find_mod_by_number, find_paper_by_base_and_conference,
     _load_conferences, _load_submissions_with_abstracts, _load_blackout_dates
 )
@@ -17,28 +19,28 @@ from src.core.constants import SCHEDULING_CONSTANTS
 class TestLoadConfig:
     """Test the main load_config function."""
     
-    def test_load_valid_config(self, test_config_path):
+    def test_load_valid_config(self, test_config_path) -> None:
         """Test loading a valid configuration."""
         config = load_config(test_config_path)
         assert isinstance(config, Config)
         assert len(config.submissions) > 0
         assert len(config.conferences) > 0
     
-    def test_load_config_with_blackout_dates(self, test_config_path):
+    def test_load_config_with_blackout_dates(self, test_config_path) -> None:
         """Test loading config with blackout dates enabled."""
         config = load_config(test_config_path)
         # Check that blackout dates are loaded if enabled
         assert hasattr(config, 'blackout_dates')
         assert isinstance(config.blackout_dates, list)
     
-    def test_load_config_file_not_found(self):
+    def test_load_config_file_not_found(self) -> None:
         """Test loading config when file is not found."""
         config = load_config("nonexistent_config.json")
         # Default config should be empty (no submissions or conferences)
         assert len(config.submissions) == 0
         assert len(config.conferences) == 0
     
-    def test_config_has_required_attributes(self, config):
+    def test_config_has_required_attributes(self, config) -> None:
         """Test that config has all required attributes."""
         required_attrs = [
             'min_abstract_lead_time_days',
@@ -57,7 +59,7 @@ class TestLoadConfig:
         for attr in required_attrs:
             assert hasattr(config, attr), f"Config missing attribute: {attr}"
     
-    def test_priority_weights_defaults(self, config):
+    def test_priority_weights_defaults(self, config) -> None:
         """Test that priority weights have sensible defaults."""
         weights = config.priority_weights
         assert 'engineering_paper' in weights
@@ -70,7 +72,7 @@ class TestLoadConfig:
 class TestLoadConferences:
     """Test the _load_conferences function."""
     
-    def test_load_valid_conferences(self, test_data_dir):
+    def test_load_valid_conferences(self, test_data_dir) -> None:
         """Test loading valid conference data."""
         conferences_path = Path(test_data_dir) / 'conferences.json'
         conferences = _load_conferences(conferences_path)
@@ -82,7 +84,7 @@ class TestLoadConferences:
             assert hasattr(conf, 'recurrence')
             assert hasattr(conf, 'deadlines')
     
-    def test_conference_with_abstract_deadline(self, test_data_dir):
+    def test_conference_with_abstract_deadline(self, test_data_dir) -> None:
         """Test conference with abstract deadline."""
         conferences_path = Path(test_data_dir) / 'conferences.json'
         conferences = _load_conferences(conferences_path)
@@ -95,7 +97,7 @@ class TestLoadConferences:
         if conf_with_abstract:
             assert conf_with_abstract.deadlines[SubmissionType.ABSTRACT] is not None
     
-    def test_conference_with_paper_deadline(self, test_data_dir):
+    def test_conference_with_paper_deadline(self, test_data_dir) -> None:
         """Test conference with paper deadline."""
         conferences_path = Path(test_data_dir) / 'conferences.json'
         conferences = _load_conferences(conferences_path)
@@ -108,7 +110,7 @@ class TestLoadConferences:
         if conf_with_paper:
             assert conf_with_paper.deadlines[SubmissionType.PAPER] is not None
     
-    def test_conference_types(self, test_data_dir):
+    def test_conference_types(self, test_data_dir) -> None:
         """Test that conferences have valid types."""
         conferences_path = Path(test_data_dir) / 'conferences.json'
         conferences = _load_conferences(conferences_path)
@@ -121,7 +123,7 @@ class TestLoadConferences:
 class TestLoadSubmissions:
     """Test the _load_submissions_with_abstracts function."""
     
-    def test_load_valid_submissions(self, test_data_dir):
+    def test_load_valid_submissions(self, test_data_dir) -> None:
         """Test loading valid submission data."""
         mods_path = Path(test_data_dir) / 'mods.json'
         papers_path = Path(test_data_dir) / 'papers.json'
@@ -154,7 +156,7 @@ class TestLoadSubmissions:
             assert hasattr(submission, 'kind')
             assert hasattr(submission, 'conference_id')
     
-    def test_submission_attributes(self, test_data_dir):
+    def test_submission_attributes(self, test_data_dir) -> None:
         """Test that submissions have all required attributes."""
         mods_path = Path(test_data_dir) / 'mods.json'
         papers_path = Path(test_data_dir) / 'papers.json'
@@ -193,7 +195,7 @@ class TestLoadSubmissions:
             assert isinstance(submission.penalty_cost_per_day, float)
             assert isinstance(submission.engineering, bool)
     
-    def test_paper_dependencies_conversion(self, test_data_dir):
+    def test_paper_dependencies_conversion(self, test_data_dir) -> None:
         """Test that paper dependencies are correctly converted."""
         mods_path = Path(test_data_dir) / 'mods.json'
         papers_path = Path(test_data_dir) / 'papers.json'
@@ -231,7 +233,7 @@ class TestLoadSubmissions:
 class TestLoadBlackoutDates:
     """Test the _load_blackout_dates function."""
     
-    def test_load_valid_blackout_dates(self, test_data_dir):
+    def test_load_valid_blackout_dates(self, test_data_dir) -> None:
         """Test loading valid blackout dates."""
         blackout_path = Path(test_data_dir) / 'blackout.json'
         blackout_dates = _load_blackout_dates(blackout_path)
@@ -240,7 +242,7 @@ class TestLoadBlackoutDates:
         for date_obj in blackout_dates:
             assert isinstance(date_obj, date)
     
-    def test_blackout_dates_with_federal_holidays(self, test_data_dir):
+    def test_blackout_dates_with_federal_holidays(self, test_data_dir) -> None:
         """Test blackout dates with federal holidays."""
         blackout_path = Path(test_data_dir) / 'blackout.json'
         blackout_dates = _load_blackout_dates(blackout_path)
@@ -248,7 +250,7 @@ class TestLoadBlackoutDates:
         # Should have some federal holidays
         assert len(blackout_dates) > 0
     
-    def test_blackout_dates_with_custom_periods(self, test_data_dir):
+    def test_blackout_dates_with_custom_periods(self, test_data_dir) -> None:
         """Test blackout dates with custom periods."""
         blackout_path = Path(test_data_dir) / 'blackout.json'
         blackout_dates = _load_blackout_dates(blackout_path)
@@ -256,13 +258,13 @@ class TestLoadBlackoutDates:
         # Should have dates from custom periods
         assert len(blackout_dates) > 0
     
-    def test_blackout_dates_file_not_found(self):
+    def test_blackout_dates_file_not_found(self) -> None:
         """Test handling of missing blackout file."""
         # Should return empty list for non-existent file
         blackout_dates = _load_blackout_dates(Path("nonexistent.json"))
         assert not blackout_dates
     
-    def test_blackout_dates_invalid_json(self):
+    def test_blackout_dates_invalid_json(self) -> None:
         """Test handling of invalid JSON in blackout file."""
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
             f.write("invalid json content")
@@ -278,7 +280,7 @@ class TestLoadBlackoutDates:
 class TestConfigIntegration:
     """Test integration of all config components."""
     
-    def test_full_config_loading(self, config):
+    def test_full_config_loading(self, config) -> None:
         """Test that all config components work together."""
         assert isinstance(config, Config)
         assert len(config.submissions) > 0
@@ -287,7 +289,7 @@ class TestConfigIntegration:
         assert config.min_paper_lead_time_days > 0
         assert config.max_concurrent_submissions > 0
     
-    def test_default_config_creation(self):
+    def test_default_config_creation(self) -> None:
         """Test that default config can be created."""
         config = Config.create_default()
         assert isinstance(config, Config)
@@ -298,7 +300,7 @@ class TestConfigIntegration:
         assert config.min_paper_lead_time_days > 0
         assert config.max_concurrent_submissions > 0
     
-    def test_config_loading_integration(self):
+    def test_config_loading_integration(self) -> None:
         """Test config loading integration with default config."""
         with patch('core.config.load_config') as mock_load:
             # Mock load_config to return default config
@@ -310,7 +312,7 @@ class TestConfigIntegration:
             assert config is not None
             assert isinstance(config, Config)
     
-    def test_config_with_default_values(self):
+    def test_config_with_default_values(self) -> None:
         """Test config with default values."""
         # Create a minimal config with default values
         config = Config.create_default()
@@ -318,7 +320,7 @@ class TestConfigIntegration:
         assert len(config.submissions) == 0
         assert len(config.conferences) == 0
     
-    def test_config_validation_integration(self):
+    def test_config_validation_integration(self) -> None:
         """Test config validation integration."""
         
         # Create valid config
@@ -342,7 +344,7 @@ class TestConfigIntegration:
             )
         ]
         
-        config = Config(
+        config: Config = Config(
             submissions=submissions,
             conferences=conferences,
             min_paper_lead_time_days=SCHEDULING_CONSTANTS.min_paper_lead_time_days,
@@ -355,7 +357,7 @@ class TestConfigIntegration:
         assert len(config.submissions) == 1
         assert len(config.conferences) == 1
     
-    def test_config_error_handling(self):
+    def test_config_error_handling(self) -> None:
         """Test config error handling integration."""
         # Test with non-existent file - now returns default config instead of raising exception
         config = load_config('non_existent_config.json')
@@ -364,7 +366,7 @@ class TestConfigIntegration:
         assert len(config.submissions) == 0
         assert len(config.conferences) == 0
     
-    def test_config_with_complex_data(self):
+    def test_config_with_complex_data(self) -> None:
         """Test config with complex data structures."""
         
         # Create complex config with multiple submissions and conferences
@@ -413,7 +415,7 @@ class TestConfigIntegration:
             )
         ]
         
-        config = Config(
+        config: Config = Config(
             submissions=submissions,
             conferences=conferences,
             min_paper_lead_time_days=SCHEDULING_CONSTANTS.min_paper_lead_time_days,
@@ -438,7 +440,7 @@ class TestConfigIntegration:
                 conference = next((c for c in config.conferences if c.id == submission.conference_id), None)
                 assert conference is not None, f"Conference {submission.conference_id} not found for submission {submission.id}"
     
-    def test_config_serialization_integration(self):
+    def test_config_serialization_integration(self) -> None:
         """Test config serialization and deserialization integration."""
         # Create a test config
         config = Config.create_default()
@@ -449,11 +451,11 @@ class TestConfigIntegration:
             save_config(config, 'test_config.json')
             mock_open.assert_called()
     
-    def test_config_with_edge_cases(self):
+    def test_config_with_edge_cases(self) -> None:
         """Test config with edge cases and boundary conditions."""
         
         # Test with empty submissions and conferences
-        config = Config(
+        config: Config = Config(
             submissions=[],
             conferences=[],
             min_paper_lead_time_days=1,
@@ -470,7 +472,7 @@ class TestConfigIntegration:
         assert config.min_abstract_lead_time_days == 1
         assert config.max_concurrent_submissions == 1
     
-    def test_config_with_blackout_periods_disabled(self, test_data_dir):
+    def test_config_with_blackout_periods_disabled(self, test_data_dir) -> None:
         """Test config loading when blackout periods are disabled."""
         # Create a config file with blackout periods disabled
         config_data = {
@@ -511,23 +513,23 @@ class TestConfigIntegration:
 class TestEnums:
     """Test enum functionality."""
     
-    def test_submission_type_enum(self):
+    def test_submission_type_enum(self) -> None:
         """Test SubmissionType enum."""
         assert SubmissionType.ABSTRACT.value == "abstract"
         assert SubmissionType.PAPER.value == "paper"
     
-    def test_scheduler_strategy_enum(self):
+    def test_scheduler_strategy_enum(self) -> None:
         """Test SchedulerStrategy enum."""
         strategies = list(SchedulerStrategy)
         assert len(strategies) > 0
         assert SchedulerStrategy.GREEDY in strategies
     
-    def test_conference_type_enum(self):
+    def test_conference_type_enum(self) -> None:
         """Test ConferenceType enum."""
         assert ConferenceType.ENGINEERING.value == "ENGINEERING"
         assert ConferenceType.MEDICAL.value == "MEDICAL"
     
-    def test_conference_recurrence_enum(self):
+    def test_conference_recurrence_enum(self) -> None:
         """Test ConferenceRecurrence enum."""
         assert ConferenceRecurrence.ANNUAL.value == "annual"
         assert ConferenceRecurrence.BIENNIAL.value == "biennial"
@@ -536,7 +538,7 @@ class TestEnums:
 class TestDataclassesSerialization:
     """Test dataclass serialization and replacement."""
     
-    def test_config_asdict_serialization(self, config):
+    def test_config_asdict_serialization(self, config) -> None:
         """Test that config can be serialized to dict."""
         config_dict = asdict(config)
         assert isinstance(config_dict, dict)
@@ -546,7 +548,7 @@ class TestDataclassesSerialization:
         assert 'min_paper_lead_time_days' in config_dict
         assert 'max_concurrent_submissions' in config_dict
     
-    def test_config_replace_functionality(self, config):
+    def test_config_replace_functionality(self, config) -> None:
         """Test that config can be modified using replace."""
         original_lead_time = config.min_abstract_lead_time_days
         modified_config = replace(config, min_abstract_lead_time_days=original_lead_time + 10)
@@ -555,7 +557,7 @@ class TestDataclassesSerialization:
         assert modified_config.min_paper_lead_time_days == config.min_paper_lead_time_days
         assert modified_config.max_concurrent_submissions == config.max_concurrent_submissions
     
-    def test_config_replace_multiple_fields(self, config):
+    def test_config_replace_multiple_fields(self, config) -> None:
         """Test replacing multiple fields in config."""
         modified_config = replace(
             config,
@@ -568,7 +570,7 @@ class TestDataclassesSerialization:
         assert modified_config.min_paper_lead_time_days == 90
         assert modified_config.max_concurrent_submissions == 5
     
-    def test_submission_asdict_serialization(self, config):
+    def test_submission_asdict_serialization(self, config) -> None:
         """Test that submissions can be serialized."""
         for submission in config.submissions:
             submission_dict = asdict(submission)
@@ -578,7 +580,7 @@ class TestDataclassesSerialization:
             assert 'kind' in submission_dict
             assert 'conference_id' in submission_dict
     
-    def test_conference_asdict_serialization(self, config):
+    def test_conference_asdict_serialization(self, config) -> None:
         """Test that conferences can be serialized."""
         for conference in config.conferences:
             conference_dict = asdict(conference)
@@ -588,10 +590,10 @@ class TestDataclassesSerialization:
             assert 'conf_type' in conference_dict
             assert 'recurrence' in conference_dict
     
-    def test_schedule_state_serialization(self, config):
+    def test_schedule_state_serialization(self, config) -> None:
         """Test that schedule state can be serialized."""
         # Create a simple schedule
-        schedule = {}
+        schedule: Dict[str, date] = {}
         for i, submission in enumerate(config.submissions[:2]):
             schedule[submission.id] = date(2025, 1, 1 + i)
         
@@ -600,7 +602,7 @@ class TestDataclassesSerialization:
         assert isinstance(schedule_dict, dict)
         assert len(schedule_dict) == 2
     
-    def test_config_validation_after_replace(self, config):
+    def test_config_validation_after_replace(self, config) -> None:
         """Test that config validation works after replace."""
         # Create a modified config
         modified_config = replace(
@@ -609,14 +611,14 @@ class TestDataclassesSerialization:
         )
         
         # Should still be valid
-        validation_errors = modified_config.validate()
+        validation_errors: List[str] = modified_config.validate()
         assert len(validation_errors) == 0
 
 
 class TestConferenceMappingAndEngineering:
     """Test conference mapping and engineering flag inference."""
     
-    def test_conference_mapping_by_family(self, tmp_path):
+    def test_conference_mapping_by_family(self, tmp_path) -> None:
         """Test that conferences are mapped by family name."""
         # Create conferences with different types
         conferences_data = [
@@ -714,7 +716,7 @@ class TestConferenceMappingAndEngineering:
         assert paper_submission.conference_id == "ieee_icra"
         assert "mod_1" in (paper_submission.depends_on or [])
     
-    def test_engineering_flag_inference(self, tmp_path):
+    def test_engineering_flag_inference(self, tmp_path) -> None:
         """Test that engineering flag is inferred correctly."""
         # Create conferences with different types
         conferences_data = [
@@ -790,7 +792,7 @@ class TestConferenceMappingAndEngineering:
         # Should be engineering since it can go to engineering conferences
         assert mod_submission.engineering is True
     
-    def test_duration_calculation_from_config(self, tmp_path):
+    def test_duration_calculation_from_config(self, tmp_path) -> None:
         """Test that duration can be calculated from config."""
         # Create a simple config with known dates
         conferences_data = [

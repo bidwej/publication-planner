@@ -2,12 +2,14 @@
 
 from datetime import date
 from src.core.models import ScheduleSummary
+from typing import Dict, List, Any, Optional
+
 
 
 class TestScheduleSummary:
     """Test cases for ScheduleSummary model."""
     
-    def test_schedule_summary_creation(self):
+    def test_schedule_summary_creation(self) -> None:
         """Test ScheduleSummary creation with all parameters."""
         summary = ScheduleSummary(
             total_submissions=5,
@@ -31,7 +33,7 @@ class TestScheduleSummary:
         assert summary.deadline_compliance == 90.5
         assert summary.resource_utilization == 0.75
     
-    def test_schedule_summary_default_values(self):
+    def test_schedule_summary_default_values(self) -> None:
         """Test ScheduleSummary creation with default values."""
         summary = ScheduleSummary(
             total_submissions=3,
@@ -55,7 +57,7 @@ class TestScheduleSummary:
         assert summary.deadline_compliance == 0.0
         assert summary.resource_utilization == 0.0
     
-    def test_schedule_summary_to_dict(self):
+    def test_schedule_summary_to_dict(self) -> None:
         """Test ScheduleSummary to_dict method."""
         summary = ScheduleSummary(
             total_submissions=2,
@@ -69,7 +71,7 @@ class TestScheduleSummary:
             resource_utilization=0.85
         )
         
-        result = summary.to_dict()
+        result: Any = summary.to_dict()
         
         expected = {
             'total_submissions': 2,
@@ -85,7 +87,7 @@ class TestScheduleSummary:
         
         assert result == expected
     
-    def test_schedule_summary_from_dict(self):
+    def test_schedule_summary_from_dict(self) -> None:
         """Test ScheduleSummary from_dict method."""
         data = {
             'total_submissions': 4,
@@ -111,7 +113,7 @@ class TestScheduleSummary:
         assert summary.deadline_compliance == 98.0
         assert summary.resource_utilization == 0.92
     
-    def test_schedule_summary_str_representation(self):
+    def test_schedule_summary_str_representation(self) -> None:
         """Test ScheduleSummary string representation."""
         summary = ScheduleSummary(
             total_submissions=1,
@@ -125,7 +127,7 @@ class TestScheduleSummary:
             resource_utilization=0.65
         )
         
-        result = str(summary)
+        result: Any = str(summary)
         
         assert "ScheduleSummary" in result
         assert "total_submissions=1" in result

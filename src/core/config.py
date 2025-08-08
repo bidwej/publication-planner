@@ -33,32 +33,6 @@ def find_paper_by_base_and_conference(submissions: List[Submission], base_id: st
     return next((s for s in submissions if s.id == expected_id), None)
 
 
-def extract_mod_number(mod_id: str) -> Optional[int]:
-    """Extract mod number from mod ID using regex."""
-    match = MOD_ID_PATTERN.match(mod_id)
-    return int(match.group(1)) if match else None
-
-
-def extract_paper_info(paper_id: str) -> Optional[tuple]:
-    """Extract paper base ID and conference from paper ID using regex."""
-    match = PAPER_ID_PATTERN.match(paper_id)
-    return (match.group(1), match.group(2)) if match else None
-
-
-def extract_abstract_info(abstract_id: str) -> Optional[tuple]:
-    """Extract paper base ID and conference from abstract ID using regex."""
-    match = ABSTRACT_ID_PATTERN.match(abstract_id)
-    return (match.group(1), match.group(2)) if match else None
-
-
-def find_submission_by_pattern(submissions: List[Submission], pattern: re.Pattern) -> Optional[Submission]:
-    """Find submission by regex pattern."""
-    for submission in submissions:
-        if pattern.match(submission.id):
-            return submission
-    return None
-
-
 def _map_conference_data(json_data: Dict) -> Dict:
     """Map JSON conference data to model fields."""
     # Normalize conference ID for consistency

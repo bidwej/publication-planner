@@ -8,6 +8,8 @@ from src.core.config import load_config
 from src.core.models import SchedulerStrategy
 from src.schedulers.optimal import OptimalScheduler
 from src.schedulers.base import BaseScheduler
+from typing import Dict, List, Any, Optional
+
 
 
 class TestOptimalScheduler:
@@ -23,32 +25,32 @@ class TestOptimalScheduler:
         """Create an optimal scheduler instance."""
         return OptimalScheduler(config)
     
-    def test_optimal_scheduler_initialization(self, scheduler):
+    def test_optimal_scheduler_initialization(self, scheduler) -> None:
         """Test that the optimal scheduler initializes correctly."""
         assert scheduler is not None
         assert scheduler.optimization_objective == "minimize_makespan"
         assert scheduler.max_concurrent == scheduler.config.max_concurrent_submissions
     
-    def test_optimal_scheduler_registration(self):
+    def test_optimal_scheduler_registration(self) -> None:
         """Test that the optimal scheduler is properly registered."""
         assert SchedulerStrategy.OPTIMAL in BaseScheduler._strategy_registry
         scheduler_class = BaseScheduler._strategy_registry[SchedulerStrategy.OPTIMAL]
         assert scheduler_class == OptimalScheduler
     
-    def test_optimal_scheduler_creation_via_factory(self, config):
+    def test_optimal_scheduler_creation_via_factory(self, config) -> None:
         """Test creating optimal scheduler via the factory method."""
-        scheduler = BaseScheduler.create_scheduler(SchedulerStrategy.OPTIMAL, config)
+        scheduler: Any = BaseScheduler.create_scheduler(SchedulerStrategy.OPTIMAL, config)
         assert isinstance(scheduler, OptimalScheduler)
         assert scheduler.optimization_objective == "minimize_makespan"
     
-    def test_milp_model_setup(self, scheduler):
+    def test_milp_model_setup(self, scheduler) -> None:
         """Test that the MILP model is set up correctly."""
         model = scheduler._setup_milp_model()
         assert model is not None
         assert hasattr(model, 'variables')
         assert hasattr(model, 'constraints')
     
-    def test_dependency_constraints(self, scheduler):
+    def test_dependency_constraints(self, scheduler) -> None:
         """Test that dependency constraints are added correctly."""
         from pulp import LpProblem, LpVariable
         
@@ -65,7 +67,7 @@ class TestOptimalScheduler:
         # Check that constraints were added
         assert len(prob.constraints) > 0
     
-    def test_deadline_constraints(self, scheduler):
+    def test_deadline_constraints(self, scheduler) -> None:
         """Test that deadline constraints are added correctly."""
         from pulp import LpProblem, LpVariable
         
@@ -83,7 +85,7 @@ class TestOptimalScheduler:
         # Check that constraints were added
         assert len(prob.constraints) > 0
     
-    def test_resource_constraints(self, scheduler):
+    def test_resource_constraints(self, scheduler) -> None:
         """Test that resource constraints are added correctly."""
         from pulp import LpProblem, LpVariable
         
@@ -103,7 +105,7 @@ class TestOptimalScheduler:
         # The test passes if no exceptions are raised
         assert True
     
-    def test_working_days_constraints(self, scheduler):
+    def test_working_days_constraints(self, scheduler) -> None:
         """Test that working days constraints are added correctly."""
         from pulp import LpProblem, LpVariable
         
@@ -121,7 +123,7 @@ class TestOptimalScheduler:
         # Check that constraints were added (may be empty if working days disabled)
         # The method should not raise an exception
     
-    def test_soft_block_constraints(self, scheduler):
+    def test_soft_block_constraints(self, scheduler) -> None:
         """Test that soft block constraints are added correctly."""
         from pulp import LpProblem, LpVariable
         
@@ -140,7 +142,7 @@ class TestOptimalScheduler:
         # The test passes if no exceptions are raised
         assert True
     
-    def test_objective_function_creation(self, scheduler):
+    def test_objective_function_creation(self, scheduler) -> None:
         """Test that objective functions are created correctly."""
         from pulp import LpProblem, LpVariable
         
@@ -161,7 +163,7 @@ class TestOptimalScheduler:
             obj_func = scheduler._create_objective_function(prob, start_vars, resource_vars)
             assert obj_func is not None
     
-    def test_milp_solver_integration(self, scheduler):
+    def test_milp_solver_integration(self, scheduler) -> None:
         """Test that the MILP solver can be called (may fail if no solver available)."""
         model = scheduler._setup_milp_model()
         
@@ -178,7 +180,7 @@ class TestOptimalScheduler:
                 # It's okay if the solver fails - we just want to test the integration
                 assert "solver" in str(e).lower() or "pulp" in str(e).lower()
     
-    def test_schedule_extraction(self, scheduler):
+    def test_schedule_extraction(self, scheduler) -> None:
         """Test that schedules can be extracted from MILP solutions."""
         # Mock a solution
         mock_solution = MagicMock()
@@ -189,7 +191,7 @@ class TestOptimalScheduler:
         schedule = scheduler._extract_schedule_from_solution(mock_solution)
         assert isinstance(schedule, dict)
     
-    def test_fallback_to_greedy(self, scheduler):
+    def test_fallback_to_greedy(self, scheduler) -> None:
         """Test that the scheduler falls back to greedy when MILP fails."""
         # Mock MILP to fail
         with patch.object(scheduler, '_setup_milp_model', return_value=None):
@@ -197,15 +199,15 @@ class TestOptimalScheduler:
             # Should still return a schedule (from greedy fallback)
             assert isinstance(schedule, dict)
     
-    def test_optimization_objectives(self, config):
+    def test_optimization_objectives(self, config) -> None:
         """Test different optimization objectives."""
         objectives = ["minimize_makespan", "minimize_penalties", "minimize_total_time"]
         
         for objective in objectives:
-            scheduler = OptimalScheduler(config, optimization_objective=objective)
+            scheduler: Any = OptimalScheduler(config, optimization_objective=objective)
             assert scheduler.optimization_objective == objective
     
-    def test_is_working_day_method(self, scheduler):
+    def test_is_working_day_method(self, scheduler) -> None:
         """Test the working day calculation method."""
         # Test a weekday
         weekday = date(2024, 1, 15)  # Monday
@@ -215,7 +217,7 @@ class TestOptimalScheduler:
         weekend = date(2024, 1, 13)  # Saturday
         assert scheduler._is_working_day(weekday) == True  # Should handle weekends
     
-    def test_penalty_constraints(self, scheduler):
+    def test_penalty_constraints(self, scheduler) -> None:
         """Test that penalty constraints are added correctly."""
         from pulp import LpProblem, LpVariable
         
@@ -235,7 +237,7 @@ class TestOptimalScheduler:
         # The test passes if no exceptions are raised
         assert True
     
-    def test_resource_variable_creation(self, scheduler):
+    def test_resource_variable_creation(self, scheduler) -> None:
         """Test that resource variables are created correctly."""
         from pulp import LpProblem
         
@@ -254,9 +256,9 @@ class TestOptimalScheduler:
             if var.cat == 'Integer':
                 assert var.lowBound == 0 and var.upBound == 1
     
-    def test_comprehensive_milp_optimization(self, config):
+    def test_comprehensive_milp_optimization(self, config) -> None:
         """Test a complete MILP optimization run."""
-        scheduler = OptimalScheduler(config)
+        scheduler: Any = OptimalScheduler(config)
         
         try:
             schedule = scheduler.schedule()
@@ -276,7 +278,7 @@ class TestOptimalScheduler:
 class TestOptimalSchedulerIntegration:
     """Integration tests for the Optimal Scheduler."""
     
-    def test_optimal_vs_greedy_comparison(self):
+    def test_optimal_vs_greedy_comparison(self) -> None:
         """Compare optimal scheduler with greedy scheduler."""
         from src.core.config import load_config
         from src.schedulers.greedy import GreedyScheduler
@@ -284,8 +286,8 @@ class TestOptimalSchedulerIntegration:
         config = load_config('config.json')
         
         # Create both schedulers
-        optimal_scheduler = OptimalScheduler(config)
-        greedy_scheduler = GreedyScheduler(config)
+        optimal_scheduler: Any = OptimalScheduler(config)
+        greedy_scheduler: Any = GreedyScheduler(config)
         
         try:
             # Generate schedules
@@ -303,7 +305,7 @@ class TestOptimalSchedulerIntegration:
             # If optimal fails, that's okay - we just want to test the integration
             assert "solver" in str(e).lower() or "pulp" in str(e).lower()
     
-    def test_optimal_scheduler_with_different_objectives(self):
+    def test_optimal_scheduler_with_different_objectives(self) -> None:
         """Test optimal scheduler with different optimization objectives."""
         from src.core.config import load_config
         
@@ -312,7 +314,7 @@ class TestOptimalSchedulerIntegration:
         
         for objective in objectives:
             try:
-                scheduler = OptimalScheduler(config, optimization_objective=objective)
+                scheduler: Any = OptimalScheduler(config, optimization_objective=objective)
                 schedule = scheduler.schedule()
                 
                 assert isinstance(schedule, dict)

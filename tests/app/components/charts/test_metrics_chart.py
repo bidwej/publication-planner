@@ -6,6 +6,8 @@ from datetime import date
 import plotly.graph_objects as go
 
 from app.components.charts.metrics_chart import create_metrics_chart
+from typing import Dict, List, Any, Optional
+
 
 
 class TestMetricsChart:
@@ -60,44 +62,44 @@ class TestMetricsChart:
             }
         )
     
-    def test_create_metrics_chart_basic(self, sample_validation_result, sample_config):
+    def test_create_metrics_chart_basic(self, sample_validation_result, sample_config) -> None:
         """Test basic metrics chart creation."""
         fig = create_metrics_chart(sample_validation_result, sample_config)
         
         assert isinstance(fig, go.Figure)
         assert fig.layout is not None
     
-    def test_create_metrics_chart_empty_result(self, sample_config):
+    def test_create_metrics_chart_empty_result(self, sample_config) -> None:
         """Test metrics chart creation with empty validation result."""
-        empty_result = {}
+        empty_result: Any = {}
         fig = create_metrics_chart(empty_result, sample_config)
         
         assert isinstance(fig, go.Figure)
         assert fig.layout is not None
     
-    def test_create_metrics_chart_with_scores(self, sample_validation_result, sample_config):
+    def test_create_metrics_chart_with_scores(self, sample_validation_result, sample_config) -> None:
         """Test metrics chart creation with scores."""
         fig = create_metrics_chart(sample_validation_result, sample_config)
         
         # Check that scores are properly displayed
         assert isinstance(fig, go.Figure)
     
-    def test_create_metrics_chart_with_violations(self, sample_validation_result, sample_config):
+    def test_create_metrics_chart_with_violations(self, sample_validation_result, sample_config) -> None:
         """Test metrics chart creation with violations."""
         fig = create_metrics_chart(sample_validation_result, sample_config)
         
         # Check that violations are properly displayed
         assert isinstance(fig, go.Figure)
     
-    def test_create_metrics_chart_layout_properties(self, sample_validation_result, sample_config):
+    def test_create_metrics_chart_layout_properties(self, sample_validation_result, sample_config) -> None:
         """Test metrics chart layout properties."""
         fig = create_metrics_chart(sample_validation_result, sample_config)
         
         assert fig.layout is not None
     
-    def test_create_metrics_chart_with_missing_data(self, sample_config):
+    def test_create_metrics_chart_with_missing_data(self, sample_config) -> None:
         """Test metrics chart creation with missing data."""
-        partial_result = {
+        partial_result: Any = {
             "overall_score": 85.5,
             "quality_score": 90.0
             # Missing other fields

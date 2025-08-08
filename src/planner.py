@@ -1,7 +1,7 @@
 """Main planner module."""
 
 from __future__ import annotations
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from pathlib import Path
 from dataclasses import replace
 from datetime import date
@@ -23,7 +23,12 @@ from src.schedulers.heuristic import HeuristicScheduler
 from src.schedulers.optimal import OptimalScheduler
 # Advanced scheduler removed as per requirements
 
-# Import scheduler implementations to register them
+# Import analytics for comprehensive analysis
+from src.analytics.analytics import analyze_dependency_graph, get_dependency_chain, get_affected_submissions
+
+# Import monitoring for progress tracking and rescheduling
+from src.monitoring.progress import ProgressTracker
+from src.monitoring.rescheduler import DynamicRescheduler
 
 
 class Planner:
@@ -41,6 +46,10 @@ class Planner:
         self.config_path = Path(config_path)
         self.config = self._load_config()
         self._validate_config()
+        
+        # Initialize monitoring systems
+        self.progress_tracker = ProgressTracker(self.config)
+        self.rescheduler = DynamicRescheduler(self.config, self.progress_tracker)
     
     def _load_config(self) -> Config:
         """Load and validate the configuration."""
@@ -210,6 +219,9 @@ class Planner:
         # Get validation result
         validation_data = validate_schedule_constraints(schedule, self.config)
         
+        # Get analytics
+        dependency_analysis = analyze_dependency_graph(self.config)
+        
         # Create unified validation result
         validation_result = ValidationResult(
             is_valid=validation_data["summary"]["is_feasible"],
@@ -340,6 +352,36 @@ class Planner:
     def generate_monthly_table(self) -> List[Dict[str, Any]]:
         """Generate monthly table for the current configuration."""
         return generate_simple_monthly_table(self.config)
+    
+    def add_planned_schedule(self, schedule: Dict[str, date]) -> None:
+        """Add a planned schedule to track progress."""
+        self.progress_tracker.add_planned_schedule(schedule)
+    
+    def update_progress(self, submission_id: str, actual_start_date: Optional[date] = None,
+                       actual_end_date: Optional[date] = None, status: str = "in_progress",
+                       notes: Optional[str] = None) -> None:
+        """Update progress for a specific submission."""
+        self.progress_tracker.update_progress(submission_id, actual_start_date, actual_end_date, status, notes)
+    
+    def detect_deviations(self) -> List[Dict[str, Any]]:
+        """Detect deviations from planned schedule."""
+        return self.progress_tracker.detect_deviations()
+    
+    def generate_progress_report(self) -> Any:
+        """Generate a comprehensive progress report."""
+        return self.progress_tracker.generate_progress_report()
+    
+    def reschedule_remaining(self, original_schedule: Dict[str, date]) -> Any:
+        """Reschedule remaining submissions based on actual progress."""
+        return self.rescheduler.reschedule_remaining(original_schedule)
+    
+    def get_dependency_chain(self, submission_id: str) -> List[str]:
+        """Get the complete dependency chain for a submission."""
+        return get_dependency_chain(submission_id, self.config)
+    
+    def get_affected_submissions(self, submission_id: str) -> List[str]:
+        """Get all submissions that would be affected if a submission is delayed."""
+        return get_affected_submissions(submission_id, self.config)
 
 
 def generate_simple_monthly_table(config: Config) -> List[Dict[str, Any]]:

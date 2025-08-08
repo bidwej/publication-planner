@@ -1,3 +1,5 @@
+from typing import Dict, List, Any, Optional
+
 """
 Tests for web application storage and models.
 """
@@ -58,7 +60,7 @@ class StorageManager:
             def __init__(self, schedule, config, validation_result):
                 self.schedule = schedule
                 self.config = config
-                self.validation_result = validation_result
+                self.validation_result: Any = validation_result
         
         return LoadedScheduleData(
             schedule=data['schedule'],
@@ -161,7 +163,7 @@ class TestWebAppStorage:
         """Test schedule data serialization and deserialization."""
         with patch.object(storage_manager, 'data_dir', tmp_path):
             # Create complex schedule data
-            complex_schedule = {
+            complex_schedule: Dict[str, date] = {
                 'paper1': date(2024, 1, 1),
                 'abstract1': date(2024, 2, 1),
                 'mod1': date(2024, 3, 1)
@@ -288,7 +290,7 @@ class TestWebAppModels:
     
     def test_schedule_data_with_complex_validation(self) -> None:
         """Test ScheduleData with complex validation result."""
-        schedule = {
+        schedule: Dict[str, date] = {
             'paper1': date(2024, 1, 1),
             'abstract1': date(2024, 2, 1),
             'mod1': date(2024, 3, 1)

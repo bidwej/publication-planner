@@ -7,28 +7,30 @@ import pytest
 from src.core.models import SubmissionType, ConferenceType, Submission, Config
 from src.schedulers.random import RandomScheduler
 from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
+from typing import Dict, List, Any, Optional
+
 
 
 class TestRandomScheduler:
     """Test the RandomScheduler class."""
 
-    def test_random_scheduler_initialization(self, empty_config):
+    def test_random_scheduler_initialization(self, empty_config) -> None:
         """Test random scheduler initialization."""
-        scheduler = RandomScheduler(empty_config)
+        scheduler: Any = RandomScheduler(empty_config)
         
         assert scheduler.config == empty_config
         assert hasattr(scheduler, 'schedule')
 
-    def test_schedule_empty_submissions(self, empty_config):
+    def test_schedule_empty_submissions(self, empty_config) -> None:
         """Test scheduling with empty submissions."""
-        scheduler = RandomScheduler(empty_config)
+        scheduler: Any = RandomScheduler(empty_config)
         
         # Empty submissions should return empty schedule
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         assert isinstance(result, dict)
         assert len(result) == 0
 
-    def test_schedule_single_paper(self):
+    def test_schedule_single_paper(self) -> None:
         """Test scheduling with single paper."""
         
         # Create mock submission
@@ -44,16 +46,16 @@ class TestRandomScheduler:
         
         config = create_mock_config([submission], [conference])
         
-        scheduler = RandomScheduler(config)
+        scheduler: Any = RandomScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) == 1
         assert "paper1" in result
         assert isinstance(result["paper1"], date)
 
-    def test_schedule_multiple_papers(self):
+    def test_schedule_multiple_papers(self) -> None:
         """Test scheduling with multiple papers."""
         
         # Create mock submissions
@@ -79,9 +81,9 @@ class TestRandomScheduler:
         
         config = create_mock_config([submission1, submission2], [conference1, conference2])
         
-        scheduler = RandomScheduler(config)
+        scheduler: Any = RandomScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) >= 1  # At least one submission should be scheduled
@@ -92,7 +94,7 @@ class TestRandomScheduler:
         if "paper2" in result:
             assert isinstance(result["paper2"], date)
 
-    def test_random_algorithm_behavior(self):
+    def test_random_algorithm_behavior(self) -> None:
         """Test the random algorithm behavior."""
         
         # Create mock submissions with different characteristics
@@ -117,16 +119,16 @@ class TestRandomScheduler:
         
         config = create_mock_config([submission1, submission2], [conference1, conference2])
         
-        scheduler = RandomScheduler(config)
+        scheduler: Any = RandomScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) == 2
         assert "paper1" in result
         assert "paper2" in result
 
-    def test_schedule_with_constraints(self):
+    def test_schedule_with_constraints(self) -> None:
         """Test scheduling with constraints."""
         
         # Create mock submission with constraints
@@ -142,9 +144,9 @@ class TestRandomScheduler:
         config = create_mock_config([submission], [conference])
         config.blackout_dates = [date(2024, 5, 15), date(2024, 5, 16)]
         
-        scheduler = RandomScheduler(config)
+        scheduler: Any = RandomScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) == 1
@@ -154,10 +156,10 @@ class TestRandomScheduler:
         scheduled_date = result["paper1"]
         assert scheduled_date not in config.blackout_dates
 
-    def test_error_handling_invalid_paper(self):
+    def test_error_handling_invalid_paper(self) -> None:
         """Test error handling with invalid paper data."""
         # Create a submission with invalid conference reference
-        invalid_submission = Submission(
+        invalid_submission: Submission = Submission(
             id="paper1",
             title="Invalid Paper",
             kind=SubmissionType.PAPER,
@@ -169,7 +171,7 @@ class TestRandomScheduler:
             engineering=False
         )
         
-        config = Config(
+        config: Config = Config(
             submissions=[invalid_submission],
             conferences=[],  # No conferences defined
             min_abstract_lead_time_days=30,
@@ -177,12 +179,12 @@ class TestRandomScheduler:
             max_concurrent_submissions=3
         )
         
-        scheduler = RandomScheduler(config)
+        scheduler: Any = RandomScheduler(config)
         
         with pytest.raises(ValueError, match="Submission paper1 references unknown conference nonexistent_conf"):
             scheduler.schedule()
 
-    def test_schedule_with_priority_ordering(self):
+    def test_schedule_with_priority_ordering(self) -> None:
         """Test scheduling with priority ordering."""
         
         # Create mock submissions with different priorities
@@ -206,9 +208,9 @@ class TestRandomScheduler:
         
         config = create_mock_config([submission1, submission2], [conference1, conference2])
         
-        scheduler = RandomScheduler(config)
+        scheduler: Any = RandomScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) >= 1  # At least one submission should be scheduled
@@ -218,7 +220,7 @@ class TestRandomScheduler:
         if "paper2" in result:
             assert isinstance(result["paper2"], date)
 
-    def test_schedule_with_deadline_compliance(self):
+    def test_schedule_with_deadline_compliance(self) -> None:
         """Test scheduling with deadline compliance."""
         
         # Create mock submission with tight deadline
@@ -233,9 +235,9 @@ class TestRandomScheduler:
         
         config = create_mock_config([submission], [conference])
         
-        scheduler = RandomScheduler(config)
+        scheduler: Any = RandomScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) == 1
@@ -246,7 +248,7 @@ class TestRandomScheduler:
         deadline = conference.deadlines[SubmissionType.PAPER]
         assert scheduled_date <= deadline
 
-    def test_schedule_with_resource_constraints(self):
+    def test_schedule_with_resource_constraints(self) -> None:
         """Test scheduling with resource constraints."""
         
         # Create mock submissions that need resource optimization
@@ -270,9 +272,9 @@ class TestRandomScheduler:
         config = create_mock_config([submission1, submission2, submission3], [conference])
         config.max_concurrent_submissions = 2
         
-        scheduler = RandomScheduler(config)
+        scheduler: Any = RandomScheduler(config)
         
-        result = scheduler.schedule()
+        result: Any = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) >= 2
@@ -285,7 +287,7 @@ class TestRandomScheduler:
                     same_date_count = sum(1 for d in scheduled_dates if d == date1)
                     assert same_date_count <= config.max_concurrent_submissions
 
-    def test_schedule_with_multiple_runs(self):
+    def test_schedule_with_multiple_runs(self) -> None:
         """Test scheduling with multiple runs to check randomness."""
         
         # Create mock submission
@@ -300,12 +302,12 @@ class TestRandomScheduler:
         
         config = create_mock_config([submission], [conference])
         
-        scheduler = RandomScheduler(config)
+        scheduler: Any = RandomScheduler(config)
         
         # Run multiple times to check that we get valid results
         results = []
         for _ in range(5):
-            result = scheduler.schedule()
+            result: Any = scheduler.schedule()
             results.append(result["paper1"])
         
         # Check that all results are valid dates

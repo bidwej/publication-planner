@@ -117,7 +117,7 @@ def check_port_availability(port: int, host: str = "127.0.0.1") -> bool:
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.settimeout(1)
-            result = s.connect_ex((host, port))
+            result: Any = s.connect_ex((host, port))
             return result != 0  # Port is available if connection fails
     except Exception:
         return False

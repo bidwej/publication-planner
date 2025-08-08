@@ -43,7 +43,7 @@ class TestValidationFunctions:
         script_path = temp_dir / "test_script.py"
         script_path.write_text("print('test')")
         
-        result = validate_script_path(str(script_path))
+        result: Any = validate_script_path(str(script_path))
         assert result is True
     
     def test_validate_script_path_nonexistent(self) -> None:
@@ -88,19 +88,19 @@ class TestValidationFunctions:
         mock_response.status_code = 200
         mock_get.return_value = mock_response
         
-        result = validate_network_connectivity("http://example.com")
+        result: Any = validate_network_connectivity("http://example.com")
         assert result is True
     
     def test_validate_dependencies_success(self) -> None:
         """Test dependency validation when all dependencies are available."""
-        result = validate_dependencies()
+        result: Any = validate_dependencies()
         assert result is True
     
     def test_validate_output_directory_success(self, temp_dir: Path) -> None:
         """Test output directory validation with valid directory."""
         output_dir = temp_dir / "output"
         
-        result = validate_output_directory(str(output_dir))
+        result: Any = validate_output_directory(str(output_dir))
         assert result is True
         assert output_dir.exists()
     
@@ -134,7 +134,7 @@ class TestServerManagement:
         mock_response.status_code = 200
         mock_get.return_value = mock_response
         
-        result = is_server_running("http://localhost:8080")
+        result: Any = is_server_running("http://localhost:8080")
         assert result is True
         mock_get.assert_called_once_with("http://localhost:8080", timeout=2)
     
@@ -143,7 +143,7 @@ class TestServerManagement:
         """Test is_server_running when server is not running."""
         mock_get.side_effect = requests.exceptions.ConnectionError("Connection refused")
         
-        result = is_server_running("http://localhost:8080")
+        result: Any = is_server_running("http://localhost:8080")
         assert result is False
     
     @patch('subprocess.Popen')
@@ -161,7 +161,7 @@ class TestServerManagement:
         # Mock server running check
         mock_is_running.return_value = True
         
-        result = start_web_server(str(script_path), 8080)
+        result: Any = start_web_server(str(script_path), 8080)
         
         assert result == mock_process
         mock_popen.assert_called_once()

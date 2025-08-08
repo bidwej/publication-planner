@@ -5,14 +5,16 @@ from datetime import date, timedelta
 from src.scoring.penalties import calculate_penalty_score
 from src.core.models import Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence
 from tests.conftest import create_mock_config
+from typing import Dict, List, Any, Optional
+
 
 
 class TestCalculatePenaltyScore:
     """Test the calculate_penalty_score function."""
     
-    def test_empty_schedule(self, config):
+    def test_empty_schedule(self, config) -> None:
         """Test penalty calculation with empty schedule."""
-        schedule = {}
+        schedule: Dict[str, date] = {}
         breakdown = calculate_penalty_score(schedule, config)
         
         assert isinstance(breakdown.total_penalty, (int, float))
@@ -21,9 +23,9 @@ class TestCalculatePenaltyScore:
         assert hasattr(breakdown, 'dependency_penalties')
         assert hasattr(breakdown, 'resource_penalties')
     
-    def test_single_submission(self, config):
+    def test_single_submission(self, config) -> None:
         """Test penalty calculation with single submission."""
-        schedule = {"test-pap": date(2025, 1, 1)}
+        schedule: Dict[str, date] = {"test-pap": date(2025, 1, 1)}
         breakdown = calculate_penalty_score(schedule, config)
         
         assert isinstance(breakdown.total_penalty, (int, float))
@@ -32,9 +34,9 @@ class TestCalculatePenaltyScore:
         assert hasattr(breakdown, 'dependency_penalties')
         assert hasattr(breakdown, 'resource_penalties')
     
-    def test_multiple_submissions(self, config):
+    def test_multiple_submissions(self, config) -> None:
         """Test penalty calculation with multiple submissions."""
-        schedule = {
+        schedule: Dict[str, date] = {
             "test-pap": date(2025, 1, 1),
             "test-mod": date(2025, 1, 15),
             "test-abs": date(2025, 2, 1)
@@ -47,10 +49,10 @@ class TestCalculatePenaltyScore:
         assert hasattr(breakdown, 'dependency_penalties')
         assert hasattr(breakdown, 'resource_penalties')
     
-    def test_late_submission_penalty(self, config):
+    def test_late_submission_penalty(self, config) -> None:
         """Test penalty for late submissions."""
         # Create a schedule with submissions after their deadlines
-        schedule = {
+        schedule: Dict[str, date] = {
             "test-pap": date(2025, 12, 31),  # Very late
             "test-mod": date(2025, 6, 30)    # Moderately late
         }
@@ -60,10 +62,10 @@ class TestCalculatePenaltyScore:
         # Should have some penalty for late submissions
         assert breakdown.total_penalty >= 0
     
-    def test_overlap_penalty(self, config):
+    def test_overlap_penalty(self, config) -> None:
         """Test penalty for overlapping submissions."""
         # Create a schedule with overlapping submissions
-        schedule = {
+        schedule: Dict[str, date] = {
             "test-pap": date(2025, 1, 1),
             "test-mod": date(2025, 1, 1),  # Same day - should cause overlap
             "test-abs": date(2025, 1, 1)   # Same day - should cause overlap
@@ -74,10 +76,10 @@ class TestCalculatePenaltyScore:
         # Should have some penalty for overlaps
         assert breakdown.total_penalty >= 0
     
-    def test_dependency_violation_penalty(self, config):
+    def test_dependency_violation_penalty(self, config) -> None:
         """Test penalty for dependency violations."""
         # Create a schedule where child starts before parent
-        schedule = {
+        schedule: Dict[str, date] = {
             "parent-pap": date(2025, 2, 1),
             "child-pap": date(2025, 1, 1)  # Child before parent
         }
@@ -87,20 +89,20 @@ class TestCalculatePenaltyScore:
         # Should have some penalty for dependency violations
         assert breakdown.total_penalty >= 0
 
-    def test_penalty_edge_cases(self):
+    def test_penalty_edge_cases(self) -> None:
         """Test penalty calculation with edge cases."""
         from src.scoring.penalties import calculate_penalty_score
         
         # Test with empty schedule
         config = create_mock_config()
-        result = calculate_penalty_score({}, config)
+        result: Any = calculate_penalty_score({}, config)
         assert result.total_penalty == 0.0
         assert result.deadline_penalties == 0.0
         assert result.dependency_penalties == 0.0
         assert result.resource_penalties == 0.0
         
         # Test with None schedule
-        result = calculate_penalty_score({}, config)
+        result: Any = calculate_penalty_score({}, config)
         assert result.total_penalty == 0.0
         
         # Test with extreme penalty values
@@ -119,11 +121,11 @@ class TestCalculatePenaltyScore:
         )
         
         # Should handle extreme values without crashing
-        result = calculate_penalty_score({}, extreme_config)
+        result: Any = calculate_penalty_score({}, extreme_config)
         assert isinstance(result.total_penalty, float)
         
         # Test with malformed submission data
-        malformed_submission = Submission(
+        malformed_submission: Submission = Submission(
             id="malformed",
             title="",
             kind=SubmissionType.PAPER,
@@ -137,24 +139,24 @@ class TestCalculatePenaltyScore:
         )
         
         # Should handle malformed data gracefully
-        result = calculate_penalty_score({"malformed": date.today()}, malformed_config)
+        result: Any = calculate_penalty_score({"malformed": date.today()}, malformed_config)
         assert isinstance(result.total_penalty, float)
 
-    def test_penalty_with_invalid_dates(self):
+    def test_penalty_with_invalid_dates(self) -> None:
         """Test penalty calculation with invalid dates."""
         from src.scoring.penalties import calculate_penalty_score
         
         # Test with submissions scheduled in the past
         past_date = date.today() - timedelta(days=365)
         
-        submission = Submission(
+        submission: Submission = Submission(
             id="past_submission",
             title="Past Submission",
             kind=SubmissionType.PAPER,
             conference_id="conf1"
         )
         
-        conference = Conference(
+        conference: Conference = Conference(
             id="conf1",
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,
@@ -168,13 +170,13 @@ class TestCalculatePenaltyScore:
         )
         
         # Schedule in the past
-        schedule = {"past_submission": past_date}
-        result = calculate_penalty_score(schedule, config)
+        schedule: Dict[str, date] = {"past_submission": past_date}
+        result: Any = calculate_penalty_score(schedule, config)
         
         # Should calculate penalties for past scheduling
         assert result.total_penalty >= 0.0
 
-    def test_penalty_with_circular_dependencies(self):
+    def test_penalty_with_circular_dependencies(self) -> None:
         """Test penalty calculation with circular dependencies."""
         from src.scoring.penalties import calculate_penalty_score
         
@@ -199,20 +201,20 @@ class TestCalculatePenaltyScore:
         )
         
         # Schedule both submissions
-        schedule = {
+        schedule: Dict[str, date] = {
             "sub_a": date.today(),
             "sub_b": date.today() + timedelta(days=1)
         }
         
         # Should handle circular dependencies gracefully
-        result = calculate_penalty_score(schedule, config)
+        result: Any = calculate_penalty_score(schedule, config)
         assert isinstance(result.total_penalty, float)
 
-    def test_penalty_with_missing_dependencies(self):
+    def test_penalty_with_missing_dependencies(self) -> None:
         """Test penalty calculation with missing dependencies."""
         from src.scoring.penalties import calculate_penalty_score
         
-        submission = Submission(
+        submission: Submission = Submission(
             id="dependent_sub",
             title="Dependent Submission",
             kind=SubmissionType.PAPER,
@@ -225,20 +227,20 @@ class TestCalculatePenaltyScore:
         )
         
         # Schedule submission with missing dependency
-        schedule = {"dependent_sub": date.today()}
-        result = calculate_penalty_score(schedule, config)
+        schedule: Dict[str, date] = {"dependent_sub": date.today()}
+        result: Any = calculate_penalty_score(schedule, config)
         
         # Should penalize missing dependencies
         assert result.dependency_penalties > 0.0
 
-    def test_penalty_with_extreme_concurrent_submissions(self):
+    def test_penalty_with_extreme_concurrent_submissions(self) -> None:
         """Test penalty calculation with extreme concurrent submission scenarios."""
         from src.scoring.penalties import calculate_penalty_score
         
         # Create many submissions scheduled on the same day
         submissions = []
         for i in range(10):
-            submission = Submission(
+            submission: Submission = Submission(
                 id=f"sub_{i}",
                 title=f"Submission {i}",
                 kind=SubmissionType.PAPER
@@ -252,26 +254,26 @@ class TestCalculatePenaltyScore:
         )
         
         # Schedule all submissions on the same day
-        schedule = {sub.id: date.today() for sub in submissions}
-        result = calculate_penalty_score(schedule, config)
+        schedule: Dict[str, date] = {sub.id: date.today() for sub in submissions}
+        result: Any = calculate_penalty_score(schedule, config)
         
         # Should heavily penalize resource violations
         assert result.resource_penalties > 0.0
         assert result.total_penalty > 0.0
 
-    def test_penalty_consistency_across_calculations(self):
+    def test_penalty_consistency_across_calculations(self) -> None:
         """Test that penalty calculations are consistent across different scenarios."""
         from src.scoring.penalties import calculate_penalty_score
         
         # Create identical schedules and ensure consistent penalties
-        submission = Submission(
+        submission: Submission = Submission(
             id="test_sub",
             title="Test Submission",
             kind=SubmissionType.PAPER,
             conference_id="conf1"
         )
         
-        conference = Conference(
+        conference: Conference = Conference(
             id="conf1",
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,

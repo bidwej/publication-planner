@@ -4,6 +4,8 @@ import pytest
 from datetime import date
 from unittest.mock import MagicMock
 from src.analytics.reports import (
+from typing import Dict, List, Any, Optional
+
     generate_schedule_report,
     calculate_overall_score
 )
@@ -88,7 +90,7 @@ class TestReports:
             "J2-pap": date(2024, 12, 1)
         }
     
-    def test_generate_schedule_report(self, sample_schedule, sample_config):
+    def test_generate_schedule_report(self, sample_schedule, sample_config) -> None:
         """Test generating a complete schedule report."""
         report = generate_schedule_report(sample_schedule, sample_config)
         
@@ -133,9 +135,9 @@ class TestReports:
         assert "avg_load" in resources
         assert "utilization_pattern" in resources
     
-    def test_generate_schedule_report_empty(self, sample_config):
+    def test_generate_schedule_report_empty(self, sample_config) -> None:
         """Test generating a report with empty schedule."""
-        empty_schedule = {}
+        empty_schedule: Dict[str, date] = {}
         report = generate_schedule_report(empty_schedule, sample_config)
         
         assert isinstance(report, dict)
@@ -143,10 +145,10 @@ class TestReports:
         assert report["summary"]["is_feasible"] is True
         assert report["summary"]["total_violations"] == 0
     
-    def test_generate_schedule_report_with_violations(self, sample_config):
+    def test_generate_schedule_report_with_violations(self, sample_config) -> None:
         """Test generating a report with constraint violations."""
         # Create a schedule with late submissions
-        late_schedule = {
+        late_schedule: Dict[str, date] = {
             "J1-pap": date(2025, 2, 1),  # After deadline
             "J2-pap": date(2025, 4, 1)   # After deadline
         }
@@ -160,10 +162,10 @@ class TestReports:
         assert report["summary"]["total_violations"] > 0
         assert report["summary"]["is_feasible"] is False
     
-    def test_generate_schedule_report_with_dependencies(self, sample_config):
+    def test_generate_schedule_report_with_dependencies(self, sample_config) -> None:
         """Test generating a report with dependency violations."""
         # Create a schedule where dependencies are violated
-        bad_dependency_schedule = {
+        bad_dependency_schedule: Dict[str, date] = {
             "J2-pap": date(2024, 11, 1),  # Child before parent
             "J1-pap": date(2024, 12, 1)   # Parent after child
         }
@@ -180,17 +182,17 @@ class TestReports:
         assert dependency_validation["is_valid"] is False
         assert dependency_validation["satisfaction_rate"] < 100.0
     
-    def test_generate_schedule_report_with_resource_violations(self, sample_config):
+    def test_generate_schedule_report_with_resource_violations(self, sample_config) -> None:
         """Test generating a report with resource violations."""
         # Create a schedule that exceeds concurrency limits
-        overloaded_schedule = {
+        overloaded_schedule: Dict[str, date] = {
             "J1-pap": date(2024, 11, 1),
             "J2-pap": date(2024, 11, 1),  # Same day as J1
             "J3-pap": date(2024, 11, 1)   # Same day as J1 and J2
         }
         
         # Add a third submission to the config
-        extra_submission = Submission(
+        extra_submission: Submission = Submission(
             id="J3-pap",
             title="Extra Paper",
             kind=SubmissionType.PAPER,
@@ -217,7 +219,7 @@ class TestReports:
         assert resource_validation["is_valid"] is False
         assert resource_validation["max_observed"] > resource_validation["max_concurrent"]
     
-    def test_calculate_overall_score(self):
+    def test_calculate_overall_score(self) -> None:
         """Test calculating overall score from validation results."""
         # Mock validation results as dictionaries
         deadline_validation = {
@@ -240,7 +242,7 @@ class TestReports:
         penalty_breakdown = MagicMock()
         penalty_breakdown.total_penalty = 0.0
         
-        score = calculate_overall_score(
+        score: float = calculate_overall_score(
             deadline_validation,
             dependency_validation,
             resource_validation,
@@ -251,7 +253,7 @@ class TestReports:
         assert score >= 0.0
         assert score <= 1.0  # Should be normalized
     
-    def test_calculate_overall_score_with_violations(self):
+    def test_calculate_overall_score_with_violations(self) -> None:
         """Test calculating overall score with violations."""
         # Mock validation results with violations as dictionaries
         deadline_validation = {
@@ -274,7 +276,7 @@ class TestReports:
         penalty_breakdown = MagicMock()
         penalty_breakdown.total_penalty = 1000.0
         
-        score = calculate_overall_score(
+        score: float = calculate_overall_score(
             deadline_validation,
             dependency_validation,
             resource_validation,
@@ -287,7 +289,7 @@ class TestReports:
         # Score should be lower due to violations
         assert score < 0.95
     
-    def test_generate_schedule_report_comprehensive(self, sample_schedule, sample_config):
+    def test_generate_schedule_report_comprehensive(self, sample_schedule, sample_config) -> None:
         """Test comprehensive report generation with all components."""
         report = generate_schedule_report(sample_schedule, sample_config)
         
@@ -340,15 +342,15 @@ class TestReports:
         assert "utilization_pattern" in resources
         assert "summary" in resources
     
-    def test_generate_schedule_report_error_handling(self, sample_config):
+    def test_generate_schedule_report_error_handling(self, sample_config) -> None:
         """Test report generation error handling."""
         # Test with invalid schedule data
-        invalid_schedule = {"invalid-id": "not-a-date"}
+        invalid_schedule: Dict[str, date] = {"invalid-id": "not-a-date"}
         
         with pytest.raises(Exception):
             generate_schedule_report(invalid_schedule, sample_config)
     
-    def test_calculate_overall_score_edge_cases(self):
+    def test_calculate_overall_score_edge_cases(self) -> None:
         """Test overall score calculation with edge cases."""
         # Test with all perfect scores
         deadline_validation = {
@@ -371,7 +373,7 @@ class TestReports:
         penalty_breakdown = MagicMock()
         penalty_breakdown.total_penalty = 0.0
         
-        score = calculate_overall_score(
+        score: float = calculate_overall_score(
             deadline_validation,
             dependency_validation,
             resource_validation,
@@ -400,7 +402,7 @@ class TestReports:
         
         penalty_breakdown.total_penalty = 10000.0
         
-        score = calculate_overall_score(
+        score: float = calculate_overall_score(
             deadline_validation,
             dependency_validation,
             resource_validation,
