@@ -11,6 +11,7 @@ from src.core.models import (
 from src.validation.deadline import validate_deadline_constraints
 from src.validation.submission import validate_submission_constraints
 from src.core.constants import SCHEDULING_CONSTANTS
+from src.core.dates import is_working_day
 
 
 class BaseScheduler(ABC):
@@ -64,9 +65,9 @@ class BaseScheduler(ABC):
     
     def _get_end_date(self, start: date, sub: Submission) -> date:
         """Calculate end date for a submission."""
-        lead_time = SCHEDULING_CONSTANTS.min_paper_lead_time_days
+        lead_time = self.config.min_paper_lead_time_days
         if sub.kind.value == "ABSTRACT":
-            lead_time = SCHEDULING_CONSTANTS.min_abstract_lead_time_days
+            lead_time = self.config.min_abstract_lead_time_days
         return start + timedelta(days=lead_time)
     
     def _meets_deadline(self, submission: Submission, start_date: date) -> bool:
@@ -123,7 +124,7 @@ class BaseScheduler(ABC):
             self.config.scheduling_options.get("enable_early_abstract_scheduling", False)):
             abstract_advance = self.config.scheduling_options.get(
                 "abstract_advance_days", 
-                SCHEDULING_CONSTANTS.abstract_advance_days
+                30  # Default value
             )
             self._schedule_early_abstracts(schedule, abstract_advance)
     
@@ -212,7 +213,7 @@ class BaseScheduler(ABC):
         scheduled_count = 0
         
         for submission_id in ready:
-            if len(active) >= SCHEDULING_CONSTANTS.max_concurrent_submissions:
+            if len(active) >= self.config.max_concurrent_submissions:
                 break
             
             submission = self.submissions[submission_id]
@@ -239,14 +240,9 @@ class BaseScheduler(ABC):
             print(f"Note: Could not schedule {len(missing)} submissions: {missing}")
             print(f"Successfully scheduled {len(schedule)} out of {len(self.submissions)} submissions")
     
-    def _is_working_day(self, current_date: date) -> bool:
-        """Check if current date is a working day."""
-        from src.core.dates import is_working_day
-        return is_working_day(current_date, self.config.blackout_dates)
-    
     def _advance_date_if_needed(self, current_date: date) -> date:
         """Advance date if it's not a working day."""
-        while not self._is_working_day(current_date):
+        while not is_working_day(current_date, self.config.blackout_dates):
             current_date += timedelta(days=1)
         return current_date
     
@@ -433,9 +429,9 @@ class BaseScheduler(ABC):
             if submission.kind in conf.deadlines:
                 deadline = conf.deadlines[submission.kind]
                 # Work backwards from deadline
-                lead_time = SCHEDULING_CONSTANTS.min_paper_lead_time_days
+                lead_time = self.config.min_paper_lead_time_days
                 if submission.kind.value == "ABSTRACT":
-                    lead_time = SCHEDULING_CONSTANTS.min_abstract_lead_time_days
+                    lead_time = self.config.min_abstract_lead_time_days
                 
                 # Calculate latest possible start date to meet deadline
                 latest_start = deadline - timedelta(days=lead_time)

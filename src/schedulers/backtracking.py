@@ -5,6 +5,7 @@ from typing import Dict, List
 from datetime import date, timedelta
 from src.schedulers.greedy import GreedyScheduler
 from src.schedulers.base import BaseScheduler
+from src.core.dates import is_working_day
 from src.core.models import SchedulerStrategy
 from src.core.constants import SCHEDULING_CONSTANTS
 
@@ -35,8 +36,8 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
         current_date = start_date
         
         while current_date <= end_date and len(schedule) < len(self.submissions):
-            # Skip blackout dates
-            if not self._is_working_day(current_date):
+            # Check working day constraint
+            if not is_working_day(current_date, self.config.blackout_dates):
                 current_date += timedelta(days=1)
                 continue
             

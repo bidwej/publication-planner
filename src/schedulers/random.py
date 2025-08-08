@@ -38,7 +38,7 @@ class RandomScheduler(BaseScheduler):
         
         while current_date <= end_date and len(schedule) < len(self.submissions):
             # Skip blackout dates
-            if not self._is_working_day(current_date):
+            if not is_working_day(current_date, self.config.blackout_dates):
                 current_date += timedelta(days=1)
                 continue
             

@@ -39,38 +39,29 @@ class HeuristicScheduler(BaseScheduler):
         # Use shared setup
         schedule, topo, start_date, end_date = self._run_common_scheduling_setup()
         
-        current = start_date
-        end = end_date
+        # Initialize active submissions list
         active: List[str] = []
+        current_date = start_date
         
-        while current <= end and len(schedule) < len(self.submissions):
+        while current_date <= end_date and len(schedule) < len(self.submissions):
             # Skip blackout dates
-            if not self._is_working_day(current):
-                current += timedelta(days=1)
+            if not self._is_working_day(current_date):
+                current_date += timedelta(days=1)
                 continue
             
             # Update active submissions
-            active = self._update_active_submissions(active, schedule, current)
+            active = self._update_active_submissions(active, schedule, current_date)
             
             # Get ready submissions
-            ready = self._get_ready_submissions(topo, schedule, current)
+            ready = self._get_ready_submissions(topo, schedule, current_date)
             
             # Sort by heuristic strategy
             ready = self._sort_by_heuristic(ready)
             
-            # Try to schedule up to concurrency limit
-            for sid in ready:
-                if len(active) >= SCHEDULING_CONSTANTS.max_concurrent_submissions:
-                    break
-                
-                # Use comprehensive constraint validation
-                if not self._validate_all_constraints(self.submissions[sid], current, schedule):
-                    continue
-                
-                schedule[sid] = current
-                active.append(sid)
+            # Schedule submissions up to concurrency limit
+            self._schedule_submissions_up_to_limit(ready, schedule, active, current_date)
             
-            current += timedelta(days=1)
+            current_date += timedelta(days=1)
         
         # Print scheduling summary
         self._print_scheduling_summary(schedule)
@@ -117,9 +108,9 @@ class HeuristicScheduler(BaseScheduler):
             if not deadline:
                 return date.min
             # Calculate latest start that still meets deadline
-            lead_time = SCHEDULING_CONSTANTS.min_paper_lead_time_days
+            lead_time = self.config.min_paper_lead_time_days
             if submission.kind.value == "ABSTRACT":
-                lead_time = SCHEDULING_CONSTANTS.min_abstract_lead_time_days
+                lead_time = self.config.min_abstract_lead_time_days
             return deadline - timedelta(days=lead_time)
         
         return sorted(ready, key=get_latest_start, reverse=True)
@@ -128,9 +119,9 @@ class HeuristicScheduler(BaseScheduler):
         """Sort by processing time (shortest or longest first)."""
         def get_processing_time(submission_id: str) -> int:
             submission = self.submissions[submission_id]
-            lead_time = SCHEDULING_CONSTANTS.min_paper_lead_time_days
+            lead_time = self.config.min_paper_lead_time_days
             if submission.kind.value == "ABSTRACT":
-                lead_time = SCHEDULING_CONSTANTS.min_abstract_lead_time_days
+                lead_time = self.config.min_abstract_lead_time_days
             return lead_time
         
         return sorted(ready, key=get_processing_time, reverse=reverse)

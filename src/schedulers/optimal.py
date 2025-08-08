@@ -7,7 +7,6 @@ import pulp
 
 from src.core.models import SchedulerStrategy
 from src.schedulers.base import BaseScheduler
-from src.core.dates import is_working_day
 
 
 @BaseScheduler.register_strategy(SchedulerStrategy.OPTIMAL)
