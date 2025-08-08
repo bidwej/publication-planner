@@ -197,7 +197,7 @@ class TestBacktrackingScheduler:
         scheduler = BacktrackingScheduler(config)
         
         # Should raise ValueError due to invalid conference reference
-        with pytest.raises(ValueError, match="Submission sub1 references unknown conference nonexistent_conf"):
+        with pytest.raises(ValueError, match="Paper sub1 references unknown conference nonexistent_conf"):
             scheduler.schedule()
 
     def test_schedule_with_priority_ordering(self):

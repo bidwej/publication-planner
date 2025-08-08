@@ -50,11 +50,24 @@ class Submission:
     earliest_start_date: Optional[date] = None
     candidate_conferences: Optional[List[str]] = None  # Suggested conferences
     
+    # Additional fields to handle data structure mismatches
+    mod_dependencies: Optional[List[int]] = None  # For papers that depend on mods
+    parent_papers: Optional[List[str]] = None  # For papers that depend on other papers
+    est_data_ready: Optional[date] = None  # For mods - estimated data ready date
+    free_slack_months: Optional[int] = None  # For mods - free slack time
+    penalty_cost_per_month: Optional[float] = None  # For mods - monthly penalty cost
+    next_mod: Optional[int] = None  # For mods - next mod in sequence
+    phase: Optional[int] = None  # For mods - development phase
+    
     def __post_init__(self):
         if self.depends_on is None:
             self.depends_on = []
         if self.candidate_conferences is None:
             self.candidate_conferences = []
+        if self.mod_dependencies is None:
+            self.mod_dependencies = []
+        if self.parent_papers is None:
+            self.parent_papers = []
     
     def validate(self) -> List[str]:
         """Validate submission and return list of errors."""
@@ -73,6 +86,12 @@ class Submission:
             errors.append("Lead time from parents cannot be negative")
         if self.penalty_cost_per_day is not None and self.penalty_cost_per_day < 0:
             errors.append("Penalty cost per day cannot be negative")
+        if self.penalty_cost_per_month is not None and self.penalty_cost_per_month < 0:
+            errors.append("Penalty cost per month cannot be negative")
+        if self.free_slack_months is not None and self.free_slack_months < 0:
+            errors.append("Free slack months cannot be negative")
+        if self.phase is not None and self.phase < 1:
+            errors.append("Phase must be at least 1")
         return errors
     
     def get_priority_score(self, config: 'Config') -> float:
@@ -190,6 +209,7 @@ class Conference:
             # For papers at conferences requiring abstracts, the abstract ID would be
             # generated based on the paper ID and conference ID
             # This is handled in the Config class during validation
+            # Return empty list as this is handled at the submission level
             pass
         
         return dependencies

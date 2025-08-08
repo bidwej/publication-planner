@@ -40,13 +40,17 @@ def _map_paper_data(json_data: Dict) -> Dict:
     """Map JSON paper data to model fields."""
     # Map mod_dependencies to depends_on
     depends_on = []
+    mod_dependencies = []
     if "mod_dependencies" in json_data:
         for mod_id in json_data["mod_dependencies"]:
             depends_on.append(f"mod_{mod_id}")
+            mod_dependencies.append(mod_id)
     
     # Add parent_papers to depends_on
+    parent_papers = []
     if "parent_papers" in json_data:
         depends_on.extend(json_data["parent_papers"])
+        parent_papers = json_data["parent_papers"]
     
     return {
         "id": json_data["id"],
@@ -56,12 +60,18 @@ def _map_paper_data(json_data: Dict) -> Dict:
         "depends_on": depends_on if depends_on else None,
         "draft_window_months": json_data.get("draft_window_months", 3),
         "lead_time_from_parents": json_data.get("lead_time_from_parents", 0),
-        "candidate_conferences": json_data.get("candidate_conferences", [])
+        "candidate_conferences": json_data.get("candidate_conferences", []),
+        "mod_dependencies": mod_dependencies,
+        "parent_papers": parent_papers
     }
 
 
 def _map_mod_data(json_data: Dict) -> Dict:
     """Map JSON mod data to model fields."""
+    est_data_ready = None
+    if json_data.get("est_data_ready"):
+        est_data_ready = parse_date(json_data["est_data_ready"]).date()
+    
     return {
         "id": f"mod_{json_data['id']}",
         "title": json_data["title"],
@@ -72,8 +82,13 @@ def _map_mod_data(json_data: Dict) -> Dict:
         "lead_time_from_parents": 0,
         "penalty_cost_per_day": json_data.get("penalty_cost_per_month", 1000.0) / 30.0,
         "engineering": False,  # Default to medical
-        "earliest_start_date": parse_date(json_data["est_data_ready"]).date() if json_data.get("est_data_ready") else None,
-        "candidate_conferences": []  # No candidate conferences for work items
+        "earliest_start_date": est_data_ready,
+        "candidate_conferences": [],  # No candidate conferences for work items
+        "est_data_ready": est_data_ready,
+        "free_slack_months": json_data.get("free_slack_months"),
+        "penalty_cost_per_month": json_data.get("penalty_cost_per_month"),
+        "next_mod": json_data.get("next_mod"),
+        "phase": json_data.get("phase")
     }
 
 

@@ -45,6 +45,7 @@ class OptimalScheduler(BaseScheduler):
         
         if solution is None:
             # If MILP fails, fall back to greedy
+            print("MILP optimization failed, falling back to greedy scheduler")
             from src.schedulers.greedy import GreedyScheduler
             greedy_scheduler = GreedyScheduler(self.config)
             return greedy_scheduler.schedule()
@@ -54,6 +55,7 @@ class OptimalScheduler(BaseScheduler):
         
         # If MILP solution is empty or invalid, fall back to greedy
         if not schedule:
+            print("MILP solution is empty, falling back to greedy scheduler")
             from src.schedulers.greedy import GreedyScheduler
             greedy_scheduler = GreedyScheduler(self.config)
             return greedy_scheduler.schedule()
@@ -102,49 +104,32 @@ class OptimalScheduler(BaseScheduler):
         return prob
     
     def _create_resource_variables(self, prob: Any, horizon_days: int) -> Dict[str, Any]:
-        """Create simplified resource variables."""
-        # For now, return empty dict to avoid complex binary variables
-        # Resource constraints will be handled by greedy fallback
-        return {}
+        """Create resource constraint variables."""
+        resource_vars = {}
+        # Simplified resource variables - just track if submission is active on each day
+        for submission_id in self.submissions:
+            for day in range(horizon_days):
+                var_name = f"resource_{submission_id}_{day}"
+                resource_vars[var_name] = pulp.LpVariable(var_name, cat=pulp.LpBinary)
+        return resource_vars
     
     def _create_objective_function(self, prob: Any, start_vars: Dict[str, Any], 
                                  resource_vars: Dict[str, Any]) -> Any:
-        """Create the objective function based on optimization goal."""
+        """Create the objective function for MILP optimization."""
         if self.optimization_objective == "minimize_makespan":
             # Minimize the maximum completion time
-            makespan = pulp.LpVariable("makespan", lowBound=0, cat='Integer')
-            
-            # Add makespan constraints
+            makespan = pulp.LpVariable("makespan", lowBound=0)
             for submission_id, submission in self.submissions.items():
                 duration = submission.get_duration_days(self.config)
                 prob += makespan >= start_vars[submission_id] + duration
-            
             return makespan
-            
-        elif self.optimization_objective == "minimize_penalties":
-            # Minimize total penalties
-            penalty_vars = {}
-            for submission_id in self.submissions:
-                penalty_vars[submission_id] = pulp.LpVariable(
-                    f"penalty_{submission_id}", lowBound=0, cat='Integer'
-                )
-            
-            # Add penalty constraints
-            self._add_penalty_constraints(prob, start_vars, penalty_vars)
-            
-            return pulp.lpSum(penalty_vars.values())
-            
-        elif self.optimization_objective == "minimize_total_time":
-            # Minimize the sum of all start times (earlier is better)
-            return pulp.lpSum(start_vars.values())
-            
         else:
-            # Default: minimize makespan
-            makespan = pulp.LpVariable("makespan", lowBound=0, cat='Integer')
-            for submission_id, submission in self.submissions.items():
-                duration = submission.get_duration_days(self.config)
-                prob += makespan >= start_vars[submission_id] + duration
-            return makespan
+            # Default: minimize total completion time
+            total_time = pulp.lpSum([
+                start_vars[submission_id] + submission.get_duration_days(self.config)
+                for submission_id, submission in self.submissions.items()
+            ])
+            return total_time
     
     def _add_dependency_constraints(self, prob: Any, start_vars: Dict[str, Any]) -> None:
         """Add dependency constraints to the MILP model."""
@@ -152,8 +137,9 @@ class OptimalScheduler(BaseScheduler):
             if submission.depends_on:
                 for dep_id in submission.depends_on:
                     if dep_id in self.submissions:
+                        dep = self.submissions[dep_id]
+                        dep_duration = dep.get_duration_days(self.config)
                         # Submission must start after dependency ends
-                        dep_duration = self.submissions[dep_id].get_duration_days(self.config)
                         prob += start_vars[submission_id] >= start_vars[dep_id] + dep_duration
     
     def _add_deadline_constraints(self, prob: Any, start_vars: Dict[str, Any], 
@@ -165,23 +151,34 @@ class OptimalScheduler(BaseScheduler):
                 if submission.kind in conf.deadlines:
                     deadline = conf.deadlines[submission.kind]
                     if deadline:
-                        # Convert deadline to days from start
                         deadline_days = (deadline - start_date).days
                         duration = submission.get_duration_days(self.config)
-                        
-                        # Ensure submission completes before deadline
+                        # Submission must complete before deadline
                         prob += start_vars[submission_id] + duration <= deadline_days
     
     def _add_resource_constraints(self, prob: Any, start_vars: Dict[str, Any], 
                                 resource_vars: Dict[str, Any]) -> None:
-        """Add simplified resource constraints to the MILP model."""
-        # For now, we'll use a simplified approach that doesn't require complex binary variables
-        # This will be handled by the greedy fallback for resource constraints
+        """Add resource constraints to the MILP model."""
+        start_date, end_date = self._get_scheduling_window()
+        horizon_days = (end_date - start_date).days
         
-        # Add a simple constraint to ensure the model has content
-        if start_vars:
-            # Ensure at least one submission starts after day 0
-            prob += pulp.lpSum(start_vars.values()) >= 1
+        # Resource constraints: limit concurrent submissions per day
+        for day in range(horizon_days):
+            active_submissions = []
+            for submission_id, submission in self.submissions.items():
+                duration = submission.get_duration_days(self.config)
+                # Check if submission is active on this day
+                var_name = f"resource_{submission_id}_{day}"
+                if var_name in resource_vars:
+                    # Submission is active if it starts before or on this day and ends after this day
+                    prob += resource_vars[var_name] <= 1
+                    prob += resource_vars[var_name] >= start_vars[submission_id] - day
+                    prob += resource_vars[var_name] >= day - start_vars[submission_id] - duration + 1
+                    active_submissions.append(resource_vars[var_name])
+            
+            # Limit concurrent submissions
+            if active_submissions:
+                prob += pulp.lpSum(active_submissions) <= self.max_concurrent
     
     def _add_working_days_constraints(self, prob: Any, start_vars: Dict[str, Any], 
                                     start_date: date) -> None:
@@ -196,7 +193,7 @@ class OptimalScheduler(BaseScheduler):
         
         for day in range(horizon_days + 1):
             working_day_vars[f"working_day_{day}"] = pulp.LpVariable(
-                f"working_day_{day}", cat='Binary'
+                f"working_day_{day}", cat=pulp.LpBinary
             )
         
         # Link working day variables to actual dates
@@ -212,8 +209,6 @@ class OptimalScheduler(BaseScheduler):
         # Ensure submissions start on working days
         for submission_id in self.submissions:
             prob += start_vars[submission_id] >= 0  # Start day must be valid
-            # For now, skip complex working day constraints to avoid MILP issues
-            # This will be handled by the greedy fallback
     
     def _add_soft_block_constraints(self, prob: Any, start_vars: Dict[str, Any], 
                                   start_date: date) -> None:
@@ -264,7 +259,7 @@ class OptimalScheduler(BaseScheduler):
         
         try:
             # Solve the model with a shorter time limit to prevent hanging
-            solver = pulp.PULP_CBC_CMD(msg=False, timeLimit=60)  # 1 minute time limit
+            solver = pulp.PULP_CBC_CMD(msg=False, timeLimit=30)  # 30 second time limit
             model.solve(solver)
             
             # Check if solution was found
@@ -299,13 +294,24 @@ class OptimalScheduler(BaseScheduler):
         try:
             for submission_id in self.submissions:
                 var_name = f"start_{submission_id}"
-                if var_name in solution.variables():
+                if hasattr(solution, 'variables') and var_name in solution.variables():
                     var = solution.variables()[var_name]
-                    if var.value() is not None:
+                    if hasattr(var, 'value') and var.value() is not None:
                         # Convert days from start to actual date
                         days_from_start = int(var.value())
                         actual_start_date = start_date + timedelta(days=days_from_start)
                         schedule[submission_id] = actual_start_date
+                else:
+                    # If variable not found, try alternative access method
+                    try:
+                        var = getattr(solution, var_name)
+                        if hasattr(var, 'value') and var.value() is not None:
+                            days_from_start = int(var.value())
+                            actual_start_date = start_date + timedelta(days=days_from_start)
+                            schedule[submission_id] = actual_start_date
+                    except AttributeError:
+                        # Variable not accessible, skip this submission
+                        continue
         except Exception as e:
             print(f"Error extracting schedule from MILP solution: {e}")
             return {}
