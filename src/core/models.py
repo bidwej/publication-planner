@@ -256,7 +256,9 @@ class Conference:
 # Utility functions for abstract-paper dependencies
 def generate_abstract_id(paper_id: str, conference_id: str) -> str:
     """Generate abstract ID for paper."""
-    return f"{paper_id}-abs-{conference_id}"  # Include conference ID in abstract ID
+    # Extract base paper ID (e.g., "paper1" from "paper1-pap-conf1")
+    base_paper_id = paper_id.split('-')[0]
+    return f"{base_paper_id}-abs-{conference_id}"  # Include conference ID in abstract ID
 
 
 def create_abstract_submission(paper: Submission, conference_id: str, 

@@ -3,11 +3,11 @@
 import pytest
 from datetime import date
 from unittest.mock import MagicMock
-from output.reports import (
+from src.output.reports import (
     generate_schedule_report,
     calculate_overall_score
 )
-from core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
+from src.core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
 
 
 class TestReports:
@@ -351,16 +351,22 @@ class TestReports:
     def test_calculate_overall_score_edge_cases(self):
         """Test overall score calculation with edge cases."""
         # Test with all perfect scores
-        deadline_validation = MagicMock()
-        deadline_validation.is_valid = True
-        deadline_validation.compliance_rate = 100.0
+        deadline_validation = {
+            "is_valid": True,
+            "compliance_rate": 100.0,
+            "violations": []
+        }
         
-        dependency_validation = MagicMock()
-        dependency_validation.is_valid = True
-        dependency_validation.satisfaction_rate = 100.0
+        dependency_validation = {
+            "is_valid": True,
+            "satisfaction_rate": 100.0,
+            "violations": []
+        }
         
-        resource_validation = MagicMock()
-        resource_validation.is_valid = True
+        resource_validation = {
+            "is_valid": True,
+            "violations": []
+        }
         
         penalty_breakdown = MagicMock()
         penalty_breakdown.total_penalty = 0.0
@@ -375,13 +381,22 @@ class TestReports:
         assert score > 0.9  # Should be very high for perfect scores
         
         # Test with all violations
-        deadline_validation.is_valid = False
-        deadline_validation.compliance_rate = 0.0
+        deadline_validation = {
+            "is_valid": False,
+            "compliance_rate": 0.0,
+            "violations": ["violation1", "violation2", "violation3"]
+        }
         
-        dependency_validation.is_valid = False
-        dependency_validation.satisfaction_rate = 0.0
+        dependency_validation = {
+            "is_valid": False,
+            "satisfaction_rate": 0.0,
+            "violations": ["violation4", "violation5"]
+        }
         
-        resource_validation.is_valid = False
+        resource_validation = {
+            "is_valid": False,
+            "violations": ["violation6"]
+        }
         
         penalty_breakdown.total_penalty = 10000.0
         

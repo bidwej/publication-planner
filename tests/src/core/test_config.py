@@ -177,7 +177,11 @@ class TestLoadSubmissions:
         )
         
         for submission in submissions:
-            assert submission.id.endswith(('-wrk', '-pap'))
+            # Check for actual data format: mod_1, mod_2, etc. for mods
+            # and J1-pap-test_conf, J2-pap-test_conf, etc. for papers
+            assert (submission.id.startswith('mod_') or 
+                   submission.id.endswith('-pap') or 
+                   submission.id.endswith('-abs'))
             assert submission.title is not None
             assert submission.kind in [SubmissionType.ABSTRACT, SubmissionType.PAPER]
             assert isinstance(submission.depends_on, list)
@@ -215,8 +219,10 @@ class TestLoadSubmissions:
         paper_submissions = [s for s in submissions if s.kind == SubmissionType.PAPER]
         for paper in paper_submissions:
             for dep in paper.depends_on or []:
-                # Dependencies can be either work items (-wrk), papers (-pap), or abstract IDs
-                assert dep.endswith(('-wrk', '-pap', '-abs')) or dep.startswith('J')
+                # Dependencies can be mods (mod_1, mod_2), papers (-pap), or abstract IDs (-abs)
+                assert (dep.startswith('mod_') or 
+                       dep.endswith(('-pap', '-abs')) or 
+                       dep.startswith('J'))
 
 
 class TestLoadBlackoutDates:

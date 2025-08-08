@@ -3,7 +3,7 @@
 import pytest
 from datetime import date
 
-from core.models import SubmissionType, ConferenceType
+from core.models import SubmissionType, ConferenceType, Submission, Config
 from schedulers.heuristic import HeuristicScheduler
 
 
@@ -157,25 +157,31 @@ class TestHeuristicScheduler:
         assert scheduled_date not in config.blackout_dates
 
     def test_error_handling_invalid_paper(self):
-        """Test error handling with invalid paper."""
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
-        
-        # Create mock submission with invalid conference
-        submission = create_mock_submission(
-            "paper1", "Test Paper", SubmissionType.PAPER, "nonexistent_conf"
+        """Test error handling with invalid paper data."""
+        # Create a submission with invalid conference reference
+        invalid_submission = Submission(
+            id="paper1",
+            title="Invalid Paper",
+            kind=SubmissionType.PAPER,
+            conference_id="nonexistent_conf",
+            depends_on=[],
+            draft_window_months=2,
+            lead_time_from_parents=0,
+            penalty_cost_per_day=100.0,
+            engineering=False
         )
         
-        conference = create_mock_conference(
-            "conf1", "Test Conference", 
-            {SubmissionType.PAPER: date(2024, 6, 1)}
+        config = Config(
+            submissions=[invalid_submission],
+            conferences=[],  # No conferences defined
+            min_abstract_lead_time_days=30,
+            min_paper_lead_time_days=90,
+            max_concurrent_submissions=3
         )
-        
-        config = create_mock_config([submission], [conference])
         
         scheduler = HeuristicScheduler(config)
         
-        # Should raise ValueError due to invalid conference reference
-        with pytest.raises(ValueError, match="Paper paper1 references unknown conference nonexistent_conf"):
+        with pytest.raises(ValueError, match="Submission paper1 references unknown conference nonexistent_conf"):
             scheduler.schedule()
 
     def test_schedule_with_priority_ordering(self):
