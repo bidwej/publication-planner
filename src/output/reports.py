@@ -4,8 +4,10 @@ from __future__ import annotations
 from typing import Dict, Any
 from datetime import date
 from core.models import Config
-from core.constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
-from scoring.penalty import calculate_penalty_score
+from src.validation.deadline import validate_deadline_compliance
+from src.validation.schedule import validate_schedule_constraints
+from src.validation.resources import validate_resource_constraints
+from scoring.penalties import calculate_penalty_score
 from output.analytics import analyze_timeline, analyze_resources
 from core.constants import (
     REPORT_CONSTANTS
@@ -27,10 +29,11 @@ def generate_schedule_report(schedule: Dict[str, date], config: Config) -> Dict[
             "resources": {}
         }
     
-    # Validate constraints
-    deadline_validation = validate_deadline_compliance(schedule, config)
-    dependency_validation = validate_dependency_satisfaction(schedule, config)
-    resource_validation = validate_resource_constraints(schedule, config)
+    # Validate all constraints using the main validation function
+    validation_result = validate_schedule_constraints(schedule, config)
+    deadline_validation = validation_result["constraints"]["deadlines"]
+    dependency_validation = validation_result["constraints"]["dependencies"]
+    resource_validation = validation_result["constraints"]["resources"]
     
     # Calculate scores
     penalty_breakdown = calculate_penalty_score(schedule, config)

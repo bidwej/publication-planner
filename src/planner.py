@@ -11,7 +11,7 @@ from core.constants import QUALITY_CONSTANTS
 from scoring.quality import calculate_quality_score
 from scoring.penalty import calculate_penalty_score
 from scoring.efficiency import calculate_efficiency_score, calculate_efficiency_resource, calculate_efficiency_timeline
-from core.constraints import validate_schedule_comprehensive
+from src.validation.schedule import validate_schedule_constraints
 from src.schedulers.base import BaseScheduler
 # Import scheduler implementations to register them
 from src.schedulers.greedy import GreedyScheduler
@@ -118,8 +118,8 @@ class Planner:
                 return {}
             
             # Validate the generated schedule
-            validation_result = validate_schedule_comprehensive(schedule, self.config)
-            if not validation_result["summary"]["is_feasible"]:
+            validation_result = validate_schedule_constraints(schedule, self.config)
+            if not validation_result["summary"]["overall_valid"]:
                 print("Warning: Generated schedule has constraint violations:")
                 constraint_result = validation_result["constraints"]
                 if "violations" in constraint_result:
@@ -147,8 +147,8 @@ class Planner:
         bool
             True if schedule is valid, False otherwise
         """
-        validation_result = validate_schedule_comprehensive(schedule, self.config)
-        return validation_result["summary"]["is_feasible"]
+        validation_result = validate_schedule_constraints(schedule, self.config)
+        return validation_result["summary"]["overall_valid"]
     
     def get_schedule_metrics(self, schedule: Dict[str, date]) -> Dict[str, Any]:
         """
@@ -208,7 +208,7 @@ class Planner:
             Complete result with all metrics and analysis
         """
         # Get validation result
-        validation_data = validate_schedule_comprehensive(schedule, self.config)
+        validation_data = validate_schedule_constraints(schedule, self.config)
         
         # Create unified validation result
         validation_result = ValidationResult(
@@ -287,10 +287,10 @@ class Planner:
     def validate_schedule_comprehensive(self, schedule: Dict[str, date]) -> Dict[str, Any]:
         """Validate schedule comprehensively and return detailed results."""
         # Use the comprehensive validation that includes all README claims
-        from src.validation import validate_single_submission_constraints_comprehensive
+        from src.validation.submission import validate_submission_placement
         
         # First run the existing comprehensive validation
-        result = validate_schedule_comprehensive(schedule, self.config)
+        result = validate_schedule_constraints(schedule, self.config)
         
         # Add comprehensive single-submission validation for each submission
         comprehensive_violations = []
@@ -298,7 +298,7 @@ class Planner:
             submission = self.config.submissions_dict.get(submission_id)
             if submission:
                 # Use comprehensive validation for each submission
-                if not validate_single_submission_constraints_comprehensive(submission, start_date, schedule, self.config):
+                if not validate_submission_placement(submission, start_date, schedule, self.config):
                     comprehensive_violations.append({
                         "submission_id": submission_id,
                         "description": f"Comprehensive validation failed for {submission_id}",

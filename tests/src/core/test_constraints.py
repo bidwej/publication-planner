@@ -7,20 +7,11 @@ import pytest
 
 from src.core.config import load_config
 from src.validation import (
-    validate_all_constraints_basic,
-    validate_all_constraints_comprehensive,
+    validate_schedule_constraints,
     validate_deadline_compliance,
-    validate_dependency_satisfaction,
-    validate_resource_constraints,
-    validate_blackout_dates,
-    validate_conference_compatibility,
-    validate_single_conference_policy,
-    validate_priority_weighting,
-    validate_paper_lead_time_months,
-    validate_schedule_comprehensive,
-    validate_soft_block_model,
-    validate_scheduling_options,
-    validate_abstract_paper_dependencies,
+    validate_dependencies_satisfied,
+    validate_resources_all_constraints,
+    validate_venue_all_constraints,
 )
 from src.core.models import Submission, SubmissionType, ConferenceType
 from src.core.constants import QUALITY_CONSTANTS
@@ -185,12 +176,15 @@ class TestAllConstraints:
             "J1-pap-ICML": date(2024, 12, 1),  # Paper after abstract dependency
         }
         
-        result = validate_all_constraints_basic(schedule, config)
+        result = validate_schedule_all_constraints(schedule, config)
         
-        assert result.is_valid is True
-        assert result.deadlines.is_valid is True
-        assert result.dependencies.is_valid is True
-        assert result.resources.is_valid is True
+        # Debug: print the result to see what's happening
+        print(f"Result: {result}")
+        
+        assert result["summary"]["overall_valid"] is True
+        assert result["constraints"]["deadlines"]["is_valid"] is True
+        assert result["constraints"]["dependencies"]["is_valid"] is True
+        assert result["constraints"]["resources"]["is_valid"] is True
     
     def test_invalid_schedule(self):
         """Test that an invalid schedule fails constraints."""
@@ -203,17 +197,17 @@ class TestAllConstraints:
             "J3-pap-MICCAI": date(2025, 1, 1),  # Too many concurrent
         }
         
-        result = validate_all_constraints_basic(schedule, config)
+        result = validate_schedule_all_constraints(schedule, config)
         
-        assert result.is_valid is False
+        assert result["summary"]["overall_valid"] is False
     
     def test_empty_schedule(self):
         """Test empty schedule."""
         config = load_config("tests/common/data/config.json")
         
-        result = validate_all_constraints_basic({}, config)
+        result = validate_schedule_all_constraints({}, config)
         
-        assert result.is_valid is True
+        assert result["summary"]["overall_valid"] is True
 
 
 class TestConstraintViolations:

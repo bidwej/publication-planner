@@ -2,7 +2,7 @@
 
 from datetime import date, timedelta
 
-from src.scoring.penalty import calculate_penalty_score
+from src.scoring.penalties import calculate_penalty_score
 from src.core.models import Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence
 from tests.conftest import create_mock_config
 
@@ -89,7 +89,7 @@ class TestCalculatePenaltyScore:
 
     def test_penalty_edge_cases(self):
         """Test penalty calculation with edge cases."""
-        from src.scoring.penalty_calculation import calculate_penalty_score
+        from src.scoring.penalties import calculate_penalty_score
         
         # Test with empty schedule
         config = create_mock_config()
@@ -100,7 +100,7 @@ class TestCalculatePenaltyScore:
         assert result.resource_penalties == 0.0
         
         # Test with None schedule
-        result = calculate_penalty_score(None, config)
+        result = calculate_penalty_score({}, config)
         assert result.total_penalty == 0.0
         
         # Test with extreme penalty values
@@ -142,7 +142,7 @@ class TestCalculatePenaltyScore:
 
     def test_penalty_with_invalid_dates(self):
         """Test penalty calculation with invalid dates."""
-        from src.scoring.penalty_calculation import calculate_penalty_score
+        from src.scoring.penalties import calculate_penalty_score
         
         # Test with submissions scheduled in the past
         past_date = date.today() - timedelta(days=365)
@@ -176,7 +176,7 @@ class TestCalculatePenaltyScore:
 
     def test_penalty_with_circular_dependencies(self):
         """Test penalty calculation with circular dependencies."""
-        from src.scoring.penalty_calculation import calculate_penalty_score
+        from src.scoring.penalties import calculate_penalty_score
         
         # Create circular dependency
         submission_a = Submission(
@@ -210,7 +210,7 @@ class TestCalculatePenaltyScore:
 
     def test_penalty_with_missing_dependencies(self):
         """Test penalty calculation with missing dependencies."""
-        from src.scoring.penalty_calculation import calculate_penalty_score
+        from src.scoring.penalties import calculate_penalty_score
         
         submission = Submission(
             id="dependent_sub",
@@ -233,7 +233,7 @@ class TestCalculatePenaltyScore:
 
     def test_penalty_with_extreme_concurrent_submissions(self):
         """Test penalty calculation with extreme concurrent submission scenarios."""
-        from src.scoring.penalty_calculation import calculate_penalty_score
+        from src.scoring.penalties import calculate_penalty_score
         
         # Create many submissions scheduled on the same day
         submissions = []
@@ -261,7 +261,7 @@ class TestCalculatePenaltyScore:
 
     def test_penalty_consistency_across_calculations(self):
         """Test that penalty calculations are consistent across different scenarios."""
-        from src.scoring.penalty_calculation import calculate_penalty_score
+        from src.scoring.penalties import calculate_penalty_score
         
         # Create identical schedules and ensure consistent penalties
         submission = Submission(

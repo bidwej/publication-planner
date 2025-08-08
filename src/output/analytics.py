@@ -6,7 +6,7 @@ from datetime import date
 import statistics
 
 from core.models import Config, ResourceAnalysis, ScheduleAnalysis, ScheduleDistribution, SubmissionTypeAnalysis, TimelineAnalysis
-from core.constraints import _calculate_daily_load
+from src.validation.resources import _calculate_daily_load
 from core.constants import ANALYTICS_CONSTANTS, QUALITY_CONSTANTS
 
 def analyze_schedule_completeness(schedule: Dict[str, date], config: Config) -> ScheduleAnalysis:

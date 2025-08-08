@@ -7,7 +7,8 @@ import statistics
 from pathlib import Path
 
 
-from core.constraints import validate_deadline_compliance, validate_resource_constraints
+from src.validation.deadline import validate_deadline_compliance
+from src.validation.resources import validate_resource_constraints
 from core.models import Config, ScheduleSummary, ScheduleMetrics, SubmissionType
 from output.tables import save_schedule_json, save_table_csv, save_metrics_json
 from scoring.efficiency import calculate_efficiency_score

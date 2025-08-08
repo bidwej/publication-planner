@@ -21,7 +21,7 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
     def schedule(self) -> Dict[str, date]:
         """Generate schedule with backtracking capability."""
         self._auto_link_abstract_paper()
-        from src.validation import validate_venue_compatibility
+        from src.validation.venue import validate_venue_compatibility
         validate_venue_compatibility(self.submissions, self.conferences)
         topo = self._topological_order()
         

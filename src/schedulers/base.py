@@ -8,7 +8,8 @@ from src.core.models import (
     Config, Submission, SubmissionType, SchedulerStrategy, Conference,
     generate_abstract_id, create_abstract_submission, ensure_abstract_paper_dependency
 )
-from src.validation import validate_deadline_compliance_single, validate_dependencies_satisfied
+from src.validation.deadline import validate_deadline_compliance
+from src.validation.submission import validate_submission_placement
 from src.core.dates import is_working_day
 
 
@@ -69,18 +70,21 @@ class BaseScheduler(ABC):
     
     def _meets_deadline(self, sub: Submission, start: date) -> bool:
         """Check if starting on this date meets the deadline."""
-        return validate_deadline_compliance_single(start, sub, self.config)
+        # Create a temporary schedule with just this submission
+        temp_schedule = {sub.id: start}
+        result = validate_deadline_compliance(temp_schedule, self.config)
+        return result.is_valid
     
     # VALIDATION METHODS - Call comprehensive validation from constraints.py
     # These methods provide fast boolean validation during scheduling by calling
     # the comprehensive validation functions from constraints.py
     
     def _validate_all_constraints(self, sub: Submission, start: date, schedule: Dict[str, date]) -> bool:
-    """Validate all constraints for a submission at a given start date."""
-    from src.validation.submission import validate_submission_placement
+        """Validate all constraints for a submission at a given start date."""
+        from src.validation.submission import validate_submission_placement
 
-    # Use the submission validation function
-    return validate_submission_placement(sub, start, schedule, self.config)
+        # Use the submission validation function
+        return validate_submission_placement(sub, start, schedule, self.config)
     
     def _auto_link_abstract_paper(self):
         """Auto-link abstracts to papers and create missing abstract submissions."""

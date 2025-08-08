@@ -77,7 +77,7 @@ def validate_deadline_compliance(schedule: Dict[str, date], config: Config) -> D
     )
 
 
-def validate_deadline_compliance_single(start_date: date, sub: Submission, config: Config) -> bool:
+def _validate_deadline_compliance_single(start_date: date, sub: Submission, config: Config) -> bool:
     """Validate deadline compliance for a single submission."""
     if not sub.conference_id or sub.conference_id not in config.conferences_dict:
         return True
@@ -92,7 +92,7 @@ def validate_deadline_compliance_single(start_date: date, sub: Submission, confi
     return end_date <= deadline
 
 
-def validate_deadline_with_lookahead(sub: Submission, start: date, config: Config, 
+def _validate_deadline_with_lookahead(sub: Submission, start: date, config: Config, 
                                    conferences: Dict[str, Any], lookahead_days: int = 0) -> bool:
     """Validate deadline with lookahead for future deadlines."""
     if not sub.conference_id or sub.conference_id not in conferences:
@@ -111,27 +111,15 @@ def validate_deadline_with_lookahead(sub: Submission, start: date, config: Confi
     return end_date <= adjusted_deadline
 
 
-def validate_blackout_dates(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+def _validate_blackout_dates(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
     """Validate that no submissions are scheduled on blackout dates."""
-    # Use constants from constants.py
-    perfect_compliance_rate = QUALITY_CONSTANTS.perfect_compliance_rate
-    percentage_multiplier = QUALITY_CONSTANTS.percentage_multiplier
-    
-    # Check if blackout periods are enabled
-    if config.scheduling_options and not config.scheduling_options.get("enable_blackout_periods", True):
-        return {
-            "is_valid": True,
-            "violations": [],
-            "compliance_rate": perfect_compliance_rate,
-            "summary": "Blackout periods disabled"
-        }
-    
     if not config.blackout_dates:
         return {
             "is_valid": True,
             "violations": [],
-            "compliance_rate": QUALITY_CONSTANTS.perfect_compliance_rate,
-            "summary": "No blackout dates configured"
+            "summary": "No blackout dates configured",
+            "total_submissions": 0,
+            "compliant_submissions": 0
         }
     
     violations = []
@@ -144,40 +132,31 @@ def validate_blackout_dates(schedule: Dict[str, date], config: Config) -> Dict[s
             continue
         
         total_submissions += 1
-        duration_days = sub.get_duration_days(config)
         
-        # Check each day of the submission
-        submission_violations = []
-        for i in range(duration_days + 1):
-            check_date = start_date + timedelta(days=i)
-            if check_date in config.blackout_dates:
-                submission_violations.append(check_date)
-        
-        if submission_violations:
+        # Check if start date is on a blackout date
+        if start_date in config.blackout_dates:
             violations.append({
                 "submission_id": sid,
-                "description": f"Submission {sid} scheduled on blackout dates: {submission_violations}",
-                "severity": "medium",
-                "blackout_dates": submission_violations
+                "description": f"Submission scheduled on blackout date {start_date}",
+                "severity": "high",
+                "blackout_date": start_date
             })
         else:
             compliant_submissions += 1
     
-    compliance_rate = (compliant_submissions / total_submissions * percentage_multiplier) if total_submissions > 0 else perfect_compliance_rate
     is_valid = len(violations) == 0
     
     return {
         "is_valid": is_valid,
         "violations": violations,
-        "compliance_rate": compliance_rate,
+        "summary": f"{compliant_submissions}/{total_submissions} submissions avoid blackout dates",
         "total_submissions": total_submissions,
-        "compliant_submissions": compliant_submissions,
-        "summary": f"Blackout dates: {compliant_submissions}/{total_submissions} submissions compliant ({compliance_rate:.1f}%)"
+        "compliant_submissions": compliant_submissions
     }
 
 
-def validate_paper_lead_time_months(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
-    """Validate paper lead time requirements."""
+def _validate_paper_lead_time_months(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+    """Validate that papers have sufficient lead time before deadlines."""
     violations = []
     total_papers = 0
     compliant_papers = 0
@@ -187,10 +166,6 @@ def validate_paper_lead_time_months(schedule: Dict[str, date], config: Config) -
         if not sub or sub.kind != SubmissionType.PAPER:
             continue
         
-        total_papers += 1
-        required_lead_time = config.min_paper_lead_time_days
-        
-        # Calculate if paper has sufficient lead time
         if not sub.conference_id or sub.conference_id not in config.conferences_dict:
             continue
         
@@ -198,29 +173,33 @@ def validate_paper_lead_time_months(schedule: Dict[str, date], config: Config) -
         if SubmissionType.PAPER not in conf.deadlines:
             continue
         
+        total_papers += 1
         deadline = conf.deadlines[SubmissionType.PAPER]
         end_date = sub.get_end_date(start_date, config)
-        actual_lead_time = (deadline - end_date).days
         
-        if actual_lead_time >= required_lead_time:
-            compliant_papers += 1
-        else:
+        # Calculate lead time in months
+        lead_time_days = (deadline - end_date).days
+        lead_time_months = lead_time_days / 30.44  # Average days per month
+        
+        min_lead_time_months = config.min_paper_lead_time_months
+        
+        if lead_time_months < min_lead_time_months:
             violations.append({
                 "submission_id": sid,
-                "description": f"Paper {sid} has insufficient lead time: {actual_lead_time} days (required: {required_lead_time})",
+                "description": f"Paper has only {lead_time_months:.1f} months lead time (minimum {min_lead_time_months})",
                 "severity": "medium",
-                "actual_lead_time": actual_lead_time,
-                "required_lead_time": required_lead_time
+                "lead_time_months": lead_time_months,
+                "min_required": min_lead_time_months
             })
+        else:
+            compliant_papers += 1
     
-    compliance_rate = (compliant_papers / total_papers * QUALITY_CONSTANTS.percentage_multiplier) if total_papers > 0 else QUALITY_CONSTANTS.perfect_compliance_rate
     is_valid = len(violations) == 0
     
     return {
         "is_valid": is_valid,
         "violations": violations,
-        "compliance_rate": compliance_rate,
+        "summary": f"{compliant_papers}/{total_papers} papers meet lead time requirements",
         "total_papers": total_papers,
-        "compliant_papers": compliant_papers,
-        "summary": f"Paper lead time: {compliant_papers}/{total_papers} papers compliant ({compliance_rate:.1f}%)"
+        "compliant_papers": compliant_papers
     }

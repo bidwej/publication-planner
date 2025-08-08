@@ -8,7 +8,33 @@ from src.core.constants import QUALITY_CONSTANTS
 from src.core.models import SubmissionType
 
 
-def validate_conference_compatibility(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+def validate_venue_all_constraints(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+    """Validate all venue-related constraints for the complete schedule."""
+    # Run all venue validations
+    conference_compat_result = _validate_conference_compatibility(schedule, config)
+    conf_sub_compat_result = _validate_conference_submission_compatibility(schedule, config)
+    single_conf_result = _validate_single_conference_policy(schedule, config)
+    
+    # Combine all violations
+    all_violations = (
+        conference_compat_result.get("violations", []) +
+        conf_sub_compat_result.get("violations", []) +
+        single_conf_result.get("violations", [])
+    )
+    
+    # Determine overall validity
+    is_valid = len(all_violations) == 0
+    
+    return {
+        "is_valid": is_valid,
+        "violations": all_violations,
+        "conference_compatibility": conference_compat_result,
+        "conference_submission_compatibility": conf_sub_compat_result,
+        "single_conference_policy": single_conf_result
+    }
+
+
+def _validate_conference_compatibility(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
     """Validate conference compatibility (medical vs engineering)."""
     violations = []
     total_submissions = 0
@@ -68,7 +94,7 @@ def validate_conference_compatibility(schedule: Dict[str, date], config: Config)
     }
 
 
-def validate_conference_submission_compatibility(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+def _validate_conference_submission_compatibility(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
     """Validate that submissions are compatible with their conference submission types."""
     violations = []
     total_submissions = 0
@@ -117,7 +143,7 @@ def validate_conference_submission_compatibility(schedule: Dict[str, date], conf
     }
 
 
-def validate_single_conference_policy(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+def _validate_single_conference_policy(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
     """Validate single conference policy (one paper per conference per cycle)."""
     violations = []
     total_papers = 0

@@ -24,8 +24,8 @@ def calculate_penalty_score(schedule: Dict[str, date], config: Config) -> Penalt
         )
     
     # Get comprehensive validation results
-    from src.validation import validate_all_constraints_comprehensive
-    comprehensive_result = validate_all_constraints_comprehensive(schedule, config)
+    from src.validation.schedule import validate_schedule_constraints
+    comprehensive_result = validate_schedule_constraints(schedule, config)
     
     # Calculate basic penalties
     deadline_penalties = _calculate_deadline_penalties(schedule, config)

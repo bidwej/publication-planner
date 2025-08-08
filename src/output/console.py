@@ -8,7 +8,8 @@ import statistics
 from pathlib import Path
 from core.models import Config, SchedulerStrategy
 from core.constants import DISPLAY_CONSTANTS
-from core.constraints import validate_schedule_comprehensive, validate_deadline_compliance
+from src.validation.deadline import validate_deadline_compliance
+from src.validation.schedule import validate_schedule_constraints
 from scoring.penalty import calculate_penalty_score
 from scoring.efficiency import calculate_efficiency_score
 from scoring.quality import calculate_quality_score
@@ -153,7 +154,7 @@ def print_schedule_analysis(schedule: Dict[str, date], config: Config, strategy_
     print_schedule_summary(schedule, config)
     
     # Comprehensive validation using all constraints, scoring, and analytics
-    validation_result = validate_schedule_comprehensive(schedule, config)
+    validation_result = validate_schedule_constraints(schedule, config)
     
     print("Comprehensive Schedule Analysis:")
     print(f"  Feasibility: {'✓' if validation_result['overall_valid'] else '✗'}")
