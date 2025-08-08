@@ -5,7 +5,7 @@ from typing import Dict, List, Set
 from datetime import date, timedelta
 from enum import Enum
 from src.schedulers.base import BaseScheduler
-from src.validation import is_working_day
+from src.core.dates import is_working_day
 from src.core.models import SchedulerStrategy
 from src.core.constants import SCHEDULING_CONSTANTS
 

@@ -1,4 +1,4 @@
-"""Concurrency validation functions for resource constraints."""
+"""Resource validation functions for concurrency constraints."""
 
 from typing import Dict, Any
 from datetime import date, timedelta

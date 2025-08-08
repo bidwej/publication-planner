@@ -5,7 +5,7 @@ import random
 from typing import Dict, List, Set, Optional
 from datetime import date, timedelta
 from src.schedulers.base import BaseScheduler
-from src.validation import is_working_day
+from src.core.dates import is_working_day
 from src.core.models import SchedulerStrategy
 from src.core.constants import SCHEDULING_CONSTANTS
 

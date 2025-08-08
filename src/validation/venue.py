@@ -1,4 +1,4 @@
-"""Venue rule validation functions for conference compatibility and policies."""
+"""Venue validation functions for conference compatibility and policies."""
 
 from typing import Dict, Any
 from datetime import date
@@ -100,33 +100,6 @@ def validate_conference_submission_compatibility(schedule: Dict[str, date], conf
                 "conference_submission_type": submission_type_str
             })
             continue
-        
-        # Check abstract-to-paper dependencies
-        if sub.kind == SubmissionType.PAPER and conf.requires_abstract_before_paper():
-            # Find the corresponding abstract submission using utility function
-            from src.core.models import generate_abstract_id
-            abstract_id = generate_abstract_id(sid, conf.id)
-            if abstract_id not in schedule:
-                violations.append({
-                    "submission_id": sid,
-                    "description": f"Paper {sid} requires abstract submission {abstract_id} but it's not scheduled",
-                    "severity": "high",
-                    "missing_dependency": abstract_id
-                })
-                continue
-            
-            # Check if abstract is scheduled before paper
-            abstract_start = schedule[abstract_id]
-            if abstract_start >= start_date:
-                violations.append({
-                    "submission_id": sid,
-                    "description": f"Paper {sid} scheduled before required abstract {abstract_id}",
-                    "severity": "high",
-                    "abstract_id": abstract_id,
-                    "paper_start": start_date,
-                    "abstract_start": abstract_start
-                })
-                continue
         
         compatible_submissions += 1
     

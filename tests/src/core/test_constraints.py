@@ -7,7 +7,7 @@ import pytest
 
 from src.core.config import load_config
 from src.validation import (
-    validate_all_constraints,
+    validate_all_constraints_basic,
     validate_all_constraints_comprehensive,
     validate_deadline_compliance,
     validate_dependency_satisfaction,
@@ -185,7 +185,7 @@ class TestAllConstraints:
             "J1-pap-ICML": date(2024, 12, 1),  # Paper after abstract dependency
         }
         
-        result = validate_all_constraints(schedule, config)
+        result = validate_all_constraints_basic(schedule, config)
         
         assert result.is_valid is True
         assert result.deadlines.is_valid is True
@@ -203,7 +203,7 @@ class TestAllConstraints:
             "J3-pap-MICCAI": date(2025, 1, 1),  # Too many concurrent
         }
         
-        result = validate_all_constraints(schedule, config)
+        result = validate_all_constraints_basic(schedule, config)
         
         assert result.is_valid is False
     
@@ -211,7 +211,7 @@ class TestAllConstraints:
         """Test empty schedule."""
         config = load_config("tests/common/data/config.json")
         
-        result = validate_all_constraints({}, config)
+        result = validate_all_constraints_basic({}, config)
         
         assert result.is_valid is True
 

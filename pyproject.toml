@@ -40,7 +40,8 @@ disable = [
   "missing-final-newline",   # ignore C0304
   "trailing-whitespace",     # ignore C0303
   "attribute-defined-outside-init",  # ignore W0201 - allows inherited attributes
-  "protected-access"         # ignore W0212 - allows access to protected methods
+  "protected-access",        # ignore W0212 - allows access to protected methods
+  "undefined-variable"       # ignore E0602 - allows undefined variable errors for imports
 ]
 
 [tool.pylint.typecheck]

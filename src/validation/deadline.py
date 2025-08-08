@@ -1,11 +1,10 @@
-"""Temporal validation functions for deadlines, blackouts, and timing rules."""
+"""Deadline validation functions for submissions."""
 
 from typing import Dict, Any, Optional, List
 from datetime import date, timedelta
 
 from src.core.models import Config, Submission, DeadlineValidation, DeadlineViolation, SubmissionType
 from src.core.constants import QUALITY_CONSTANTS, SCHEDULING_CONSTANTS
-from .utilities import is_working_day
 
 
 def validate_deadline_compliance(schedule: Dict[str, date], config: Config) -> DeadlineValidation:
@@ -225,94 +224,3 @@ def validate_paper_lead_time_months(schedule: Dict[str, date], config: Config) -
         "compliant_papers": compliant_papers,
         "summary": f"Paper lead time: {compliant_papers}/{total_papers} papers compliant ({compliance_rate:.1f}%)"
     }
-
-
-def _validate_early_abstract_scheduling(schedule: Dict[str, date], config: Config) -> List[Dict[str, Any]]:
-    """Validate early abstract scheduling."""
-    violations = []
-    
-    # Check if scheduling_options exists before accessing it
-    if not config.scheduling_options:
-        return violations
-    
-    abstract_advance = config.scheduling_options.get("abstract_advance_days", SCHEDULING_CONSTANTS.abstract_advance_days)
-    abstracts = [sid for sid, sub in config.submissions_dict.items() 
-                if sub.kind == SubmissionType.ABSTRACT]
-    
-    for abstract_id in abstracts:
-        if abstract_id not in schedule:
-            continue
-        
-        sub = config.submissions_dict[abstract_id]
-        if not sub.conference_id or sub.conference_id not in config.conferences_dict:
-            continue
-        
-        conf = config.conferences_dict[sub.conference_id]
-        if SubmissionType.ABSTRACT not in conf.deadlines:
-            continue
-        
-        deadline = conf.deadlines[SubmissionType.ABSTRACT]
-        early_date = deadline - timedelta(days=abstract_advance)
-        scheduled_date = schedule[abstract_id]
-        
-        if scheduled_date > early_date:
-            violations.append({
-                "submission_id": abstract_id,
-                "description": f"Abstract {abstract_id} not scheduled early enough (should be {early_date}, scheduled {scheduled_date})",
-                "severity": "low"
-            })
-    
-    return violations
-
-
-def _validate_conference_response_time(schedule: Dict[str, date], config: Config) -> List[Dict[str, Any]]:
-    """Validate conference response time requirements."""
-    violations = []
-    
-    # Check if scheduling_options exists before accessing it
-    if not config.scheduling_options:
-        return violations
-    
-    response_buffer = config.scheduling_options.get("conference_response_time_days", SCHEDULING_CONSTANTS.conference_response_time_days)
-    
-    for sid, start_date in schedule.items():
-        sub = config.submissions_dict.get(sid)
-        if not sub or not sub.conference_id:
-            continue
-        
-        conf = config.conferences_dict.get(sub.conference_id)
-        if not conf:
-            continue
-        
-        # Calculate when we need to hear back
-        end_date = sub.get_end_date(start_date, config)
-        required_response_date = end_date - timedelta(days=response_buffer)
-        
-        # Check if we have enough time for response
-        if required_response_date < date.today():
-            violations.append({
-                "submission_id": sid,
-                "description": f"Submission {sid} needs response by {required_response_date} but it's already past",
-                "severity": "medium"
-            })
-    
-    return violations
-
-
-def _validate_working_days_only(schedule: Dict[str, date], config: Config) -> List[Dict[str, Any]]:
-    """Validate working days only scheduling."""
-    violations = []
-    
-    # Check if scheduling_options exists before accessing it
-    if not config.scheduling_options or not config.scheduling_options.get("working_days_only", False):
-        return violations
-    
-    for sid, start_date in schedule.items():
-        if not is_working_day(start_date, config.blackout_dates):
-            violations.append({
-                "submission_id": sid,
-                "description": f"Submission {sid} starts on non-working day {start_date}",
-                "severity": "low"
-            })
-    
-    return violations
