@@ -8,8 +8,6 @@ from src.core.models import (
     Config, Submission, SubmissionType, SchedulerStrategy, Conference,
     generate_abstract_id, create_abstract_submission, ensure_abstract_paper_dependency
 )
-from src.validation.deadline import validate_deadline_constraints
-from src.validation.submission import validate_submission_constraints
 from src.core.constants import SCHEDULING_CONSTANTS
 from src.core.dates import is_working_day
 
@@ -74,19 +72,50 @@ class BaseScheduler(ABC):
         """Check if starting on this date meets the deadline."""
         # Create a temporary schedule with just this submission
         temp_schedule = {submission.id: start_date}
+        from src.validation.deadline import validate_deadline_constraints
         result = validate_deadline_constraints(temp_schedule, self.config)
         return result.is_valid
     
-    # VALIDATION METHODS - Call comprehensive validation from constraints.py
+    # VALIDATION METHODS - Call comprehensive validation from all validation files
     # These methods provide fast boolean validation during scheduling by calling
-    # the comprehensive validation functions from constraints.py
+    # the comprehensive validation functions from all validation modules
     
     def _validate_all_constraints(self, sub: Submission, start: date, schedule: Dict[str, date]) -> bool:
         """Validate all constraints for a submission at a given start date."""
         from src.validation.submission import validate_submission_constraints
+        from src.validation.deadline import validate_deadline_constraints
+        from src.validation.resources import validate_resources_constraints
+        from src.validation.venue import validate_venue_constraints
+        from src.validation.schedule import validate_schedule_constraints
 
-        # Use the submission validation function
-        return validate_submission_constraints(sub, start, schedule, self.config)
+        # Use the submission validation function for individual submission
+        if not validate_submission_constraints(sub, start, schedule, self.config):
+            return False
+        
+        # Create temporary schedule with this submission
+        temp_schedule = {**schedule, sub.id: start}
+        
+        # Validate deadline constraints
+        deadline_result = validate_deadline_constraints(temp_schedule, self.config)
+        if not deadline_result.is_valid:
+            return False
+        
+        # Validate resource constraints
+        resource_result = validate_resources_constraints(temp_schedule, self.config)
+        if not resource_result.is_valid:
+            return False
+        
+        # Validate venue constraints
+        venue_result = validate_venue_constraints(temp_schedule, self.config)
+        if not venue_result["is_valid"]:
+            return False
+        
+        # Validate complete schedule constraints
+        schedule_result = validate_schedule_constraints(temp_schedule, self.config)
+        if not schedule_result["summary"]["overall_valid"]:
+            return False
+        
+        return True
     
     def _run_common_scheduling_setup(self) -> tuple[Dict[str, date], List[str], date, date]:
         """
@@ -124,7 +153,7 @@ class BaseScheduler(ABC):
             self.config.scheduling_options.get("enable_early_abstract_scheduling", False)):
             abstract_advance = self.config.scheduling_options.get(
                 "abstract_advance_days", 
-                30  # Default value
+                SCHEDULING_CONSTANTS.abstract_advance_days
             )
             self._schedule_early_abstracts(schedule, abstract_advance)
     
@@ -424,7 +453,7 @@ class BaseScheduler(ABC):
                 # Calculate latest possible start date to meet deadline
                 latest_start = deadline - timedelta(days=lead_time)
                 # Add buffer to ensure we have enough time
-                latest_start_with_buffer = latest_start - timedelta(days=30)
+                latest_start_with_buffer = latest_start - timedelta(days=SCHEDULING_CONSTANTS.lookahead_window_days)
                 # Earliest date must be before the latest start date
                 earliest_date = min(earliest_date, latest_start_with_buffer)
         
@@ -460,7 +489,7 @@ class BaseScheduler(ABC):
                 latest_deadlines.extend(conf.deadlines.values())
             if latest_deadlines:
                 latest_deadline = max(latest_deadlines)
-                end_date = latest_deadline + timedelta(days=90)  # 3 months buffer after latest deadline
+                end_date = latest_deadline + timedelta(days=SCHEDULING_CONSTANTS.conference_response_time_days)
             else:
                 end_date = start_date + timedelta(days=365)  # 1 year from start as fallback
         else:

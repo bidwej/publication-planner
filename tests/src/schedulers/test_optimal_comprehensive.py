@@ -3,6 +3,7 @@
 import pytest
 from datetime import date, timedelta
 from unittest.mock import patch, MagicMock
+from pathlib import Path
 
 from src.core.config import load_config
 from src.core.models import SchedulerStrategy, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
@@ -39,8 +40,9 @@ class TestOptimalSchedulerComprehensive:
             )
         ]
         
-        # Create config with test data
-        config = load_config('config.json')
+        # Create config with test data from tests/common/data
+        test_data_dir = Path(__file__).parent.parent.parent.parent / "tests" / "common" / "data"
+        config = load_config(str(test_data_dir / "config.json"))
         config.submissions = submissions
         config.conferences = conferences
         
@@ -95,8 +97,9 @@ class TestOptimalSchedulerComprehensive:
             )
         ]
         
-        # Create config with test data
-        config = load_config('config.json')
+        # Create config with test data from tests/common/data
+        test_data_dir = Path(__file__).parent.parent.parent.parent / "tests" / "common" / "data"
+        config = load_config(str(test_data_dir / "config.json"))
         config.submissions = submissions
         config.conferences = conferences
         
@@ -138,7 +141,8 @@ class TestOptimalSchedulerComprehensive:
         ]
         
         # Create config with blackout dates
-        config = load_config('config.json')
+        test_data_dir = Path(__file__).parent.parent.parent.parent / "tests" / "common" / "data"
+        config = load_config(str(test_data_dir / "config.json"))
         config.submissions = submissions
         config.conferences = conferences
         config.blackout_dates = [
@@ -191,7 +195,8 @@ class TestOptimalSchedulerComprehensive:
         ]
         
         # Create config
-        config = load_config('config.json')
+        test_data_dir = Path(__file__).parent.parent.parent.parent / "tests" / "common" / "data"
+        config = load_config(str(test_data_dir / "config.json"))
         config.submissions = submissions
         config.conferences = conferences
         
@@ -233,7 +238,8 @@ class TestOptimalSchedulerComprehensive:
         ]
         
         # Create config with resource constraints
-        config = load_config('config.json')
+        test_data_dir = Path(__file__).parent.parent.parent.parent / "tests" / "common" / "data"
+        config = load_config(str(test_data_dir / "config.json"))
         config.submissions = submissions
         config.conferences = conferences
         config.max_concurrent_submissions = 2  # Only 2 concurrent submissions allowed
@@ -308,7 +314,8 @@ class TestOptimalSchedulerComprehensive:
         ]
         
         # Create config with complex constraints
-        config = load_config('config.json')
+        test_data_dir = Path(__file__).parent.parent.parent.parent / "tests" / "common" / "data"
+        config = load_config(str(test_data_dir / "config.json"))
         config.submissions = submissions
         config.conferences = conferences
         config.max_concurrent_submissions = 2
@@ -376,12 +383,13 @@ class TestOptimalSchedulerComprehensive:
         ]
         
         # Create config
-        config = load_config('config.json')
+        test_data_dir = Path(__file__).parent.parent.parent.parent / "tests" / "common" / "data"
+        config = load_config(str(test_data_dir / "config.json"))
         config.submissions = submissions
         config.conferences = conferences
         
         # Test MILP optimization
-        scheduler = OptimalScheduler(config, optimization_objective="minimize_makespan")
+        scheduler = OptimalScheduler(config)
         schedule = scheduler.schedule()
         
         # Verify MILP produces a valid schedule

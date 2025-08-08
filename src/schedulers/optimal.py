@@ -264,7 +264,7 @@ class OptimalScheduler(BaseScheduler):
         
         try:
             # Solve the model with a shorter time limit to prevent hanging
-            solver = pulp.PULP_CBC_CMD(msg=0, timeLimit=60)  # 1 minute time limit
+            solver = pulp.PULP_CBC_CMD(msg=False, timeLimit=60)  # 1 minute time limit
             model.solve(solver)
             
             # Check if solution was found
