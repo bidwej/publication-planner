@@ -88,8 +88,10 @@ class GreedyScheduler(BaseScheduler):
                 current_date += timedelta(days=1)
                 continue
             
-            # Check working day constraint
-            if not is_working_day(current_date, self.config.blackout_dates):
+            # Check working day constraint only if enabled
+            if (self.config.scheduling_options and 
+                self.config.scheduling_options.get("enable_working_days_only", False) and
+                not is_working_day(current_date, self.config.blackout_dates)):
                 current_date += timedelta(days=1)
                 continue
             

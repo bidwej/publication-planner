@@ -31,22 +31,27 @@ class TestBacktrackingScheduler:
 
     def test_schedule_single_paper(self) -> None:
         """Test scheduling with single paper."""
-        # Create mock submission with all required fields
+        # Create mock submission with all required fields and future dates
         submission = create_mock_submission(
             "sub1", "Test Paper", SubmissionType.PAPER, "conf1",
             draft_window_months=3,
             penalty_cost_per_day=100.0,
             engineering=True,
-            earliest_start_date=date(2024, 1, 1)
+            earliest_start_date=date(2026, 1, 1)  # Use future date in 2026
         )
         
-        # Create mock conference with proper deadline
+        # Create mock conference with future deadline
         conference = create_mock_conference(
             "conf1", "Test Conference", 
-            {SubmissionType.PAPER: date(2024, 6, 1)}
+            {SubmissionType.PAPER: date(2026, 6, 1)}  # Use future deadline in 2026
         )
         
-        config = create_mock_config([submission], [conference])
+        # Create config with working days disabled
+        config = create_mock_config(
+            [submission], 
+            [conference],
+            scheduling_options={"enable_working_days_only": False}
+        )
         
         scheduler: Any = BacktrackingGreedyScheduler(config)
         
@@ -320,3 +325,42 @@ class TestBacktrackingScheduler:
         # This test should pass and help us understand the issue
         assert conference.accepts_submission_type(SubmissionType.PAPER)
         assert conference.submission_types is not None
+
+    def test_debug_scheduler_logic(self) -> None:
+        """Debug test to understand scheduler logic."""
+        # Create mock submission with all required fields and future dates
+        submission = create_mock_submission(
+            "sub1", "Test Paper", SubmissionType.PAPER, "conf1",
+            draft_window_months=3,
+            penalty_cost_per_day=100.0,
+            engineering=True,
+            earliest_start_date=date(2026, 1, 1)  # Use future date in 2026
+        )
+        
+        # Create mock conference with future deadline
+        conference = create_mock_conference(
+            "conf1", "Test Conference", 
+            {SubmissionType.PAPER: date(2026, 6, 1)}  # Use future deadline in 2026
+        )
+        
+        # Create config with working days disabled
+        config = create_mock_config(
+            [submission], 
+            [conference],
+            scheduling_options={"enable_working_days_only": False}
+        )
+        
+        scheduler: Any = BacktrackingGreedyScheduler(config)
+        
+        # Debug: Check deadline calculation
+        deadline = conference.deadlines[SubmissionType.PAPER]
+        duration = submission.get_duration_days(config)
+        latest_start = deadline - timedelta(days=duration)
+        print(f"Deadline: {deadline}")
+        print(f"Duration: {duration} days")
+        print(f"Latest start: {latest_start}")
+        print(f"Earliest start: {submission.earliest_start_date}")
+        print(f"Today: {date.today()}")
+        
+        # This test should help us understand the issue
+        assert latest_start > date.today(), "Latest start should be in the future"
