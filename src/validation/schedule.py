@@ -1,7 +1,7 @@
 """Schedule validation functions for complete schedule analysis."""
 
 from typing import Dict, Any
-from datetime import date
+from datetime import date, timedelta
 
 from src.core.models import Config, Submission, ConstraintValidationResult
 from src.core.constants import QUALITY_CONSTANTS
@@ -197,6 +197,105 @@ def _calculate_average_daily_load(schedule: Dict[str, date], config: Config) -> 
     
     total_load = sum(daily_load.values())
     return total_load / len(daily_load)
+
+
+def _calculate_schedule_makespan(schedule: Dict[str, date], config: Config) -> int:
+    """Calculate the makespan (total duration) of the schedule."""
+    if not schedule:
+        return 0
+    
+    start_dates = list(schedule.values())
+    end_dates = []
+    
+    for submission_id, start_date in schedule.items():
+        submission = config.submissions_dict.get(submission_id)
+        if submission:
+            duration_days = submission.get_duration_days(config)
+            end_date = start_date + timedelta(days=duration_days)
+            end_dates.append(end_date)
+    
+    if not end_dates:
+        return 0
+    
+    earliest_start = min(start_dates)
+    latest_end = max(end_dates)
+    makespan = (latest_end - earliest_start).days
+    
+    return max(0, makespan)
+
+
+def _calculate_schedule_utilization(schedule: Dict[str, date], config: Config) -> float:
+    """Calculate the resource utilization rate of the schedule."""
+    if not schedule:
+        return 0.0
+    
+    # Calculate total work days
+    start_dates = list(schedule.values())
+    end_dates = []
+    
+    for submission_id, start_date in schedule.items():
+        submission = config.submissions_dict.get(submission_id)
+        if submission:
+            duration_days = submission.get_duration_days(config)
+            end_date = start_date + timedelta(days=duration_days)
+            end_dates.append(end_date)
+    
+    if not end_dates:
+        return 0.0
+    
+    earliest_start = min(start_dates)
+    latest_end = max(end_dates)
+    total_days = (latest_end - earliest_start).days
+    
+    if total_days <= 0:
+        return 0.0
+    
+    # Calculate total work effort
+    total_effort = 0
+    for submission_id, start_date in schedule.items():
+        submission = config.submissions_dict.get(submission_id)
+        if submission:
+            duration_days = submission.get_duration_days(config)
+            total_effort += duration_days
+    
+    # Calculate utilization rate
+    max_possible_effort = total_days * config.max_concurrent_submissions
+    utilization_rate = total_effort / max_possible_effort if max_possible_effort > 0 else 0.0
+    
+    return min(1.0, max(0.0, utilization_rate))
+
+
+def _calculate_schedule_efficiency(schedule: Dict[str, date], config: Config) -> float:
+    """Calculate the overall efficiency score of the schedule."""
+    if not schedule:
+        return 0.0
+    
+    # Calculate various efficiency metrics
+    makespan = _calculate_schedule_makespan(schedule, config)
+    utilization = _calculate_schedule_utilization(schedule, config)
+    
+    # Calculate deadline compliance
+    deadline_violations = 0
+    total_submissions = 0
+    
+    for submission_id, start_date in schedule.items():
+        submission = config.submissions_dict.get(submission_id)
+        if submission and submission.conference_id:
+            total_submissions += 1
+            conference = config.conferences_dict.get(submission.conference_id)
+            if conference and submission.kind in conference.deadlines:
+                deadline = conference.deadlines[submission.kind]
+                duration_days = submission.get_duration_days(config)
+                end_date = start_date + timedelta(days=duration_days)
+                if end_date > deadline:
+                    deadline_violations += 1
+    
+    deadline_compliance = 1.0 - (deadline_violations / total_submissions) if total_submissions > 0 else 1.0
+    
+    # Calculate overall efficiency score
+    efficiency_score = (utilization * 0.4 + deadline_compliance * 0.4 + (1.0 / (1.0 + makespan / 365)) * 0.2)
+    
+    return max(0.0, min(1.0, efficiency_score))
 
 
 def _validate_schedule_constraints_structured(schedule: Dict[str, date], config: Config) -> ConstraintValidationResult:

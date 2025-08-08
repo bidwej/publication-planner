@@ -219,17 +219,23 @@ class TestReports:
     
     def test_calculate_overall_score(self):
         """Test calculating overall score from validation results."""
-        # Mock validation results
-        deadline_validation = MagicMock()
-        deadline_validation.is_valid = True
-        deadline_validation.compliance_rate = 100.0
+        # Mock validation results as dictionaries
+        deadline_validation = {
+            "is_valid": True,
+            "compliance_rate": 100.0,
+            "violations": []
+        }
         
-        dependency_validation = MagicMock()
-        dependency_validation.is_valid = True
-        dependency_validation.satisfaction_rate = 100.0
+        dependency_validation = {
+            "is_valid": True,
+            "satisfaction_rate": 100.0,
+            "violations": []
+        }
         
-        resource_validation = MagicMock()
-        resource_validation.is_valid = True
+        resource_validation = {
+            "is_valid": True,
+            "violations": []
+        }
         
         penalty_breakdown = MagicMock()
         penalty_breakdown.total_penalty = 0.0
@@ -247,17 +253,23 @@ class TestReports:
     
     def test_calculate_overall_score_with_violations(self):
         """Test calculating overall score with violations."""
-        # Mock validation results with violations
-        deadline_validation = MagicMock()
-        deadline_validation.is_valid = False
-        deadline_validation.compliance_rate = 50.0
+        # Mock validation results with violations as dictionaries
+        deadline_validation = {
+            "is_valid": False,
+            "compliance_rate": 50.0,
+            "violations": ["violation1", "violation2"]
+        }
         
-        dependency_validation = MagicMock()
-        dependency_validation.is_valid = False
-        dependency_validation.satisfaction_rate = 75.0
+        dependency_validation = {
+            "is_valid": False,
+            "satisfaction_rate": 75.0,
+            "violations": ["violation3"]
+        }
         
-        resource_validation = MagicMock()
-        resource_validation.is_valid = True
+        resource_validation = {
+            "is_valid": True,
+            "violations": []
+        }
         
         penalty_breakdown = MagicMock()
         penalty_breakdown.total_penalty = 1000.0

@@ -74,111 +74,184 @@ def generate_schedule_summary_table(schedule: Dict[str, date], config: Config) -
 
 
 def generate_schedule_table(schedule: Dict[str, date], config: Config) -> List[Dict[str, str]]:
-    """Generate a comprehensive schedule table."""
+    """Generate a table showing the schedule assignments."""
     if not schedule:
         return []
     
-    table = []
-    sub_map = {s.id: s for s in config.submissions}
-    
-    for sid, start_date in sorted(schedule.items(), key=lambda x: x[1]):
-        sub = sub_map.get(sid)
-        if not sub:
-            continue
+    table_data = []
+    for submission_id, start_date in sorted(schedule.items()):
+        submission = config.submissions_dict.get(submission_id)
+        if submission:
+            duration_days = submission.get_duration_days(config)
+            end_date = start_date + timedelta(days=duration_days)
             
-        # Calculate end date
-        duration = config.min_paper_lead_time_days if sub.kind == SubmissionType.PAPER else 0
-        end_date = start_date + timedelta(days=duration)
-        
-        # Get conference info
-        conf_name = "N/A"
-        if sub.conference_id and sub.conference_id in config.conferences_dict:
-            conf_name = config.conferences_dict[sub.conference_id].name
-        
-        table.append({
-            "ID": sid,
-            "Title": sub.title[:DISPLAY_CONSTANTS.max_title_length] + ("" if len(sub.title) > DISPLAY_CONSTANTS.max_title_length else ""),
-            "Type": sub.kind.value.title(),
-            "Conference": conf_name,
-            "Start Date": start_date.strftime("%Y-%m-%d"),
-            "End Date": end_date.strftime("%Y-%m-%d"),
-            "Duration (days)": str(duration),
-            "Engineering": "Yes" if sub.engineering else "No"
-        })
+            # Get conference info
+            conference_name = "N/A"
+            if submission.conference_id:
+                conference = config.conferences_dict.get(submission.conference_id)
+                if conference:
+                    conference_name = conference.name
+            
+            table_data.append({
+                "ID": submission_id,
+                "Title": submission.title[:50] + "..." if len(submission.title) > 50 else submission.title,
+                "Type": submission.kind.value.title(),
+                "Start Date": start_date.strftime("%Y-%m-%d"),
+                "End Date": end_date.strftime("%Y-%m-%d"),
+                "Duration (days)": str(duration_days),
+                "Conference": conference_name,
+                "Status": "Scheduled"
+            })
     
-    return table
+    return table_data
 
 
 def generate_metrics_table(schedule: Dict[str, date], config: Config) -> List[Dict[str, str]]:
-    """Generate metrics summary table."""
+    """Generate a table showing schedule metrics."""
     if not schedule:
         return []
     
-    # Calculate basic metrics
+    # Calculate metrics
     total_submissions = len(schedule)
-    abstracts = papers = 0
-    sub_map = {s.id: s for s in config.submissions}
+    start_dates = list(schedule.values())
+    end_dates = []
     
-    for sid in schedule:
-        sub = sub_map.get(sid)
-        if sub:
-            if sub.kind == SubmissionType.ABSTRACT:
-                abstracts += 1
-            elif sub.kind == SubmissionType.PAPER:
-                papers += 1
+    for submission_id, start_date in schedule.items():
+        submission = config.submissions_dict.get(submission_id)
+        if submission:
+            duration_days = submission.get_duration_days(config)
+            end_date = start_date + timedelta(days=duration_days)
+            end_dates.append(end_date)
     
-    # Calculate date range
-    start_date = min(schedule.values())
-    end_date = max(schedule.values())
-    duration = (end_date - start_date).days
+    if not end_dates:
+        return []
     
-    return [
+    earliest_start = min(start_dates)
+    latest_end = max(end_dates)
+    schedule_span = (latest_end - earliest_start).days
+    
+    # Calculate deadline compliance
+    deadline_violations = 0
+    total_with_deadlines = 0
+    
+    for submission_id, start_date in schedule.items():
+        submission = config.submissions_dict.get(submission_id)
+        if submission and submission.conference_id:
+            conference = config.conferences_dict.get(submission.conference_id)
+            if conference and submission.kind in conference.deadlines:
+                total_with_deadlines += 1
+                deadline = conference.deadlines[submission.kind]
+                duration_days = submission.get_duration_days(config)
+                end_date = start_date + timedelta(days=duration_days)
+                if end_date > deadline:
+                    deadline_violations += 1
+    
+    compliance_rate = (1.0 - (deadline_violations / total_with_deadlines)) * 100 if total_with_deadlines > 0 else 100.0
+    
+    table_data = [
         {"Metric": "Total Submissions", "Value": str(total_submissions)},
-        {"Metric": "Abstracts", "Value": str(abstracts)},
-        {"Metric": "Papers", "Value": str(papers)},
-        {"Metric": "Start Date", "Value": start_date.strftime("%Y-%m-%d")},
-        {"Metric": "End Date", "Value": end_date.strftime("%Y-%m-%d")},
-        {"Metric": "Duration (days)", "Value": str(duration)},
-        {"Metric": "Avg Submissions/Day", "Value": f"{total_submissions/duration:.2f}" if duration > 0 else "N/A"}
+        {"Metric": "Schedule Span (days)", "Value": str(schedule_span)},
+        {"Metric": "Earliest Start", "Value": earliest_start.strftime("%Y-%m-%d")},
+        {"Metric": "Latest End", "Value": latest_end.strftime("%Y-%m-%d")},
+        {"Metric": "Deadline Compliance", "Value": f"{compliance_rate:.1f}%"},
+        {"Metric": "Violations", "Value": str(deadline_violations)},
+        {"Metric": "Max Concurrent", "Value": str(config.max_concurrent_submissions)}
     ]
+    
+    return table_data
 
 
 def generate_deadline_table(schedule: Dict[str, date], config: Config) -> List[Dict[str, str]]:
-    """Generate deadline compliance table."""
+    """Generate a table showing deadline information."""
     if not schedule:
         return []
     
-    table = []
-    sub_map = {s.id: s for s in config.submissions}
+    table_data = []
+    for submission_id, start_date in sorted(schedule.items()):
+        submission = config.submissions_dict.get(submission_id)
+        if submission and submission.conference_id:
+            conference = config.conferences_dict.get(submission.conference_id)
+            if conference and submission.kind in conference.deadlines:
+                deadline = conference.deadlines[submission.kind]
+                duration_days = submission.get_duration_days(config)
+                end_date = start_date + timedelta(days=duration_days)
+                days_until_deadline = (deadline - end_date).days
+                status = "On Time" if days_until_deadline >= 0 else "Late"
+                
+                table_data.append({
+                    "Submission": submission_id,
+                    "Conference": conference.name,
+                    "Type": submission.kind.value.title(),
+                    "Start Date": start_date.strftime("%Y-%m-%d"),
+                    "End Date": end_date.strftime("%Y-%m-%d"),
+                    "Deadline": deadline.strftime("%Y-%m-%d"),
+                    "Days Until Deadline": str(days_until_deadline),
+                    "Status": status
+                })
     
-    for sid, start_date in schedule.items():
-        sub = sub_map.get(sid)
-        if not sub or not sub.conference_id or sub.conference_id not in config.conferences_dict:
-            continue
-        
-        conf = config.conferences_dict[sub.conference_id]
-        if sub.kind not in conf.deadlines:
-            continue
-        
-        deadline = conf.deadlines[sub.kind]
-        duration = config.min_paper_lead_time_days if sub.kind == SubmissionType.PAPER else 0
-        end_date = start_date + timedelta(days=duration)
-        
-        status = "On Time" if end_date <= deadline else "Late"
-        days_diff = (end_date - deadline).days if end_date > deadline else 0
-        
-        table.append({
-            "Submission": sid,
-            "Title": sub.title[:DISPLAY_CONSTANTS.max_title_length] + ("" if len(sub.title) > DISPLAY_CONSTANTS.max_title_length else ""),
-            "Conference": conf.name,
-            "Type": sub.kind.value.title(),
-            "Deadline": deadline.strftime("%Y-%m-%d"),
-            "End Date": end_date.strftime("%Y-%m-%d"),
-            "Status": status,
-            "Days Late": str(days_diff) if status == "Late" else "0"
-        })
+    return table_data
+
+
+def generate_violations_table(validation_result: Dict[str, Any]) -> List[Dict[str, str]]:
+    """Generate a table showing constraint violations."""
+    if not validation_result or "constraints" not in validation_result:
+        return []
     
-    return sorted(table, key=lambda x: x["Days Late"], reverse=True)
+    table_data = []
+    constraints = validation_result["constraints"]
+    
+    # Process deadline violations
+    if "deadlines" in constraints:
+        for violation in constraints["deadlines"].get("violations", []):
+            table_data.append({
+                "Type": "Deadline",
+                "Submission": violation.get("submission_id", "Unknown"),
+                "Description": violation.get("description", "Unknown"),
+                "Severity": violation.get("severity", "medium"),
+                "Days Late": str(violation.get("days_late", 0))
+            })
+    
+    # Process dependency violations
+    if "dependencies" in constraints:
+        for violation in constraints["dependencies"].get("violations", []):
+            table_data.append({
+                "Type": "Dependency",
+                "Submission": violation.get("submission_id", "Unknown"),
+                "Description": violation.get("description", "Unknown"),
+                "Severity": violation.get("severity", "medium"),
+                "Dependency": violation.get("dependency_id", "Unknown")
+            })
+    
+    # Process resource violations
+    if "resources" in constraints:
+        for violation in constraints["resources"].get("violations", []):
+            table_data.append({
+                "Type": "Resource",
+                "Submission": violation.get("submission_id", "Unknown"),
+                "Description": violation.get("description", "Unknown"),
+                "Severity": violation.get("severity", "medium"),
+                "Load": str(violation.get("load", 0)),
+                "Limit": str(violation.get("limit", 0))
+            })
+    
+    return table_data
+
+
+def generate_penalties_table(penalty_breakdown: Dict[str, float]) -> List[Dict[str, str]]:
+    """Generate a table showing penalty breakdown."""
+    if not penalty_breakdown:
+        return []
+    
+    table_data = []
+    for penalty_type, amount in penalty_breakdown.items():
+        if amount > 0:  # Only show non-zero penalties
+            table_data.append({
+                "Penalty Type": penalty_type.replace("_", " ").title(),
+                "Amount": f"${amount:,.2f}",
+                "Percentage": f"{(amount / penalty_breakdown.get('total_penalty', 1)) * 100:.1f}%"
+            })
+    
+    return table_data
 
 
 # ============================================================================

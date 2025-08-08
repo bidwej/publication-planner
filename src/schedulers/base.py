@@ -316,9 +316,8 @@ class BaseScheduler(ABC):
                 
                 # Check if conference requires abstract before paper
                 if conf.requires_abstract_before_paper():
-                    # Generate abstract ID using simplified format
-                    base_paper_id = submission_id.split('-')[0]  # Get base paper ID (e.g., "J1" from "J1-pap-icml")
-                    abstract_id = f"{base_paper_id}-abs"
+                    # Generate abstract ID using full format with conference
+                    abstract_id = generate_abstract_id(submission_id, submission.conference_id)
                     
                     # Check if abstract already exists
                     if abstract_id not in submissions_dict:
@@ -328,7 +327,7 @@ class BaseScheduler(ABC):
                             self.config.penalty_costs or {}
                         )
                         
-                        # Update abstract ID to use simplified format
+                        # Update abstract ID to use full format
                         abstract_submission.id = abstract_id
                         
                         # Add to config submissions

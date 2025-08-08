@@ -242,16 +242,16 @@ def _validate_venue_compatibility(submissions: Dict[str, Submission],
             # Papers should have conference_id or candidate_conferences
             if submission.conference_id:
                 if submission.conference_id not in conferences:
-                    raise ValueError(f"Paper {sub_id} references unknown conference {submission.conference_id}")
+                    raise ValueError(f"Submission {sub_id} references unknown conference {submission.conference_id}")
                 conf = conferences[submission.conference_id]
                 if not conf.accepts_submission_type(SubmissionType.PAPER):
-                    raise ValueError(f"Paper {sub_id} not compatible with conference {submission.conference_id}")
+                    raise ValueError(f"Submission {sub_id} not compatible with conference {submission.conference_id}")
             elif submission.candidate_conferences:
                 # Validate against candidate conferences
                 for conf_id in submission.candidate_conferences:
                     if conf_id in conferences:
                         conf = conferences[conf_id]
                         if not conf.accepts_submission_type(SubmissionType.PAPER):
-                            raise ValueError(f"Paper {sub_id} not compatible with conference {conf_id}")
+                            raise ValueError(f"Submission {sub_id} not compatible with conference {conf_id}")
             else:
-                raise ValueError(f"Paper {sub_id} must have either conference_id or candidate_conferences")
+                raise ValueError(f"Submission {sub_id} must have either conference_id or candidate_conferences")

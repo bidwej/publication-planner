@@ -179,7 +179,17 @@ def _calculate_blackout_penalties(comprehensive_result: Dict[str, Any], config: 
     penalty_costs = config.penalty_costs or {}
     penalty_per_violation = penalty_costs.get("blackout_violation_penalty", 100.0)
     
-    return len(violations) * penalty_per_violation
+    total_penalty = len(violations) * penalty_per_violation
+    
+    # Add additional penalties for each violation based on severity
+    for violation in violations:
+        severity = violation.get("severity", "medium")
+        if severity == "high":
+            total_penalty += penalty_per_violation * 2
+        elif severity == "low":
+            total_penalty += penalty_per_violation * 0.5
+    
+    return total_penalty
 
 
 def _calculate_soft_block_penalties(comprehensive_result: Dict[str, Any], config: Config) -> float:
@@ -192,7 +202,15 @@ def _calculate_soft_block_penalties(comprehensive_result: Dict[str, Any], config
     penalty_costs = config.penalty_costs or {}
     penalty_per_violation = penalty_costs.get("soft_block_violation_penalty", 200.0)
     
-    return len(violations) * penalty_per_violation
+    total_penalty = len(violations) * penalty_per_violation
+    
+    # Add penalties based on violation details
+    for violation in violations:
+        days_violation = violation.get("days_violation", 0)
+        if days_violation > 0:
+            total_penalty += days_violation * penalty_per_violation * 0.1
+    
+    return total_penalty
 
 
 def _calculate_single_conference_penalties(comprehensive_result: Dict[str, Any], config: Config) -> float:
@@ -205,7 +223,15 @@ def _calculate_single_conference_penalties(comprehensive_result: Dict[str, Any],
     penalty_costs = config.penalty_costs or {}
     penalty_per_violation = penalty_costs.get("single_conference_violation_penalty", 500.0)
     
-    return len(violations) * penalty_per_violation
+    total_penalty = len(violations) * penalty_per_violation
+    
+    # Add penalties based on conference prestige
+    for violation in violations:
+        conference_id = violation.get("conference_id", "")
+        if "ICML" in conference_id or "NeurIPS" in conference_id or "CVPR" in conference_id:
+            total_penalty += penalty_per_violation * 1.5  # Higher penalty for top-tier conferences
+    
+    return total_penalty
 
 
 def _calculate_lead_time_penalties(comprehensive_result: Dict[str, Any], config: Config) -> float:
@@ -218,7 +244,15 @@ def _calculate_lead_time_penalties(comprehensive_result: Dict[str, Any], config:
     penalty_costs = config.penalty_costs or {}
     penalty_per_violation = penalty_costs.get("lead_time_violation_penalty", 150.0)
     
-    return len(violations) * penalty_per_violation
+    total_penalty = len(violations) * penalty_per_violation
+    
+    # Add penalties based on lead time shortage
+    for violation in violations:
+        days_shortage = violation.get("days_shortage", 0)
+        if days_shortage > 0:
+            total_penalty += days_shortage * penalty_per_violation * 0.2
+    
+    return total_penalty
 
 
 def _calculate_conference_compatibility_penalties(comprehensive_result: Dict[str, Any], config: Config) -> float:
@@ -231,7 +265,17 @@ def _calculate_conference_compatibility_penalties(comprehensive_result: Dict[str
     penalty_costs = config.penalty_costs or {}
     penalty_per_violation = penalty_costs.get("conference_compatibility_penalty", 300.0)
     
-    return len(violations) * penalty_per_violation
+    total_penalty = len(violations) * penalty_per_violation
+    
+    # Add penalties based on compatibility issues
+    for violation in violations:
+        issue_type = violation.get("issue", "general")
+        if issue_type == "submission_type_mismatch":
+            total_penalty += penalty_per_violation * 1.5
+        elif issue_type == "deadline_mismatch":
+            total_penalty += penalty_per_violation * 1.2
+    
+    return total_penalty
 
 
 def _calculate_abstract_paper_dependency_penalties(comprehensive_result: Dict[str, Any], config: Config) -> float:
@@ -244,7 +288,17 @@ def _calculate_abstract_paper_dependency_penalties(comprehensive_result: Dict[st
     penalty_costs = config.penalty_costs or {}
     penalty_per_violation = penalty_costs.get("abstract_paper_dependency_penalty", 400.0)
     
-    return len(violations) * penalty_per_violation
+    total_penalty = len(violations) * penalty_per_violation
+    
+    # Add penalties based on dependency issues
+    for violation in violations:
+        issue_type = violation.get("issue", "missing_dependency")
+        if issue_type == "missing_dependency":
+            total_penalty += penalty_per_violation * 2.0  # High penalty for missing dependencies
+        elif issue_type == "timing_violation":
+            total_penalty += penalty_per_violation * 1.5  # Medium penalty for timing issues
+    
+    return total_penalty
 
 
 def _calculate_slack_cost_penalties(schedule: Dict[str, date], config: Config) -> float:
