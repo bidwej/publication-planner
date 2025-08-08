@@ -1,7 +1,7 @@
 """Pytest configuration and shared fixtures for all tests."""
 from datetime import date
 from pathlib import Path
-from typing import Optional
+from typing import Dict, List, Optional, Any
 
 import pytest
 
@@ -12,24 +12,30 @@ from src.core.models import (
 
 
 @pytest.fixture
-def test_root_dir():
+def test_root_dir() -> Path:
     """Fixture to provide the test root directory."""
     return Path(__file__).parent
 
 
 @pytest.fixture
-def project_root_dir():
+def project_root_dir() -> Path:
     """Fixture to provide the project root directory."""
     return Path(__file__).parent.parent
 
 
 @pytest.fixture
-def temp_dir(tmp_path):
+def temp_dir(tmp_path: Path) -> Path:
     """Fixture to provide a temporary directory for testing."""
     return tmp_path
 
 
-def create_mock_submission(submission_id: str, title: str, submission_type, conference_id: Optional[str], **kwargs):
+def create_mock_submission(
+    submission_id: str, 
+    title: str, 
+    submission_type: Any, 
+    conference_id: Optional[str], 
+    **kwargs: Any
+) -> Submission:
     """Create a mock submission for testing."""
     if isinstance(submission_type, str):
         submission_type = SubmissionType(submission_type)
@@ -43,7 +49,12 @@ def create_mock_submission(submission_id: str, title: str, submission_type, conf
     )
 
 
-def create_mock_conference(conference_id: str, name: str, deadlines: dict, **kwargs):
+def create_mock_conference(
+    conference_id: str, 
+    name: str, 
+    deadlines: Dict[Any, date], 
+    **kwargs: Any
+) -> Conference:
     """Create a mock conference for testing."""
     return Conference(
         id=conference_id,
@@ -54,7 +65,11 @@ def create_mock_conference(conference_id: str, name: str, deadlines: dict, **kwa
     )
 
 
-def create_mock_config(submissions=None, conferences=None, **kwargs):
+def create_mock_config(
+    submissions: Optional[List[Submission]] = None, 
+    conferences: Optional[List[Conference]] = None, 
+    **kwargs: Any
+) -> Config:
     """Create a mock config for testing."""
     if submissions is None:
         submissions = []
@@ -77,16 +92,16 @@ def create_mock_config(submissions=None, conferences=None, **kwargs):
 
 
 @pytest.fixture
-def empty_config():
+def empty_config() -> Config:
     """Fixture to provide an empty configuration for testing."""
     return Config.create_default()
 
 
 @pytest.fixture
-def sample_config():
+def sample_config() -> Config:
     """Fixture to provide a sample configuration with test data."""
     # Create sample conferences
-    sample_conferences = [
+    sample_conferences: List[Conference] = [
         Conference(
             id="ICRA2026",
             name="IEEE International Conference on Robotics and Automation 2026",
@@ -110,7 +125,7 @@ def sample_config():
     ]
     
     # Create sample submissions
-    sample_submissions = [
+    sample_submissions: List[Submission] = [
         Submission(
             id="mod1-wrk",
             title="Endoscope Navigation Module",
@@ -150,13 +165,13 @@ def sample_config():
     ]
     
     # Default penalty costs
-    default_penalty_costs = {
+    default_penalty_costs: Dict[str, float] = {
         "default_mod_penalty_per_day": 1000.0,
         "default_paper_penalty_per_day": 2000.0
     }
     
     # Default priority weights
-    default_priority_weights = {
+    default_priority_weights: Dict[str, float] = {
         "engineering_paper": 2.0,
         "medical_paper": 1.0,
         "mod": 1.5,
@@ -164,7 +179,7 @@ def sample_config():
     }
     
     # Default scheduling options
-    default_scheduling_options = {
+    default_scheduling_options: Dict[str, bool] = {
         "enable_blackout_periods": False,
         "enable_early_abstract_scheduling": False,
         "enable_working_days_only": False,

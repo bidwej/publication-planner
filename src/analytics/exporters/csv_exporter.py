@@ -1,218 +1,440 @@
-"""Enhanced CSV export functionality."""
+"""CSV export functionality for Paper Planner."""
 
 from __future__ import annotations
 from typing import Dict, List, Any, Optional
-from datetime import date
-import csv
+from datetime import date, datetime
 from pathlib import Path
+import csv
+import json
 
-from src.core.models import Config
+from src.core.models import Config, ScheduleSummary, ScheduleMetrics
 from src.analytics.tables import (
-    generate_schedule_table,
-    generate_metrics_table,
-    generate_deadline_table,
-    generate_violations_table,
-    generate_penalties_table
+    generate_schedule_table, generate_metrics_table, generate_deadline_table,
+    generate_violations_table, generate_penalties_table
 )
-from src.analytics.analytics import (
-    analyze_schedule_completeness,
-    analyze_schedule_distribution,
-    analyze_submission_types,
-    analyze_timeline,
-    analyze_resources,
-    analyze_dependency_graph
-)
+from src.validation.deadline import validate_deadline_constraints
+from src.validation.resources import validate_resources_constraints
+from src.validation.venue import validate_venue_constraints
+from src.validation.schedule import validate_schedule_constraints
+from src.scoring.penalties import calculate_penalty_score
+from src.scoring.quality import calculate_quality_score
+from src.scoring.efficiency import calculate_efficiency_score
 
 
 class CSVExporter:
-    """Enhanced CSV export functionality."""
+    """Comprehensive CSV export functionality for Paper Planner."""
     
     def __init__(self, config: Config):
+        """Initialize CSV exporter with configuration."""
         self.config = config
     
-    def export_schedule_csv(self, schedule: Dict[str, date], filename: str) -> None:
-        """Export schedule to CSV format."""
-        table_data = generate_schedule_table(schedule, self.config)
+    def export_schedule_csv(self, schedule: Dict[str, date], output_dir: str, 
+                           filename: str = "schedule.csv") -> str:
+        """
+        Export schedule to CSV format with detailed submission information.
         
-        if not table_data:
-            return
-        
-        with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
-            fieldnames = table_data[0].keys()
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        Parameters
+        ----------
+        schedule : Dict[str, date]
+            Schedule mapping submission_id to start_date
+        output_dir : str
+            Output directory path
+        filename : str, optional
+            Output filename, default "schedule.csv"
             
-            writer.writeheader()
-            for row in table_data:
-                writer.writerow(row)
-    
-    def export_metrics_csv(self, schedule: Dict[str, date], filename: str) -> None:
-        """Export metrics to CSV format."""
-        # Get all analytics
-        completeness = analyze_schedule_completeness(schedule, self.config)
-        distribution = analyze_schedule_distribution(schedule, self.config)
-        submission_types = analyze_submission_types(schedule, self.config)
-        timeline = analyze_timeline(schedule, self.config)
-        resources = analyze_resources(schedule, self.config)
+        Returns
+        -------
+        str
+            Path to saved CSV file
+        """
+        filepath = Path(output_dir) / filename
         
-        # Create metrics data
+        # Get detailed schedule table
+        schedule_data = generate_schedule_table(schedule, self.config)
+        
+        if not schedule_data:
+            return ""
+        
+        with open(filepath, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=schedule_data[0].keys())
+            writer.writeheader()
+            writer.writerows(schedule_data)
+        
+        return str(filepath)
+    
+    def export_metrics_csv(self, schedule: Dict[str, date], output_dir: str,
+                          filename: str = "metrics.csv") -> str:
+        """
+        Export performance metrics to CSV format.
+        
+        Parameters
+        ----------
+        schedule : Dict[str, date]
+            Schedule mapping submission_id to start_date
+        output_dir : str
+            Output directory path
+        filename : str, optional
+            Output filename, default "metrics.csv"
+            
+        Returns
+        -------
+        str
+            Path to saved CSV file
+        """
+        filepath = Path(output_dir) / filename
+        
+        # Calculate comprehensive metrics
+        metrics_data = self._calculate_comprehensive_metrics(schedule)
+        
+        with open(filepath, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=metrics_data[0].keys())
+            writer.writeheader()
+            writer.writerows(metrics_data)
+        
+        return str(filepath)
+    
+    def export_deadline_csv(self, schedule: Dict[str, date], output_dir: str,
+                           filename: str = "deadlines.csv") -> str:
+        """
+        Export deadline compliance information to CSV format.
+        
+        Parameters
+        ----------
+        schedule : Dict[str, date]
+            Schedule mapping submission_id to start_date
+        output_dir : str
+            Output directory path
+        filename : str, optional
+            Output filename, default "deadlines.csv"
+            
+        Returns
+        -------
+        str
+            Path to saved CSV file
+        """
+        filepath = Path(output_dir) / filename
+        
+        # Get deadline table
+        deadline_data = generate_deadline_table(schedule, self.config)
+        
+        if not deadline_data:
+            return ""
+        
+        with open(filepath, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=deadline_data[0].keys())
+            writer.writeheader()
+            writer.writerows(deadline_data)
+        
+        return str(filepath)
+    
+    def export_violations_csv(self, schedule: Dict[str, date], output_dir: str,
+                             filename: str = "violations.csv") -> str:
+        """
+        Export constraint violations to CSV format.
+        
+        Parameters
+        ----------
+        schedule : Dict[str, date]
+            Schedule mapping submission_id to start_date
+        output_dir : str
+            Output directory path
+        filename : str, optional
+            Output filename, default "violations.csv"
+            
+        Returns
+        -------
+        str
+            Path to saved CSV file
+        """
+        filepath = Path(output_dir) / filename
+        
+        # Run comprehensive validation
+        validation_result = self._run_comprehensive_validation(schedule)
+        violations_data = generate_violations_table(validation_result)
+        
+        if not violations_data:
+            return ""
+        
+        with open(filepath, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=violations_data[0].keys())
+            writer.writeheader()
+            writer.writerows(violations_data)
+        
+        return str(filepath)
+    
+    def export_penalties_csv(self, schedule: Dict[str, date], output_dir: str,
+                            filename: str = "penalties.csv") -> str:
+        """
+        Export penalty breakdown to CSV format.
+        
+        Parameters
+        ----------
+        schedule : Dict[str, date]
+            Schedule mapping submission_id to start_date
+        output_dir : str
+            Output directory path
+        filename : str, optional
+            Output filename, default "penalties.csv"
+            
+        Returns
+        -------
+        str
+            Path to saved CSV file
+        """
+        filepath = Path(output_dir) / filename
+        
+        # Calculate penalty breakdown
+        penalty_result = calculate_penalty_score(schedule, self.config)
+        penalties_data = generate_penalties_table(penalty_result.breakdown)
+        
+        if not penalties_data:
+            return ""
+        
+        with open(filepath, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=penalties_data[0].keys())
+            writer.writeheader()
+            writer.writerows(penalties_data)
+        
+        return str(filepath)
+    
+    def export_comparison_csv(self, comparison_results: Dict[str, Any], output_dir: str,
+                             filename: str = "strategy_comparison.csv") -> str:
+        """
+        Export strategy comparison results to CSV format.
+        
+        Parameters
+        ----------
+        comparison_results : Dict[str, Any]
+            Results from strategy comparison
+        output_dir : str
+            Output directory path
+        filename : str, optional
+            Output filename, default "strategy_comparison.csv"
+            
+        Returns
+        -------
+        str
+            Path to saved CSV file
+        """
+        filepath = Path(output_dir) / filename
+        
+        comparison_data = self._format_comparison_data(comparison_results)
+        
+        if not comparison_data:
+            return ""
+        
+        with open(filepath, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=comparison_data[0].keys())
+            writer.writeheader()
+            writer.writerows(comparison_data)
+        
+        return str(filepath)
+    
+    def export_summary_csv(self, schedule: Dict[str, date], output_dir: str,
+                          filename: str = "summary.csv") -> str:
+        """
+        Export schedule summary to CSV format.
+        
+        Parameters
+        ----------
+        schedule : Dict[str, date]
+            Schedule mapping submission_id to start_date
+        output_dir : str
+            Output directory path
+        filename : str, optional
+            Output filename, default "summary.csv"
+            
+        Returns
+        -------
+        str
+            Path to saved CSV file
+        """
+        filepath = Path(output_dir) / filename
+        
+        summary_data = self._create_summary_data(schedule)
+        
+        with open(filepath, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=summary_data[0].keys())
+            writer.writeheader()
+            writer.writerows(summary_data)
+        
+        return str(filepath)
+    
+    def export_all_csv(self, schedule: Dict[str, date], output_dir: str) -> Dict[str, str]:
+        """
+        Export all CSV formats for a schedule.
+        
+        Parameters
+        ----------
+        schedule : Dict[str, date]
+            Schedule mapping submission_id to start_date
+        output_dir : str
+            Output directory path
+            
+        Returns
+        -------
+        Dict[str, str]
+            Mapping of file type to file path
+        """
+        saved_files = {}
+        
+        # Export all CSV formats
+        saved_files["schedule"] = self.export_schedule_csv(schedule, output_dir)
+        saved_files["metrics"] = self.export_metrics_csv(schedule, output_dir)
+        saved_files["deadlines"] = self.export_deadline_csv(schedule, output_dir)
+        saved_files["violations"] = self.export_violations_csv(schedule, output_dir)
+        saved_files["penalties"] = self.export_penalties_csv(schedule, output_dir)
+        saved_files["summary"] = self.export_summary_csv(schedule, output_dir)
+        
+        return saved_files
+    
+    def _calculate_comprehensive_metrics(self, schedule: Dict[str, date]) -> List[Dict[str, str]]:
+        """Calculate comprehensive metrics for CSV export."""
+        if not schedule:
+            return [{"Metric": "Total Submissions", "Value": "0"}]
+        
+        # Calculate various metrics
+        total_submissions = len(schedule)
+        start_date = min(schedule.values())
+        end_date = max(schedule.values())
+        schedule_span = (end_date - start_date).days
+        
+        # Calculate scores
+        penalty_result = calculate_penalty_score(schedule, self.config)
+        quality_score = calculate_quality_score(schedule, self.config)
+        efficiency_score = calculate_efficiency_score(schedule, self.config)
+        
+        # Calculate compliance
+        deadline_validation = validate_deadline_constraints(schedule, self.config)
+        resource_validation = validate_resources_constraints(schedule, self.config)
+        
         metrics_data = [
-            {
-                "Metric": "Total Submissions",
-                "Value": completeness.total_count,
-                "Category": "Completeness"
-            },
-            {
-                "Metric": "Scheduled Submissions", 
-                "Value": completeness.scheduled_count,
-                "Category": "Completeness"
-            },
-            {
-                "Metric": "Completion Rate (%)",
-                "Value": f"{completeness.completion_rate:.1f}",
-                "Category": "Completeness"
-            },
-            {
-                "Metric": "Timeline Duration (days)",
-                "Value": timeline.duration_days,
-                "Category": "Timeline"
-            },
-            {
-                "Metric": "Peak Daily Load",
-                "Value": resources.peak_load,
-                "Category": "Resources"
-            },
-            {
-                "Metric": "Average Daily Load",
-                "Value": f"{resources.avg_load:.1f}",
-                "Category": "Resources"
-            }
+            {"Metric": "Total Submissions", "Value": str(total_submissions)},
+            {"Metric": "Schedule Span (Days)", "Value": str(schedule_span)},
+            {"Metric": "Start Date", "Value": start_date.strftime("%Y-%m-%d")},
+            {"Metric": "End Date", "Value": end_date.strftime("%Y-%m-%d")},
+            {"Metric": "Total Penalty Score", "Value": f"{penalty_result.total_penalty:.2f}"},
+            {"Metric": "Quality Score", "Value": f"{quality_score:.2f}"},
+            {"Metric": "Efficiency Score", "Value": f"{efficiency_score:.2f}"},
+            {"Metric": "Deadline Compliance (%)", "Value": f"{deadline_validation.compliance_rate:.1f}"},
+            {"Metric": "Resource Utilization (%)", "Value": f"{(resource_validation.max_observed / resource_validation.max_concurrent * 100):.1f}"},
+            {"Metric": "Max Concurrent Submissions", "Value": str(resource_validation.max_observed)},
+            {"Metric": "Allowed Concurrent Submissions", "Value": str(resource_validation.max_concurrent)},
         ]
         
-        # Add submission type metrics
-        for sub_type, count in submission_types.type_counts.items():
-            metrics_data.append({
-                "Metric": f"{sub_type} Count",
-                "Value": count,
-                "Category": "Submission Types"
+        return metrics_data
+    
+    def _run_comprehensive_validation(self, schedule: Dict[str, date]) -> Dict[str, Any]:
+        """Run comprehensive validation on schedule."""
+        validation_result = {
+            "deadline_validation": validate_deadline_constraints(schedule, self.config),
+            "resource_validation": validate_resources_constraints(schedule, self.config),
+            "venue_validation": validate_venue_constraints(schedule, self.config),
+            "schedule_validation": validate_schedule_constraints(schedule, self.config)
+        }
+        
+        return validation_result
+    
+    def _format_comparison_data(self, comparison_results: Dict[str, Any]) -> List[Dict[str, str]]:
+        """Format strategy comparison data for CSV export."""
+        comparison_data = []
+        
+        for strategy_name, results in comparison_results.items():
+            if isinstance(results, dict) and "schedule" in results:
+                schedule = results["schedule"]
+                metrics = results.get("metrics", {})
+                
+                comparison_data.append({
+                    "Strategy": strategy_name,
+                    "Total Submissions": str(len(schedule)),
+                    "Schedule Span": str(metrics.get("schedule_span", 0)),
+                    "Penalty Score": f"{metrics.get('penalty_score', 0):.2f}",
+                    "Quality Score": f"{metrics.get('quality_score', 0):.2f}",
+                    "Efficiency Score": f"{metrics.get('efficiency_score', 0):.2f}",
+                    "Compliance Rate": f"{metrics.get('compliance_rate', 0):.1f}%",
+                    "Resource Utilization": f"{metrics.get('resource_utilization', 0):.1f}%"
+                })
+        
+        return comparison_data
+    
+    def _create_summary_data(self, schedule: Dict[str, date]) -> List[Dict[str, str]]:
+        """Create summary data for CSV export."""
+        if not schedule:
+            return [{"Category": "Status", "Value": "No Schedule"}]
+        
+        # Calculate summary statistics
+        total_submissions = len(schedule)
+        start_date = min(schedule.values())
+        end_date = max(schedule.values())
+        schedule_span = (end_date - start_date).days
+        
+        # Count by submission type
+        submission_types = {}
+        for sub_id in schedule.keys():
+            submission = self.config.submissions_dict.get(sub_id)
+            if submission:
+                sub_type = submission.kind.value
+                submission_types[sub_type] = submission_types.get(sub_type, 0) + 1
+        
+        summary_data = [
+            {"Category": "Total Submissions", "Value": str(total_submissions)},
+            {"Category": "Schedule Span", "Value": f"{schedule_span} days"},
+            {"Category": "Start Date", "Value": start_date.strftime("%Y-%m-%d")},
+            {"Category": "End Date", "Value": end_date.strftime("%Y-%m-%d")},
+        ]
+        
+        # Add submission type breakdown
+        for sub_type, count in submission_types.items():
+            summary_data.append({
+                "Category": f"{sub_type.title()} Submissions",
+                "Value": str(count)
             })
         
-        # Add monthly distribution
-        for month, count in distribution.monthly_distribution.items():
-            metrics_data.append({
-                "Metric": f"Submissions in {month}",
-                "Value": count,
-                "Category": "Distribution"
-            })
-        
-        with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
-            fieldnames = ["Metric", "Value", "Category"]
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            
-            writer.writeheader()
-            for row in metrics_data:
-                writer.writerow(row)
+        return summary_data
+
+
+def export_schedule_to_csv(schedule: Dict[str, date], config: Config, output_dir: str,
+                          filename: str = "schedule.csv") -> str:
+    """
+    Convenience function to export schedule to CSV.
     
-    def export_violations_csv(self, violations: List[Dict[str, Any]], filename: str) -> None:
-        """Export constraint violations to CSV format."""
-        if not violations:
-            return
+    Parameters
+    ----------
+    schedule : Dict[str, date]
+        Schedule mapping submission_id to start_date
+    config : Config
+        Configuration object
+    output_dir : str
+        Output directory path
+    filename : str, optional
+        Output filename, default "schedule.csv"
         
-        with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
-            fieldnames = violations[0].keys()
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            
-            writer.writeheader()
-            for violation in violations:
-                writer.writerow(violation)
+    Returns
+    -------
+    str
+        Path to saved CSV file
+    """
+    exporter = CSVExporter(config)
+    return exporter.export_schedule_csv(schedule, output_dir, filename)
+
+
+def export_all_csv_formats(schedule: Dict[str, date], config: Config, output_dir: str) -> Dict[str, str]:
+    """
+    Convenience function to export all CSV formats.
     
-    def export_penalties_csv(self, penalties: List[Dict[str, Any]], filename: str) -> None:
-        """Export penalty breakdown to CSV format."""
-        if not penalties:
-            return
+    Parameters
+    ----------
+    schedule : Dict[str, date]
+        Schedule mapping submission_id to start_date
+    config : Config
+        Configuration object
+    output_dir : str
+        Output directory path
         
-        with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
-            fieldnames = penalties[0].keys()
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            
-            writer.writeheader()
-            for penalty in penalties:
-                writer.writerow(penalty)
-    
-    def export_dependency_graph_csv(self, filename: str) -> None:
-        """Export dependency graph analysis to CSV format."""
-        graph_analysis = analyze_dependency_graph(self.config)
-        
-        # Create dependency data
-        dependency_data = []
-        for node_id, node in graph_analysis.nodes.items():
-            dependency_data.append({
-                "Submission ID": node_id,
-                "Dependencies": ", ".join(node.dependencies) if node.dependencies else "None",
-                "Dependents": ", ".join(node.dependents) if node.dependents else "None",
-                "Depth": node.depth,
-                "Critical Path": "Yes" if node.critical_path else "No",
-                "Is Bottleneck": "Yes" if node_id in graph_analysis.bottlenecks else "No",
-                "Is Isolated": "Yes" if node_id in graph_analysis.isolated_nodes else "No"
-            })
-        
-        with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
-            fieldnames = ["Submission ID", "Dependencies", "Dependents", "Depth", 
-                         "Critical Path", "Is Bottleneck", "Is Isolated"]
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            
-            writer.writeheader()
-            for row in dependency_data:
-                writer.writerow(row)
-    
-    def export_comparison_csv(self, comparison_results: List[Dict[str, Any]], filename: str) -> None:
-        """Export strategy comparison results to CSV format."""
-        if not comparison_results:
-            return
-        
-        with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
-            fieldnames = comparison_results[0].keys()
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            
-            writer.writeheader()
-            for result in comparison_results:
-                writer.writerow(result)
-    
-    def export_all_csv(self, schedule: Dict[str, date], output_dir: str) -> None:
-        """Export all CSV files to a directory."""
-        output_path = Path(output_dir)
-        output_path.mkdir(parents=True, exist_ok=True)
-        
-        # Export schedule
-        self.export_schedule_csv(schedule, output_path / "schedule.csv")
-        
-        # Export metrics
-        self.export_metrics_csv(schedule, output_path / "metrics.csv")
-        
-        # Export dependency graph
-        self.export_dependency_graph_csv(output_path / "dependency_graph.csv")
-        
-        # Export deadlines
-        deadline_data = generate_deadline_table(self.config)
-        if deadline_data:
-            with open(output_path / "deadlines.csv", 'w', newline='', encoding='utf-8') as csvfile:
-                fieldnames = deadline_data[0].keys()
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-                writer.writeheader()
-                for row in deadline_data:
-                    writer.writerow(row)
-    
-    def export_custom_csv(self, data: List[Dict[str, Any]], filename: str, 
-                         fieldnames: Optional[List[str]] = None) -> None:
-        """Export custom data to CSV format."""
-        if not data:
-            return
-        
-        if not fieldnames:
-            fieldnames = data[0].keys()
-        
-        with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            
-            writer.writeheader()
-            for row in data:
-                writer.writerow(row)
+    Returns
+    -------
+    Dict[str, str]
+        Mapping of file type to file path
+    """
+    exporter = CSVExporter(config)
+    return exporter.export_all_csv(schedule, output_dir)

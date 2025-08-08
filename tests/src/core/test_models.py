@@ -1,6 +1,8 @@
 """Tests for core models."""
 
 from datetime import date
+from typing import Dict, List, Any, Optional
+
 from src.core.models import (
     Config, Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence,
     ValidationResult, ScoringResult, ScheduleResult, ScheduleSummary, ScheduleMetrics,
@@ -11,7 +13,7 @@ from src.core.models import (
 class TestScheduleType:
     """Test schedule type definitions."""
     
-    def test_schedule_type(self):
+    def test_schedule_type(self) -> None:
         """Test that schedule type is properly defined."""
         assert isinstance(SubmissionType.PAPER, SubmissionType)
         assert isinstance(SubmissionType.ABSTRACT, SubmissionType)
@@ -21,24 +23,24 @@ class TestScheduleType:
 class TestEnums:
     """Test enum definitions."""
     
-    def test_submission_type_enum(self):
+    def test_submission_type_enum(self) -> None:
         """Test submission type enum values."""
         assert SubmissionType.PAPER == "paper"
         assert SubmissionType.ABSTRACT == "abstract"
         assert SubmissionType.POSTER == "poster"
     
-    def test_conference_type_enum(self):
+    def test_conference_type_enum(self) -> None:
         """Test conference type enum values."""
         assert ConferenceType.MEDICAL == "MEDICAL"
         assert ConferenceType.ENGINEERING == "ENGINEERING"
     
-    def test_conference_recurrence_enum(self):
+    def test_conference_recurrence_enum(self) -> None:
         """Test conference recurrence enum values."""
         assert ConferenceRecurrence.ANNUAL == "annual"
         assert ConferenceRecurrence.BIENNIAL == "biennial"
         assert ConferenceRecurrence.QUARTERLY == "quarterly"
     
-    def test_scheduler_strategy_enum(self):
+    def test_scheduler_strategy_enum(self) -> None:
         """Test scheduler strategy enum values."""
         from core.models import SchedulerStrategy
         assert SchedulerStrategy.GREEDY == "greedy"
@@ -49,9 +51,9 @@ class TestEnums:
 class TestSubmission:
     """Test Submission model."""
     
-    def test_submission_creation(self):
+    def test_submission_creation(self) -> None:
         """Test basic submission creation."""
-        submission = Submission(
+        submission: Submission = Submission(
             id="test-pap",
             title="Test Paper",
             kind=SubmissionType.PAPER,
@@ -64,9 +66,9 @@ class TestSubmission:
         assert submission.conference_id == "conf1"
         assert submission.depends_on == []
     
-    def test_submission_with_dependencies(self):
+    def test_submission_with_dependencies(self) -> None:
         """Test submission with dependencies."""
-        submission = Submission(
+        submission: Submission = Submission(
             id="test-pap",
             title="Test Paper",
             kind=SubmissionType.PAPER,
@@ -76,9 +78,9 @@ class TestSubmission:
         
         assert submission.depends_on == ["dep1", "dep2"]
     
-    def test_submission_defaults(self):
+    def test_submission_defaults(self) -> None:
         """Test submission default values."""
-        submission = Submission(
+        submission: Submission = Submission(
             id="test-pap",
             title="Test Paper",
             kind=SubmissionType.PAPER,
@@ -91,21 +93,21 @@ class TestSubmission:
         assert submission.engineering is False
         assert submission.earliest_start_date is None
     
-    def test_submission_validation_valid(self):
+    def test_submission_validation_valid(self) -> None:
         """Test submission validation with valid data."""
-        submission = Submission(
+        submission: Submission = Submission(
             id="test-pap",
             title="Test Paper",
             kind=SubmissionType.PAPER,
             conference_id="conf1"
         )
         
-        errors = submission.validate()
+        errors: List[str] = submission.validate()
         assert len(errors) == 0
     
-    def test_submission_validation_invalid(self):
+    def test_submission_validation_invalid(self) -> None:
         """Test submission validation with invalid data."""
-        submission = Submission(
+        submission: Submission = Submission(
             id="",
             title="",
             kind=SubmissionType.PAPER,
@@ -115,7 +117,7 @@ class TestSubmission:
             penalty_cost_per_day=-100
         )
         
-        errors = submission.validate()
+        errors: List[str] = submission.validate()
         assert len(errors) > 0
         assert any("Missing submission ID" in error for error in errors)
         assert any("Missing title" in error for error in errors)
@@ -124,9 +126,9 @@ class TestSubmission:
         assert any("Lead time from parents cannot be negative" in error for error in errors)
         assert any("Penalty cost per day cannot be negative" in error for error in errors)
     
-    def test_submission_priority_score(self):
+    def test_submission_priority_score(self) -> None:
         """Test submission priority score calculation."""
-        config = Config(
+        config: Config = Config(
             submissions=[],
             conferences=[],
             min_abstract_lead_time_days=30,
@@ -140,7 +142,7 @@ class TestSubmission:
         )
         
         # Test paper submission
-        paper_submission = Submission(
+        paper_submission: Submission = Submission(
             id="test-pap",
             title="Test Paper",
             kind=SubmissionType.PAPER,
@@ -149,7 +151,7 @@ class TestSubmission:
         assert paper_submission.get_priority_score(config) == 2.0
         
         # Test engineering paper
-        eng_paper = Submission(
+        eng_paper: Submission = Submission(
             id="test-eng",
             title="Engineering Paper",
             kind=SubmissionType.PAPER,
@@ -159,7 +161,7 @@ class TestSubmission:
         assert eng_paper.get_priority_score(config) == 3.0  # 2.0 * 1.5
         
         # Test abstract
-        abstract_submission = Submission(
+        abstract_submission: Submission = Submission(
             id="test-abs",
             title="Test Abstract",
             kind=SubmissionType.ABSTRACT,
@@ -171,7 +173,7 @@ class TestSubmission:
 class TestAbstractPaperDependencies:
     """Test abstract-paper dependency functionality."""
     
-    def test_generate_abstract_id(self):
+    def test_generate_abstract_id(self) -> None:
         """Test abstract ID generation."""
         from core.models import generate_abstract_id
         
@@ -183,7 +185,7 @@ class TestAbstractPaperDependencies:
         abstract_id = generate_abstract_id("paper1-pap-conf1", "conf2")
         assert abstract_id == "paper1-abs-conf2"
     
-    def test_create_abstract_submission(self):
+    def test_create_abstract_submission(self) -> None:
         """Test abstract submission creation."""
         from core.models import create_abstract_submission
         
@@ -209,11 +211,11 @@ class TestAbstractPaperDependencies:
         assert abstract.earliest_start_date == date(2024, 1, 1)
         assert abstract.candidate_conferences == ["conf1"]
     
-    def test_ensure_abstract_paper_dependency(self):
+    def test_ensure_abstract_paper_dependency(self) -> None:
         """Test ensuring paper depends on abstract."""
         from core.models import ensure_abstract_paper_dependency
         
-        paper = Submission(
+        paper: Submission = Submission(
             id="paper1",
             title="Test Paper",
             kind=SubmissionType.PAPER,
@@ -225,13 +227,15 @@ class TestAbstractPaperDependencies:
         
         # Add abstract dependency
         ensure_abstract_paper_dependency(paper, "paper1-abs-conf1")
+        assert paper.depends_on is not None
         assert "paper1-abs-conf1" in paper.depends_on
         
         # Adding again should not duplicate
         ensure_abstract_paper_dependency(paper, "paper1-abs-conf1")
+        assert paper.depends_on is not None
         assert paper.depends_on.count("paper1-abs-conf1") == 1
     
-    def test_find_abstract_for_paper(self):
+    def test_find_abstract_for_paper(self) -> None:
         """Test finding abstract for paper."""
         from core.models import find_abstract_for_paper
         
@@ -252,7 +256,7 @@ class TestAbstractPaperDependencies:
 class TestConference:
     """Test Conference model."""
     
-    def test_conference_creation(self):
+    def test_conference_creation(self) -> None:
         """Test basic conference creation."""
         conference = Conference(
             id="conf1",
@@ -268,7 +272,7 @@ class TestConference:
         assert conference.recurrence == ConferenceRecurrence.ANNUAL
         assert len(conference.deadlines) == 1
     
-    def test_conference_with_single_deadline(self):
+    def test_conference_with_single_deadline(self) -> None:
         """Test conference with single deadline."""
         conference = Conference(
             id="conf1",
@@ -283,7 +287,7 @@ class TestConference:
         assert conference.has_deadline(SubmissionType.PAPER) is True
         assert conference.has_deadline(SubmissionType.ABSTRACT) is False
     
-    def test_conference_validation_valid(self):
+    def test_conference_validation_valid(self) -> None:
         """Test conference validation with valid data."""
         conference = Conference(
             id="conf1",
@@ -296,7 +300,7 @@ class TestConference:
         errors = conference.validate()
         assert len(errors) == 0
     
-    def test_conference_validation_invalid(self):
+    def test_conference_validation_invalid(self) -> None:
         """Test conference validation with invalid data."""
         conference = Conference(
             id="",
@@ -316,7 +320,7 @@ class TestConference:
 class TestConfig:
     """Test Config model."""
     
-    def test_config_creation(self):
+    def test_config_creation(self) -> None:
         """Test basic config creation."""
         submission = Submission(
             id="test-pap",
@@ -347,7 +351,7 @@ class TestConfig:
         assert config.min_paper_lead_time_days == 90
         assert config.max_concurrent_submissions == 3
     
-    def test_config_validation_valid(self):
+    def test_config_validation_valid(self) -> None:
         """Test config validation with valid data."""
         submission = Submission(
             id="test-pap",
@@ -375,7 +379,7 @@ class TestConfig:
         errors = config.validate()
         assert len(errors) == 0
     
-    def test_config_validation_invalid(self):
+    def test_config_validation_invalid(self) -> None:
         """Test config validation with invalid data."""
         # Test empty submissions
         conference = Conference(
@@ -397,7 +401,7 @@ class TestConfig:
         errors = config.validate()
         assert any("No submissions defined" in error for error in errors)
     
-    def test_config_computed_properties(self):
+    def test_config_computed_properties(self) -> None:
         """Test config computed properties."""
         submission = Submission(
             id="test-pap",
@@ -427,7 +431,7 @@ class TestConfig:
         assert config.submissions_dict["test-pap"] == submission
         assert config.conferences_dict["conf1"] == conference
     
-    def test_config_abstract_paper_dependency_validation(self):
+    def test_config_abstract_paper_dependency_validation(self) -> None:
         """Test config validation of abstract-paper dependencies."""
         # Create conference that requires abstracts
         conference = Conference(
@@ -461,7 +465,7 @@ class TestConfig:
         errors = config.validate()
         assert any("requires abstract" in error for error in errors)
     
-    def test_config_ensure_abstract_paper_dependencies(self):
+    def test_config_ensure_abstract_paper_dependencies(self) -> None:
         """Test automatic creation of abstract dependencies."""
         # Create conference that requires abstracts
         conference = Conference(
@@ -504,12 +508,13 @@ class TestConfig:
         assert "paper1-abs-conf1" in config.submissions_dict
         
         # Paper should depend on abstract
-        abstract = config.submissions_dict["paper1-abs-conf1"]
+        abstract: Submission = config.submissions_dict["paper1-abs-conf1"]
         assert abstract.kind == SubmissionType.ABSTRACT
         assert abstract.conference_id == "conf1"
+        assert paper.depends_on is not None
         assert "paper1-abs-conf1" in paper.depends_on
 
-    def test_config_edge_cases(self):
+    def test_config_edge_cases(self) -> None:
         """Test config edge cases and error conditions."""
         # Test with empty submissions and conferences
         empty_config = Config(
@@ -578,7 +583,7 @@ class TestConfig:
         errors = invalid_config.validate()
         assert len(errors) > 0
 
-    def test_config_abstract_paper_dependencies_edge_cases(self):
+    def test_config_abstract_paper_dependencies_edge_cases(self) -> None:
         """Test abstract-paper dependencies with edge cases."""
         # Test with conference that doesn't require abstracts
         conference_no_abstract = Conference(
@@ -669,9 +674,10 @@ class TestConfig:
         config_before_abstract.ensure_abstract_paper_dependencies()
         assert len(config_before_abstract.submissions) == 2
         assert "paper2-abs-conf_with_abstract" in config_before_abstract.submissions_dict
+        assert paper_before_abstract.depends_on is not None
         assert "paper2-abs-conf_with_abstract" in paper_before_abstract.depends_on
 
-    def test_config_validation_comprehensive_edge_cases(self):
+    def test_config_validation_comprehensive_edge_cases(self) -> None:
         """Test comprehensive validation with edge cases."""
         # Test with submissions that have circular dependencies
         submission_a = Submission(
@@ -755,14 +761,39 @@ class TestConfig:
 class TestUnifiedModels:
     """Test unified models."""
     
-    def test_validation_result_creation(self):
+    def test_validation_result_creation(self) -> None:
         """Test ValidationResult creation."""
-        validation_result = ValidationResult(
+        deadline_validation = DeadlineValidation(
             is_valid=True,
             violations=[],
-            deadline_validation={},
-            dependency_validation={},
-            resource_validation={},
+            summary="All deadlines met",
+            compliance_rate=100.0,
+            total_submissions=0,
+            compliant_submissions=0
+        )
+        dependency_validation = DependencyValidation(
+            is_valid=True,
+            violations=[],
+            summary="All dependencies satisfied",
+            satisfaction_rate=100.0,
+            total_dependencies=0,
+            satisfied_dependencies=0
+        )
+        resource_validation = ResourceValidation(
+            is_valid=True,
+            violations=[],
+            summary="Resource constraints satisfied",
+            max_concurrent=3,
+            max_observed=0,
+            total_days=0
+        )
+        
+        validation_result: ValidationResult = ValidationResult(
+            is_valid=True,
+            violations=[],
+            deadline_validation=deadline_validation,
+            dependency_validation=dependency_validation,
+            resource_validation=resource_validation,
             summary="All validations passed"
         )
         
@@ -770,7 +801,7 @@ class TestUnifiedModels:
         assert len(validation_result.violations) == 0
         assert validation_result.summary == "All validations passed"
     
-    def test_scoring_result_creation(self):
+    def test_scoring_result_creation(self) -> None:
         """Test scoring result creation."""
         penalty_breakdown = PenaltyBreakdown(
             total_penalty=100.0,
@@ -809,7 +840,7 @@ class TestUnifiedModels:
         assert scoring_result.efficiency_score == 90.0
         assert scoring_result.overall_score == 91.67
 
-    def test_schedule_result_creation(self):
+    def test_schedule_result_creation(self) -> None:
         """Test schedule result creation."""
         schedule = {"paper1": date(2024, 5, 1), "paper2": date(2024, 7, 1)}
         
@@ -915,7 +946,7 @@ class TestUnifiedModels:
 class TestAnalysisClasses:
     """Test analytics classes."""
     
-    def test_schedule_analysis(self):
+    def test_schedule_analysis(self) -> None:
         """Test ScheduleAnalysis creation."""
         from core.models import ScheduleAnalysis
         
@@ -934,7 +965,7 @@ class TestAnalysisClasses:
         assert len(analysis.missing_submissions) == 2
         assert analysis.summary == "Half of submissions scheduled"
     
-    def test_schedule_distribution(self):
+    def test_schedule_distribution(self) -> None:
         """Test ScheduleDistribution creation."""
         from core.models import ScheduleDistribution
         
@@ -951,7 +982,7 @@ class TestAnalysisClasses:
         assert distribution.yearly_distribution["2024"] == 5
         assert distribution.summary == "Well distributed schedule"
     
-    def test_submission_type_analysis(self):
+    def test_submission_type_analysis(self) -> None:
         """Test SubmissionTypeAnalysis creation."""
         from core.models import SubmissionTypeAnalysis
         
@@ -966,7 +997,7 @@ class TestAnalysisClasses:
         assert analysis.type_percentages["paper"] == 60.0
         assert analysis.summary == "More papers than abstracts"
     
-    def test_timeline_analysis(self):
+    def test_timeline_analysis(self) -> None:
         """Test TimelineAnalysis creation."""
         from core.models import TimelineAnalysis
         
@@ -985,7 +1016,7 @@ class TestAnalysisClasses:
         assert analysis.avg_submissions_per_month == 1.67
         assert analysis.summary == "3-month timeline"
     
-    def test_resource_analysis(self):
+    def test_resource_analysis(self) -> None:
         """Test ResourceAnalysis creation."""
         from core.models import ResourceAnalysis
         

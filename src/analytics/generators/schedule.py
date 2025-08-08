@@ -9,11 +9,12 @@ from pathlib import Path
 
 from src.validation.deadline import validate_deadline_constraints
 from src.validation.resources import validate_resources_constraints
-from core.models import Config, ScheduleSummary, ScheduleMetrics, SubmissionType
+from src.core.models import Config, ScheduleSummary, ScheduleMetrics, SubmissionType
 from src.analytics.tables import save_schedule_json, save_table_csv, save_metrics_json
-from scoring.efficiency import calculate_efficiency_score
-from scoring.penalties import calculate_penalty_score
-from scoring.quality import calculate_quality_score
+from src.analytics.exporters.csv_exporter import CSVExporter
+from src.scoring.efficiency import calculate_efficiency_score
+from src.scoring.penalties import calculate_penalty_score
+from src.scoring.quality import calculate_quality_score
 
 def create_output_directory(base_dir: str = "output") -> str:
     """Create a timestamped output directory."""
@@ -48,6 +49,11 @@ def save_all_outputs(
     
     # Save metrics JSON
     saved_files["metrics"] = save_metrics_json(metrics, output_dir)
+    
+    # Export comprehensive CSV formats
+    csv_exporter = CSVExporter(Config.create_default())  # We'll need to pass the actual config
+    csv_files = csv_exporter.export_all_csv(schedule, output_dir)
+    saved_files.update(csv_files)
     
     return saved_files
 
