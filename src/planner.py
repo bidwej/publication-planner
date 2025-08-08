@@ -11,7 +11,8 @@ from src.core.constants import QUALITY_CONSTANTS
 from src.scoring.quality import calculate_quality_score
 from src.scoring.penalties import calculate_penalty_score
 from src.scoring.efficiency import calculate_efficiency_score, calculate_efficiency_resource, calculate_efficiency_timeline
-from src.validation.schedule import validate_schedule_constraints
+from src.validation.schedule import validate_schedule_constraints, validate_schedule
+from src.scoring.metrics import get_schedule_metrics
 from src.schedulers.base import BaseScheduler
 # Import scheduler implementations to register them
 from src.schedulers.greedy import GreedyScheduler
@@ -156,8 +157,7 @@ class Planner:
         bool
             True if schedule is valid, False otherwise
         """
-        validation_result = validate_schedule_constraints(schedule, self.config)
-        return validation_result["summary"]["overall_valid"]
+        return validate_schedule(schedule, self.config)
     
     def get_schedule_metrics(self, schedule: Dict[str, date]) -> Dict[str, Any]:
         """
@@ -173,32 +173,7 @@ class Planner:
         Dict[str, Any]
             Dictionary containing various schedule metrics
         """
-        # Calculate scores
-        penalty_breakdown = calculate_penalty_score(schedule, self.config)
-        quality_score = calculate_quality_score(schedule, self.config)
-        efficiency_score = calculate_efficiency_score(schedule, self.config)
-        
-        # Calculate basic metrics
-        total_submissions = len(schedule)
-        if schedule:
-            start_date = min(schedule.values())
-            end_date = max(schedule.values())
-            duration_days = (end_date - start_date).days
-        else:
-            duration_days = 0
-        
-        return {
-            "total_submissions": total_submissions,
-            "duration_days": duration_days,
-            "penalty_score": penalty_breakdown.total_penalty,
-            "quality_score": quality_score,
-            "efficiency_score": efficiency_score,
-            "penalty_breakdown": {
-                "deadline_penalties": penalty_breakdown.deadline_penalties,
-                "dependency_penalties": penalty_breakdown.dependency_penalties,
-                "resource_penalties": penalty_breakdown.resource_penalties
-            }
-        }
+        return get_schedule_metrics(schedule, self.config)
     
     def get_comprehensive_result(self, schedule: Dict[str, date], strategy: SchedulerStrategy) -> ScheduleResult:
         """

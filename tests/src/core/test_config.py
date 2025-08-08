@@ -745,7 +745,7 @@ class TestConferenceMappingAndEngineering:
             }
         ]
         
-        # Create data directory structure
+        # Create data directory structure relative to config file
         data_dir = tmp_path / "data"
         data_dir.mkdir()
         
@@ -765,30 +765,22 @@ class TestConferenceMappingAndEngineering:
             "min_paper_lead_time_days": 60,
             "max_concurrent_submissions": 3,
             "data_files": {
-                "conferences": "conferences.json",
-                "mods": "mods.json",
-                "papers": "papers.json"
+                "conferences": "data/conferences.json",
+                "mods": "data/mods.json",
+                "papers": "data/papers.json"
             }
         }
         
         config_file = tmp_path / "config.json"
         config_file.write_text(json.dumps(config_data))
         
-        # Temporarily change working directory to tmp_path so load_config finds the data directory
-        import os
-        original_cwd = os.getcwd()
-        os.chdir(str(tmp_path))
-        
-        try:
-            # Load config
-            config = load_config(str(config_file))
-        finally:
-            os.chdir(original_cwd)
+        # Load config
+        config = load_config(str(config_file))
         
         # Check that engineering flag is inferred correctly
         # The test creates a mod with candidate_conferences that include engineering conferences
         # So the engineering flag should be inferred as True
-        mod_submission = next(s for s in config.submissions if s.id == "mod1-wrk")
+        mod_submission = next(s for s in config.submissions if s.id == "mod_mod1")
         # Should be engineering since it can go to engineering conferences
         assert mod_submission.engineering is True
     
@@ -814,7 +806,7 @@ class TestConferenceMappingAndEngineering:
             }
         ]
         
-        # Create data directory structure
+        # Create data directory structure relative to config file
         data_dir = tmp_path / "data"
         data_dir.mkdir()
         
@@ -834,28 +826,20 @@ class TestConferenceMappingAndEngineering:
             "min_paper_lead_time_days": 60,
             "max_concurrent_submissions": 3,
             "data_files": {
-                "conferences": "conferences.json",
-                "mods": "mods.json",
-                "papers": "papers.json"
+                "conferences": "data/conferences.json",
+                "mods": "data/mods.json",
+                "papers": "data/papers.json"
             }
         }
         
         config_file = tmp_path / "config.json"
         config_file.write_text(json.dumps(config_data))
         
-        # Temporarily change working directory to tmp_path so load_config finds the data directory
-        import os
-        original_cwd = os.getcwd()
-        os.chdir(str(tmp_path))
-        
-        try:
-            # Load config
-            config = load_config(str(config_file))
-        finally:
-            os.chdir(original_cwd)
+        # Load config
+        config = load_config(str(config_file))
         
         # Check that we can calculate duration
-        conference = next(c for c in config.conferences if c.id == "TEST_CONF")
+        conference = next(c for c in config.conferences if c.id == "test_conf")
         abstract_deadline = conference.deadlines[SubmissionType.ABSTRACT]
         paper_deadline = conference.deadlines[SubmissionType.PAPER]
         

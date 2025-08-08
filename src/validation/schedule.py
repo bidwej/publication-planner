@@ -27,7 +27,8 @@ def validate_schedule_constraints(schedule: Dict[str, date], config: Config) -> 
     structured_result = _validate_schedule_constraints_structured(schedule, config)
     
     # Get additional analytics
-    analytics = _analyze_schedule_with_scoring(schedule, config)
+    from src.analytics.schedule_analysis import analyze_schedule_with_scoring
+    analytics = analyze_schedule_with_scoring(schedule, config)
     
     # Get additional validation results that penalty functions expect
     from .deadline import _validate_blackout_dates, _validate_paper_lead_time_months
@@ -118,6 +119,26 @@ def validate_schedule_constraints(schedule: Dict[str, date], config: Config) -> 
         },
         "analytics": analytics.get("schedule_analysis", {})
     }
+
+
+def validate_schedule(schedule: Dict[str, date], config: Config) -> bool:
+    """
+    Simple boolean validation of a schedule.
+    
+    Parameters
+    ----------
+    schedule : Dict[str, date]
+        The schedule to validate
+    config : Config
+        The configuration to use for validation
+        
+    Returns
+    -------
+    bool
+        True if schedule is valid, False otherwise
+    """
+    validation_result = validate_schedule_constraints(schedule, config)
+    return validation_result["summary"]["overall_valid"]
 
 
 def _validate_dependency_satisfaction(schedule: Dict[str, date], config: Config):

@@ -102,9 +102,9 @@ def _map_mod_data(json_data: Dict) -> Dict:
         "draft_window_months": 1,  # Short duration for work items
         "lead_time_from_parents": 0,
         "penalty_cost_per_day": json_data.get("penalty_cost_per_month", 1000.0) / 30.0,
-        "engineering": False,  # Default to medical
+        "engineering": json_data.get("engineering", False),  # Use engineering flag from JSON data
         "earliest_start_date": est_data_ready,
-        "candidate_conferences": [],  # No candidate conferences for work items
+        "candidate_conferences": json_data.get("candidate_conferences", []),  # Use candidate conferences from JSON data
         "est_data_ready": est_data_ready,
         "free_slack_months": json_data.get("free_slack_months"),
         "penalty_cost_per_month": json_data.get("penalty_cost_per_month"),

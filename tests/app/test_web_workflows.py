@@ -6,7 +6,7 @@ import json
 import tempfile
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, List, Dict
 from unittest.mock import Mock, patch, MagicMock
 
 import dash
@@ -15,8 +15,10 @@ import pytest
 from app.main import create_dashboard_app, create_timeline_app
 from app.models import WebAppState
 from src.core.config import load_config
-from src.planner import validate_schedule_comprehensive
-from src.core.models import Config, Conference, SchedulerStrategy, Submission, SubmissionType
+from src.core.models import Config, SchedulerStrategy
+from src.planner import Planner
+from src.validation.schedule import validate_schedule_constraints
+from src.core.models import Conference, Submission, SubmissionType, ConferenceType, ConferenceRecurrence
 from src.schedulers.base import BaseScheduler
 
 # Import schedulers to ensure they are registered
@@ -208,8 +210,8 @@ class TestWebAppWorkflows:
         assert hasattr(config, 'conferences_dict')
         
         # Test schedule validation (without actual scheduling)
-        sample_schedule: Dict[str, date] = {"paper1": date(2024, 1, 15)}
-        validation_result: Any = validate_schedule_comprehensive(sample_schedule, config)
+        sample_schedule: Dict[str, Any] = {"paper1": date(2024, 1, 15)}
+        validation_result: Any = validate_schedule_constraints(sample_schedule, config)
         assert validation_result is not None
     
     def test_web_app_data_flow(self, dashboard_app: dash.Dash, sample_config) -> None:
@@ -250,7 +252,7 @@ class TestWebAppWorkflows:
         assert config is not None  # Should return default config
         
         # Test with invalid schedule
-        invalid_schedule: Dict[str, date] = {"invalid_id": "invalid_date"}  # Invalid date string for error testing
+        invalid_schedule: Dict[str, Any] = {"invalid_id": date(2024, 1, 1)}  # Invalid date string for error testing
         config = Mock(spec=Config)
         
         # Should handle gracefully

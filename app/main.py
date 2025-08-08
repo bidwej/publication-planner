@@ -13,7 +13,7 @@ import sys
 from src.core.config import load_config
 from src.core.models import Config, SchedulerStrategy
 from app.models import WebAppState
-from src.validation.schedule import validate_schedule_comprehensive
+from src.validation.schedule import validate_schedule_constraints
 
 from src.schedulers.base import BaseScheduler
 # Import scheduler implementations to register them
@@ -111,7 +111,7 @@ def create_dashboard_app():
             _current_schedule_data = schedule
             
             # Validate the schedule
-            validation_result = validate_schedule_comprehensive(schedule, config)
+            validation_result = validate_schedule_constraints(schedule, config)
             
             # Create charts and tables
             gantt_fig = create_gantt_chart(schedule, config)
