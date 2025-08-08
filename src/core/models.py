@@ -263,21 +263,25 @@ def generate_abstract_id(paper_id: str, conference_id: str) -> str:
 
 def create_abstract_submission(paper: Submission, conference_id: str, 
                              penalty_costs: Dict[str, float]) -> Submission:
-    """Create abstract submission as work item."""
+    """Create abstract submission for a paper.
+    
+    Abstracts are submitted first in academic workflow, so they have no dependencies.
+    The paper will depend on the abstract being submitted and accepted.
+    """
     abstract_id = generate_abstract_id(paper.id, conference_id)
     
     return Submission(
         id=abstract_id,
         title=f"Abstract for {paper.title}",
         kind=SubmissionType.ABSTRACT,
-        conference_id=None,  # Work item, no conference assignment
-        depends_on=[],  # No dependencies
+        conference_id=conference_id,
+        depends_on=[],  # Abstracts come first - no dependencies
         draft_window_months=1,
         lead_time_from_parents=0,
         penalty_cost_per_day=penalty_costs.get("default_mod_penalty_per_day", 1000.0),
         engineering=paper.engineering,
         earliest_start_date=paper.earliest_start_date,
-        candidate_conferences=[conference_id]  # Store as candidate
+        candidate_conferences=[conference_id]
     )
 
 

@@ -19,7 +19,7 @@ os.environ['PYTHONPATH'] = str(Path(__file__).parent / "src") + os.pathsep + os.
 from core.config import load_config
 from core.models import SchedulerStrategy
 from schedulers.base import BaseScheduler
-from output.console import print_schedule_analysis, print_strategy_comparison, print_available_strategies
+from src.analytics.console import print_schedule_analysis, print_strategy_comparison, print_available_strategies
 
 # Import all schedulers to register them with the factory
 import schedulers.greedy

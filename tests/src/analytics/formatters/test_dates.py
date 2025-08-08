@@ -2,7 +2,7 @@
 
 from datetime import date, datetime, timedelta
 
-from output.formatters.dates import (
+from src.analytics.formatters.dates import (
     format_date_display, format_relative_time, format_duration_days,
     format_month_year
 )

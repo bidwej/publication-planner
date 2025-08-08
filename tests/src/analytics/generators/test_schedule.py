@@ -4,7 +4,7 @@ from datetime import date
 from unittest.mock import Mock, patch
 from pathlib import Path
 
-from output.generators.schedule import (
+from src.analytics.generators.schedule import (
     create_output_directory,
     save_all_outputs,
     generate_schedule_summary,

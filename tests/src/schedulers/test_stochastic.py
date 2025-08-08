@@ -4,7 +4,7 @@ from datetime import date, timedelta
 
 import pytest
 
-from src.core.models import SubmissionType, ConferenceType
+from src.core.models import SubmissionType, ConferenceType, Submission, Config
 from src.schedulers.stochastic import StochasticGreedyScheduler
 from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
 
@@ -169,7 +169,7 @@ class TestStochasticScheduler:
             max_concurrent_submissions=3
         )
         
-        scheduler = StochasticScheduler(config)
+        scheduler = StochasticGreedyScheduler(config)
         
         with pytest.raises(ValueError, match="Submission paper1 references unknown conference nonexistent_conf"):
             scheduler.schedule()

@@ -614,36 +614,43 @@ class TestConferenceMappingAndEngineering:
     """Test conference mapping and engineering flag inference."""
     
     def test_conference_mapping_by_family(self, tmp_path):
-        """Test that conferences are mapped correctly by family."""
-        # Create a minimal conferences list
+        """Test that conferences are mapped by family name."""
+        # Create conferences with different types
         conferences_data = [
             {
                 "name": "IEEE_ICRA",
                 "conference_type": "ENGINEERING",
                 "recurrence": "annual",
-                "abstract_deadline": "2025-01-15",
-                "full_paper_deadline": "2025-02-15"
+                "abstract_deadline": "2025-02-15"
+            },
+            {
+                "name": "MICCAI",
+                "conference_type": "MEDICAL",
+                "recurrence": "annual",
+                "abstract_deadline": "2025-02-15"
             }
         ]
         
-        # Create mods with candidate conferences
+        # Create mods that can go to both types
         mods_data = [
             {
-                "id": "mod1",
+                "id": 1,  # Numeric ID like actual data
                 "title": "Test Mod 1",
-                "candidate_conferences": ["IEEE_ICRA"],
-                "est_data_ready": "2025-01-01"
+                "phase": 1,
+                "est_data_ready": "2025-01-01",
+                "free_slack_months": 1,
+                "penalty_cost_per_month": 1000,
+                "next_mod": 2
             }
         ]
         
-        # Create papers with dependencies
+        # Create papers that depend on mods
         papers_data = [
             {
                 "id": "paper1",
                 "title": "Test Paper 1",
-                "mod_dependencies": ["mod1"],
-                "candidate_conferences": ["IEEE_ICRA"],
-                "earliest_start_date": "2025-01-01"
+                "conference": "IEEE_ICRA",
+                "depends_on_mods": [1]  # Reference the mod ID number
             }
         ]
         
@@ -651,15 +658,20 @@ class TestConferenceMappingAndEngineering:
         data_dir = tmp_path / "data"
         data_dir.mkdir()
         
-        # Write test files in data directory
-        conferences_file = data_dir / "conferences.json"
+        # Write test files in the same directory as config (not in data subdirectory)
+        conferences_file = tmp_path / "conferences.json"
         conferences_file.write_text(json.dumps(conferences_data))
         
-        mods_file = data_dir / "mods.json"
+        mods_file = tmp_path / "mods.json"
         mods_file.write_text(json.dumps(mods_data))
         
-        papers_file = data_dir / "papers.json"
+        papers_file = tmp_path / "papers.json"
         papers_file.write_text(json.dumps(papers_data))
+        
+        print(f"DEBUG: Data files created:")
+        print(f"  Conferences: {conferences_file.exists()} - {conferences_file.read_text()}")
+        print(f"  Mods: {mods_file.exists()} - {mods_file.read_text()}")
+        print(f"  Papers: {papers_file.exists()} - {papers_file.read_text()}")
         
         # Create config file
         config_data = {
@@ -683,18 +695,22 @@ class TestConferenceMappingAndEngineering:
         
         try:
             # Load config
+            print(f"DEBUG: Config file exists: {config_file.exists()}")
+            print(f"DEBUG: Config file content: {config_file.read_text()}")
             config = load_config(str(config_file))
+            print(f"DEBUG: Config loaded, submissions count: {len(config.submissions)}")
         finally:
             os.chdir(original_cwd)
         
         # Check that submissions are mapped correctly
-        mod_submission = next(s for s in config.submissions if s.id == "mod1-wrk")
-        paper_submission = next(s for s in config.submissions if s.id == "paper1-pap-IEEE_ICRA")
+        print(f"DEBUG: All submission IDs: {[s.id for s in config.submissions]}")
+        mod_submission = next(s for s in config.submissions if s.id == "mod_1")
+        paper_submission = next(s for s in config.submissions if s.id == "paper1-pap-ieee_icra")
         
         # Mods don't get conference assignments (they are internal work items)
         assert mod_submission.conference_id is None
-        assert paper_submission.conference_id == "IEEE_ICRA"
-        assert "mod1-wrk" in (paper_submission.depends_on or [])
+        assert paper_submission.conference_id == "ieee_icra"
+        assert "mod_1" in (paper_submission.depends_on or [])
     
     def test_engineering_flag_inference(self, tmp_path):
         """Test that engineering flag is inferred correctly."""

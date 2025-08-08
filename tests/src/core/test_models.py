@@ -204,7 +204,7 @@ class TestAbstractPaperDependencies:
         assert abstract.title == "Abstract for Test Paper"
         assert abstract.kind == SubmissionType.ABSTRACT
         assert abstract.conference_id == "conf1"
-        assert abstract.depends_on == ["dep1"]  # Same dependencies as paper
+        assert abstract.depends_on == []  # Abstracts come first - no dependencies
         assert abstract.engineering == True
         assert abstract.earliest_start_date == date(2024, 1, 1)
         assert abstract.candidate_conferences == ["conf1"]

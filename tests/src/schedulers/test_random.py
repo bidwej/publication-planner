@@ -1,10 +1,12 @@
 """Tests for the random scheduler."""
 
-import pytest
-from datetime import date
+from datetime import date, timedelta
 
-from core.models import SubmissionType, ConferenceType
-from schedulers.random import RandomScheduler
+import pytest
+
+from src.core.models import SubmissionType, ConferenceType, Submission, Config
+from src.schedulers.random import RandomScheduler
+from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
 
 
 class TestRandomScheduler:
@@ -28,7 +30,6 @@ class TestRandomScheduler:
 
     def test_schedule_single_paper(self):
         """Test scheduling with single paper."""
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
         # Create mock submission
         submission = create_mock_submission(
@@ -54,7 +55,6 @@ class TestRandomScheduler:
 
     def test_schedule_multiple_papers(self):
         """Test scheduling with multiple papers."""
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
         # Create mock submissions
         submission1 = create_mock_submission(
@@ -94,7 +94,6 @@ class TestRandomScheduler:
 
     def test_random_algorithm_behavior(self):
         """Test the random algorithm behavior."""
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
         # Create mock submissions with different characteristics
         submission1 = create_mock_submission(
@@ -129,7 +128,6 @@ class TestRandomScheduler:
 
     def test_schedule_with_constraints(self):
         """Test scheduling with constraints."""
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
         # Create mock submission with constraints
         submission = create_mock_submission(
@@ -186,7 +184,6 @@ class TestRandomScheduler:
 
     def test_schedule_with_priority_ordering(self):
         """Test scheduling with priority ordering."""
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
         # Create mock submissions with different priorities
         submission1 = create_mock_submission(
@@ -223,7 +220,6 @@ class TestRandomScheduler:
 
     def test_schedule_with_deadline_compliance(self):
         """Test scheduling with deadline compliance."""
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
         # Create mock submission with tight deadline
         submission = create_mock_submission(
@@ -252,7 +248,6 @@ class TestRandomScheduler:
 
     def test_schedule_with_resource_constraints(self):
         """Test scheduling with resource constraints."""
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
         # Create mock submissions that need resource optimization
         submission1 = create_mock_submission(
@@ -292,7 +287,6 @@ class TestRandomScheduler:
 
     def test_schedule_with_multiple_runs(self):
         """Test scheduling with multiple runs to check randomness."""
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
         # Create mock submission
         submission = create_mock_submission(

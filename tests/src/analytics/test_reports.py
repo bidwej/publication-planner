@@ -3,7 +3,7 @@
 import pytest
 from datetime import date
 from unittest.mock import MagicMock
-from src.output.reports import (
+from src.analytics.reports import (
     generate_schedule_report,
     calculate_overall_score
 )

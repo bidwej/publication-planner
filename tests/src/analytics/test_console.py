@@ -3,7 +3,7 @@
 import pytest
 from datetime import date
 from unittest.mock import patch
-from output.console import (
+from src.analytics.console import (
     print_schedule_summary,
     print_deadline_status,
     print_utilization_summary,

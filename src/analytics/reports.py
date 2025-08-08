@@ -8,7 +8,7 @@ from src.validation.deadline import validate_deadline_constraints
 from src.validation.schedule import validate_schedule_constraints
 from src.validation.resources import validate_resources_constraints
 from src.scoring.penalties import calculate_penalty_score
-from src.output.analytics import analyze_timeline, analyze_resources
+from src.analytics.analytics import analyze_timeline, analyze_resources
 from src.core.constants import (
     REPORT_CONSTANTS
 )

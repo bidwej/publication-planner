@@ -1,10 +1,11 @@
-"""Tests for the backtracking scheduler."""
+"""Tests for backtracking scheduler."""
 
 import pytest
-from datetime import date
-
-from core.models import SubmissionType, ConferenceRecurrence, ConferenceType, Submission, Config
-from schedulers.backtracking import BacktrackingGreedyScheduler as BacktrackingScheduler
+from datetime import date, timedelta
+from unittest.mock import Mock, patch
+from src.core.models import SubmissionType, ConferenceRecurrence, ConferenceType, Submission, Config
+from src.schedulers.backtracking import BacktrackingGreedyScheduler
+from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
 
 
 class TestBacktrackingScheduler:
@@ -12,14 +13,14 @@ class TestBacktrackingScheduler:
 
     def test_backtracking_scheduler_initialization(self, empty_config):
         """Test backtracking scheduler initialization."""
-        scheduler = BacktrackingScheduler(empty_config)
+        scheduler = BacktrackingGreedyScheduler(empty_config)
         
         assert scheduler.config == empty_config
         assert hasattr(scheduler, 'schedule')
 
     def test_schedule_empty_submissions(self, empty_config):
         """Test scheduling with empty submissions."""
-        scheduler = BacktrackingScheduler(empty_config)
+        scheduler = BacktrackingGreedyScheduler(empty_config)
         
         # Empty submissions should return empty schedule
         result = scheduler.schedule()
@@ -29,8 +30,6 @@ class TestBacktrackingScheduler:
     def test_schedule_single_paper(self):
         """Test scheduling with single paper."""
         # Create mock submission
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
-        
         submission = create_mock_submission(
             "sub1", "Test Paper", SubmissionType.PAPER, "conf1"
         )
@@ -43,7 +42,7 @@ class TestBacktrackingScheduler:
         
         config = create_mock_config([submission], [conference])
         
-        scheduler = BacktrackingScheduler(config)
+        scheduler = BacktrackingGreedyScheduler(config)
         
         result = scheduler.schedule()
         
@@ -54,8 +53,6 @@ class TestBacktrackingScheduler:
 
     def test_schedule_multiple_papers(self):
         """Test scheduling with multiple papers."""
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
-        
         # Create mock submissions
         submission1 = create_mock_submission(
             "sub1", "Test Paper 1", SubmissionType.PAPER, "conf1"
@@ -79,7 +76,7 @@ class TestBacktrackingScheduler:
         
         config = create_mock_config([submission1, submission2], [conference1, conference2])
         
-        scheduler = BacktrackingScheduler(config)
+        scheduler = BacktrackingGreedyScheduler(config)
         
         result = scheduler.schedule()
         
@@ -94,8 +91,6 @@ class TestBacktrackingScheduler:
 
     def test_schedule_with_constraints(self):
         """Test scheduling with constraints."""
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
-        
         # Create mock paper with constraints
         submission = create_mock_submission(
             "sub1", "Test Paper", SubmissionType.PAPER, "conf1"
@@ -109,7 +104,7 @@ class TestBacktrackingScheduler:
         config = create_mock_config([submission], [conference])
         config.blackout_dates = [date(2024, 5, 15), date(2024, 5, 16)]
         
-        scheduler = BacktrackingScheduler(config)
+        scheduler = BacktrackingGreedyScheduler(config)
         
         result = scheduler.schedule()
         
@@ -123,8 +118,6 @@ class TestBacktrackingScheduler:
 
     def test_schedule_with_insufficient_time(self):
         """Test scheduling when there's insufficient time."""
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
-        
         # Create mock paper with very short deadline
         submission = create_mock_submission(
             "sub1", "Test Paper", SubmissionType.PAPER, "conf1",
@@ -139,7 +132,7 @@ class TestBacktrackingScheduler:
         
         config = create_mock_config([submission], [conference])
         
-        scheduler = BacktrackingScheduler(config)
+        scheduler = BacktrackingGreedyScheduler(config)
         
         # Should return empty schedule due to insufficient time
         result = scheduler.schedule()
@@ -148,8 +141,6 @@ class TestBacktrackingScheduler:
 
     def test_backtracking_algorithm(self):
         """Test the backtracking algorithm behavior."""
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
-        
         # Create mock submissions with dependencies
         submission1 = create_mock_submission(
             "sub1", "Test Paper 1", SubmissionType.PAPER, "conf1"
@@ -167,7 +158,7 @@ class TestBacktrackingScheduler:
         
         config = create_mock_config([submission1, submission2], [conference])
         
-        scheduler = BacktrackingScheduler(config)
+        scheduler = BacktrackingGreedyScheduler(config)
         
         result = scheduler.schedule()
         
@@ -203,15 +194,13 @@ class TestBacktrackingScheduler:
             max_concurrent_submissions=3
         )
         
-        scheduler = BacktrackingScheduler(config)
+        scheduler = BacktrackingGreedyScheduler(config)
         
         with pytest.raises(ValueError, match="Submission sub1 references unknown conference nonexistent_conf"):
             scheduler.schedule()
 
     def test_schedule_with_priority_ordering(self):
         """Test scheduling with priority ordering."""
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
-        
         # Create mock submissions with different priorities
         submission1 = create_mock_submission(
             "sub1", "Test Paper 1", SubmissionType.PAPER, "conf1"
@@ -233,7 +222,7 @@ class TestBacktrackingScheduler:
         
         config = create_mock_config([submission1, submission2], [conference1, conference2])
         
-        scheduler = BacktrackingScheduler(config)
+        scheduler = BacktrackingGreedyScheduler(config)
         
         result = scheduler.schedule()
         
@@ -247,8 +236,6 @@ class TestBacktrackingScheduler:
 
     def test_schedule_with_resource_constraints(self):
         """Test scheduling with resource constraints."""
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
-        
         # Create mock submissions that would exceed concurrency limit
         submission1 = create_mock_submission(
             "sub1", "Test Paper 1", SubmissionType.PAPER, "conf1"
@@ -277,7 +264,7 @@ class TestBacktrackingScheduler:
         )
         config.max_concurrent_submissions = 2
         
-        scheduler = BacktrackingScheduler(config)
+        scheduler = BacktrackingGreedyScheduler(config)
         
         result = scheduler.schedule()
         

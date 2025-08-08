@@ -101,6 +101,7 @@ def load_config(config_path: str) -> Config:
             print("Using default configuration with sample data")
             return Config.create_default()
         
+        print(f"DEBUG: Loading config from {config_path}")
         with open(config_file, "r", encoding="utf-8") as f:
             config_data = json.load(f)
         
@@ -112,13 +113,20 @@ def load_config(config_path: str) -> Config:
         papers_path = config_dir / data_files.get("papers", "data/papers.json")
         blackouts_path = config_dir / data_files.get("blackouts", "data/blackout.json")
         
+        print(f"DEBUG: Data file paths:")
+        print(f"  Conferences: {conferences_path} (exists: {conferences_path.exists()})")
+        print(f"  Mods: {mods_path} (exists: {mods_path.exists()})")
+        print(f"  Papers: {papers_path} (exists: {papers_path.exists()})")
+        
         # Load conferences with proper field mapping
         conferences = _load_conferences(conferences_path)
+        print(f"DEBUG: Loaded {len(conferences)} conferences")
         
         # Load submissions with proper abstract-paper dependencies
         submissions = _load_submissions_with_abstracts(
             mods_path, papers_path, conferences, config_data
         )
+        print(f"DEBUG: Loaded {len(submissions)} submissions")
         
         # Load blackout dates only if enabled
         scheduling_options = config_data.get("scheduling_options", {})
