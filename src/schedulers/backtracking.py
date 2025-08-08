@@ -1,153 +1,99 @@
-"""Backtracking greedy scheduler implementation."""
+"""Backtracking scheduler implementation."""
 
 from __future__ import annotations
 from typing import Dict, List
 from datetime import date, timedelta
 from src.schedulers.greedy import GreedyScheduler
 from src.schedulers.base import BaseScheduler
-from src.core.dates import is_working_day
 from src.core.models import SchedulerStrategy
 from src.core.constants import SCHEDULING_CONSTANTS
 
 
 @BaseScheduler.register_strategy(SchedulerStrategy.BACKTRACKING)
 class BacktrackingGreedyScheduler(GreedyScheduler):
-    """Backtracking greedy scheduler that can undo decisions when stuck."""
+    """Backtracking greedy scheduler that can reschedule submissions to find better solutions."""
     
     def __init__(self, config, max_backtracks: int = 5):
+        """Initialize scheduler with config and max backtracks."""
         super().__init__(config)
         self.max_backtracks = max_backtracks
     
     def schedule(self) -> Dict[str, date]:
-        """Generate schedule with backtracking capability."""
-        self._auto_link_abstract_paper()
-        from src.validation.venue import _validate_venue_compatibility
-        _validate_venue_compatibility(self.submissions, self.conferences)
-        topo = self._topological_order()
+        """
+        Generate a schedule using backtracking algorithm.
         
-        # Global time window - use robust date calculation
-        current, end = self._get_scheduling_window()
+        Returns
+        -------
+        Dict[str, date]
+            Mapping of submission_id to start_date
+        """
+        # Use shared setup
+        schedule, topo, start_date, end_date = self._run_common_scheduling_setup()
         
-        schedule: Dict[str, date] = {}
+        # Initialize active submissions list
         active: List[str] = []
-        backtracks = 0
+        current_date = start_date
         
-        # Early abstract scheduling if enabled
-        if (self.config.scheduling_options and 
-            self.config.scheduling_options.get("enable_early_abstract_scheduling", False)):
-            abstract_advance = self.config.scheduling_options.get("abstract_advance_days", SCHEDULING_CONSTANTS.abstract_advance_days)
-            self._schedule_early_abstracts(schedule, abstract_advance)
-        
-        while current <= end and len(schedule) < len(self.submissions) and backtracks < self.max_backtracks:
+        while current_date <= end_date and len(schedule) < len(self.submissions):
             # Skip blackout dates
-            if not is_working_day(current, self.config.blackout_dates):
-                current += timedelta(days=1)
+            if not self._is_working_day(current_date):
+                current_date += timedelta(days=1)
                 continue
             
-            # Retire finished drafts
-            active = [
-                sid for sid in active
-                if self._get_end_date(schedule[sid], self.submissions[sid]) > current
-            ]
+            # Update active submissions
+            active = self._update_active_submissions(active, schedule, current_date)
             
-            # Try to schedule submissions
-            scheduled_this_round = self._try_schedule_round(current, topo, schedule, active)
+            # Get ready submissions
+            ready = self._get_ready_submissions(topo, schedule, current_date)
             
-            # Try backtracking if needed
-            if not scheduled_this_round and active and backtracks < self.max_backtracks:
-                if self._backtrack(schedule, active, current):
-                    backtracks += 1
-                    continue
+            # Sort by priority
+            ready = self._sort_by_priority(ready)
             
-            current += timedelta(days=1)
+            # Try to schedule up to concurrency limit
+            scheduled_this_round = self._schedule_submissions_up_to_limit(ready, schedule, active, current_date)
+            
+            # If nothing was scheduled and we have active submissions, try backtracking
+            if scheduled_this_round == 0 and active:
+                if self._backtrack(schedule, active, current_date):
+                    continue  # Try again with the rescheduled submission
+            
+            current_date += timedelta(days=1)
         
-        if len(schedule) != len(self.submissions):
-            missing = [sid for sid in self.submissions if sid not in schedule]
-            print("Note: Could not schedule %s submissions: %s", len(missing), missing)
-            print("Successfully scheduled %s out of %s submissions", len(schedule), len(self.submissions))
+        # Print scheduling summary
+        self._print_scheduling_summary(schedule)
         
         return schedule
     
-    def _backtrack(self, schedule: Dict[str, date], active: List[str], current: date) -> bool:
+    def _backtrack(self, schedule: Dict[str, date], active: List[str], current_date: date) -> bool:
         """Try to backtrack by rescheduling an active submission earlier."""
-        for sid in list(active):
-            if self._can_reschedule_earlier(sid, schedule, current):
+        for submission_id in list(active):
+            if self._can_reschedule_earlier(submission_id, schedule, current_date):
                 # Remove from active and schedule
-                active.remove(sid)
-                del schedule[sid]
+                active.remove(submission_id)
+                del schedule[submission_id]
                 return True
         return False
     
-    def _can_reschedule_earlier(self, sid: str, schedule: Dict[str, date], current: date) -> bool:
+    def _can_reschedule_earlier(self, submission_id: str, schedule: Dict[str, date], current_date: date) -> bool:
         """Check if a submission can be rescheduled earlier."""
-        sub = self.submissions[sid]
-        current_start = schedule[sid]
+        submission = self.submissions[submission_id]
+        current_start = schedule[submission_id]
         
         # Try to find an earlier valid start date
         for days_back in range(1, SCHEDULING_CONSTANTS.backtrack_limit_days + 1):  # Look back up to max_backtrack_days days
             new_start = current_start - timedelta(days=days_back)
-            if new_start < (sub.earliest_start_date or current):
+            if new_start < (submission.earliest_start_date or current_date):
                 break
             
-            if self._can_schedule(sid, new_start, schedule, []):
-                schedule[sid] = new_start
+            if self._can_schedule(submission_id, new_start, schedule, []):
+                schedule[submission_id] = new_start
                 return True
         
         return False
     
-    def _can_schedule(self, sid: str, start: date, schedule: Dict[str, date], active: List[str]) -> bool:
+    def _can_schedule(self, submission_id: str, start_date: date, schedule: Dict[str, date], active: List[str]) -> bool:
         """Check if a submission can be scheduled at the given start date."""
-        sub = self.submissions[sid]
+        submission = self.submissions[submission_id]
         
         # Use comprehensive validation instead of simple checks
-        return self._validate_all_constraints(sub, start, schedule)
-    
-    def _try_schedule_round(self, current: date, topo: List[str], schedule: Dict[str, date], active: List[str]) -> bool:
-        """Try to schedule submissions for the current round."""
-        # Gather ready submissions
-        ready: List[str] = []
-        for sid in topo:
-            if sid in schedule:
-                continue
-            s = self.submissions[sid]
-            if not self._deps_satisfied(s, schedule, current):
-                continue
-            # Use calculated earliest start date
-            earliest_start = self._calculate_earliest_start_date(s)
-            if current < earliest_start:
-                continue
-            ready.append(sid)
-        
-        # Sort by priority weight
-        ready = self._sort_by_priority(ready)
-        
-        # Try to schedule up to concurrency limit
-        scheduled_this_round = False
-        for sid in ready:
-            if len(active) >= SCHEDULING_CONSTANTS.max_concurrent_submissions:
-                break
-            if not self._meets_deadline(self.submissions[sid], current):
-                continue
-            schedule[sid] = current
-            active.append(sid)
-            scheduled_this_round = True
-        
-        return scheduled_this_round
-    
-    def _sort_by_priority(self, ready: List[str]) -> List[str]:
-        """Sort ready submissions by priority weight (inherited from GreedyScheduler)."""
-        def get_priority(sid: str) -> float:
-            s = self.submissions[sid]
-            weights = self.config.priority_weights or {}
-            
-            base_priority = 0.0
-            if s.kind.value == "PAPER":
-                base_priority = weights.get("engineering_paper" if s.engineering else "medical_paper", 1.0)
-            elif s.kind.value == "ABSTRACT":
-                base_priority = weights.get("abstract", 0.5)
-            else:
-                base_priority = weights.get("mod", 1.5)
-            
-            return base_priority
-        
-        return sorted(ready, key=get_priority, reverse=True) 
+        return self._validate_all_constraints(submission, start_date, schedule) 

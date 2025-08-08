@@ -6,7 +6,7 @@ from datetime import timedelta, date
 from src.schedulers.greedy import GreedyScheduler
 from src.schedulers.base import BaseScheduler
 from src.core.models import Submission, SchedulerStrategy
-from src.core.constants import SCHEDULING_CONSTANTS
+from src.core.constants import SCHEDULING_CONSTANTS, EFFICIENCY_CONSTANTS
 
 
 @BaseScheduler.register_strategy(SchedulerStrategy.LOOKAHEAD)
@@ -20,44 +20,36 @@ class LookaheadGreedyScheduler(GreedyScheduler):
     
     def _sort_by_priority(self, ready: List[str]) -> List[str]:
         """Override priority selection to add lookahead consideration."""
-        def get_priority(sid: str) -> float:
-            s = self.submissions[sid]
-            weights = self.config.priority_weights or {}
-            
-            base_priority = 0.0
-            if s.kind.value == "PAPER":
-                base_priority = weights.get("engineering_paper" if s.engineering else "medical_paper", 1.0)
-            elif s.kind.value == "ABSTRACT":
-                base_priority = weights.get("abstract", 0.5)
-            else:
-                base_priority = weights.get("mod", 1.5)
+        def get_priority(submission_id: str) -> float:
+            submission = self.submissions[submission_id]
+            base_priority = self._get_base_priority(submission)
             
             # Add lookahead bonus for submissions with dependencies
             lookahead_bonus = 0.0
-            for other_sid in self.submissions:
-                other_sub = self.submissions[other_sid]
-                if other_sub.depends_on and sid in other_sub.depends_on:
+            for other_submission_id in self.submissions:
+                other_submission = self.submissions[other_submission_id]
+                if other_submission.depends_on and submission_id in other_submission.depends_on:
                     # This submission blocks others, give it higher priority
-                    lookahead_bonus += self.config.lookahead_bonus_increment
+                    lookahead_bonus += EFFICIENCY_CONSTANTS.lookahead_bonus_increment
             
             return base_priority + lookahead_bonus
         
         return sorted(ready, key=get_priority, reverse=True)
     
-    def _meets_deadline(self, sub: Submission, start: date) -> bool:
+    def _meets_deadline(self, submission: Submission, start_date: date) -> bool:
         """Override deadline checking to add lookahead buffer."""
-        if not sub.conference_id or sub.conference_id not in self.conferences:
+        if not submission.conference_id or submission.conference_id not in self.conferences:
             return True
         
-        conf = self.conferences[sub.conference_id]
-        if sub.kind not in conf.deadlines:
+        conf = self.conferences[submission.conference_id]
+        if submission.kind not in conf.deadlines:
             return True
         
-        deadline = conf.deadlines[sub.kind]
+        deadline = conf.deadlines[submission.kind]
         if deadline is None:
             return True
         
-        end_date = self._get_end_date(start, sub)
+        end_date = self._get_end_date(start_date, submission)
         
         # Add lookahead buffer to ensure we don't cut it too close
         buffer_date = deadline - timedelta(days=self.lookahead_days)

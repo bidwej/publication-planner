@@ -28,9 +28,8 @@ class OptimalScheduler(BaseScheduler):
         Dict[str, date]
             Mapping of submission_id to start_date
         """
-        self._auto_link_abstract_paper()
-        from src.validation.venue import _validate_venue_compatibility
-        _validate_venue_compatibility(self.submissions, self.conferences)
+        # Use shared setup
+        schedule, topo, start_date, end_date = self._run_common_scheduling_setup()
         
         # Create and solve MILP model
         model = self._setup_milp_model()
@@ -51,6 +50,9 @@ class OptimalScheduler(BaseScheduler):
             greedy_scheduler = GreedyScheduler(self.config)
             return greedy_scheduler.schedule()
         
+        # Print scheduling summary
+        self._print_scheduling_summary(schedule)
+        
         return schedule
     
     def _setup_milp_model(self) -> Optional[Any]:
@@ -63,8 +65,8 @@ class OptimalScheduler(BaseScheduler):
         
         # Decision variables: start time for each submission
         start_vars = {}
-        for sid in self.submissions:
-            start_vars[sid] = pulp.LpVariable(f"start_{sid}", lowBound=0, cat='Integer')
+        for submission_id in self.submissions:
+            start_vars[submission_id] = pulp.LpVariable(f"start_{submission_id}", lowBound=0, cat='Integer')
         
         # Objective function
         makespan = None
@@ -76,8 +78,8 @@ class OptimalScheduler(BaseScheduler):
         elif self.optimization_objective == "minimize_penalties":
             # Minimize total penalties
             penalty_vars = {}
-            for sid in self.submissions:
-                penalty_vars[sid] = pulp.LpVariable(f"penalty_{sid}", lowBound=0, cat='Integer')
+            for submission_id in self.submissions:
+                penalty_vars[submission_id] = pulp.LpVariable(f"penalty_{submission_id}", lowBound=0, cat='Integer')
             prob += pulp.lpSum(penalty_vars.values())
         
         elif self.optimization_objective == "minimize_total_time":
@@ -102,17 +104,17 @@ class OptimalScheduler(BaseScheduler):
     
     def _add_dependency_constraints(self, prob: Any, start_vars: Dict[str, Any]) -> None:
         """Add dependency constraints to the MILP model."""
-        for sid, submission in self.submissions.items():
+        for submission_id, submission in self.submissions.items():
             if submission.depends_on:
                 for dep_id in submission.depends_on:
                     if dep_id in self.submissions:
                         # Submission must start after dependency ends
                         dep_duration = self.submissions[dep_id].get_duration_days(self.config)
-                        prob += start_vars[sid] >= start_vars[dep_id] + dep_duration
+                        prob += start_vars[submission_id] >= start_vars[dep_id] + dep_duration
     
     def _add_deadline_constraints(self, prob: Any, start_vars: Dict[str, Any]) -> None:
         """Add deadline constraints to the MILP model."""
-        for sid, submission in self.submissions.items():
+        for submission_id, submission in self.submissions.items():
             if submission.conference_id and submission.conference_id in self.conferences:
                 conf = self.conferences[submission.conference_id]
                 if submission.kind in conf.deadlines:
@@ -122,19 +124,19 @@ class OptimalScheduler(BaseScheduler):
                         start_date, _ = self._get_scheduling_window()
                         deadline_days = (deadline - start_date).days
                         duration = submission.get_duration_days(self.config)
-                        prob += start_vars[sid] + duration <= deadline_days
+                        prob += start_vars[submission_id] + duration <= deadline_days
     
     def _add_soft_block_constraints(self, prob: Any, start_vars: Dict[str, Any]) -> None:
         """Add soft block model constraints (PCCP) to the MILP model."""
-        for sid, submission in self.submissions.items():
+        for submission_id, submission in self.submissions.items():
             if submission.earliest_start_date:
                 # Convert earliest start date to days from base
                 start_date, _ = self._get_scheduling_window()
                 earliest_days = (submission.earliest_start_date - start_date).days
                 
                 # Soft block constraint: within ±2 months (60 days)
-                prob += start_vars[sid] >= earliest_days - 60  # Lower bound
-                prob += start_vars[sid] <= earliest_days + 60  # Upper bound
+                prob += start_vars[submission_id] >= earliest_days - 60  # Lower bound
+                prob += start_vars[submission_id] <= earliest_days + 60  # Upper bound
     
     def _add_working_days_constraints(self, prob: Any, start_vars: Dict[str, Any]) -> None:
         """Add working days only constraints to the MILP model."""
@@ -151,49 +153,50 @@ class OptimalScheduler(BaseScheduler):
     
     def _add_makespan_constraints(self, prob: Any, start_vars: Dict[str, Any], makespan: Any) -> None:
         """Add makespan constraints to the MILP model."""
-        for sid, submission in self.submissions.items():
+        for submission_id, submission in self.submissions.items():
             duration = submission.get_duration_days(self.config)
-            prob += makespan >= start_vars[sid] + duration
+            prob += makespan >= start_vars[submission_id] + duration
     
     def _solve_milp_model(self, model: Optional[Any]) -> Optional[Any]:
-        """Solve the MILP model and extract the solution."""
+        """Solve the MILP model and return the solution."""
         if model is None:
             return None
-            
+        
         try:
-            # Solve the problem
-            status = model.solve()
+            # Solve the model
+            model.solve()
             
-            if status == pulp.LpStatusOptimal:
-                # Check if the solver actually did any work
-                # If objective value is 0 and no iterations, the solver didn't do meaningful optimization
-                if model.objective.value() == 0:
-                    print("MILP solver found trivial solution - falling back to greedy")
-                    return None
+            # Check if solution was found
+            if model.status == pulp.LpStatusOptimal:
                 return model
-            print(f"MILP solver status: {pulp.LpStatus[status]}")
-            return None
+            else:
+                print(f"MILP optimization failed with status: {model.status}")
+                return None
+                
         except Exception as e:
-            print(f"Error solving MILP: {e}")
+            print(f"Error solving MILP model: {e}")
             return None
     
     def _extract_schedule_from_solution(self, solution: Optional[Any]) -> Dict[str, date]:
-        """Extract the schedule from the MILP solution."""
-        schedule = {}
-        
+        """Extract schedule from MILP solution."""
         if solution is None:
-            return schedule
+            return {}
         
-        # Get the base date for conversion using robust date calculation
-        base_date, _ = self._get_scheduling_window()
+        schedule = {}
+        start_date, _ = self._get_scheduling_window()
         
-        # Extract start times from solution
-        for var in solution.variables():
-            if var.name.startswith("start_"):
-                sid = var.name.replace("start_", "")
-                if sid in self.submissions:
-                    start_days = int(var.value())
-                    start_date = base_date + timedelta(days=start_days)
-                    schedule[sid] = start_date
+        try:
+            for submission_id in self.submissions:
+                var_name = f"start_{submission_id}"
+                if var_name in solution.variables():
+                    var = solution.variables()[var_name]
+                    if var.value() is not None:
+                        # Convert days from start to actual date
+                        days_from_start = int(var.value())
+                        actual_start_date = start_date + timedelta(days=days_from_start)
+                        schedule[submission_id] = actual_start_date
+        except Exception as e:
+            print(f"Error extracting schedule from MILP solution: {e}")
+            return {}
         
         return schedule

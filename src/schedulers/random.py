@@ -29,66 +29,34 @@ class RandomScheduler(BaseScheduler):
         Dict[str, date]
             Mapping of submission_id to start_date
         """
-        self._auto_link_abstract_paper()
-        from src.validation.venue import _validate_venue_compatibility
-        _validate_venue_compatibility(self.submissions, self.conferences)
-        topo = self._topological_order()
+        # Use shared setup
+        schedule, topo, start_date, end_date = self._run_common_scheduling_setup()
         
-        # Global time window - use robust date calculation
-        current, end = self._get_scheduling_window()
-        
-        schedule: Dict[str, date] = {}
+        # Initialize active submissions list
         active: List[str] = []
+        current_date = start_date
         
-        # Early abstract scheduling if enabled
-        if (self.config.scheduling_options and 
-            self.config.scheduling_options.get("enable_early_abstract_scheduling", False)):
-            abstract_advance = self.config.scheduling_options.get("abstract_advance_days", SCHEDULING_CONSTANTS.abstract_advance_days)
-            self._schedule_early_abstracts(schedule, abstract_advance)
-        
-        while current <= end and len(schedule) < len(self.submissions):
+        while current_date <= end_date and len(schedule) < len(self.submissions):
             # Skip blackout dates
-            if not is_working_day(current, self.config.blackout_dates):
-                current += timedelta(days=1)
+            if not self._is_working_day(current_date):
+                current_date += timedelta(days=1)
                 continue
             
-            # Retire finished drafts
-            active = [
-                sid for sid in active
-                if self._get_end_date(schedule[sid], self.submissions[sid]) > current
-            ]
+            # Update active submissions
+            active = self._update_active_submissions(active, schedule, current_date)
             
-            # Gather ready submissions
-            ready: List[str] = []
-            for sid in topo:
-                if sid in schedule:
-                    continue
-                s = self.submissions[sid]
-                if not self._deps_satisfied(s, schedule, current):
-                    continue
-                # Use calculated earliest start date
-                earliest_start = self._calculate_earliest_start_date(s)
-                if current < earliest_start:
-                    continue
-                ready.append(sid)
+            # Get ready submissions
+            ready = self._get_ready_submissions(topo, schedule, current_date)
             
             # Randomize the order
             random.shuffle(ready)
             
-            # Try to schedule up to concurrency limit
-            for sid in ready:
-                if len(active) >= self.config.max_concurrent_submissions:
-                    break
-                if not self._meets_deadline(self.submissions[sid], current):
-                    continue
-                schedule[sid] = current
-                active.append(sid)
+            # Schedule submissions up to concurrency limit
+            self._schedule_submissions_up_to_limit(ready, schedule, active, current_date)
             
-            current += timedelta(days=1)
+            current_date += timedelta(days=1)
         
-        if len(schedule) != len(self.submissions):
-            missing = [sid for sid in self.submissions if sid not in schedule]
-            print("Note: Could not schedule %s submissions: %s", len(missing), missing)
-            print("Successfully scheduled %s out of %s submissions", len(schedule), len(self.submissions))
+        # Print scheduling summary
+        self._print_scheduling_summary(schedule)
         
         return schedule

@@ -4,7 +4,6 @@ from __future__ import annotations
 from typing import Dict, List, Optional
 from datetime import date, timedelta
 from src.schedulers.base import BaseScheduler
-from src.core.dates import is_working_day
 from src.core.models import SchedulerStrategy
 from src.core.constants import SCHEDULING_CONSTANTS
 from src.core.models import Submission
@@ -16,18 +15,15 @@ class GreedyScheduler(BaseScheduler):
     
     def schedule(self) -> Dict[str, date]:
         """Generate a schedule using greedy algorithm."""
-        # Auto-link abstracts to papers if needed
-        self._auto_link_abstract_paper()
+        # Use shared setup
+        schedule, topo, start_date, end_date = self._run_common_scheduling_setup()
         
-        # Get submissions in priority order
-        submissions = self._topological_order()
-        
-        # Initialize schedule
-        schedule = {}
-        
-        # Schedule each submission
-        for submission_id in submissions:
-            submission = self.config.submissions_dict[submission_id]
+        # Schedule each submission in priority order
+        for submission_id in topo:
+            if submission_id in schedule:
+                continue
+                
+            submission = self.submissions[submission_id]
             
             # Find earliest valid start date
             start_date = self._find_earliest_valid_start(submission, schedule)
@@ -38,34 +34,11 @@ class GreedyScheduler(BaseScheduler):
                 # If we can't schedule this submission, skip it
                 continue
         
-        # Report any missing submissions
-        if len(schedule) != len(self.submissions):
-            missing = [sid for sid in self.submissions if sid not in schedule]
-            print(f"Note: Could not schedule {len(missing)} submissions: {missing}")
-            print(f"Successfully scheduled {len(schedule)} out of {len(self.submissions)} submissions")
+        # Print scheduling summary
+        self._print_scheduling_summary(schedule)
         
         return schedule
     
-    def _sort_by_priority(self, ready: List[str]) -> List[str]:
-        """Sort ready submissions by priority weight (greedy selection)."""
-        def get_priority(sid: str) -> float:
-            s = self.submissions[sid]
-            weights = self.config.priority_weights or {}
-            
-            base_priority = 0.0
-            if s.kind.value == "PAPER":
-                base_priority = weights.get("engineering_paper" if s.engineering else "medical_paper", 1.0)
-            elif s.kind.value == "ABSTRACT":
-                base_priority = weights.get("abstract", 0.5)
-            elif s.kind.value == "POSTER":
-                base_priority = weights.get("poster", 0.8)
-            else:
-                base_priority = weights.get("other", 1.0)
-            
-            return base_priority
-        
-        return sorted(ready, key=get_priority, reverse=True) 
-
     def _find_earliest_valid_start(self, submission: Submission, schedule: Dict[str, date]) -> Optional[date]:
         """Find the earliest valid start date for a submission with comprehensive constraint validation."""
      
@@ -76,7 +49,7 @@ class GreedyScheduler(BaseScheduler):
         if submission.depends_on:
             for dep_id in submission.depends_on:
                 if dep_id in schedule:
-                    dep_end = self._get_end_date(schedule[dep_id], self.config.submissions_dict[dep_id])
+                    dep_end = self._get_end_date(schedule[dep_id], self.submissions[dep_id])
                     current_date = max(current_date, dep_end)
         
         # Check earliest start date constraint
@@ -85,7 +58,7 @@ class GreedyScheduler(BaseScheduler):
         
         # Check deadline constraint
         if submission.conference_id:
-            conf = self.config.conferences_dict.get(submission.conference_id)
+            conf = self.conferences.get(submission.conference_id)
             if conf and submission.kind in conf.deadlines:
                 deadline = conf.deadlines[submission.kind]
                 duration = submission.get_duration_days(self.config)
@@ -98,10 +71,10 @@ class GreedyScheduler(BaseScheduler):
         while current_date <= date.today() + timedelta(days=365):  # Reasonable limit
             # Count active submissions on this date
             active_count = 0
-            for scheduled_id, start_date in schedule.items():
-                scheduled_sub = self.config.submissions_dict[scheduled_id]
-                end_date = self._get_end_date(start_date, scheduled_sub)
-                if start_date <= current_date <= end_date:
+            for scheduled_id, scheduled_start_date in schedule.items():
+                scheduled_sub = self.submissions[scheduled_id]
+                end_date = self._get_end_date(scheduled_start_date, scheduled_sub)
+                if scheduled_start_date <= current_date <= end_date:
                     active_count += 1
             
             # Check resource constraint
@@ -110,7 +83,7 @@ class GreedyScheduler(BaseScheduler):
                 continue
             
             # Check working day constraint
-            if not is_working_day(current_date, self.config.blackout_dates):
+            if not self._is_working_day(current_date):
                 current_date += timedelta(days=1)
                 continue
             

@@ -18,6 +18,7 @@ class SchedulingConstants:
     default_paper_lead_time_months: int = 3
     work_item_duration_days: int = 14
     min_paper_lead_time_days: int = 90
+    min_abstract_lead_time_days: int = 30
     max_concurrent_submissions: int = 3
 
 # ===== PENALTY CONSTANTS =====

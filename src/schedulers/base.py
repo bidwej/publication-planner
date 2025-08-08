@@ -10,7 +10,7 @@ from src.core.models import (
 )
 from src.validation.deadline import validate_deadline_constraints
 from src.validation.submission import validate_submission_constraints
-
+from src.core.constants import SCHEDULING_CONSTANTS
 
 
 class BaseScheduler(ABC):
@@ -64,15 +64,15 @@ class BaseScheduler(ABC):
     
     def _get_end_date(self, start: date, sub: Submission) -> date:
         """Calculate end date for a submission."""
-        lead_time = self.config.min_paper_lead_time_days
+        lead_time = SCHEDULING_CONSTANTS.min_paper_lead_time_days
         if sub.kind.value == "ABSTRACT":
-            lead_time = self.config.min_abstract_lead_time_days
+            lead_time = SCHEDULING_CONSTANTS.min_abstract_lead_time_days
         return start + timedelta(days=lead_time)
     
-    def _meets_deadline(self, sub: Submission, start: date) -> bool:
+    def _meets_deadline(self, submission: Submission, start_date: date) -> bool:
         """Check if starting on this date meets the deadline."""
         # Create a temporary schedule with just this submission
-        temp_schedule = {sub.id: start}
+        temp_schedule = {submission.id: start_date}
         result = validate_deadline_constraints(temp_schedule, self.config)
         return result.is_valid
     
@@ -86,6 +86,191 @@ class BaseScheduler(ABC):
 
         # Use the submission validation function
         return validate_submission_constraints(sub, start, schedule, self.config)
+    
+    def _run_common_scheduling_setup(self) -> tuple[Dict[str, date], List[str], date, date]:
+        """
+        Common setup for all schedulers.
+        
+        Returns
+        -------
+        tuple[Dict[str, date], List[str], date, date]
+            (schedule, topological_order, start_date, end_date)
+        """
+        # Auto-link abstracts to papers if needed
+        self._auto_link_abstract_paper()
+        
+        # Validate venue compatibility
+        from src.validation.venue import _validate_venue_compatibility
+        _validate_venue_compatibility(self.submissions, self.conferences)
+        
+        # Get submissions in topological order
+        topo = self._topological_order()
+        
+        # Get scheduling window
+        start_date, end_date = self._get_scheduling_window()
+        
+        # Initialize schedule
+        schedule: Dict[str, date] = {}
+        
+        # Apply early abstract scheduling if enabled
+        self._apply_early_abstract_scheduling(schedule)
+        
+        return schedule, topo, start_date, end_date
+    
+    def _apply_early_abstract_scheduling(self, schedule: Dict[str, date]) -> None:
+        """Apply early abstract scheduling if enabled in config."""
+        if (self.config.scheduling_options and 
+            self.config.scheduling_options.get("enable_early_abstract_scheduling", False)):
+            abstract_advance = self.config.scheduling_options.get(
+                "abstract_advance_days", 
+                SCHEDULING_CONSTANTS.abstract_advance_days
+            )
+            self._schedule_early_abstracts(schedule, abstract_advance)
+    
+    def _get_ready_submissions(self, topo: List[str], schedule: Dict[str, date], current_date: date) -> List[str]:
+        """
+        Get list of submissions ready to be scheduled at the current date.
+        
+        Parameters
+        ----------
+        topo : List[str]
+            Submissions in topological order
+        schedule : Dict[str, date]
+            Current schedule
+        current_date : date
+            Current date being considered
+            
+        Returns
+        -------
+        List[str]
+            List of submission IDs ready to be scheduled
+        """
+        ready = []
+        for submission_id in topo:
+            if submission_id in schedule:
+                continue
+            
+            submission = self.submissions[submission_id]
+            
+            # Check dependencies
+            if not self._deps_satisfied(submission, schedule, current_date):
+                continue
+            
+            # Check earliest start date
+            earliest_start = self._calculate_earliest_start_date(submission)
+            if current_date < earliest_start:
+                continue
+            
+            ready.append(submission_id)
+        
+        return ready
+    
+    def _update_active_submissions(self, active: List[str], schedule: Dict[str, date], current_date: date) -> List[str]:
+        """
+        Update list of active submissions by removing finished ones.
+        
+        Parameters
+        ----------
+        active : List[str]
+            Current list of active submission IDs
+        schedule : Dict[str, date]
+            Current schedule
+        current_date : date
+            Current date being considered
+            
+        Returns
+        -------
+        List[str]
+            Updated list of active submission IDs
+        """
+        return [
+            submission_id for submission_id in active
+            if self._get_end_date(schedule[submission_id], self.submissions[submission_id]) > current_date
+        ]
+    
+    def _schedule_submissions_up_to_limit(self, ready: List[str], schedule: Dict[str, date], 
+                                        active: List[str], current_date: date) -> int:
+        """
+        Schedule submissions up to the concurrency limit.
+        
+        Parameters
+        ----------
+        ready : List[str]
+            List of submission IDs ready to be scheduled
+        schedule : Dict[str, date]
+            Current schedule
+        active : List[str]
+            Current list of active submission IDs
+        current_date : date
+            Current date being considered
+            
+        Returns
+        -------
+        int
+            Number of submissions scheduled in this round
+        """
+        scheduled_count = 0
+        
+        for submission_id in ready:
+            if len(active) >= SCHEDULING_CONSTANTS.max_concurrent_submissions:
+                break
+            
+            submission = self.submissions[submission_id]
+            
+            # Check deadline constraint
+            if not self._meets_deadline(submission, current_date):
+                continue
+            
+            # Check all constraints using comprehensive validation
+            if not self._validate_all_constraints(submission, current_date, schedule):
+                continue
+            
+            # Schedule the submission
+            schedule[submission_id] = current_date
+            active.append(submission_id)
+            scheduled_count += 1
+        
+        return scheduled_count
+    
+    def _print_scheduling_summary(self, schedule: Dict[str, date]) -> None:
+        """Print summary of scheduling results."""
+        if len(schedule) != len(self.submissions):
+            missing = [submission_id for submission_id in self.submissions if submission_id not in schedule]
+            print(f"Note: Could not schedule {len(missing)} submissions: {missing}")
+            print(f"Successfully scheduled {len(schedule)} out of {len(self.submissions)} submissions")
+    
+    def _is_working_day(self, current_date: date) -> bool:
+        """Check if current date is a working day."""
+        from src.core.dates import is_working_day
+        return is_working_day(current_date, self.config.blackout_dates)
+    
+    def _advance_date_if_needed(self, current_date: date) -> date:
+        """Advance date if it's not a working day."""
+        while not self._is_working_day(current_date):
+            current_date += timedelta(days=1)
+        return current_date
+    
+    def _get_base_priority(self, submission: Submission) -> float:
+        """Get base priority for a submission based on config weights."""
+        weights = self.config.priority_weights or {}
+        
+        if submission.kind.value == "PAPER":
+            weight_key = "engineering_paper" if submission.engineering else "medical_paper"
+            return weights.get(weight_key, 1.0)
+        elif submission.kind.value == "ABSTRACT":
+            return weights.get("abstract", 0.5)
+        elif submission.kind.value == "POSTER":
+            return weights.get("poster", 0.8)
+        else:
+            return weights.get("mod", 1.5)
+    
+    def _sort_by_priority(self, ready: List[str]) -> List[str]:
+        """Sort ready submissions by priority weight."""
+        def get_priority(submission_id: str) -> float:
+            submission = self.submissions[submission_id]
+            return self._get_base_priority(submission)
+        
+        return sorted(ready, key=get_priority, reverse=True)
     
     def _auto_link_abstract_paper(self):
         """Auto-link abstracts to papers and create missing abstract submissions."""
@@ -248,9 +433,9 @@ class BaseScheduler(ABC):
             if submission.kind in conf.deadlines:
                 deadline = conf.deadlines[submission.kind]
                 # Work backwards from deadline
-                lead_time = self.config.min_paper_lead_time_days
+                lead_time = SCHEDULING_CONSTANTS.min_paper_lead_time_days
                 if submission.kind.value == "ABSTRACT":
-                    lead_time = self.config.min_abstract_lead_time_days
+                    lead_time = SCHEDULING_CONSTANTS.min_abstract_lead_time_days
                 
                 # Calculate latest possible start date to meet deadline
                 latest_start = deadline - timedelta(days=lead_time)
