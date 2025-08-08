@@ -54,10 +54,10 @@ def run_timeline():
             from app.main import main as app_main
             logger.info("[OK] Successfully imported app.main")
         except ImportError as e:
-                    logger.error("[ERROR] Error importing timeline app: %s", e)
-        logger.error("[TIP] Make sure you're in the project root directory")
-        logger.error("[TIP] Check that all dependencies are installed")
-        return 1
+            logger.error("[ERROR] Error importing timeline app: %s", e)
+            logger.error("[TIP] Make sure you're in the project root directory")
+            logger.error("[TIP] Check that all dependencies are installed")
+            return 1
         
         # Set up arguments for timeline mode
         sys.argv = ['main.py', '--mode', 'timeline', '--port', '8051']

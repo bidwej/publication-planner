@@ -187,12 +187,16 @@ def create_timeline_app():
     def create_minimal_layout():
         """Create a truly minimal layout with just the timeline."""
         return html.Div([
-            # Single generate button at top
+            # Control buttons at top
             html.Div([
                 html.Button([
                     html.I(className="fas fa-play"),
                     " Generate Timeline"
-                ], id="generate-btn", className="btn btn-primary", style={'margin': '10px'})
+                ], id="generate-btn", className="btn btn-primary", style={'margin': '10px'}),
+                html.Button([
+                    html.I(className="fas fa-file-pdf"),
+                    " Export PDF"
+                ], id="export-pdf-btn", className="btn btn-success", style={'margin': '10px'})
             ], style={'textAlign': 'center'}),
             
             # Timeline Chart - full screen
@@ -217,21 +221,40 @@ def create_timeline_app():
     # Set the layout
     app.layout = create_minimal_layout()
     
-    # Simple callback
+    # Callbacks
     @app.callback(
         Output('timeline-chart', 'figure'),
-        Input('generate-btn', 'n_clicks')
+        [Input('generate-btn', 'n_clicks'),
+         Input('export-pdf-btn', 'n_clicks')]
     )
-    def update_timeline(n_clicks):
+    def update_timeline(n_generate, n_export):
         """Update timeline chart when generate button is clicked."""
-        if not n_clicks or n_clicks == 0:
-            # Return empty chart on initial load
-            return create_gantt_chart({}, Config.create_default())
+        ctx = callback_context
         
+        # Only run callback if a button was actually clicked
+        if not ctx.triggered:
+            raise exceptions.PreventUpdate
+        
+        trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+        
+        # Check if buttons were actually clicked (not just initialized)
+        if trigger_id == 'generate-btn' and n_generate and n_generate > 0:
+            return _generate_timeline()
+        elif trigger_id == 'export-pdf-btn' and n_export and n_export > 0:
+            return _export_timeline_pdf()
+        else:
+            raise exceptions.PreventUpdate
+    
+    def _generate_timeline():
+        """Generate timeline chart."""
         try:
             config = load_config('config.json')
             scheduler = BaseScheduler.create_scheduler(SchedulerStrategy('greedy'), config)
             schedule = scheduler.schedule()
+            
+            # Store the current schedule data for PDF export
+            global _current_schedule_data
+            _current_schedule_data = schedule
             
             # Create timeline chart
             timeline_fig = create_gantt_chart(schedule, config)
@@ -239,6 +262,29 @@ def create_timeline_app():
             
         except Exception as e:
             print("Error generating schedule: %s", e)
+            return create_gantt_chart({}, Config.create_default())
+    
+    def _export_timeline_pdf():
+        """Export timeline as PDF."""
+        try:
+            if not _current_schedule_data:
+                print("No schedule data available. Please generate a timeline first.")
+                return create_gantt_chart({}, Config.create_default())
+            
+            config = load_config('config.json')
+            
+            # Import PDF generator
+            from app.components.charts.pdf_generator import generate_timeline_pdf
+            
+            # Generate PDF
+            pdf_path = generate_timeline_pdf(_current_schedule_data, config)
+            print(f"✅ PDF exported: {pdf_path}")
+            
+            # Return the current chart (don't change the display)
+            return create_gantt_chart(_current_schedule_data, config)
+            
+        except Exception as e:
+            print("Error exporting PDF: %s", e)
             return create_gantt_chart({}, Config.create_default())
     
     return app

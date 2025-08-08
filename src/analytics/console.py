@@ -171,7 +171,7 @@ def print_schedule_analysis(schedule: Dict[str, date], config: Config, strategy_
         print("Skipping detailed validation analysis")
     
     # Print detailed constraint validation results
-    if 'constraints' in validation_result:
+    if 'validation_result' in locals() and 'constraints' in validation_result:
         constraints = validation_result['constraints']
         print("\n=== Constraint Validation Details ===")
         
@@ -223,7 +223,11 @@ def print_schedule_analysis(schedule: Dict[str, date], config: Config, strategy_
                 print("  Comprehensive Validation: ✓")
     
     # Print detailed metrics
-    print_metrics_summary(schedule, config)
+    try:
+        print_metrics_summary(schedule, config)
+    except Exception as e:
+        print(f"Metrics summary failed: {e}")
+        print("Skipping detailed metrics analysis")
 
 
 def print_strategy_comparison(results: Dict[str, Dict[str, date]], config: Config, output_file: Optional[str] = None) -> None:

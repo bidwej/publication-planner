@@ -91,12 +91,12 @@ class GanttChartBuilder:
             )
     
     def _add_blackout_periods(self):
-        """Add blackout period backgrounds."""
+        """Add blackout period backgrounds with proper light gray coloring."""
         blackout_data = self._load_blackout_data()
         
-        # Add custom blackout periods (limit to avoid performance issues)
+        # Add custom blackout periods
         custom_periods = blackout_data.get('custom_blackout_periods', [])
-        for period in custom_periods[:10]:  # Limit to 10 periods
+        for period in custom_periods:
             start_date = date.fromisoformat(period['start'])
             end_date = date.fromisoformat(period['end'])
             
@@ -110,16 +110,20 @@ class GanttChartBuilder:
                     x1=end_days,
                     y0=0,
                     y1=len(self.schedule),
-                    fillcolor="rgba(128, 128, 128, 0.3)",
+                    fillcolor="rgba(200, 200, 200, 0.2)",  # Light gray
                     line=dict(width=0),
                     layer="below"
                 )
         
-        # Skip weekend and holiday periods for performance
-        # These can be added back later if needed
-        # if blackout_data.get('weekends', {}).get('enabled', False):
-        #     self._add_weekend_periods()
-        # self._add_holiday_periods(blackout_data)
+        # Add weekend periods
+        if blackout_data.get('weekends', {}).get('enabled', False):
+            self._add_weekend_periods()
+        
+        # Add holiday periods
+        self._add_holiday_periods(blackout_data)
+        
+        # Add time interval bands (monthly/quarterly)
+        self._add_time_interval_bands()
     
     def _add_weekend_periods(self):
         """Add weekend periods as recurring shaded rectangles."""
@@ -175,6 +179,46 @@ class GanttChartBuilder:
                         )
                 except ValueError:
                     continue
+    
+    def _add_time_interval_bands(self):
+        """Add alternating time interval bands for better readability."""
+        # Calculate timeline duration
+        timeline_days = (self.max_date - self.min_date).days
+        
+        # Determine interval size based on timeline length
+        if timeline_days <= 90:  # 3 months or less
+            interval_days = 7  # Weekly
+        elif timeline_days <= 365:  # 1 year or less
+            interval_days = 30  # Monthly
+        else:  # More than 1 year
+            interval_days = 90  # Quarterly
+        
+        # Add alternating bands
+        current_day = 0
+        band_count = 0
+        
+        while current_day <= timeline_days:
+            end_day = min(current_day + interval_days, timeline_days)
+            
+            # Alternate colors for bands
+            if band_count % 2 == 0:
+                fillcolor = "rgba(240, 240, 240, 0.1)"  # Very light gray
+            else:
+                fillcolor = "rgba(255, 255, 255, 0.0)"  # Transparent
+            
+            self.fig.add_shape(
+                type="rect",
+                x0=current_day,
+                x1=end_day,
+                y0=0,
+                y1=len(self.schedule),
+                fillcolor=fillcolor,
+                line=dict(width=0),
+                layer="below"
+            )
+            
+            current_day = end_day
+            band_count += 1
     
     def _add_dependency_arrows(self):
         """Add dependency arrows between submissions."""
