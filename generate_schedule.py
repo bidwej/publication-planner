@@ -23,24 +23,44 @@ from src.analytics.console import print_schedule_analysis, print_strategy_compar
 from src.analytics.exporters.csv_exporter import CSVExporter
 
 # Import all schedulers to register them with the factory
-import schedulers.greedy
-import schedulers.stochastic
-import schedulers.lookahead
-import schedulers.backtracking
-import schedulers.random
-import schedulers.heuristic
-import schedulers.optimal
+import src.schedulers.greedy
+import src.schedulers.stochastic
+import src.schedulers.lookahead
+import src.schedulers.backtracking
+import src.schedulers.random
+import src.schedulers.heuristic
+import src.schedulers.optimal
 
 # Manual registration as backup for optimal scheduler
-from schedulers.optimal import OptimalScheduler
+from src.schedulers.optimal import OptimalScheduler
 BaseScheduler._strategy_registry[SchedulerStrategy.OPTIMAL] = OptimalScheduler
+
+# Explicit registration of all schedulers to ensure they're available
+from src.schedulers.greedy import GreedyScheduler
+from src.schedulers.stochastic import StochasticGreedyScheduler
+from src.schedulers.lookahead import LookaheadGreedyScheduler
+from src.schedulers.backtracking import BacktrackingGreedyScheduler
+from src.schedulers.random import RandomScheduler
+from src.schedulers.heuristic import HeuristicScheduler
+
+BaseScheduler._strategy_registry[SchedulerStrategy.GREEDY] = GreedyScheduler
+BaseScheduler._strategy_registry[SchedulerStrategy.STOCHASTIC] = StochasticGreedyScheduler
+BaseScheduler._strategy_registry[SchedulerStrategy.LOOKAHEAD] = LookaheadGreedyScheduler
+BaseScheduler._strategy_registry[SchedulerStrategy.BACKTRACKING] = BacktrackingGreedyScheduler
+BaseScheduler._strategy_registry[SchedulerStrategy.RANDOM] = RandomScheduler
+BaseScheduler._strategy_registry[SchedulerStrategy.HEURISTIC] = HeuristicScheduler
 # Advanced scheduler removed as per requirements
 
 
 def generate_schedule(config, strategy: SchedulerStrategy, verbose: bool = True, csv_dir: Optional[str] = None) -> Dict[str, date]:
     """Generate a schedule for the given strategy."""
     try:
+        if verbose:
+            print(f"Creating scheduler for strategy: {strategy}")
+            print(f"Registry contains: {list(BaseScheduler._strategy_registry.keys())}")
         scheduler = BaseScheduler.create_scheduler(strategy, config)
+        if verbose:
+            print(f"Scheduler created successfully: {type(scheduler).__name__}")
         schedule = scheduler.schedule()
         
         if verbose:
@@ -59,7 +79,7 @@ def generate_schedule(config, strategy: SchedulerStrategy, verbose: bool = True,
         return schedule
     except Exception as e:
         if verbose:
-            print("Error generating schedule with %s: %s", strategy.value, e)
+            print(f"Error generating schedule with {strategy.value}: {e}")
         return {}
 
 

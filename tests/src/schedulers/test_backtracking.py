@@ -73,15 +73,15 @@ class TestBacktrackingScheduler:
             "sub2", "Test Paper 2", SubmissionType.ABSTRACT, "conf2"
         )
         
-        # Create mock conferences
+        # Create mock conferences with future dates
         conference1 = create_mock_conference(
             "conf1", "Test Conference 1", 
-            {SubmissionType.PAPER: date(2024, 6, 1)}
+            {SubmissionType.PAPER: date(2026, 6, 1)}
         )
         
         conference2 = create_mock_conference(
             "conf2", "Test Conference 2", 
-            {SubmissionType.ABSTRACT: date(2024, 8, 1)},
+            {SubmissionType.ABSTRACT: date(2026, 8, 1)},
             conf_type=ConferenceType.MEDICAL
         )
         
@@ -109,11 +109,11 @@ class TestBacktrackingScheduler:
         
         conference = create_mock_conference(
             "conf1", "Test Conference", 
-            {SubmissionType.PAPER: date(2024, 6, 1)}
+            {SubmissionType.PAPER: date(2026, 6, 1)}
         )
         
         config = create_mock_config([submission], [conference])
-        config.blackout_dates = [date(2024, 5, 15), date(2024, 5, 16)]
+        config.blackout_dates = [date(2026, 5, 15), date(2026, 5, 16)]
         
         scheduler: Any = BacktrackingGreedyScheduler(config)
         
@@ -132,12 +132,12 @@ class TestBacktrackingScheduler:
         # Create mock paper with very short deadline
         submission = create_mock_submission(
             "sub1", "Test Paper", SubmissionType.PAPER, "conf1",
-            earliest_start_date=date(2024, 1, 15)  # Start date
+            earliest_start_date=date(2026, 1, 15)  # Start date
         )
         
         conference = create_mock_conference(
             "conf1", "Test Conference", 
-            {SubmissionType.PAPER: date(2024, 1, 20)},  # Very short deadline - only 5 days
+            {SubmissionType.PAPER: date(2026, 1, 20)},  # Very short deadline - only 5 days
             recurrence=ConferenceRecurrence.QUARTERLY  # Use quarterly to avoid next year's deadline
         )
         
@@ -164,7 +164,7 @@ class TestBacktrackingScheduler:
         
         conference = create_mock_conference(
             "conf1", "Test Conference", 
-            {SubmissionType.PAPER: date(2024, 6, 1)}
+            {SubmissionType.PAPER: date(2026, 6, 1)}
         )
         
         config = create_mock_config([submission1, submission2], [conference])
@@ -223,12 +223,12 @@ class TestBacktrackingScheduler:
         
         conference1 = create_mock_conference(
             "conf1", "Test Conference 1", 
-            {SubmissionType.PAPER: date(2024, 6, 1)}
+            {SubmissionType.PAPER: date(2026, 6, 1)}
         )
         
         conference2 = create_mock_conference(
             "conf2", "Test Conference 2", 
-            {SubmissionType.PAPER: date(2024, 6, 1)}
+            {SubmissionType.PAPER: date(2026, 6, 1)}
         )
         
         config = create_mock_config([submission1, submission2], [conference1, conference2])
@@ -266,7 +266,7 @@ class TestBacktrackingScheduler:
         
         conference = create_mock_conference(
             "conf1", "Test Conference", 
-            {SubmissionType.PAPER: date(2024, 6, 1)}
+            {SubmissionType.PAPER: date(2026, 6, 1)}
         )
         
         config = create_mock_config(
@@ -300,13 +300,13 @@ class TestBacktrackingScheduler:
             draft_window_months=3,
             penalty_cost_per_day=100.0,
             engineering=True,
-            earliest_start_date=date(2024, 1, 1)
+            earliest_start_date=date(2026, 1, 1)
         )
         
         # Create mock conference with proper deadline
         conference = create_mock_conference(
             "conf1", "Test Conference", 
-            {SubmissionType.PAPER: date(2024, 6, 1)}
+            {SubmissionType.PAPER: date(2026, 6, 1)}
         )
         
         # Debug: Check conference submission types
@@ -318,7 +318,7 @@ class TestBacktrackingScheduler:
         
         # Debug: Check if submission is valid
         from src.validation.submission import validate_submission_constraints
-        test_date = date(2024, 3, 1)
+        test_date = date(2026, 3, 1)
         is_valid = validate_submission_constraints(submission, test_date, {}, config)
         print(f"Submission validation result: {is_valid}")
         

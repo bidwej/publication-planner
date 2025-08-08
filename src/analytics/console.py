@@ -154,17 +154,21 @@ def print_schedule_analysis(schedule: Dict[str, date], config: Config, strategy_
     print_schedule_summary(schedule, config)
     
     # Comprehensive validation using all constraints, scoring, and analytics
-    validation_result = validate_schedule_constraints(schedule, config)
-    
-    print("Comprehensive Schedule Analysis:")
-    print(f"  Feasibility: {'✓' if validation_result['overall_valid'] else '✗'}")
-    print(f"  Completion: {validation_result['completion_rate']:.1f}%")
-    print(f"  Duration: {validation_result['duration_days']} days")
-    print(f"  Peak Load: {validation_result['peak_load']} submissions")
-    print(f"  Quality Score: {validation_result['quality_score']:.1f}/100")
-    print(f"  Efficiency Score: {validation_result['efficiency_score']:.1f}/100")
-    print(f"  Total Penalty: ${validation_result['total_penalty']:.2f}")
-    print(f"  Total Violations: {validation_result['summary']['total_violations']}")
+    try:
+        validation_result = validate_schedule_constraints(schedule, config)
+        
+        print("Comprehensive Schedule Analysis:")
+        print(f"  Feasibility: {'✓' if validation_result['overall_valid'] else '✗'}")
+        print(f"  Completion: {validation_result['completion_rate']:.1f}%")
+        print(f"  Duration: {validation_result['duration_days']} days")
+        print(f"  Peak Load: {validation_result['peak_load']} submissions")
+        print(f"  Quality Score: {validation_result['quality_score']:.1f}/100")
+        print(f"  Efficiency Score: {validation_result['efficiency_score']:.1f}/100")
+        print(f"  Total Penalty: ${validation_result['total_penalty']:.2f}")
+        print(f"  Total Violations: {validation_result['summary']['total_violations']}")
+    except Exception as e:
+        print(f"Validation failed: {e}")
+        print("Skipping detailed validation analysis")
     
     # Print detailed constraint validation results
     if 'constraints' in validation_result:
