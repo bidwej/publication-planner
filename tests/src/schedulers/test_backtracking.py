@@ -31,12 +31,16 @@ class TestBacktrackingScheduler:
 
     def test_schedule_single_paper(self) -> None:
         """Test scheduling with single paper."""
-        # Create mock submission
+        # Create mock submission with all required fields
         submission = create_mock_submission(
-            "sub1", "Test Paper", SubmissionType.PAPER, "conf1"
+            "sub1", "Test Paper", SubmissionType.PAPER, "conf1",
+            draft_window_months=3,
+            penalty_cost_per_day=100.0,
+            engineering=True,
+            earliest_start_date=date(2024, 1, 1)
         )
         
-        # Create mock conference
+        # Create mock conference with proper deadline
         conference = create_mock_conference(
             "conf1", "Test Conference", 
             {SubmissionType.PAPER: date(2024, 6, 1)}
@@ -282,3 +286,37 @@ class TestBacktrackingScheduler:
                     # Count how many submissions are scheduled on this date
                     same_date_count = sum(1 for d in scheduled_dates if d == date1)
                     assert same_date_count <= config.max_concurrent_submissions
+
+    def test_debug_conference_validation(self) -> None:
+        """Debug test to understand conference validation issues."""
+        # Create mock submission with all required fields
+        submission = create_mock_submission(
+            "sub1", "Test Paper", SubmissionType.PAPER, "conf1",
+            draft_window_months=3,
+            penalty_cost_per_day=100.0,
+            engineering=True,
+            earliest_start_date=date(2024, 1, 1)
+        )
+        
+        # Create mock conference with proper deadline
+        conference = create_mock_conference(
+            "conf1", "Test Conference", 
+            {SubmissionType.PAPER: date(2024, 6, 1)}
+        )
+        
+        # Debug: Check conference submission types
+        print(f"Conference submission_types: {conference.submission_types}")
+        print(f"Conference accepts papers: {conference.accepts_submission_type(SubmissionType.PAPER)}")
+        print(f"Conference deadlines: {conference.deadlines}")
+        
+        config = create_mock_config([submission], [conference])
+        
+        # Debug: Check if submission is valid
+        from src.validation.submission import validate_submission_constraints
+        test_date = date(2024, 3, 1)
+        is_valid = validate_submission_constraints(submission, test_date, {}, config)
+        print(f"Submission validation result: {is_valid}")
+        
+        # This test should pass and help us understand the issue
+        assert conference.accepts_submission_type(SubmissionType.PAPER)
+        assert conference.submission_types is not None

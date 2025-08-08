@@ -24,7 +24,7 @@ def create_output_directory(base_dir: str = "output") -> str:
     return str(output_dir)
 
 def save_all_outputs(
-    schedule: Dict[str, str],
+    schedule: Dict[str, date],
     schedule_table: List[Dict[str, str]],
     metrics_table: List[Dict[str, str]],
     deadline_table: List[Dict[str, str]],

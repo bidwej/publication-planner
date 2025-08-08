@@ -152,9 +152,29 @@ def calculate_efficiency_timeline(schedule: Dict[str, date], config: Config) -> 
             timeline_efficiency=min_score
         )
     
-    # Calculate timeline span
-    start_date = min(schedule.values())
-    end_date = max(schedule.values())
+    # Calculate timeline span - handle both string and date objects
+    start_dates = []
+    end_dates = []
+    
+    for date_val in schedule.values():
+        if isinstance(date_val, str):
+            from datetime import datetime
+            parsed_date = datetime.strptime(date_val, "%Y-%m-%d").date()
+            start_dates.append(parsed_date)
+            end_dates.append(parsed_date)
+        else:
+            start_dates.append(date_val)
+            end_dates.append(date_val)
+    
+    if not start_dates:
+        return TimelineMetrics(
+            duration_days=0,
+            avg_daily_load=min_score,
+            timeline_efficiency=min_score
+        )
+    
+    start_date = min(start_dates)
+    end_date = max(end_dates)
     duration_days = (end_date - start_date).days + 1
     
     # Calculate average daily load

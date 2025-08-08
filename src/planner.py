@@ -271,59 +271,6 @@ class Planner:
             scoring=scoring_result
         )
     
-    def validate_schedule_comprehensive(self, schedule: Dict[str, date]) -> Dict[str, Any]:
-        """Validate schedule comprehensively and return detailed results."""
-        # Use the comprehensive validation that includes all README claims
-        from src.validation.submission import validate_submission_constraints
-        
-        # First run the existing comprehensive validation
-        result = validate_schedule_constraints(schedule, self.config)
-        
-        # Add comprehensive single-submission validation for each submission
-        comprehensive_violations = []
-        for submission_id, start_date in schedule.items():
-            submission = self.config.submissions_dict.get(submission_id)
-            if submission:
-                # Use comprehensive validation for each submission
-                if not validate_submission_constraints(submission, start_date, schedule, self.config):
-                    comprehensive_violations.append({
-                        "submission_id": submission_id,
-                        "description": f"Comprehensive validation failed for {submission_id}",
-                        "severity": "high"
-                    })
-        
-        # Add comprehensive violations to the result
-        if comprehensive_violations:
-            if "constraints" not in result:
-                result["constraints"] = {}
-            if "comprehensive_violations" not in result["constraints"]:
-                result["constraints"]["comprehensive_violations"] = []
-            result["constraints"]["comprehensive_violations"].extend(comprehensive_violations)
-            
-            # Update overall validity
-            result["summary"]["overall_valid"] = False
-            result["summary"]["total_violations"] += len(comprehensive_violations)
-        
-        # Transform the result to match expected test structure
-        if 'constraints' in result:
-            constraints = result['constraints']
-            # Extract top-level keys that tests expect
-            if 'deadlines' in constraints:
-                result['deadlines'] = constraints['deadlines']
-            if 'dependencies' in constraints:
-                result['dependencies'] = constraints['dependencies']
-            if 'resources' in constraints:
-                result['resources'] = constraints['resources']
-        
-        # Ensure summary has the expected structure
-        if 'summary' in result:
-            summary = result['summary']
-            if isinstance(summary, dict) and 'summary' not in summary:
-                # Add a summary field if it doesn't exist
-                summary['summary'] = f"Validation result: {summary.get('is_feasible', 'Unknown')}"
-        
-        return result
-    
     def generate_monthly_table(self) -> List[Dict[str, Any]]:
         """Generate monthly table for the current configuration."""
         return generate_simple_monthly_table(self.config)

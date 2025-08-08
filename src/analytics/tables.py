@@ -580,7 +580,7 @@ def create_analytics_table(validation_result: Dict[str, Any]) -> List[Dict[str, 
 # File I/O Functions
 # ============================================================================
 
-def save_schedule_json(schedule: Dict[str, str], output_dir: str, filename: str = "schedule.json") -> str:
+def save_schedule_json(schedule: Dict[str, date], output_dir: str, filename: str = "schedule.json") -> str:
     """Save schedule as JSON file."""
     filepath = Path(output_dir) / filename
     with open(filepath, 'w', encoding='utf-8') as f:

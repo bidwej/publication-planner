@@ -33,9 +33,26 @@ def get_schedule_metrics(schedule: Dict[str, date], config: Config) -> Dict[str,
     # Calculate basic metrics
     total_submissions = len(schedule)
     if schedule:
-        start_date = min(schedule.values())
-        end_date = max(schedule.values())
-        duration_days = (end_date - start_date).days
+        # Handle both string and date objects
+        start_dates = []
+        end_dates = []
+        
+        for date_val in schedule.values():
+            if isinstance(date_val, str):
+                from datetime import datetime
+                parsed_date = datetime.strptime(date_val, "%Y-%m-%d").date()
+                start_dates.append(parsed_date)
+                end_dates.append(parsed_date)
+            else:
+                start_dates.append(date_val)
+                end_dates.append(date_val)
+        
+        if start_dates:
+            start_date = min(start_dates)
+            end_date = max(end_dates)
+            duration_days = (end_date - start_date).days
+        else:
+            duration_days = 0
     else:
         duration_days = 0
     

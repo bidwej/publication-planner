@@ -50,20 +50,13 @@ class TestSaveAllOutputs:
     """Test the save_all_outputs function."""
 
     def test_save_all_outputs_basic(self, tmp_path: Path) -> None:
-        """Test basic save all outputs functionality."""
-        schedule: Dict[str, str] = {"paper1": "2024-01-01", "paper2": "2024-02-01"}
-        schedule_table: List[Dict[str, str]] = [{"Month": "2024-01", "Papers": "1"}]
-        metrics_table: List[Dict[str, str]] = [{"Metric": "Total", "Value": "2"}]
-        deadline_table: List[Dict[str, str]] = [{"Conference": "Test", "Deadline": "2024-01-15"}]
+        """Test save all outputs with basic data."""
+        schedule: Dict[str, date] = {"paper1": date(2024, 1, 1)}
+        schedule_table: List[Dict[str, str]] = [{"id": "paper1", "date": "2024-01-01"}]
+        metrics_table: List[Dict[str, str]] = [{"metric": "score", "value": "0.85"}]
+        deadline_table: List[Dict[str, str]] = [{"deadline": "2024-02-01", "status": "met"}]
         
         metrics: Mock = Mock(spec=ScheduleSummary)
-        metrics.total_submissions = 2
-        metrics.schedule_span = 30
-        metrics.penalty_score: float = 0.0
-        metrics.quality_score: float = 85.0
-        metrics.efficiency_score: float = 75.0
-        metrics.deadline_compliance = 100.0
-        metrics.resource_utilization = 80.0
         
         output_dir: str = str(tmp_path)
         
@@ -86,7 +79,7 @@ class TestSaveAllOutputs:
 
     def test_save_all_outputs_empty_tables(self, tmp_path: Path) -> None:
         """Test save all outputs with empty tables."""
-        schedule: Dict[str, str] = {"paper1": "2024-01-01"}
+        schedule: Dict[str, date] = {"paper1": date(2024, 1, 1)}
         schedule_table: List[Dict[str, str]] = []
         metrics_table: List[Dict[str, str]] = []
         deadline_table: List[Dict[str, str]] = []
