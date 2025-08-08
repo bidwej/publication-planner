@@ -1,28 +1,75 @@
 """Configuration management for the Endoscope AI project."""
 
 import json
-from pathlib import Path
-from typing import Dict, List, Optional, Any
+import re
 from datetime import date, timedelta
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 from dateutil.parser import parse as parse_date
-from dateutil.relativedelta import relativedelta
+
 from src.core.models import (
-    Config, Submission, Conference, SubmissionType, ConferenceType, 
-    ConferenceRecurrence, generate_abstract_id, create_abstract_submission,
-    ensure_abstract_paper_dependency
+    Conference, ConferenceRecurrence, ConferenceType, Config, Submission, 
+    SubmissionType, create_abstract_submission, generate_abstract_id
 )
-# parse_date is already imported from dateutil.parser above
+
+# Regex patterns for robust ID matching
+MOD_ID_PATTERN = re.compile(r'^mod_(\d+)$')
+PAPER_ID_PATTERN = re.compile(r'^(.+)-pap-(.+)$')
+ABSTRACT_ID_PATTERN = re.compile(r'^(.+)-abs-(.+)$')
+
+def normalize_conference_id(conference_name: str) -> str:
+    """Normalize conference ID to lowercase with underscores."""
+    return conference_name.lower().replace('-', '_').replace(' ', '_')
+
+def find_mod_by_number(submissions: List[Submission], mod_number: int) -> Optional[Submission]:
+    """Find mod submission by number."""
+    expected_id = f"mod_{mod_number}"
+    return next((s for s in submissions if s.id == expected_id), None)
+
+def find_paper_by_base_and_conference(submissions: List[Submission], base_id: str, conference_id: str) -> Optional[Submission]:
+    """Find paper submission by base ID and conference."""
+    normalized_conf = normalize_conference_id(conference_id)
+    expected_id = f"{base_id}-pap-{normalized_conf}"
+    return next((s for s in submissions if s.id == expected_id), None)
+
+
+def extract_mod_number(mod_id: str) -> Optional[int]:
+    """Extract mod number from mod ID using regex."""
+    match = MOD_ID_PATTERN.match(mod_id)
+    return int(match.group(1)) if match else None
+
+
+def extract_paper_info(paper_id: str) -> Optional[tuple]:
+    """Extract paper base ID and conference from paper ID using regex."""
+    match = PAPER_ID_PATTERN.match(paper_id)
+    return (match.group(1), match.group(2)) if match else None
+
+
+def extract_abstract_info(abstract_id: str) -> Optional[tuple]:
+    """Extract paper base ID and conference from abstract ID using regex."""
+    match = ABSTRACT_ID_PATTERN.match(abstract_id)
+    return (match.group(1), match.group(2)) if match else None
+
+
+def find_submission_by_pattern(submissions: List[Submission], pattern: re.Pattern) -> Optional[Submission]:
+    """Find submission by regex pattern."""
+    for submission in submissions:
+        if pattern.match(submission.id):
+            return submission
+    return None
 
 
 def _map_conference_data(json_data: Dict) -> Dict:
     """Map JSON conference data to model fields."""
+    # Normalize conference ID for consistency
+    conference_id = normalize_conference_id(json_data["name"])
+    
     return {
-        "id": json_data["name"].lower().replace(" ", "_").replace("-", "_"),
+        "id": conference_id,
         "name": json_data["name"],
-        "conf_type": ConferenceType(json_data["conference_type"]),
-        "recurrence": ConferenceRecurrence(json_data["recurrence"]),
-        "deadlines": _build_deadlines_dict(json_data),
-        "submission_types": None  # Auto-determined
+        "conf_type": ConferenceType(json_data.get("conference_type", "MEDICAL")),
+        "recurrence": ConferenceRecurrence(json_data.get("recurrence", "annual")),
+        "deadlines": _build_deadlines_dict(json_data)
     }
 
 

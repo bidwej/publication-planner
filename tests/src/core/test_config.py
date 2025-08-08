@@ -6,7 +6,10 @@ import json
 from datetime import date
 from dataclasses import asdict, replace
 from unittest.mock import patch
-from src.core.config import load_config, _load_conferences, _load_submissions_with_abstracts, _load_blackout_dates
+from src.core.config import (
+    load_config, find_mod_by_number, find_paper_by_base_and_conference,
+    _load_conferences, _load_submissions_with_abstracts, _load_blackout_dates
+)
 from src.core.models import Config, SubmissionType, ConferenceType, SchedulerStrategy, ConferenceRecurrence, Conference, Submission
 from src.core.constants import SCHEDULING_CONSTANTS
 
@@ -621,7 +624,8 @@ class TestConferenceMappingAndEngineering:
                 "name": "IEEE_ICRA",
                 "conference_type": "ENGINEERING",
                 "recurrence": "annual",
-                "abstract_deadline": "2025-02-15"
+                "abstract_deadline": "2025-02-15",
+                "full_paper_deadline": "2025-03-15"  # Add paper deadline so paper submission is created
             },
             {
                 "name": "MICCAI",
@@ -649,8 +653,8 @@ class TestConferenceMappingAndEngineering:
             {
                 "id": "paper1",
                 "title": "Test Paper 1",
-                "conference": "IEEE_ICRA",
-                "depends_on_mods": [1]  # Reference the mod ID number
+                "candidate_conferences": ["IEEE_ICRA"],  # Use correct field name
+                "mod_dependencies": [1]  # Use correct field name
             }
         ]
         
@@ -667,11 +671,6 @@ class TestConferenceMappingAndEngineering:
         
         papers_file = tmp_path / "papers.json"
         papers_file.write_text(json.dumps(papers_data))
-        
-        print(f"DEBUG: Data files created:")
-        print(f"  Conferences: {conferences_file.exists()} - {conferences_file.read_text()}")
-        print(f"  Mods: {mods_file.exists()} - {mods_file.read_text()}")
-        print(f"  Papers: {papers_file.exists()} - {papers_file.read_text()}")
         
         # Create config file
         config_data = {
@@ -695,17 +694,20 @@ class TestConferenceMappingAndEngineering:
         
         try:
             # Load config
-            print(f"DEBUG: Config file exists: {config_file.exists()}")
-            print(f"DEBUG: Config file content: {config_file.read_text()}")
             config = load_config(str(config_file))
-            print(f"DEBUG: Config loaded, submissions count: {len(config.submissions)}")
         finally:
             os.chdir(original_cwd)
         
-        # Check that submissions are mapped correctly
+        # Check that submissions are mapped correctly using robust functions
         print(f"DEBUG: All submission IDs: {[s.id for s in config.submissions]}")
-        mod_submission = next(s for s in config.submissions if s.id == "mod_1")
-        paper_submission = next(s for s in config.submissions if s.id == "paper1-pap-ieee_icra")
+        
+        # Find mod by number (robust)
+        mod_submission = find_mod_by_number(config.submissions, 1)
+        assert mod_submission is not None, f"Mod 1 not found in submissions: {[s.id for s in config.submissions]}"
+        
+        # Find paper by base ID and conference (robust)
+        paper_submission = find_paper_by_base_and_conference(config.submissions, "paper1", "IEEE_ICRA")
+        assert paper_submission is not None, f"Paper paper1-pap-ieee_icra not found in submissions: {[s.id for s in config.submissions]}"
         
         # Mods don't get conference assignments (they are internal work items)
         assert mod_submission.conference_id is None
