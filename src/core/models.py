@@ -665,6 +665,8 @@ class PenaltyBreakdown:
     deadline_penalties: float
     dependency_penalties: float
     resource_penalties: float
+    conference_compatibility_penalties: float
+    abstract_paper_dependency_penalties: float
 
 @dataclass
 class EfficiencyMetrics:

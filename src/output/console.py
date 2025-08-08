@@ -165,6 +165,58 @@ def print_schedule_analysis(schedule: Dict[str, date], config: Config, strategy_
     print(f"  Total Penalty: ${validation_result['total_penalty']:.2f}")
     print(f"  Total Violations: {validation_result['summary']['total_violations']}")
     
+    # Print detailed constraint validation results
+    if 'constraints' in validation_result:
+        constraints = validation_result['constraints']
+        print("\n=== Constraint Validation Details ===")
+        
+        # Deadline compliance
+        if 'deadlines' in constraints:
+            deadline_val = constraints['deadlines']
+            print(f"  Deadline Compliance: {deadline_val.compliance_rate:.1f}% ({deadline_val.compliant_submissions}/{deadline_val.total_submissions})")
+        
+        # Dependency satisfaction
+        if 'dependencies' in constraints:
+            dep_val = constraints['dependencies']
+            print(f"  Dependency Satisfaction: {dep_val.satisfaction_rate:.1f}% ({dep_val.satisfied_dependencies}/{dep_val.total_dependencies})")
+        
+        # Resource constraints
+        if 'resources' in constraints:
+            res_val = constraints['resources']
+            print(f"  Resource Constraints: {'✓' if res_val.is_valid else '✗'} (Max: {res_val.max_observed}/{res_val.max_concurrent})")
+        
+        # Additional constraints from README
+        constraint_checks = [
+            ('blackout_dates', 'Blackout Dates'),
+            ('scheduling_options', 'Scheduling Options'),
+            ('conference_compatibility', 'Conference Compatibility'),
+            ('conference_submission_compatibility', 'Conference Submission Compatibility'),
+            ('abstract_paper_dependencies', 'Abstract-Paper Dependencies'),
+            ('single_conference_policy', 'Single Conference Policy'),
+            ('soft_block_model', 'Soft Block Model (PCCP)'),
+            ('paper_lead_time', 'Paper Lead Time')
+        ]
+        
+        for key, name in constraint_checks:
+            if key in constraints:
+                constraint = constraints[key]
+                if isinstance(constraint, dict):
+                    is_valid = constraint.get('is_valid', True)
+                    compliance_rate = constraint.get('compliance_rate', 0.0)
+                    print(f"  {name}: {'✓' if is_valid else '✗'} ({compliance_rate:.1f}%)")
+        
+        # Comprehensive violations
+        if 'comprehensive_violations' in constraints:
+            comp_violations = constraints['comprehensive_violations']
+            if comp_violations:
+                print(f"  Comprehensive Validation: ✗ ({len(comp_violations)} violations)")
+                for violation in comp_violations[:3]:  # Show first 3 violations
+                    print(f"    - {violation['description']}")
+                if len(comp_violations) > 3:
+                    print(f"    ... and {len(comp_violations) - 3} more violations")
+            else:
+                print("  Comprehensive Validation: ✓")
+    
     # Print detailed metrics
     print_metrics_summary(schedule, config)
 

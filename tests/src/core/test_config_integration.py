@@ -5,6 +5,7 @@ from unittest.mock import patch
 from datetime import date
 
 from src.core.models import Config
+from src.core.config import load_config
 # Test fixtures removed as per requirements
 
 
@@ -13,7 +14,6 @@ class TestConfigIntegration:
     
     def test_config_loading_integration(self):
         """Test config loading integration with default config."""
-        from src.core.config import load_config
         
         with patch('core.config.load_config') as mock_load:
             # Mock load_config to return default config
@@ -25,16 +25,20 @@ class TestConfigIntegration:
             assert config is not None
             assert isinstance(config, Config)
     
+    def test_load_config_with_nonexistent_file(self):
+        """Test loading config with non-existent file."""
+        config = load_config("nonexistent_file.json")
+        # Default config should be empty (no submissions or conferences)
+        assert len(config.submissions) == 0
+        assert len(config.conferences) == 0
+
     def test_config_with_default_values(self):
-        """Test config with default values integration."""
-        config = create_test_config_with_sample_data()
-        
-        # Test default config properties
-        assert config.submissions is not None
-        assert config.conferences is not None
-        assert config.min_paper_lead_time_days > 0
-        assert config.min_abstract_lead_time_days > 0
-        assert config.max_concurrent_submissions > 0
+        """Test config with default values."""
+        # Create a minimal config with default values
+        config = Config.create_default()
+        # Default config should be empty (no submissions or conferences)
+        assert len(config.submissions) == 0
+        assert len(config.conferences) == 0
     
     def test_config_validation_integration(self):
         """Test config validation integration."""

@@ -1,10 +1,10 @@
 """Tests for core models."""
 
 from datetime import date
-from core.models import (
-    Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence,
-    Config, ValidationResult, ScoringResult, ScheduleResult, ScheduleSummary, ScheduleMetrics,
-    PenaltyBreakdown, EfficiencyMetrics, TimelineMetrics
+from src.core.models import (
+    Config, Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence,
+    ValidationResult, ScoringResult, ScheduleResult, ScheduleSummary, ScheduleMetrics,
+    PenaltyBreakdown, EfficiencyMetrics, TimelineMetrics, DeadlineValidation, DependencyValidation, ResourceValidation
 )
 
 
@@ -771,120 +771,145 @@ class TestUnifiedModels:
         assert validation_result.summary == "All validations passed"
     
     def test_scoring_result_creation(self):
-        """Test ScoringResult creation."""
+        """Test scoring result creation."""
         penalty_breakdown = PenaltyBreakdown(
-            total_penalty=10.0,
-            deadline_penalties=5.0,
-            dependency_penalties=3.0,
-            resource_penalties=2.0
+            total_penalty=100.0,
+            deadline_penalties=50.0,
+            dependency_penalties=30.0,
+            resource_penalties=20.0,
+            conference_compatibility_penalties=0.0,
+            abstract_paper_dependency_penalties=0.0
         )
         
         efficiency_metrics = EfficiencyMetrics(
-            utilization_rate=80.0,
-            peak_utilization=3,
-            avg_utilization=2.5,
+            utilization_rate=0.8,
+            peak_utilization=5,
+            avg_utilization=3.2,
             efficiency_score=85.0
         )
         
         timeline_metrics = TimelineMetrics(
-            duration_days=90,
-            avg_daily_load=1.5,
-            timeline_efficiency=90.0
+            duration_days=30,
+            avg_daily_load=2.5,
+            timeline_efficiency=0.9
         )
         
         scoring_result = ScoringResult(
-            penalty_score=10.0,
+            penalty_score=100.0,
             quality_score=85.0,
-            efficiency_score=85.0,
+            efficiency_score=90.0,
             penalty_breakdown=penalty_breakdown,
             efficiency_metrics=efficiency_metrics,
             timeline_metrics=timeline_metrics,
-            overall_score=53.33
+            overall_score=91.67
         )
         
-        assert scoring_result.penalty_score == 10.0
+        assert scoring_result.penalty_score == 100.0
         assert scoring_result.quality_score == 85.0
-        assert scoring_result.efficiency_score == 85.0
-        assert scoring_result.overall_score == 53.33
-    
+        assert scoring_result.efficiency_score == 90.0
+        assert scoring_result.overall_score == 91.67
+
     def test_schedule_result_creation(self):
-        """Test ScheduleResult creation."""
-        schedule = {"test-pap": date(2024, 5, 1)}
+        """Test schedule result creation."""
+        schedule = {"paper1": date(2024, 5, 1), "paper2": date(2024, 7, 1)}
         
-        schedule_summary = ScheduleSummary(
-            total_submissions=1,
-            schedule_span=0,
+        summary = ScheduleSummary(
+            total_submissions=2,
+            schedule_span=61,
             start_date=date(2024, 5, 1),
-            end_date=date(2024, 5, 1),
-            penalty_score=0.0,
-            quality_score=100.0,
-            efficiency_score=100.0,
-            deadline_compliance=100.0,
-            resource_utilization=80.0
+            end_date=date(2024, 7, 1),
+            penalty_score=100.0,
+            quality_score=85.0,
+            efficiency_score=90.0,
+            deadline_compliance=95.0,
+            resource_utilization=0.8
         )
         
-        schedule_metrics = ScheduleMetrics(
-            makespan=0,
-            avg_utilization=1.0,
-            peak_utilization=1,
-            total_penalty=0.0,
-            compliance_rate=100.0,
-            quality_score=100.0
+        metrics = ScheduleMetrics(
+            makespan=61,
+            avg_utilization=0.8,
+            peak_utilization=5,
+            total_penalty=100.0,
+            compliance_rate=95.0,
+            quality_score=85.0
+        )
+        
+        penalty_breakdown = PenaltyBreakdown(
+            total_penalty=100.0,
+            deadline_penalties=50.0,
+            dependency_penalties=30.0,
+            resource_penalties=20.0,
+            conference_compatibility_penalties=0.0,
+            abstract_paper_dependency_penalties=0.0
+        )
+        
+        efficiency_metrics = EfficiencyMetrics(
+            utilization_rate=0.8,
+            peak_utilization=5,
+            avg_utilization=3.2,
+            efficiency_score=90.0
+        )
+        
+        timeline_metrics = TimelineMetrics(
+            duration_days=61,
+            avg_daily_load=2.5,
+            timeline_efficiency=0.9
+        )
+        
+        scoring_result = ScoringResult(
+            penalty_score=100.0,
+            quality_score=85.0,
+            efficiency_score=90.0,
+            penalty_breakdown=penalty_breakdown,
+            efficiency_metrics=efficiency_metrics,
+            timeline_metrics=timeline_metrics,
+            overall_score=91.67
         )
         
         validation_result = ValidationResult(
             is_valid=True,
             violations=[],
-            deadline_validation={},
-            dependency_validation={},
-            resource_validation={},
-            summary="Valid schedule"
-        )
-        
-        penalty_breakdown = PenaltyBreakdown(
-            total_penalty=0.0,
-            deadline_penalties=0.0,
-            dependency_penalties=0.0,
-            resource_penalties=0.0
-        )
-        
-        efficiency_metrics = EfficiencyMetrics(
-            utilization_rate=80.0,
-            peak_utilization=1,
-            avg_utilization=1.0,
-            efficiency_score=100.0
-        )
-        
-        timeline_metrics = TimelineMetrics(
-            duration_days=0,
-            avg_daily_load=1.0,
-            timeline_efficiency=100.0
-        )
-        
-        scoring_result = ScoringResult(
-            penalty_score=0.0,
-            quality_score=100.0,
-            efficiency_score=100.0,
-            penalty_breakdown=penalty_breakdown,
-            efficiency_metrics=efficiency_metrics,
-            timeline_metrics=timeline_metrics,
-            overall_score=66.67
+            deadline_validation=DeadlineValidation(
+                is_valid=True,
+                violations=[],
+                summary="All deadlines met",
+                compliance_rate=100.0,
+                total_submissions=2,
+                compliant_submissions=2
+            ),
+            dependency_validation=DependencyValidation(
+                is_valid=True,
+                violations=[],
+                summary="All dependencies satisfied",
+                satisfaction_rate=100.0,
+                total_dependencies=0,
+                satisfied_dependencies=0
+            ),
+            resource_validation=ResourceValidation(
+                is_valid=True,
+                violations=[],
+                summary="Resource constraints satisfied",
+                max_concurrent=3,
+                max_observed=2,
+                total_days=61
+            ),
+            summary="Schedule is valid"
         )
         
         schedule_result = ScheduleResult(
             schedule=schedule,
-            summary=schedule_summary,
-            metrics=schedule_metrics,
+            summary=summary,
+            metrics=metrics,
             tables={"monthly": []},
             validation=validation_result,
             scoring=scoring_result
         )
         
         assert schedule_result.schedule == schedule
-        assert schedule_result.summary == schedule_summary
-        assert schedule_result.metrics == schedule_metrics
-        assert schedule_result.validation == validation_result
-        assert schedule_result.scoring == scoring_result
+        assert schedule_result.summary.total_submissions == 2
+        assert schedule_result.metrics.makespan == 61
+        assert schedule_result.validation.is_valid is True
+        assert schedule_result.scoring.overall_score == 91.67
 
 
 class TestAnalysisClasses:

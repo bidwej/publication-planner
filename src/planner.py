@@ -286,7 +286,36 @@ class Planner:
     
     def validate_schedule_comprehensive(self, schedule: Dict[str, date]) -> Dict[str, Any]:
         """Validate schedule comprehensively and return detailed results."""
+        # Use the comprehensive validation that includes all README claims
+        from src.core.constraints import validate_single_submission_constraints_comprehensive
+        
+        # First run the existing comprehensive validation
         result = validate_schedule_comprehensive(schedule, self.config)
+        
+        # Add comprehensive single-submission validation for each submission
+        comprehensive_violations = []
+        for submission_id, start_date in schedule.items():
+            submission = self.config.submissions_dict.get(submission_id)
+            if submission:
+                # Use comprehensive validation for each submission
+                if not validate_single_submission_constraints_comprehensive(submission, start_date, schedule, self.config):
+                    comprehensive_violations.append({
+                        "submission_id": submission_id,
+                        "description": f"Comprehensive validation failed for {submission_id}",
+                        "severity": "high"
+                    })
+        
+        # Add comprehensive violations to the result
+        if comprehensive_violations:
+            if "constraints" not in result:
+                result["constraints"] = {}
+            if "comprehensive_violations" not in result["constraints"]:
+                result["constraints"]["comprehensive_violations"] = []
+            result["constraints"]["comprehensive_violations"].extend(comprehensive_violations)
+            
+            # Update overall validity
+            result["summary"]["overall_valid"] = False
+            result["summary"]["total_violations"] += len(comprehensive_violations)
         
         # Transform the result to match expected test structure
         if 'constraints' in result:

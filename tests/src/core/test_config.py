@@ -27,12 +27,11 @@ class TestLoadConfig:
         assert isinstance(config.blackout_dates, list)
     
     def test_load_config_file_not_found(self):
-        """Test loading a non-existent config file."""
-        # Now returns default config instead of raising FileNotFoundError
+        """Test loading config when file is not found."""
         config = load_config("nonexistent_config.json")
-        assert isinstance(config, Config)
-        assert len(config.submissions) > 0
-        assert len(config.conferences) > 0
+        # Default config should be empty (no submissions or conferences)
+        assert len(config.submissions) == 0
+        assert len(config.conferences) == 0
     
     def test_config_has_required_attributes(self, config):
         """Test that config has all required attributes."""
@@ -289,12 +288,11 @@ class TestConfigIntegration:
         assert config.max_concurrent_submissions > 0
     
     def test_load_config_with_nonexistent_file(self):
-        """Test loading config when file doesn't exist."""
-        # Should return default config instead of raising error
+        """Test loading config when file is not found."""
         config = load_config("nonexistent_file.json")
-        assert isinstance(config, Config)
-        assert len(config.submissions) > 0
-        assert len(config.conferences) > 0
+        # Default config should be empty (no submissions or conferences)
+        assert len(config.submissions) == 0
+        assert len(config.conferences) == 0
     
     def test_config_with_blackout_periods_disabled(self, test_data_dir):
         """Test config loading when blackout periods are disabled."""

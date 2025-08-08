@@ -19,24 +19,84 @@ def calculate_quality_score(schedule: Dict[str, date], config: Config) -> float:
     if not schedule:
         return min_score
     
-    # Get constraint validations
-    deadline_validation = validate_deadline_compliance(schedule, config)
-    dependency_validation = validate_dependency_satisfaction(schedule, config)
-    resource_validation = validate_resource_constraints(schedule, config)
+    # Get comprehensive constraint validations
+    from src.core.constraints import validate_all_constraints_comprehensive
+    comprehensive_result = validate_all_constraints_comprehensive(schedule, config)
     
-    # Calculate component scores
-    deadline_score = deadline_validation.compliance_rate
-    dependency_score = dependency_validation.satisfaction_rate
+    # Extract constraint results
+    deadline_validation = comprehensive_result.get("deadlines", {})
+    dependency_validation = comprehensive_result.get("dependencies", {})
+    resource_validation = comprehensive_result.get("resources", {})
+    
+    # Calculate component scores with comprehensive validation
+    deadline_score = deadline_validation.compliance_rate if hasattr(deadline_validation, 'compliance_rate') else max_score
+    dependency_score = dependency_validation.satisfaction_rate if hasattr(dependency_validation, 'satisfaction_rate') else max_score
     resource_score = max_score if resource_validation.is_valid else QUALITY_CONSTANTS.quality_resource_fallback_score
     
-    # Calculate weighted score
-    quality_score = (
+    # Additional quality factors from comprehensive validation
+    additional_quality_factors = []
+    
+    # Blackout dates compliance
+    blackout_result = comprehensive_result.get("blackout_dates", {})
+    if isinstance(blackout_result, dict):
+        blackout_score = blackout_result.get("compliance_rate", max_score)
+        additional_quality_factors.append(blackout_score)
+    
+    # Conference compatibility
+    conf_compat_result = comprehensive_result.get("conference_compatibility", {})
+    if isinstance(conf_compat_result, dict):
+        conf_compat_score = conf_compat_result.get("compatibility_rate", max_score)
+        additional_quality_factors.append(conf_compat_score)
+    
+    # Conference submission compatibility
+    conf_sub_compat_result = comprehensive_result.get("conference_submission_compatibility", {})
+    if isinstance(conf_sub_compat_result, dict):
+        conf_sub_compat_score = conf_sub_compat_result.get("compatibility_rate", max_score)
+        additional_quality_factors.append(conf_sub_compat_score)
+    
+    # Abstract-paper dependencies
+    abstract_paper_result = comprehensive_result.get("abstract_paper_dependencies", {})
+    if isinstance(abstract_paper_result, dict):
+        abstract_paper_score = abstract_paper_result.get("dependency_rate", max_score)
+        additional_quality_factors.append(abstract_paper_score)
+    
+    # Single conference policy
+    single_conf_result = comprehensive_result.get("single_conference_policy", {})
+    if isinstance(single_conf_result, dict):
+        single_conf_score = max_score if single_conf_result.get("is_valid", True) else min_score
+        additional_quality_factors.append(single_conf_score)
+    
+    # Soft block model
+    soft_block_result = comprehensive_result.get("soft_block_model", {})
+    if isinstance(soft_block_result, dict):
+        soft_block_score = soft_block_result.get("compliance_rate", max_score)
+        additional_quality_factors.append(soft_block_score)
+    
+    # Paper lead time
+    lead_time_result = comprehensive_result.get("paper_lead_time", {})
+    if isinstance(lead_time_result, dict):
+        lead_time_score = lead_time_result.get("compliance_rate", max_score)
+        additional_quality_factors.append(lead_time_score)
+    
+    # Calculate weighted score with additional factors
+    base_score = (
         deadline_score * SCORING_CONSTANTS.quality_deadline_weight +
         dependency_score * SCORING_CONSTANTS.quality_dependency_weight +
         resource_score * SCORING_CONSTANTS.quality_resource_weight
     )
     
-    return min(max_score, max(min_score, quality_score))
+    # Add additional quality factors with equal weight
+    if additional_quality_factors:
+        additional_score = sum(additional_quality_factors) / len(additional_quality_factors)
+        # Weight the additional factors at 30% of the total score
+        quality_score = base_score * 0.7 + additional_score * 0.3
+    else:
+        quality_score = base_score
+    
+    # Ensure score is within bounds
+    quality_score = max(min_score, min(max_score, quality_score))
+    
+    return quality_score
 
 def calculate_quality_robustness(schedule: Dict[str, date], config: Config) -> float:
     """Calculate how robust the schedule is to disruptions."""

@@ -2,8 +2,9 @@
 
 from datetime import date, timedelta
 
-from scoring.penalty import calculate_penalty_score
-from src.scoring.penalty import Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence
+from src.scoring.penalty import calculate_penalty_score
+from src.core.models import Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence
+from tests.conftest import create_mock_config
 
 
 class TestCalculatePenaltyScore:

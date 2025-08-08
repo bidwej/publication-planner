@@ -1199,6 +1199,48 @@ def validate_single_submission_constraints(submission: Submission, start_date: d
     if not validate_dependencies_satisfied(submission, schedule, config.submissions_dict, config, start_date):
         return False
     
+    # Direct conference compatibility check
+    if submission.conference_id and submission.conference_id in config.conferences_dict:
+        conf = config.conferences_dict[submission.conference_id]
+        if not conf.accepts_submission_type(submission.kind):
+            return False
+    
+    return True
+
+
+def validate_single_submission_constraints_comprehensive(submission: Submission, start_date: date, schedule: Dict[str, date], config: Config) -> bool:
+    """
+    Comprehensive validation for a single submission at a given start date.
+    This includes all advanced constraints and is used for final validation.
+    
+    Parameters
+    ----------
+    submission : Submission
+        The submission to validate
+    start_date : date
+        The proposed start date
+    schedule : Dict[str, date]
+        Current schedule (may be empty for first submission)
+    config : Config
+        Configuration object
+        
+    Returns
+    -------
+    bool
+        True if all constraints are satisfied, False otherwise
+    """
+    # Create a temporary schedule with this submission
+    temp_schedule = schedule.copy()
+    temp_schedule[submission.id] = start_date
+    
+    # Basic deadline check
+    if not validate_deadline_compliance_single(start_date, submission, config):
+        return False
+    
+    # Dependencies check
+    if not validate_dependencies_satisfied(submission, schedule, config.submissions_dict, config, start_date):
+        return False
+    
     # Advanced constraints - call comprehensive validation functions
     # Soft block model validation
     soft_block_result = validate_soft_block_model(temp_schedule, config)

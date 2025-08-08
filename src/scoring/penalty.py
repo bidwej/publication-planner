@@ -1,6 +1,6 @@
 """Penalty scoring functions."""
 
-from typing import Dict
+from typing import Dict, Any
 from datetime import date, timedelta
 from collections import defaultdict
 
@@ -12,29 +12,56 @@ from core.constants import (
 # and should be configurable by users. Only algorithm constants remain in constants.py.
 
 def calculate_penalty_score(schedule: Dict[str, date], config: Config) -> PenaltyBreakdown:
-    """Calculate total penalty score for the schedule."""
+    """Calculate penalty score for a schedule."""
     if not schedule:
         return PenaltyBreakdown(
-                    total_penalty=REPORT_CONSTANTS.min_score,
-        deadline_penalties=REPORT_CONSTANTS.min_score,
-        dependency_penalties=REPORT_CONSTANTS.min_score,
-        resource_penalties=REPORT_CONSTANTS.min_score
+            total_penalty=0.0,
+            deadline_penalties=0.0,
+            dependency_penalties=0.0,
+            resource_penalties=0.0,
+            conference_compatibility_penalties=0.0,
+            abstract_paper_dependency_penalties=0.0
         )
     
+    # Get comprehensive validation results
+    from src.core.constraints import validate_all_constraints_comprehensive
+    comprehensive_result = validate_all_constraints_comprehensive(schedule, config)
+    
+    # Calculate basic penalties
     deadline_penalties = _calculate_deadline_penalties(schedule, config)
     dependency_penalties = _calculate_dependency_penalties(schedule, config)
     resource_penalties = _calculate_resource_penalties(schedule, config)
-    conference_penalties = _calculate_conference_compatibility_penalties(schedule, config)
-    abstract_paper_penalties = _calculate_abstract_paper_dependency_penalties(schedule, config)
-    slack_penalties = _calculate_slack_cost_penalties(schedule, config)
     
-    total_penalty = deadline_penalties + dependency_penalties + resource_penalties + conference_penalties + abstract_paper_penalties + slack_penalties
+    # Calculate additional penalties from comprehensive validation
+    conference_compatibility_penalties = _calculate_conference_compatibility_penalties(comprehensive_result, config)
+    abstract_paper_dependency_penalties = _calculate_abstract_paper_dependency_penalties(comprehensive_result, config)
+    
+    # Calculate additional penalties from README claims
+    blackout_penalties = _calculate_blackout_penalties(comprehensive_result, config)
+    soft_block_penalties = _calculate_soft_block_penalties(comprehensive_result, config)
+    single_conference_penalties = _calculate_single_conference_penalties(comprehensive_result, config)
+    lead_time_penalties = _calculate_lead_time_penalties(comprehensive_result, config)
+    
+    # Sum all penalties
+    total_penalty = (
+        deadline_penalties +
+        dependency_penalties +
+        resource_penalties +
+        conference_compatibility_penalties +
+        abstract_paper_dependency_penalties +
+        blackout_penalties +
+        soft_block_penalties +
+        single_conference_penalties +
+        lead_time_penalties
+    )
     
     return PenaltyBreakdown(
         total_penalty=total_penalty,
         deadline_penalties=deadline_penalties,
         dependency_penalties=dependency_penalties,
-        resource_penalties=resource_penalties
+        resource_penalties=resource_penalties,
+        conference_compatibility_penalties=conference_compatibility_penalties,
+        abstract_paper_dependency_penalties=abstract_paper_dependency_penalties
     )
 
 def _calculate_deadline_penalties(schedule: Dict[str, date], config: Config) -> float:
@@ -142,76 +169,82 @@ def _calculate_resource_penalties(schedule: Dict[str, date], config: Config) -> 
     
     return total_penalty
 
-def _calculate_conference_compatibility_penalties(schedule: Dict[str, date], config: Config) -> float:
-    """Calculate penalties for conference compatibility issues."""
-    total_penalty = 0.0
+def _calculate_blackout_penalties(comprehensive_result: Dict[str, Any], config: Config) -> float:
+    """Calculate penalties for blackout date violations."""
+    blackout_result = comprehensive_result.get("blackout_dates", {})
+    if not isinstance(blackout_result, dict):
+        return 0.0
     
-    for sid in schedule:
-        sub = config.submissions_dict.get(sid)
-        if not sub:
-            continue
-        
-        if not sub.conference_id or sub.conference_id not in config.conferences_dict:
-            continue
-        
-        conf = config.conferences_dict[sub.conference_id]
-        
-        # Check engineering vs medical mismatch
-        if sub.engineering and conf.conf_type == ConferenceType.MEDICAL:
-            total_penalty += PENALTY_CONSTANTS.technical_audience_loss_penalty
-        elif not sub.engineering and conf.conf_type == ConferenceType.ENGINEERING:
-            total_penalty += PENALTY_CONSTANTS.audience_mismatch_penalty
+    violations = blackout_result.get("violations", [])
+    penalty_costs = config.penalty_costs or {}
+    penalty_per_violation = penalty_costs.get("blackout_violation_penalty", 100.0)
     
-    return total_penalty
+    return len(violations) * penalty_per_violation
 
 
-def _calculate_abstract_paper_dependency_penalties(schedule: Dict[str, date], config: Config) -> float:
+def _calculate_soft_block_penalties(comprehensive_result: Dict[str, Any], config: Config) -> float:
+    """Calculate penalties for soft block model violations."""
+    soft_block_result = comprehensive_result.get("soft_block_model", {})
+    if not isinstance(soft_block_result, dict):
+        return 0.0
+    
+    violations = soft_block_result.get("violations", [])
+    penalty_costs = config.penalty_costs or {}
+    penalty_per_violation = penalty_costs.get("soft_block_violation_penalty", 200.0)
+    
+    return len(violations) * penalty_per_violation
+
+
+def _calculate_single_conference_penalties(comprehensive_result: Dict[str, Any], config: Config) -> float:
+    """Calculate penalties for single conference policy violations."""
+    single_conf_result = comprehensive_result.get("single_conference_policy", {})
+    if not isinstance(single_conf_result, dict):
+        return 0.0
+    
+    violations = single_conf_result.get("violations", [])
+    penalty_costs = config.penalty_costs or {}
+    penalty_per_violation = penalty_costs.get("single_conference_violation_penalty", 500.0)
+    
+    return len(violations) * penalty_per_violation
+
+
+def _calculate_lead_time_penalties(comprehensive_result: Dict[str, Any], config: Config) -> float:
+    """Calculate penalties for paper lead time violations."""
+    lead_time_result = comprehensive_result.get("paper_lead_time", {})
+    if not isinstance(lead_time_result, dict):
+        return 0.0
+    
+    violations = lead_time_result.get("violations", [])
+    penalty_costs = config.penalty_costs or {}
+    penalty_per_violation = penalty_costs.get("lead_time_violation_penalty", 150.0)
+    
+    return len(violations) * penalty_per_violation
+
+
+def _calculate_conference_compatibility_penalties(comprehensive_result: Dict[str, Any], config: Config) -> float:
+    """Calculate penalties for conference compatibility violations."""
+    conf_compat_result = comprehensive_result.get("conference_compatibility", {})
+    if not isinstance(conf_compat_result, dict):
+        return 0.0
+    
+    violations = conf_compat_result.get("violations", [])
+    penalty_costs = config.penalty_costs or {}
+    penalty_per_violation = penalty_costs.get("conference_compatibility_penalty", 300.0)
+    
+    return len(violations) * penalty_per_violation
+
+
+def _calculate_abstract_paper_dependency_penalties(comprehensive_result: Dict[str, Any], config: Config) -> float:
     """Calculate penalties for abstract-paper dependency violations."""
-    total_penalty = 0.0
+    abstract_paper_result = comprehensive_result.get("abstract_paper_dependencies", {})
+    if not isinstance(abstract_paper_result, dict):
+        return 0.0
     
-    for sid in schedule:
-        sub = config.submissions_dict.get(sid)
-        if not sub or sub.kind != SubmissionType.PAPER or not sub.conference_id:
-            continue
-        
-        conf = config.conferences_dict.get(sub.conference_id)
-        if not conf or not conf.requires_abstract_before_paper():
-            continue
-        
-        # Check if required abstract exists and is scheduled
-        from src.core.models import generate_abstract_id
-        abstract_id = generate_abstract_id(sub.id, sub.conference_id)
-        abstract = config.submissions_dict.get(abstract_id)
-        
-        if not abstract:
-            # Missing abstract - high penalty
-            missing_abstract_penalty = (config.penalty_costs or {}).get("missing_abstract_penalty", 3000.0)
-            total_penalty += missing_abstract_penalty
-            continue
-        
-        if abstract_id not in schedule:
-            # Abstract exists but not scheduled - high penalty
-            unscheduled_abstract_penalty = (config.penalty_costs or {}).get("unscheduled_abstract_penalty", 2500.0)
-            total_penalty += unscheduled_abstract_penalty
-            continue
-        
-        # Check if paper is scheduled after abstract
-        paper_start = schedule[sid]
-        abstract_start = schedule[abstract_id]
-        
-        if paper_start <= abstract_start:
-            # Paper scheduled before or same time as abstract - high penalty
-            timing_violation_penalty = (config.penalty_costs or {}).get("abstract_paper_timing_penalty", 2000.0)
-            total_penalty += timing_violation_penalty
-            continue
-        
-        # Check if paper depends on abstract
-        if abstract_id not in (sub.depends_on or []):
-            # Missing dependency - medium penalty
-            missing_dependency_penalty = (config.penalty_costs or {}).get("missing_abstract_dependency_penalty", 1500.0)
-            total_penalty += missing_dependency_penalty
+    violations = abstract_paper_result.get("violations", [])
+    penalty_costs = config.penalty_costs or {}
+    penalty_per_violation = penalty_costs.get("abstract_paper_dependency_penalty", 400.0)
     
-    return total_penalty
+    return len(violations) * penalty_per_violation
 
 
 def _calculate_slack_cost_penalties(schedule: Dict[str, date], config: Config) -> float:
