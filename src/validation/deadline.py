@@ -7,7 +7,7 @@ from src.core.models import Config, Submission, DeadlineValidation, DeadlineViol
 from src.core.constants import QUALITY_CONSTANTS, SCHEDULING_CONSTANTS
 
 
-def validate_deadline_compliance(schedule: Dict[str, date], config: Config) -> DeadlineValidation:
+def validate_deadline_constraints(schedule: Dict[str, date], config: Config) -> DeadlineValidation:
     """Validate that all submissions meet their deadlines."""
     # Use constants from constants.py
     perfect_compliance_rate = QUALITY_CONSTANTS.perfect_compliance_rate
@@ -74,33 +74,26 @@ def _validate_deadline_violations(schedule: Dict[str, date], config: Config) -> 
         if not sub:
             continue
         
-        # Skip submissions without deadlines
-        if not sub.conference_id or sub.conference_id not in config.conferences_dict:
-            continue
-        
-        conf = config.conferences_dict[sub.conference_id]
-        if sub.kind not in conf.deadlines:
-            continue
-        
-        deadline = conf.deadlines[sub.kind]
-        
-        # Calculate end date using submission method
-        end_date = sub.get_end_date(start_date, config)
-        
-        # Check if deadline is met
-        if end_date > deadline:
-            days_late = (end_date - deadline).days
-            violations.append(DeadlineViolation(
-                submission_id=sid,
-                description=f"Deadline missed by {days_late} days",
-                severity="high" if days_late > 7 else "medium" if days_late > 1 else "low",
-                submission_title=sub.title,
-                conference_id=sub.conference_id,
-                submission_type=sub.kind.value,
-                deadline=deadline,
-                end_date=end_date,
-                days_late=days_late
-            ))
+        # Use the single submission validation helper
+        if not _validate_deadline_compliance_single(start_date, sub, config):
+            # Get conference and deadline info for violation details
+            if sub.conference_id and sub.conference_id in config.conferences_dict:
+                conf = config.conferences_dict[sub.conference_id]
+                deadline = conf.deadlines[sub.kind]
+                end_date = sub.get_end_date(start_date, config)
+                days_late = (end_date - deadline).days
+                
+                violations.append(DeadlineViolation(
+                    submission_id=sid,
+                    description=f"Deadline missed by {days_late} days",
+                    severity="high" if days_late > 7 else "medium" if days_late > 1 else "low",
+                    submission_title=sub.title,
+                    conference_id=sub.conference_id,
+                    submission_type=sub.kind.value,
+                    deadline=deadline,
+                    end_date=end_date,
+                    days_late=days_late
+                ))
     
     return violations
 
@@ -137,6 +130,43 @@ def _validate_deadline_with_lookahead(sub: Submission, start: date, config: Conf
     adjusted_deadline = deadline - timedelta(days=lookahead_days)
     
     return end_date <= adjusted_deadline
+
+
+def _validate_deadline_with_lookahead_violations(schedule: Dict[str, date], config: Config, 
+                                               lookahead_days: int = 0) -> List[Dict[str, Any]]:
+    """Validate deadline compliance with lookahead buffer and return violations."""
+    violations = []
+    
+    for sid, start_date in schedule.items():
+        sub = config.submissions_dict.get(sid)
+        if not sub:
+            continue
+        
+        # Use the lookahead validation helper
+        if not _validate_deadline_with_lookahead(sub, start_date, config, config.conferences_dict, lookahead_days):
+            # Get conference and deadline info for violation details
+            if sub.conference_id and sub.conference_id in config.conferences_dict:
+                conf = config.conferences_dict[sub.conference_id]
+                deadline = conf.deadlines[sub.kind]
+                end_date = sub.get_end_date(start_date, config)
+                adjusted_deadline = deadline - timedelta(days=lookahead_days)
+                days_late = (end_date - adjusted_deadline).days
+                
+                violations.append({
+                    "submission_id": sid,
+                    "description": f"Deadline missed by {days_late} days (with {lookahead_days} day lookahead buffer)",
+                    "severity": "high" if days_late > 7 else "medium" if days_late > 1 else "low",
+                    "submission_title": sub.title,
+                    "conference_id": sub.conference_id,
+                    "submission_type": sub.kind.value,
+                    "deadline": deadline,
+                    "adjusted_deadline": adjusted_deadline,
+                    "end_date": end_date,
+                    "days_late": days_late,
+                    "lookahead_days": lookahead_days
+                })
+    
+    return violations
 
 
 def _validate_blackout_dates(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:

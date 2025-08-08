@@ -2,9 +2,9 @@
 """Test script to verify deadline validation refactoring."""
 
 from datetime import date
-from src.core.models import Config, Submission, SubmissionType, Conference, ConferenceType
-from src.validation.deadline import validate_deadline_compliance
-from src.validation.submission import validate_submission_placement
+from src.core.models import Config, Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence
+from src.validation.deadline import validate_deadline_constraints
+from src.validation.submission import validate_submission_constraints
 from src.validation.schedule import validate_schedule_constraints
 
 def test_deadline_refactoring():
@@ -16,9 +16,9 @@ def test_deadline_refactoring():
         id="test_conf",
         name="Test Conference",
         conf_type=ConferenceType.MEDICAL,
-        submission_types=SubmissionType.PAPER,
+        submission_types=None,  # Will be auto-determined
         deadlines={SubmissionType.PAPER: date(2024, 6, 1)},
-        recurrence=None
+        recurrence=ConferenceRecurrence.ANNUAL
     )
     
     submission = Submission(
@@ -43,17 +43,17 @@ def test_deadline_refactoring():
     # Test single submission deadline validation
     start_date = date(2024, 5, 1)  # Should meet deadline
     schedule1 = {submission.id: start_date}
-    result1 = validate_deadline_compliance(schedule1, config)
+    result1 = validate_deadline_constraints(schedule1, config)
     print(f"Deadline validation (valid): {result1.is_valid}")
     
     start_date_late = date(2024, 5, 15)  # Should miss deadline
     schedule2 = {submission.id: start_date_late}
-    result2 = validate_deadline_compliance(schedule2, config)
+    result2 = validate_deadline_constraints(schedule2, config)
     print(f"Deadline validation (late): {result2.is_valid}")
     
     # Test submission placement validation
     schedule = {"test_sub": start_date}
-    result3 = validate_submission_placement(submission, start_date, schedule, config)
+    result3 = validate_submission_constraints(submission, start_date, schedule, config)
     print(f"Submission placement validation: {result3}")
     
     # Test comprehensive schedule validation

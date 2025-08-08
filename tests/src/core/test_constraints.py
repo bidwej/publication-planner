@@ -6,13 +6,11 @@ from typing import Dict, Any, List
 import pytest
 
 from src.core.config import load_config
-from src.validation import (
-    validate_schedule_constraints,
-    validate_deadline_compliance,
-    _validate_dependencies_satisfied,
-    validate_resources_all_constraints,
-    validate_venue_constraints,
-)
+from src.validation.schedule import validate_schedule_constraints
+from src.validation.deadline import validate_deadline_compliance
+from src.validation.submission import _validate_dependencies_satisfied
+from src.validation.resources import validate_resources_constraints
+from src.validation.venue import validate_venue_constraints
 from src.core.models import Submission, SubmissionType, ConferenceType
 from src.core.constants import QUALITY_CONSTANTS
 
@@ -176,14 +174,14 @@ class TestAllConstraints:
         config = load_config("tests/common/data/config.json")
         
         # Create a valid schedule with proper dependency order
-        # For ICML (which requires both abstract and paper), we need both submissions
+        # For MICCAI (medical conference that accepts both abstract and paper)
         schedule = {
             "1-wrk": date(2024, 6, 1),   # Mod 1 (much earlier)
-            "J1-abs-ICML": date(2024, 11, 1),  # Abstract after mod dependency
-            "J1-pap-ICML": date(2024, 12, 1),  # Paper after abstract dependency
+            "J1-abs-MICCAI": date(2024, 11, 1),  # Abstract after mod dependency
+            "J1-pap-MICCAI": date(2024, 12, 1),  # Paper after abstract dependency (with good lead time)
         }
         
-        result = validate_schedule_all_constraints(schedule, config)
+        result = validate_schedule_constraints(schedule, config)
         
         # Debug: print the result to see what's happening
         print(f"Result: {result}")
@@ -204,7 +202,7 @@ class TestAllConstraints:
             "J3-pap-MICCAI": date(2025, 1, 1),  # Too many concurrent
         }
         
-        result = validate_schedule_all_constraints(schedule, config)
+        result = validate_schedule_constraints(schedule, config)
         
         assert result["summary"]["overall_valid"] is False
     
@@ -212,7 +210,7 @@ class TestAllConstraints:
         """Test empty schedule."""
         config = load_config("tests/common/data/config.json")
         
-        result = validate_schedule_all_constraints({}, config)
+        result = validate_schedule_constraints({}, config)
         
         assert result["summary"]["overall_valid"] is True
 

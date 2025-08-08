@@ -8,7 +8,7 @@ from src.core.constants import QUALITY_CONSTANTS
 from .deadline import _validate_deadline_compliance_single
 
 
-def validate_submission_placement(submission: Submission, start_date: date, schedule: Dict[str, date], config: Config) -> bool:
+def validate_submission_constraints(submission: Submission, start_date: date, schedule: Dict[str, date], config: Config) -> bool:
     """Validate if a submission can be placed at a specific date in the schedule."""
     # Basic deadline check
     if not _validate_deadline_compliance_single(start_date, submission, config):

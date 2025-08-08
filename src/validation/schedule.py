@@ -6,7 +6,7 @@ from datetime import date
 from src.core.models import Config, Submission, ConstraintValidationResult
 from src.core.constants import QUALITY_CONSTANTS
 
-from .deadline import validate_deadline_compliance
+from .deadline import validate_deadline_constraints
 from .resources import validate_resources_constraints
 from .venue import validate_venue_constraints
 
@@ -24,20 +24,17 @@ def validate_schedule_constraints(schedule: Dict[str, date], config: Config) -> 
             "analytics": {}
         }
     
-    # Run all validations
-    deadline_result = validate_deadline_compliance(schedule, config)
-    dependency_result = _validate_dependency_satisfaction(schedule, config)
-    resource_result = validate_resources_constraints(schedule, config)
-    blackout_result = _validate_blackout_dates(schedule, config)
-    venue_result = validate_venue_constraints(schedule, config)
+    # Use the structured validation function
+    structured_result = _validate_schedule_constraints_structured(schedule, config)
     
-    # Combine all violations
+    # Get additional analytics
+    analytics = _analyze_schedule_with_scoring(schedule, config)
+    
+    # Combine results
     all_violations = (
-        deadline_result.violations +
-        dependency_result.violations +
-        resource_result.violations +
-        blackout_result.get("violations", []) +
-        venue_result.get("violations", [])
+        structured_result.deadlines.violations +
+        structured_result.dependencies.violations +
+        structured_result.resources.violations
     )
     
     # Determine overall validity
@@ -45,19 +42,15 @@ def validate_schedule_constraints(schedule: Dict[str, date], config: Config) -> 
     
     # Calculate overall compliance rate
     total_checks = (
-        deadline_result.total_submissions +
-        dependency_result.total_dependencies +
-        resource_result.total_days +
-        blackout_result.get("total_submissions", 0) +
-        venue_result.get("total_submissions", 0)
+        structured_result.deadlines.total_submissions +
+        structured_result.dependencies.total_dependencies +
+        structured_result.resources.total_days
     )
     
     compliant_checks = (
-        deadline_result.compliant_submissions +
-        dependency_result.satisfied_dependencies +
-        resource_result.total_days - len([v for v in resource_result.violations]) +
-        blackout_result.get("compliant_submissions", 0) +
-        venue_result.get("compatible_submissions", 0)
+        structured_result.deadlines.compliant_submissions +
+        structured_result.dependencies.satisfied_dependencies +
+        structured_result.resources.total_days - len([v for v in structured_result.resources.violations])
     )
     
     overall_compliance_rate = (compliant_checks / total_checks * QUALITY_CONSTANTS.percentage_multiplier) if total_checks > 0 else QUALITY_CONSTANTS.perfect_compliance_rate
@@ -70,28 +63,22 @@ def validate_schedule_constraints(schedule: Dict[str, date], config: Config) -> 
         },
         "constraints": {
             "deadlines": {
-                "is_valid": deadline_result.is_valid,
-                "violations": deadline_result.violations,
-                "compliance_rate": deadline_result.compliance_rate
+                "is_valid": structured_result.deadlines.is_valid,
+                "violations": structured_result.deadlines.violations,
+                "compliance_rate": structured_result.deadlines.compliance_rate
             },
             "dependencies": {
-                "is_valid": dependency_result.is_valid,
-                "violations": dependency_result.violations,
-                "satisfaction_rate": dependency_result.satisfaction_rate
+                "is_valid": structured_result.dependencies.is_valid,
+                "violations": structured_result.dependencies.violations,
+                "satisfaction_rate": structured_result.dependencies.satisfaction_rate
             },
             "resources": {
-                "is_valid": resource_result.is_valid,
-                "violations": resource_result.violations,
-                "max_observed": resource_result.max_observed
-            },
-            "blackout_dates": blackout_result,
-            "venue": venue_result
+                "is_valid": structured_result.resources.is_valid,
+                "violations": structured_result.resources.violations,
+                "max_observed": structured_result.resources.max_observed
+            }
         },
-        "analytics": {
-            "total_submissions": len(schedule),
-            "total_violations": len(all_violations),
-            "compliance_rate": overall_compliance_rate
-        }
+        "analytics": analytics.get("schedule_analysis", {})
     }
 
 
@@ -178,23 +165,20 @@ def _validate_dependency_satisfaction(schedule: Dict[str, date], config: Config)
 
 def _analyze_schedule_with_scoring(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
     """Analyze complete schedule with scoring and penalty calculations."""
-    # Get all constraints validation results
-    result = validate_schedule_constraints(schedule, config)
-    
-    # Add additional schedule analysis
-    result["schedule_analysis"] = {
-        "total_submissions": len(schedule),
-        "schedule_span": _calculate_schedule_span(schedule) if schedule else 0,
-        "average_daily_load": _calculate_average_daily_load(schedule, config) if schedule else 0
+    # Add additional schedule analysis (without recursive call)
+    return {
+        "schedule_analysis": {
+            "total_submissions": len(schedule),
+            "schedule_span": _calculate_schedule_span(schedule) if schedule else 0,
+            "average_daily_load": _calculate_average_daily_load(schedule, config) if schedule else 0
+        }
     }
-    
-    return result
 
 
 def _validate_submission_placement(submission: Submission, start_date: date, schedule: Dict[str, date], config: Config) -> bool:
     """Validate placement of a single submission (lighter version for schedulers)."""
-    from .submission import validate_submission_placement as _validate_submission_placement
-    return _validate_submission_placement(submission, start_date, schedule, config)
+    from .submission import validate_submission_constraints as _validate_submission_constraints
+    return _validate_submission_constraints(submission, start_date, schedule, config)
 
 
 def _validate_submission_in_schedule(submission: Submission, start_date: date, schedule: Dict[str, date], config: Config) -> bool:
@@ -246,7 +230,7 @@ def _validate_blackout_dates(schedule: Dict[str, date], config: Config) -> Dict[
 def _validate_schedule_constraints_structured(schedule: Dict[str, date], config: Config) -> ConstraintValidationResult:
     """Validate all constraints for a complete schedule and return structured result."""
     # Basic validations
-    deadline_result = validate_deadline_compliance(schedule, config)
+    deadline_result = validate_deadline_constraints(schedule, config)
     dependency_result = _validate_dependency_satisfaction(schedule, config)
     resource_result = validate_resources_constraints(schedule, config)
     

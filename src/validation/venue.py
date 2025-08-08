@@ -15,11 +15,22 @@ def validate_venue_constraints(schedule: Dict[str, date], config: Config) -> Dic
     conf_sub_compat_result = _validate_conference_submission_compatibility(schedule, config)
     single_conf_result = _validate_single_conference_policy(schedule, config)
     
+    # Additional compatibility validation using the helper function
+    compatibility_violations = []
+    try:
+        _validate_venue_compatibility(config.submissions_dict, config.conferences_dict)
+    except ValueError as e:
+        compatibility_violations.append({
+            "description": str(e),
+            "severity": "high"
+        })
+    
     # Combine all violations
     all_violations = (
         conference_compat_result.get("violations", []) +
         conf_sub_compat_result.get("violations", []) +
-        single_conf_result.get("violations", [])
+        single_conf_result.get("violations", []) +
+        compatibility_violations
     )
     
     # Determine overall validity
@@ -30,7 +41,11 @@ def validate_venue_constraints(schedule: Dict[str, date], config: Config) -> Dic
         "violations": all_violations,
         "conference_compatibility": conference_compat_result,
         "conference_submission_compatibility": conf_sub_compat_result,
-        "single_conference_policy": single_conf_result
+        "single_conference_policy": single_conf_result,
+        "compatibility_validation": {
+            "is_valid": len(compatibility_violations) == 0,
+            "violations": compatibility_violations
+        }
     }
 
 
