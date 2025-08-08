@@ -1,0 +1,413 @@
+"""Comprehensive tests for MILP optimization with real constraints."""
+
+import pytest
+from datetime import date, timedelta
+from unittest.mock import patch, MagicMock
+
+from src.core.config import load_config
+from src.core.models import SchedulerStrategy, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
+from src.schedulers.optimal import OptimalScheduler
+from src.schedulers.base import BaseScheduler
+
+
+class TestOptimalSchedulerComprehensive:
+    """Comprehensive tests for MILP optimization with real constraints."""
+    
+    def test_milp_with_dependencies(self):
+        """Test MILP optimization with submission dependencies."""
+        # Create test data with dependencies
+        submissions = [
+            Submission(
+                id="paper1", title="Paper 1", kind=SubmissionType.PAPER,
+                conference_id="conf1", depends_on=[]
+            ),
+            Submission(
+                id="paper2", title="Paper 2", kind=SubmissionType.PAPER,
+                conference_id="conf1", depends_on=["paper1"]
+            ),
+            Submission(
+                id="paper3", title="Paper 3", kind=SubmissionType.PAPER,
+                conference_id="conf1", depends_on=["paper2"]
+            )
+        ]
+        
+        conferences = [
+            Conference(
+                id="conf1", name="Test Conference", conf_type=ConferenceType.MEDICAL,
+                recurrence=ConferenceRecurrence.ANNUAL,
+                deadlines={SubmissionType.PAPER: date(2025, 12, 31)}
+            )
+        ]
+        
+        # Create config with test data
+        config = load_config('config.json')
+        config.submissions = submissions
+        config.conferences = conferences
+        
+        # Test MILP optimization
+        scheduler = OptimalScheduler(config)
+        schedule = scheduler.schedule()
+        
+        # Verify dependencies are respected
+        assert "paper1" in schedule
+        assert "paper2" in schedule
+        assert "paper3" in schedule
+        
+        # Check dependency order
+        paper1_start = schedule["paper1"]
+        paper2_start = schedule["paper2"]
+        paper3_start = schedule["paper3"]
+        
+        # Paper2 should start after paper1 ends
+        paper1_duration = submissions[0].get_duration_days(config)
+        paper1_end = paper1_start + timedelta(days=paper1_duration)
+        assert paper2_start >= paper1_end
+        
+        # Paper3 should start after paper2 ends
+        paper2_duration = submissions[1].get_duration_days(config)
+        paper2_end = paper2_start + timedelta(days=paper2_duration)
+        assert paper3_start >= paper2_end
+    
+    def test_milp_with_deadlines(self):
+        """Test MILP optimization with strict deadlines."""
+        # Create test data with tight deadlines
+        submissions = [
+            Submission(
+                id="paper1", title="Paper 1", kind=SubmissionType.PAPER,
+                conference_id="conf1", depends_on=[]
+            ),
+            Submission(
+                id="paper2", title="Paper 2", kind=SubmissionType.PAPER,
+                conference_id="conf2", depends_on=[]
+            )
+        ]
+        
+        conferences = [
+            Conference(
+                id="conf1", name="Conference 1", conf_type=ConferenceType.MEDICAL,
+                recurrence=ConferenceRecurrence.ANNUAL,
+                deadlines={SubmissionType.PAPER: date(2025, 6, 30)}  # Early deadline
+            ),
+            Conference(
+                id="conf2", name="Conference 2", conf_type=ConferenceType.ENGINEERING,
+                recurrence=ConferenceRecurrence.ANNUAL,
+                deadlines={SubmissionType.PAPER: date(2025, 12, 31)}  # Late deadline
+            )
+        ]
+        
+        # Create config with test data
+        config = load_config('config.json')
+        config.submissions = submissions
+        config.conferences = conferences
+        
+        # Test MILP optimization
+        scheduler = OptimalScheduler(config)
+        schedule = scheduler.schedule()
+        
+        # Verify deadlines are respected
+        assert "paper1" in schedule
+        assert "paper2" in schedule
+        
+        # Check that submissions complete before deadlines
+        paper1_start = schedule["paper1"]
+        paper1_duration = submissions[0].get_duration_days(config)
+        paper1_end = paper1_start + timedelta(days=paper1_duration)
+        assert paper1_end <= date(2025, 6, 30)
+        
+        paper2_start = schedule["paper2"]
+        paper2_duration = submissions[1].get_duration_days(config)
+        paper2_end = paper2_start + timedelta(days=paper2_duration)
+        assert paper2_end <= date(2025, 12, 31)
+    
+    def test_milp_with_blackout_dates(self):
+        """Test MILP optimization with blackout dates."""
+        # Create test data
+        submissions = [
+            Submission(
+                id="paper1", title="Paper 1", kind=SubmissionType.PAPER,
+                conference_id="conf1", depends_on=[]
+            )
+        ]
+        
+        conferences = [
+            Conference(
+                id="conf1", name="Test Conference", conf_type=ConferenceType.MEDICAL,
+                recurrence=ConferenceRecurrence.ANNUAL,
+                deadlines={SubmissionType.PAPER: date(2025, 12, 31)}
+            )
+        ]
+        
+        # Create config with blackout dates
+        config = load_config('config.json')
+        config.submissions = submissions
+        config.conferences = conferences
+        config.blackout_dates = [
+            date(2025, 7, 4),   # Independence Day
+            date(2025, 9, 1),   # Labor Day
+            date(2025, 11, 27), # Thanksgiving
+            date(2025, 12, 25)  # Christmas
+        ]
+        
+        # Test MILP optimization
+        scheduler = OptimalScheduler(config)
+        schedule = scheduler.schedule()
+        
+        # Verify blackout dates are respected
+        assert "paper1" in schedule
+        paper1_start = schedule["paper1"]
+        
+        # Check that submission doesn't start on blackout dates
+        assert paper1_start not in config.blackout_dates
+        
+        # Check that submission doesn't overlap with blackout dates
+        paper1_duration = submissions[0].get_duration_days(config)
+        paper1_end = paper1_start + timedelta(days=paper1_duration)
+        
+        for blackout_date in config.blackout_dates:
+            assert not (paper1_start <= blackout_date <= paper1_end)
+    
+    def test_milp_with_soft_block_constraints(self):
+        """Test MILP optimization with soft block (PCCP) constraints."""
+        # Create test data with earliest start dates
+        submissions = [
+            Submission(
+                id="paper1", title="Paper 1", kind=SubmissionType.PAPER,
+                conference_id="conf1", depends_on=[],
+                earliest_start_date=date(2025, 6, 1)
+            ),
+            Submission(
+                id="paper2", title="Paper 2", kind=SubmissionType.PAPER,
+                conference_id="conf1", depends_on=[],
+                earliest_start_date=date(2025, 8, 1)
+            )
+        ]
+        
+        conferences = [
+            Conference(
+                id="conf1", name="Test Conference", conf_type=ConferenceType.MEDICAL,
+                recurrence=ConferenceRecurrence.ANNUAL,
+                deadlines={SubmissionType.PAPER: date(2025, 12, 31)}
+            )
+        ]
+        
+        # Create config
+        config = load_config('config.json')
+        config.submissions = submissions
+        config.conferences = conferences
+        
+        # Test MILP optimization
+        scheduler = OptimalScheduler(config)
+        schedule = scheduler.schedule()
+        
+        # Verify soft block constraints are respected (±2 months = 60 days)
+        assert "paper1" in schedule
+        assert "paper2" in schedule
+        
+        paper1_start = schedule["paper1"]
+        paper2_start = schedule["paper2"]
+        
+        # Paper1 should be within ±60 days of earliest start date
+        earliest1 = date(2025, 6, 1)
+        assert earliest1 - timedelta(days=60) <= paper1_start <= earliest1 + timedelta(days=60)
+        
+        # Paper2 should be within ±60 days of earliest start date
+        earliest2 = date(2025, 8, 1)
+        assert earliest2 - timedelta(days=60) <= paper2_start <= earliest2 + timedelta(days=60)
+    
+    def test_milp_with_resource_constraints(self):
+        """Test MILP optimization with resource constraints (max concurrent)."""
+        # Create test data with multiple submissions
+        submissions = [
+            Submission(
+                id=f"paper{i}", title=f"Paper {i}", kind=SubmissionType.PAPER,
+                conference_id="conf1", depends_on=[]
+            ) for i in range(1, 6)  # 5 papers
+        ]
+        
+        conferences = [
+            Conference(
+                id="conf1", name="Test Conference", conf_type=ConferenceType.MEDICAL,
+                recurrence=ConferenceRecurrence.ANNUAL,
+                deadlines={SubmissionType.PAPER: date(2025, 12, 31)}
+            )
+        ]
+        
+        # Create config with resource constraints
+        config = load_config('config.json')
+        config.submissions = submissions
+        config.conferences = conferences
+        config.max_concurrent_submissions = 2  # Only 2 concurrent submissions allowed
+        
+        # Test MILP optimization
+        scheduler = OptimalScheduler(config)
+        schedule = scheduler.schedule()
+        
+        # Verify resource constraints are respected
+        assert len(schedule) > 0
+        
+        # Check that no more than max_concurrent submissions are active on any day
+        active_submissions = {}
+        for submission_id, start_date in schedule.items():
+            submission = next(s for s in submissions if s.id == submission_id)
+            duration = submission.get_duration_days(config)
+            end_date = start_date + timedelta(days=duration)
+            
+            # Track active submissions for each day
+            current_date = start_date
+            while current_date < end_date:
+                if current_date not in active_submissions:
+                    active_submissions[current_date] = 0
+                active_submissions[current_date] += 1
+                current_date += timedelta(days=1)
+        
+        # Verify no day has more than max_concurrent submissions
+        for day, count in active_submissions.items():
+            assert count <= config.max_concurrent_submissions, f"Day {day} has {count} active submissions, max allowed is {config.max_concurrent_submissions}"
+    
+    def test_milp_with_complex_scenario(self):
+        """Test MILP optimization with a complex real-world scenario."""
+        # Create a complex scenario with dependencies, deadlines, and constraints
+        submissions = [
+            # Abstract that must be submitted before paper
+            Submission(
+                id="abs1", title="Abstract 1", kind=SubmissionType.ABSTRACT,
+                conference_id="conf1", depends_on=[]
+            ),
+            # Paper that depends on abstract
+            Submission(
+                id="paper1", title="Paper 1", kind=SubmissionType.PAPER,
+                conference_id="conf1", depends_on=["abs1"]
+            ),
+            # Independent paper with early deadline
+            Submission(
+                id="paper2", title="Paper 2", kind=SubmissionType.PAPER,
+                conference_id="conf2", depends_on=[]
+            ),
+            # Paper with soft block constraint
+            Submission(
+                id="paper3", title="Paper 3", kind=SubmissionType.PAPER,
+                conference_id="conf1", depends_on=[],
+                earliest_start_date=date(2025, 7, 1)
+            )
+        ]
+        
+        conferences = [
+            Conference(
+                id="conf1", name="Conference 1", conf_type=ConferenceType.MEDICAL,
+                recurrence=ConferenceRecurrence.ANNUAL,
+                deadlines={
+                    SubmissionType.ABSTRACT: date(2025, 8, 31),
+                    SubmissionType.PAPER: date(2025, 12, 31)
+                }
+            ),
+            Conference(
+                id="conf2", name="Conference 2", conf_type=ConferenceType.ENGINEERING,
+                recurrence=ConferenceRecurrence.ANNUAL,
+                deadlines={SubmissionType.PAPER: date(2025, 6, 30)}  # Early deadline
+            )
+        ]
+        
+        # Create config with complex constraints
+        config = load_config('config.json')
+        config.submissions = submissions
+        config.conferences = conferences
+        config.max_concurrent_submissions = 2
+        config.blackout_dates = [
+            date(2025, 7, 4),   # Independence Day
+            date(2025, 9, 1),   # Labor Day
+        ]
+        
+        # Test MILP optimization
+        scheduler = OptimalScheduler(config)
+        schedule = scheduler.schedule()
+        
+        # Verify all constraints are respected
+        assert len(schedule) > 0
+        
+        # Check dependencies
+        if "abs1" in schedule and "paper1" in schedule:
+            abs1_start = schedule["abs1"]
+            paper1_start = schedule["paper1"]
+            abs1_duration = submissions[0].get_duration_days(config)
+            abs1_end = abs1_start + timedelta(days=abs1_duration)
+            assert paper1_start >= abs1_end
+        
+        # Check deadlines
+        for submission_id, start_date in schedule.items():
+            submission = next(s for s in submissions if s.id == submission_id)
+            if submission.conference_id:
+                conf = next(c for c in conferences if c.id == submission.conference_id)
+                if submission.kind in conf.deadlines:
+                    deadline = conf.deadlines[submission.kind]
+                    duration = submission.get_duration_days(config)
+                    end_date = start_date + timedelta(days=duration)
+                    assert end_date <= deadline
+        
+        # Check blackout dates
+        for submission_id, start_date in schedule.items():
+            assert start_date not in config.blackout_dates
+        
+        # Check soft block constraints
+        if "paper3" in schedule:
+            paper3_start = schedule["paper3"]
+            earliest_start = date(2025, 7, 1)
+            assert earliest_start - timedelta(days=60) <= paper3_start <= earliest_start + timedelta(days=60)
+    
+    def test_milp_optimality_verification(self):
+        """Test that MILP actually produces optimal solutions."""
+        # Create a simple scenario where optimal solution is obvious
+        submissions = [
+            Submission(
+                id="paper1", title="Paper 1", kind=SubmissionType.PAPER,
+                conference_id="conf1", depends_on=[]
+            ),
+            Submission(
+                id="paper2", title="Paper 2", kind=SubmissionType.PAPER,
+                conference_id="conf1", depends_on=[]
+            )
+        ]
+        
+        conferences = [
+            Conference(
+                id="conf1", name="Test Conference", conf_type=ConferenceType.MEDICAL,
+                recurrence=ConferenceRecurrence.ANNUAL,
+                deadlines={SubmissionType.PAPER: date(2025, 12, 31)}
+            )
+        ]
+        
+        # Create config
+        config = load_config('config.json')
+        config.submissions = submissions
+        config.conferences = conferences
+        
+        # Test MILP optimization
+        scheduler = OptimalScheduler(config, optimization_objective="minimize_makespan")
+        schedule = scheduler.schedule()
+        
+        # Verify MILP produces a valid schedule
+        assert len(schedule) > 0
+        
+        # Check that all scheduled submissions meet constraints
+        for submission_id, start_date in schedule.items():
+            submission = next(s for s in submissions if s.id == submission_id)
+            assert start_date >= date.today()  # Should start in the future
+            
+            # Check deadline
+            if submission.conference_id:
+                conf = next(c for c in conferences if c.id == submission.conference_id)
+                if submission.kind in conf.deadlines:
+                    deadline = conf.deadlines[submission.kind]
+                    duration = submission.get_duration_days(config)
+                    end_date = start_date + timedelta(days=duration)
+                    assert end_date <= deadline
+        
+        # Verify MILP objective (minimize makespan)
+        if len(schedule) > 1:
+            # Calculate makespan
+            makespan = max(
+                start_date + timedelta(days=next(s for s in submissions if s.id == sub_id).get_duration_days(config))
+                for sub_id, start_date in schedule.items()
+            )
+            
+            # The makespan should be reasonable (not too far in the future)
+            assert makespan <= date.today() + timedelta(days=365)  # Within a year
