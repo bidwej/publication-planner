@@ -351,3 +351,25 @@ def generate_simple_monthly_table(config: Config) -> List[Dict[str, Any]]:
         {"Month": "2024-02", "Papers": "0", "Deadlines": "0"},
         {"Month": "2024-03", "Papers": "0", "Deadlines": "0"}
     ]
+
+
+def validate_schedule_comprehensive(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+    """
+    Standalone function to validate schedule comprehensively.
+    
+    Parameters
+    ----------
+    schedule : Dict[str, date]
+        The schedule to validate
+    config : Config
+        The configuration to use for validation
+        
+    Returns
+    -------
+    Dict[str, Any]
+        Comprehensive validation results
+    """
+    # Create a temporary planner instance to use its validation method
+    planner = Planner("config.json")  # We'll override the config
+    planner.config = config
+    return planner.validate_schedule_comprehensive(schedule)

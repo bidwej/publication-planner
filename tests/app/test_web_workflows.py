@@ -14,10 +14,10 @@ import pytest
 
 from app.main import create_dashboard_app, create_timeline_app
 from app.models import WebAppState
-from core.config import load_config
-from core.constraints import validate_schedule_comprehensive
-from core.models import Config, Conference, SchedulerStrategy, Submission, SubmissionType
-from schedulers.base import BaseScheduler
+from src.core.config import load_config
+from src.planner import validate_schedule_comprehensive
+from src.core.models import Config, Conference, SchedulerStrategy, Submission, SubmissionType
+from src.schedulers.base import BaseScheduler
 
 # Import schedulers to ensure they are registered
 import src.schedulers

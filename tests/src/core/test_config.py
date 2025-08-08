@@ -8,6 +8,7 @@ from dataclasses import asdict, replace
 from unittest.mock import patch
 from src.core.config import load_config, _load_conferences, _load_submissions_with_abstracts, _load_blackout_dates
 from src.core.models import Config, SubmissionType, ConferenceType, SchedulerStrategy, ConferenceRecurrence, Conference, Submission
+from src.core.constants import SCHEDULING_CONSTANTS
 
 
 class TestLoadConfig:
@@ -310,7 +311,6 @@ class TestConfigIntegration:
     
     def test_config_validation_integration(self):
         """Test config validation integration."""
-        from src.core.models import Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
         
         # Create valid config
         submissions = [
@@ -336,8 +336,8 @@ class TestConfigIntegration:
         config = Config(
             submissions=submissions,
             conferences=conferences,
-            min_paper_lead_time_days=90,
-            min_abstract_lead_time_days=30,
+            min_paper_lead_time_days=SCHEDULING_CONSTANTS.min_paper_lead_time_days,
+            min_abstract_lead_time_days=SCHEDULING_CONSTANTS.min_abstract_lead_time_days,
             max_concurrent_submissions=2
         )
         
@@ -357,7 +357,6 @@ class TestConfigIntegration:
     
     def test_config_with_complex_data(self):
         """Test config with complex data structures."""
-        from src.core.models import Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
         
         # Create complex config with multiple submissions and conferences
         submissions = [
@@ -408,9 +407,9 @@ class TestConfigIntegration:
         config = Config(
             submissions=submissions,
             conferences=conferences,
-            min_paper_lead_time_days=90,
-            min_abstract_lead_time_days=30,
-            max_concurrent_submissions=3,
+            min_paper_lead_time_days=SCHEDULING_CONSTANTS.min_paper_lead_time_days,
+            min_abstract_lead_time_days=SCHEDULING_CONSTANTS.min_abstract_lead_time_days,
+            max_concurrent_submissions=SCHEDULING_CONSTANTS.max_concurrent_submissions,
             priority_weights={
                 "engineering_paper": 1.0,
                 "medical_paper": 1.2,
@@ -443,7 +442,6 @@ class TestConfigIntegration:
     
     def test_config_with_edge_cases(self):
         """Test config with edge cases and boundary conditions."""
-        from src.core.models import Config
         
         # Test with empty submissions and conferences
         config = Config(

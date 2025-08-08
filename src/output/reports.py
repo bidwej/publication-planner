@@ -46,9 +46,9 @@ def generate_schedule_report(schedule: Dict[str, date], config: Config) -> Dict[
     
     # Overall assessment
     total_violations = (
-        len(deadline_validation.violations) +
-        len(dependency_validation.violations) +
-        len(resource_validation.violations)
+        len(deadline_validation.get("violations", [])) +
+        len(dependency_validation.get("violations", [])) +
+        len(resource_validation.get("violations", []))
     )
     
     is_feasible = total_violations == 0
@@ -63,28 +63,28 @@ def generate_schedule_report(schedule: Dict[str, date], config: Config) -> Dict[
         },
         "constraints": {
             "deadlines": {
-                "is_valid": deadline_validation.is_valid,
-                "compliance_rate": deadline_validation.compliance_rate,
-                "total_submissions": deadline_validation.total_submissions,
-                "compliant_submissions": deadline_validation.compliant_submissions,
-                "violations": [v.__dict__ for v in deadline_validation.violations],
-                "summary": deadline_validation.summary
+                "is_valid": deadline_validation.get("is_valid", True),
+                "compliance_rate": deadline_validation.get("compliance_rate", 100.0),
+                "total_submissions": deadline_validation.get("total_submissions", 0),
+                "compliant_submissions": deadline_validation.get("compliant_submissions", 0),
+                "violations": deadline_validation.get("violations", []),
+                "summary": deadline_validation.get("summary", "")
             },
             "dependencies": {
-                "is_valid": dependency_validation.is_valid,
-                "satisfaction_rate": dependency_validation.satisfaction_rate,
-                "total_dependencies": dependency_validation.total_dependencies,
-                "satisfied_dependencies": dependency_validation.satisfied_dependencies,
-                "violations": [v.__dict__ for v in dependency_validation.violations],
-                "summary": dependency_validation.summary
+                "is_valid": dependency_validation.get("is_valid", True),
+                "satisfaction_rate": dependency_validation.get("satisfaction_rate", 100.0),
+                "total_dependencies": dependency_validation.get("total_dependencies", 0),
+                "satisfied_dependencies": dependency_validation.get("satisfied_dependencies", 0),
+                "violations": dependency_validation.get("violations", []),
+                "summary": dependency_validation.get("summary", "")
             },
             "resources": {
-                "is_valid": resource_validation.is_valid,
-                "max_concurrent": resource_validation.max_concurrent,
-                "max_observed": resource_validation.max_observed,
-                "total_days": resource_validation.total_days,
-                "violations": [v.__dict__ for v in resource_validation.violations],
-                "summary": resource_validation.summary
+                "is_valid": resource_validation.get("is_valid", True),
+                "max_concurrent": resource_validation.get("max_concurrent", 0),
+                "max_observed": resource_validation.get("max_observed", 0),
+                "total_days": resource_validation.get("total_days", 0),
+                "violations": resource_validation.get("violations", []),
+                "summary": resource_validation.get("summary", "")
             }
         },
         "scoring": {
@@ -115,18 +115,18 @@ def calculate_overall_score(deadline_validation, dependency_validation,
     score = 1.0
     
     # Deduct for violations (normalized)
-    score -= len(deadline_validation.violations) * REPORT_CONSTANTS.deadline_violation_penalty
-    score -= len(dependency_validation.violations) * REPORT_CONSTANTS.dependency_violation_penalty
-    score -= len(resource_validation.violations) * REPORT_CONSTANTS.resource_violation_penalty
+    score -= len(deadline_validation.get("violations", [])) * REPORT_CONSTANTS.deadline_violation_penalty
+    score -= len(dependency_validation.get("violations", [])) * REPORT_CONSTANTS.dependency_violation_penalty
+    score -= len(resource_validation.get("violations", [])) * REPORT_CONSTANTS.resource_violation_penalty
     
     # Deduct for penalty costs (normalized)
     penalty_factor = min(penalty_breakdown.total_penalty / REPORT_CONSTANTS.penalty_normalization_factor, REPORT_CONSTANTS.max_penalty_factor)  # Cap at max_penalty_factor
     score -= penalty_factor
     
     # Bonus for high compliance rates (but cap at 1.0)
-    if deadline_validation.compliance_rate > 95:
+    if deadline_validation.get("compliance_rate", 100) > 95:
         score += 0.05
-    if dependency_validation.satisfaction_rate > 95:
+    if dependency_validation.get("satisfaction_rate", 100) > 95:
         score += 0.05
     
     # Clamp between min_score and max_score

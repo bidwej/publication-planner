@@ -25,15 +25,16 @@ def calculate_quality_score(schedule: Dict[str, date], config: Config) -> float:
     from src.validation.schedule import validate_schedule_constraints
     comprehensive_result = validate_schedule_constraints(schedule, config)
     
-    # Extract constraint results
-    deadline_validation = comprehensive_result.get("deadlines", {})
-    dependency_validation = comprehensive_result.get("dependencies", {})
-    resource_validation = comprehensive_result.get("resources", {})
+    # Extract constraint results from the constraints dictionary
+    constraints = comprehensive_result.get("constraints", {})
+    deadline_validation = constraints.get("deadlines", {})
+    dependency_validation = constraints.get("dependencies", {})
+    resource_validation = constraints.get("resources", {})
     
     # Calculate component scores with comprehensive validation
-    deadline_score = deadline_validation.compliance_rate if hasattr(deadline_validation, 'compliance_rate') else max_score
-    dependency_score = dependency_validation.satisfaction_rate if hasattr(dependency_validation, 'satisfaction_rate') else max_score
-    resource_score = max_score if resource_validation.is_valid else QUALITY_CONSTANTS.quality_resource_fallback_score
+    deadline_score = deadline_validation.get("compliance_rate", max_score) if isinstance(deadline_validation, dict) else max_score
+    dependency_score = dependency_validation.get("satisfaction_rate", max_score) if isinstance(dependency_validation, dict) else max_score
+    resource_score = max_score if resource_validation.get("is_valid", True) else QUALITY_CONSTANTS.quality_resource_fallback_score
     
     # Additional quality factors from comprehensive validation
     additional_quality_factors = []
