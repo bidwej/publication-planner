@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 import random
-from typing import Dict, List, Set, Optional
+from typing import Dict, List, Optional
 from datetime import date, timedelta
 from src.schedulers.base import BaseScheduler
 from src.core.dates import is_working_day
@@ -38,7 +38,7 @@ class RandomScheduler(BaseScheduler):
         current, end = self._get_scheduling_window()
         
         schedule: Dict[str, date] = {}
-        active: Set[str] = set()
+        active: List[str] = []
         
         # Early abstract scheduling if enabled
         if (self.config.scheduling_options and 
@@ -53,10 +53,10 @@ class RandomScheduler(BaseScheduler):
                 continue
             
             # Retire finished drafts
-            active = {
+            active = [
                 sid for sid in active
                 if self._get_end_date(schedule[sid], self.submissions[sid]) > current
-            }
+            ]
             
             # Gather ready submissions
             ready: List[str] = []
@@ -82,7 +82,7 @@ class RandomScheduler(BaseScheduler):
                 if not self._meets_deadline(self.submissions[sid], current):
                     continue
                 schedule[sid] = current
-                active.add(sid)
+                active.append(sid)
             
             current += timedelta(days=1)
         

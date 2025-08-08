@@ -1,7 +1,7 @@
 """Heuristic scheduler implementation."""
 
 from __future__ import annotations
-from typing import Dict, List, Set
+from typing import Dict, List
 from datetime import date, timedelta
 from enum import Enum
 from src.schedulers.base import BaseScheduler
@@ -46,7 +46,7 @@ class HeuristicScheduler(BaseScheduler):
         current, end = self._get_scheduling_window()
         
         schedule: Dict[str, date] = {}
-        active: Set[str] = set()
+        active: List[str] = []
         
         # Early abstract scheduling if enabled
         if (self.config.scheduling_options and 
@@ -61,10 +61,10 @@ class HeuristicScheduler(BaseScheduler):
                 continue
             
             # Retire finished drafts
-            active = {
+            active = [
                 sid for sid in active
                 if self._get_end_date(schedule[sid], self.submissions[sid]) > current
-            }
+            ]
             
             # Gather ready submissions
             ready: List[str] = []
@@ -85,7 +85,7 @@ class HeuristicScheduler(BaseScheduler):
             
             # Try to schedule up to concurrency limit
             for sid in ready:
-                if len(active) >= self.config.max_concurrent_submissions:
+                if len(active) >= SCHEDULING_CONSTANTS.max_concurrent_submissions:
                     break
                 
                 # Use comprehensive constraint validation
@@ -93,7 +93,7 @@ class HeuristicScheduler(BaseScheduler):
                     continue
                 
                 schedule[sid] = current
-                active.add(sid)
+                active.append(sid)
             
             current += timedelta(days=1)
         
@@ -144,9 +144,9 @@ class HeuristicScheduler(BaseScheduler):
             if not deadline:
                 return date.min
             # Calculate latest start that still meets deadline
-            lead_time = self.config.min_paper_lead_time_days
+            lead_time = SCHEDULING_CONSTANTS.min_paper_lead_time_days
             if s.kind.value == "ABSTRACT":
-                lead_time = self.config.min_abstract_lead_time_days
+                lead_time = SCHEDULING_CONSTANTS.min_abstract_lead_time_days
             return deadline - timedelta(days=lead_time)
         
         return sorted(ready, key=get_latest_start, reverse=True)
@@ -155,9 +155,9 @@ class HeuristicScheduler(BaseScheduler):
         """Sort by processing time (shortest or longest first)."""
         def get_processing_time(sid: str) -> int:
             s = self.submissions[sid]
-            lead_time = self.config.min_paper_lead_time_days
+            lead_time = SCHEDULING_CONSTANTS.min_paper_lead_time_days
             if s.kind.value == "ABSTRACT":
-                lead_time = self.config.min_abstract_lead_time_days
+                lead_time = SCHEDULING_CONSTANTS.min_abstract_lead_time_days
             return lead_time
         
         return sorted(ready, key=get_processing_time, reverse=reverse)

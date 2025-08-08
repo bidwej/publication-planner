@@ -228,8 +228,12 @@ def _validate_single_conference_policy(schedule: Dict[str, date], config: Config
 def _validate_venue_compatibility(submissions: Dict[str, Submission], conferences: Dict[str, Any]) -> None:
     """Validate venue compatibility between submissions and conferences."""
     for sid, sub in submissions.items():
-        if not sub.conference_id or sub.conference_id not in conferences:
+        if not sub.conference_id:
             continue
+        
+        # Check if conference exists
+        if sub.conference_id not in conferences:
+            raise ValueError(f"Submission {sid} references unknown conference {sub.conference_id}")
         
         conf = conferences[sub.conference_id]
         

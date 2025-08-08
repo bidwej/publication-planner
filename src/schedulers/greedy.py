@@ -1,7 +1,7 @@
 """Greedy scheduler implementation."""
 
 from __future__ import annotations
-from typing import Dict, List, Set, Optional
+from typing import Dict, List, Optional
 from datetime import date, timedelta
 from src.schedulers.base import BaseScheduler
 from src.core.dates import is_working_day
@@ -37,6 +37,12 @@ class GreedyScheduler(BaseScheduler):
             else:
                 # If we can't schedule this submission, skip it
                 continue
+        
+        # Report any missing submissions
+        if len(schedule) != len(self.submissions):
+            missing = [sid for sid in self.submissions if sid not in schedule]
+            print(f"Note: Could not schedule {len(missing)} submissions: {missing}")
+            print(f"Successfully scheduled {len(schedule)} out of {len(self.submissions)} submissions")
         
         return schedule
     
@@ -88,7 +94,7 @@ class GreedyScheduler(BaseScheduler):
                     return None  # Can't meet deadline
         
         # Check resource constraints and all other constraints
-        max_concurrent = self.config.max_concurrent_submissions
+        max_concurrent = SCHEDULING_CONSTANTS.max_concurrent_submissions
         while current_date <= date.today() + timedelta(days=365):  # Reasonable limit
             # Count active submissions on this date
             active_count = 0
@@ -100,6 +106,11 @@ class GreedyScheduler(BaseScheduler):
             
             # Check resource constraint
             if active_count >= max_concurrent:
+                current_date += timedelta(days=1)
+                continue
+            
+            # Check working day constraint
+            if not is_working_day(current_date, self.config.blackout_dates):
                 current_date += timedelta(days=1)
                 continue
             

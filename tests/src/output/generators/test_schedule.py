@@ -145,7 +145,7 @@ class TestGenerateScheduleSummary:
         with patch('output.generators.schedule.calculate_penalty_score') as mock_penalty, \
              patch('output.generators.schedule.calculate_quality_score') as mock_quality, \
              patch('output.generators.schedule.calculate_efficiency_score') as mock_efficiency, \
-             patch('output.generators.schedule.validate_deadline_compliance') as mock_deadline, \
+             patch('output.generators.schedule.validate_deadline_constraints') as mock_deadline, \
              patch('output.generators.schedule.validate_resource_constraints') as mock_resource:
             
             mock_penalty.return_value = Mock(total_penalty=150.0)
@@ -210,7 +210,7 @@ class TestGenerateScheduleMetrics:
         config.min_paper_lead_time_days = 90
         
         with patch('output.generators.schedule.calculate_penalty_score') as mock_penalty, \
-             patch('output.generators.schedule.validate_deadline_compliance') as mock_deadline, \
+             patch('output.generators.schedule.validate_deadline_constraints') as mock_deadline, \
              patch('output.generators.schedule.calculate_quality_score') as mock_quality:
             
             mock_penalty.return_value = Mock(total_penalty=150.0)

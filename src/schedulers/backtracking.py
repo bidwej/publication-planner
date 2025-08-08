@@ -1,7 +1,7 @@
 """Backtracking greedy scheduler implementation."""
 
 from __future__ import annotations
-from typing import Dict, List, Set
+from typing import Dict, List
 from datetime import date, timedelta
 from src.schedulers.greedy import GreedyScheduler
 from src.schedulers.base import BaseScheduler
@@ -29,7 +29,7 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
         current, end = self._get_scheduling_window()
         
         schedule: Dict[str, date] = {}
-        active: Set[str] = set()
+        active: List[str] = []
         backtracks = 0
         
         # Early abstract scheduling if enabled
@@ -45,10 +45,10 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
                 continue
             
             # Retire finished drafts
-            active = {
+            active = [
                 sid for sid in active
                 if self._get_end_date(schedule[sid], self.submissions[sid]) > current
-            }
+            ]
             
             # Try to schedule submissions
             scheduled_this_round = self._try_schedule_round(current, topo, schedule, active)
@@ -68,7 +68,7 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
         
         return schedule
     
-    def _backtrack(self, schedule: Dict[str, date], active: Set[str], current: date) -> bool:
+    def _backtrack(self, schedule: Dict[str, date], active: List[str], current: date) -> bool:
         """Try to backtrack by rescheduling an active submission earlier."""
         for sid in list(active):
             if self._can_reschedule_earlier(sid, schedule, current):
@@ -84,31 +84,25 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
         current_start = schedule[sid]
         
         # Try to find an earlier valid start date
-        for days_back in range(1, self.config.max_backtrack_days + 1):  # Look back up to max_backtrack_days days
+        for days_back in range(1, SCHEDULING_CONSTANTS.backtrack_limit_days + 1):  # Look back up to max_backtrack_days days
             new_start = current_start - timedelta(days=days_back)
             if new_start < (sub.earliest_start_date or current):
                 break
             
-            if self._can_schedule(sid, new_start, schedule, set()):
+            if self._can_schedule(sid, new_start, schedule, []):
                 schedule[sid] = new_start
                 return True
         
         return False
     
-    def _can_schedule(self, sid: str, start: date, schedule: Dict[str, date], active: Set[str]) -> bool:
+    def _can_schedule(self, sid: str, start: date, schedule: Dict[str, date], active: List[str]) -> bool:
         """Check if a submission can be scheduled at the given start date."""
         sub = self.submissions[sid]
         
-        # Check all constraints
-        constraints = [
-            self._deps_satisfied(sub, schedule, start),
-            self._meets_deadline(sub, start),
-            len(active) < self.config.max_concurrent_submissions
-        ]
-        
-        return all(constraints)
+        # Use comprehensive validation instead of simple checks
+        return self._validate_all_constraints(sub, start, schedule)
     
-    def _try_schedule_round(self, current: date, topo: List[str], schedule: Dict[str, date], active: Set[str]) -> bool:
+    def _try_schedule_round(self, current: date, topo: List[str], schedule: Dict[str, date], active: List[str]) -> bool:
         """Try to schedule submissions for the current round."""
         # Gather ready submissions
         ready: List[str] = []
@@ -130,12 +124,12 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
         # Try to schedule up to concurrency limit
         scheduled_this_round = False
         for sid in ready:
-            if len(active) >= self.config.max_concurrent_submissions:
+            if len(active) >= SCHEDULING_CONSTANTS.max_concurrent_submissions:
                 break
             if not self._meets_deadline(self.submissions[sid], current):
                 continue
             schedule[sid] = current
-            active.add(sid)
+            active.append(sid)
             scheduled_this_round = True
         
         return scheduled_this_round

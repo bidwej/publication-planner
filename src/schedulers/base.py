@@ -10,7 +10,7 @@ from src.core.models import (
 )
 from src.validation.deadline import validate_deadline_constraints
 from src.validation.submission import validate_submission_constraints
-from src.core.dates import is_working_day
+
 
 
 class BaseScheduler(ABC):
@@ -167,6 +167,14 @@ class BaseScheduler(ABC):
                 if submission.kind in conference.deadlines:
                     # Update the submission with the assigned conference
                     submission.conference_id = conf_id
+                    # Update schedule to reflect conference assignment
+                    if paper_id in schedule:
+                        # Revalidate the schedule with the new conference assignment
+                        if self._validate_all_constraints(submission, schedule[paper_id], schedule):
+                            break
+                        else:
+                            # If validation fails, remove the conference assignment
+                            submission.conference_id = None
                     break
         
         return schedule

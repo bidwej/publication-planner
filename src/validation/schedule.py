@@ -175,24 +175,6 @@ def _analyze_schedule_with_scoring(schedule: Dict[str, date], config: Config) ->
     }
 
 
-def _validate_submission_placement(submission: Submission, start_date: date, schedule: Dict[str, date], config: Config) -> bool:
-    """Validate placement of a single submission (lighter version for schedulers)."""
-    from .submission import validate_submission_constraints as _validate_submission_constraints
-    return _validate_submission_constraints(submission, start_date, schedule, config)
-
-
-def _validate_submission_in_schedule(submission: Submission, start_date: date, schedule: Dict[str, date], config: Config) -> bool:
-    """Validate if a submission placement works within the complete schedule context."""
-    # Create a temporary schedule with this submission
-    temp_schedule = schedule.copy()
-    temp_schedule[submission.id] = start_date
-    
-    # Run all constraints validation on the temporary schedule
-    result = validate_schedule_constraints(temp_schedule, config)
-    
-    return result["summary"]["overall_valid"]
-
-
 def _calculate_schedule_span(schedule: Dict[str, date]) -> int:
     """Calculate the span of the schedule in days."""
     if not schedule:
@@ -217,16 +199,6 @@ def _calculate_average_daily_load(schedule: Dict[str, date], config: Config) -> 
     return total_load / len(daily_load)
 
 
-def _validate_blackout_dates(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
-    """Validate that no submissions are scheduled on blackout dates."""
-    # For now, return empty result since blackout dates are not implemented
-    return {
-        "violations": [],
-        "total_submissions": len(schedule),
-        "compliant_submissions": len(schedule)
-    }
-
-
 def _validate_schedule_constraints_structured(schedule: Dict[str, date], config: Config) -> ConstraintValidationResult:
     """Validate all constraints for a complete schedule and return structured result."""
     # Basic validations
@@ -235,7 +207,6 @@ def _validate_schedule_constraints_structured(schedule: Dict[str, date], config:
     resource_result = validate_resources_constraints(schedule, config)
     
     # Additional validations
-    blackout_result = _validate_blackout_dates(schedule, config)
     venue_result = validate_venue_constraints(schedule, config)
     
     # Combine all violations
@@ -243,7 +214,6 @@ def _validate_schedule_constraints_structured(schedule: Dict[str, date], config:
         deadline_result.violations +
         dependency_result.violations +
         resource_result.violations +
-        blackout_result.get("violations", []) +
         venue_result.get("violations", [])
     )
     

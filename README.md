@@ -501,9 +501,15 @@ config = {
 src/
 ├── core/           # Core data models and business logic
 │   ├── models.py   # Data classes (Submission, Conference, Config)
-│   ├── constraints.py  # Constraint validation logic
 │   ├── constants.py    # Centralized constants
+│   ├── dates.py    # Date utilities and calculations
 │   └── config.py   # Configuration loading and parsing
+├── validation/     # Constraint validation and compliance checking
+│   ├── deadline.py     # Deadline validation and blackout dates
+│   ├── schedule.py     # Comprehensive schedule validation
+│   ├── submission.py   # Individual submission validation
+│   ├── venue.py        # Conference compatibility validation
+│   └── resources.py    # Resource constraint validation
 ├── schedulers/     # Scheduling algorithms
 │   ├── base.py     # Base scheduler class
 │   ├── greedy.py   # Greedy algorithm
@@ -516,13 +522,13 @@ src/
 ├── scoring/        # Scoring and evaluation
 │   ├── quality.py  # Quality metrics
 │   ├── efficiency.py  # Efficiency metrics
-│   └── penalty.py  # Penalty calculations
+│   └── penalties.py  # Penalty calculations
 ├── output/         # Output generation
 │   ├── reports.py  # Report generation
 │   ├── analytics.py # Analysis functions
 │   ├── console.py  # Console output formatting
-│   ├── tables.py   # Table generation
 │   ├── generators/ # Output file generation
+│   │   └── schedule.py # Schedule output generation
 │   └── formatters/ # Data formatting utilities
 └── planner.py      # Main planner interface
 
