@@ -287,7 +287,7 @@ class Planner:
     def validate_schedule_comprehensive(self, schedule: Dict[str, date]) -> Dict[str, Any]:
         """Validate schedule comprehensively and return detailed results."""
         # Use the comprehensive validation that includes all README claims
-        from src.core.constraints import validate_single_submission_constraints_comprehensive
+        from src.validation import validate_single_submission_constraints_comprehensive
         
         # First run the existing comprehensive validation
         result = validate_schedule_comprehensive(schedule, self.config)

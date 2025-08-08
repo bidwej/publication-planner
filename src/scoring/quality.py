@@ -5,7 +5,7 @@ from datetime import date, timedelta
 import statistics
 
 from core.models import Config
-from core.constraints import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
+from src.validation import validate_deadline_compliance, validate_dependency_satisfaction, validate_resource_constraints
 from core.constants import (
     QUALITY_CONSTANTS, SCORING_CONSTANTS, REPORT_CONSTANTS
 )
@@ -20,7 +20,7 @@ def calculate_quality_score(schedule: Dict[str, date], config: Config) -> float:
         return min_score
     
     # Get comprehensive constraint validations
-    from src.core.constraints import validate_all_constraints_comprehensive
+    from src.validation import validate_all_constraints_comprehensive
     comprehensive_result = validate_all_constraints_comprehensive(schedule, config)
     
     # Extract constraint results

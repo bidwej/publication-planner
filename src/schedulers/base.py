@@ -8,7 +8,7 @@ from src.core.models import (
     Config, Submission, SubmissionType, SchedulerStrategy, Conference,
     generate_abstract_id, create_abstract_submission, ensure_abstract_paper_dependency
 )
-from src.core.constraints import validate_deadline_compliance_single, validate_dependencies_satisfied, is_working_day
+from src.validation import validate_deadline_compliance_single, validate_dependencies_satisfied, is_working_day
 
 
 class BaseScheduler(ABC):
@@ -76,7 +76,7 @@ class BaseScheduler(ABC):
     
     def _validate_all_constraints(self, sub: Submission, start: date, schedule: Dict[str, date]) -> bool:
         """Validate all constraints for a submission at a given start date."""
-        from src.core.constraints import validate_single_submission_constraints
+        from src.validation import validate_single_submission_constraints
         return validate_single_submission_constraints(sub, start, schedule, self.config)
     
     def _auto_link_abstract_paper(self):

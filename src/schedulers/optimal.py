@@ -28,7 +28,7 @@ class OptimalScheduler(BaseScheduler):
             Mapping of submission_id to start_date
         """
         self._auto_link_abstract_paper()
-        from src.core.constraints import validate_venue_compatibility
+        from src.validation import validate_venue_compatibility
         validate_venue_compatibility(self.submissions, self.conferences)
         
         # Create and solve MILP model

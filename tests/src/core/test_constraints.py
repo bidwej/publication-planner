@@ -6,7 +6,7 @@ from typing import Dict, Any, List
 import pytest
 
 from src.core.config import load_config
-from src.core.constraints import (
+from src.validation import (
     validate_all_constraints,
     validate_all_constraints_comprehensive,
     validate_deadline_compliance,
@@ -818,7 +818,7 @@ class TestComprehensiveConstraints:
         weekend_date = date(2025, 3, 22)  # Saturday
         
         # Test comprehensive validation directly
-        from src.core.constraints import validate_scheduling_options
+        from src.validation import validate_scheduling_options
         
         working_schedule = {"temp": working_date}
         weekend_schedule = {"temp": weekend_date}
