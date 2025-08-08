@@ -69,7 +69,12 @@ class GreedyScheduler(BaseScheduler):
         
         # Check resource constraints and all other constraints
         max_concurrent = self.config.max_concurrent_submissions
-        while current_date <= date.today() + timedelta(days=365):  # Reasonable limit
+        max_iterations = 1000  # Safety limit to prevent infinite loops
+        iteration_count = 0
+        
+        while current_date <= date.today() + timedelta(days=365) and iteration_count < max_iterations:  # Reasonable limit
+            iteration_count += 1
+            
             # Count active submissions on this date
             active_count = 0
             for scheduled_id, scheduled_start_date in schedule.items():
@@ -93,5 +98,8 @@ class GreedyScheduler(BaseScheduler):
                 return current_date
             
             current_date += timedelta(days=1)
+        
+        if iteration_count >= max_iterations:
+            print(f"Warning: Could not find valid start date for {submission.id} after {max_iterations} iterations")
         
         return None  # Could not find valid start date 

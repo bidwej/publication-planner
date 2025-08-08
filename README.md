@@ -295,6 +295,20 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ## Scheduling Algorithms
 
+### Available Strategies
+
+The system implements **7 different scheduling strategies**:
+
+| Strategy | Description | Use Case |
+|----------|-------------|----------|
+| **Greedy** | Basic topological ordering with earliest feasible placement | Default, fast scheduling |
+| **Stochastic** | Greedy with random perturbations | Exploration of alternative schedules |
+| **Lookahead** | Greedy with future consideration bonus | Better resource utilization |
+| **Backtracking** | Greedy with conflict resolution | Complex dependency scenarios |
+| **Random** | Completely random placement | Baseline comparison |
+| **Heuristic** | Rule-based optimization | Domain-specific constraints |
+| **Optimal** | Mathematical optimization (when feasible) | Best possible schedule |
+
 ### 1. Greedy Scheduler
 - Prioritizes submissions by deadline and priority
 - Uses comprehensive constraint validation
@@ -354,6 +368,103 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 - **Blackout Periods**: Federal holidays and custom blackout date enforcement
 - **Slack Cost Optimization**: Monthly slip penalties and full-year deferral penalties
 - **Missed Opportunity Penalties**: Penalties for missed abstract-only submission windows
+
+## Advanced Features
+
+### Comprehensive Scoring System
+
+The system includes sophisticated scoring mechanisms:
+
+- **Quality Scoring**: Evaluates schedule quality based on venue prestige, paper type, and engineering vs medical classification
+- **Penalty Scoring**: Calculates costs for deadline violations, dependency violations, and resource overruns
+- **Efficiency Scoring**: Measures resource utilization and timeline efficiency
+- **Resource Metrics**: Peak utilization, average utilization, and efficiency scores
+- **Timeline Metrics**: Duration analysis and daily load calculations
+
+### Advanced Validation System
+
+Beyond basic constraints, the system validates:
+
+- **Deadline Validation**: Ensures all submissions meet conference deadlines
+- **Resource Validation**: Checks concurrent submission limits
+- **Venue Compatibility**: Validates paper type vs conference type matching
+- **Submission Validation**: Verifies abstract-paper dependencies
+- **Schedule Constraint Validation**: Comprehensive constraint checking
+
+### Rich Data Models
+
+Rich data models support complex scenarios:
+
+- **Submission Types**: `PAPER`, `ABSTRACT`, `POSTER`
+- **Conference Submission Types**: `ABSTRACT_ONLY`, `PAPER_ONLY`, `ABSTRACT_AND_PAPER`, `ABSTRACT_OR_PAPER`, `POSTER_ONLY`, `ALL_TYPES`
+- **Conference Types**: `MEDICAL`, `ENGINEERING`
+- **Recurrence Patterns**: `ANNUAL`, `BIENNIAL`, `QUARTERLY`
+- **Priority Weighting**: Configurable weights for different submission types
+- **Penalty Costs**: Per-day penalty costs for different submission types
+
+### Configuration Management
+
+Advanced configuration features:
+
+- **Priority Weights**: Different weights for engineering vs medical papers
+- **Penalty Costs**: Configurable daily penalties for different submission types
+- **Scheduling Options**: Blackout periods, working days only, early abstract scheduling
+- **Blackout Dates**: Support for unavailable periods
+- **Conference Response Times**: Configurable response time expectations
+
+## Web Application Interface
+
+### Dashboard Mode
+
+The system includes a **complete web dashboard** built with Dash:
+
+- **Interactive Gantt Charts**: Visual timeline with drag-and-drop capabilities
+- **Metrics Visualization**: Real-time charts showing schedule quality and efficiency
+- **Schedule Tables**: Detailed tabular views of assignments
+- **Violation Reporting**: Real-time constraint violation detection and display
+- **Strategy Comparison**: Side-by-side comparison of different scheduling approaches
+
+### Timeline Mode
+
+Simplified timeline view for quick schedule overview.
+
+### Features
+
+- **Real-time Schedule Generation**: Instant schedule creation with different strategies
+- **Interactive Controls**: Strategy selection, parameter adjustment
+- **Data Persistence**: Save and load schedules
+- **Export Capabilities**: CSV export of schedules and metrics
+
+## Command Line Interface
+
+The system provides a comprehensive CLI with multiple options:
+
+```bash
+# Generate schedule with specific strategy
+python generate_schedule.py --strategy greedy
+
+# Compare all strategies
+python generate_schedule.py --compare --output comparison.json
+
+# List available strategies
+python generate_schedule.py --list-strategies
+
+# Run web interface
+python run_web_charts.py --mode dashboard
+python run_web_charts.py --mode timeline
+```
+
+## Testing Infrastructure
+
+Comprehensive testing coverage:
+
+- **Unit Tests**: All components have dedicated test suites
+- **Integration Tests**: End-to-end scheduler testing
+- **Web Application Tests**: Dashboard and timeline functionality
+- **Headless Browser Testing**: Automated web interface testing
+- **Test Data Generation**: Automated test data creation
+
+Run tests with: `pytest -q`
 
 ## Configuration
 
@@ -594,6 +705,42 @@ When adding new features:
 - **Test Categories**: Core, schedulers, scoring, output, metrics
 - **Test Data**: Common test data and fixtures
 - **Validation Testing**: All constraint and scoring functions tested
+
+## Implementation Status
+
+### ✅ Implemented Features
+
+- **7 Scheduling Algorithms**: Greedy, Stochastic, Lookahead, Backtracking, Random, Heuristic, Optimal
+- **Web Dashboard**: Complete Dash-based web application with interactive charts
+- **Scoring System**: Quality, penalty, and efficiency scoring
+- **Validation System**: Comprehensive constraint validation
+- **CLI Interface**: Command-line tools for schedule generation
+- **Testing Infrastructure**: Complete test suite
+- **Configuration Management**: Advanced configuration options
+- **Data Models**: Rich data structures for complex scenarios
+
+### 🚧 Planned Features (Not Yet Implemented)
+
+- **MILP Optimization**: Mathematical optimization using PuLP / OR‑Tools
+- **Quarterly Re-solve**: Automated re-scheduling as real-world dates slip
+- **Advanced Penalty Terms**: SlackCost, VenuePenalty, FDA delay terms
+- **CSV Export**: Direct CSV export functionality (partially implemented)
+
+## Quick Start
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Generate a schedule
+python generate_schedule.py --strategy greedy
+
+# Run web dashboard
+python run_web_charts.py --mode dashboard
+
+# Run tests
+pytest -q
+```
 
 ## License
 
