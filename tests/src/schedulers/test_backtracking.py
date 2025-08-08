@@ -3,7 +3,7 @@
 import pytest
 from datetime import date
 
-from core.models import SubmissionType, ConferenceRecurrence
+from core.models import SubmissionType, ConferenceRecurrence, ConferenceType
 from schedulers.backtracking import BacktrackingGreedyScheduler as BacktrackingScheduler
 
 
@@ -73,7 +73,8 @@ class TestBacktrackingScheduler:
         
         conference2 = create_mock_conference(
             "conf2", "Test Conference 2", 
-            {SubmissionType.ABSTRACT: date(2024, 8, 1)}
+            {SubmissionType.ABSTRACT: date(2024, 8, 1)},
+            conf_type=ConferenceType.MEDICAL
         )
         
         config = create_mock_config([submission1, submission2], [conference1, conference2])

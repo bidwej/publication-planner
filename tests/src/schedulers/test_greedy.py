@@ -4,7 +4,7 @@ from datetime import date, timedelta
 
 import pytest
 
-from src.core.models import SubmissionType
+from src.core.models import SubmissionType, ConferenceType
 from src.schedulers.greedy import GreedyScheduler
 from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
 
@@ -159,7 +159,8 @@ class TestGreedyScheduler:
         conference = create_mock_conference(
             "conf1", "Test Conference", 
             {SubmissionType.PAPER: date(2025, 12, 1),
-             SubmissionType.ABSTRACT: date(2025, 12, 1)}
+             SubmissionType.ABSTRACT: date(2025, 12, 1)},
+            conf_type=ConferenceType.MEDICAL
         )
         
         # Custom priority weights
@@ -214,7 +215,8 @@ class TestGreedyScheduler:
         conference = create_mock_conference(
             "conf1", "Test Conference", 
             {SubmissionType.ABSTRACT: date(2025, 10, 1),
-             SubmissionType.PAPER: date(2025, 12, 1)}
+             SubmissionType.PAPER: date(2025, 12, 1)},
+            conf_type=ConferenceType.MEDICAL
         )
         config = create_mock_config([abstract, paper], [conference])
         

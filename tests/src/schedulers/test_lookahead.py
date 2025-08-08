@@ -4,7 +4,7 @@ from datetime import date, timedelta
 
 import pytest
 
-from src.core.models import SubmissionType
+from src.core.models import SubmissionType, ConferenceType
 from src.schedulers.lookahead import LookaheadGreedyScheduler
 from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
 
@@ -72,7 +72,8 @@ class TestLookaheadScheduler:
         
         conference2 = create_mock_conference(
             "conf2", "Test Conference 2", 
-            {SubmissionType.ABSTRACT: date(2025, 10, 1)}
+            {SubmissionType.ABSTRACT: date(2025, 10, 1)},
+            conf_type=ConferenceType.MEDICAL
         )
         
         config = create_mock_config([submission1, submission2], [conference1, conference2])

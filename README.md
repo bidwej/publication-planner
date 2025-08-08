@@ -295,79 +295,298 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ## Scheduling Algorithms
 
-### Available Strategies
+The scheduler architecture has been completely refactored to provide a clear separation between different scheduling approaches with comprehensive validation and constraint satisfaction. The new architecture uses a shared base class with specialized schedulers for different optimization strategies.
 
-The system implements **7 different scheduling strategies**:
+### Architecture Components
 
-| Strategy | Description | Use Case |
-|----------|-------------|----------|
-| **Greedy** | Basic topological ordering with earliest feasible placement | Default, fast scheduling |
-| **Stochastic** | Greedy with random perturbations | Exploration of alternative schedules |
-| **Lookahead** | Greedy with future consideration bonus | Better resource utilization |
-| **Backtracking** | Greedy with conflict resolution | Complex dependency scenarios |
-| **Random** | Completely random placement | Baseline comparison |
-| **Heuristic** | Rule-based optimization | Domain-specific constraints |
-| **Optimal** | Mathematical optimization (when feasible) | Best possible schedule |
+#### Base Scheduler (`BaseScheduler`)
+- **Abstract base class** that defines the interface for all schedulers
+- Provides comprehensive shared utility methods for dependency checking, deadline validation, and constraint satisfaction
+- Implements common setup and validation methods used by all schedulers
+- Cannot be instantiated directly (abstract class)
+- **Key Features**:
+  - Shared validation methods (`_validate_all_constraints`)
+  - Common scheduling setup (`_run_common_scheduling_setup`)
+  - Dependency management (`_deps_satisfied`, `_get_ready_submissions`)
+  - Resource tracking (`_update_active_submissions`, `_schedule_submissions_up_to_limit`)
+  - Priority calculation (`_get_base_priority`, `_sort_by_priority`)
+  - Conference assignment (`_assign_conferences`, `_check_conference_compatibility`)
+  - Abstract-paper linking (`_auto_link_abstract_paper`)
 
-### 1. Greedy Scheduler
-- Prioritizes submissions by deadline and priority
-- Uses comprehensive constraint validation
-- Fast execution with good quality solutions
-- Integrates all business rules and constraints
+### Core Schedulers
 
-### 2. Backtracking Scheduler  
-- Explores multiple scheduling paths with constraint satisfaction
-- Can find optimal solutions but slower
-- Comprehensive constraint validation at each step
-- Handles complex dependency chains
+#### 1. Greedy Scheduler (`GreedyScheduler`)
+- **Algorithm**: Schedules submissions as early as possible based on priority and dependencies
+- **Priority-based selection**: Uses configurable weights for different submission types
+- **Comprehensive validation**: All business rules integrated into scheduling process
+- **Key Features**:
+  - Topological ordering of submissions
+  - Earliest valid start date calculation
+  - Comprehensive constraint validation at each step
+  - Deadline-aware scheduling with buffer time
+  - Resource constraint enforcement
+  - Working day validation
+- **Use Case**: Default, fast scheduling with good quality solutions
 
-### 3. Heuristic Scheduler
-- Combines multiple heuristics for better solutions
-- Balances speed and quality
-- Multiple strategies: earliest deadline, latest start, shortest processing time
-- Critical path analysis for dependency optimization
+#### 2. Heuristic Scheduler (`HeuristicScheduler`)
+- **Multiple strategies**: Implements different scheduling heuristics
+- **Strategies available**:
+  - `EARLIEST_DEADLINE`: Schedule submissions with earliest deadlines first
+  - `LATEST_START`: Schedule submissions that can start latest first (reverse of earliest start)
+  - `SHORTEST_PROCESSING_TIME`: Schedule shortest tasks first
+  - `LONGEST_PROCESSING_TIME`: Schedule longest tasks first
+  - `CRITICAL_PATH`: Prioritize submissions that block others
+- **Key Features**:
+  - Strategy-based sorting (`_sort_by_heuristic`)
+  - Deadline calculation with lead time consideration
+  - Critical path analysis for dependency optimization
+  - Processing time optimization
+- **Use Case**: Domain-specific constraints and complex scenarios
 
-### 4. Lookahead Scheduler
-- Considers future implications of current decisions
-- Uses 30-day lookahead window by default
-- Predictive constraint validation
-- Optimizes for long-term resource utilization
+#### 3. Optimal Scheduler (`OptimalScheduler`)
+- **MILP optimization**: Uses PuLP for mathematical optimization
+- **Multiple objectives**: minimize makespan, minimize penalties, minimize total time
+- **Comprehensive constraint modeling**: All business rules modeled as MILP constraints
+- **Key Features**:
+  - Mixed Integer Linear Programming formulation
+  - Dependency constraints (`_add_dependency_constraints`)
+  - Deadline constraints (`_add_deadline_constraints`)
+  - Resource constraints (`_add_concurrency_constraints`)
+  - Working day constraints (`_add_working_days_constraints`)
+  - Fallback to greedy if MILP fails
+- **Use Case**: Best possible schedule when computational resources allow
 
-### 5. Random Scheduler
-- Generates random valid schedules
-- Useful for baseline comparisons
-- Comprehensive constraint validation
-- Monte Carlo approach for complex scenarios
+#### 4. Random Scheduler (`RandomScheduler`)
+- **Baseline comparison**: Schedules submissions in random order
+- **Reproducible**: Uses configurable seed for consistent results
+- **Comprehensive validation**: All constraints enforced despite random ordering
+- **Key Features**:
+  - Random shuffling of ready submissions
+  - Same validation as other schedulers
+  - Configurable seed for reproducibility
+- **Use Case**: Testing, comparison, and Monte Carlo analysis
 
-### 6. Stochastic Scheduler
-- Uses probabilistic methods for optimization
-- Good for complex constraint scenarios
-- Adaptive parameter adjustment
-- Multi-objective optimization
+### Greedy Variants
 
-### 7. Optimal Scheduler (MILP)
-- Finds mathematically optimal solutions using Mixed Integer Linear Programming
-- Computationally expensive but highest quality
-- Comprehensive constraint modeling
-- Multi-objective optimization (makespan, penalties, utilization)
+These schedulers inherit from `GreedyScheduler` and add specific enhancements:
 
-### 8. Advanced Scheduler
-- **Multi-Objective Optimization**: Balances makespan, penalties, and resource utilization
-- **Adaptive Scheduling**: Adjusts strategy based on constraint violations
-- **Hybrid Approach**: Combines multiple strategies for optimal results
-- **Constraint Satisfaction**: Advanced backtracking with comprehensive validation
-- **Priority-Based Scoring**: Multi-factor priority calculation including deadline urgency, dependency criticality, resource efficiency, and conference compatibility
-- **Real-time Validation**: All business rules integrated into scheduling process
-- **Resource Optimization**: Target 80% utilization with penalty for deviations
-- **Conference Compatibility**: Automatic conference-submission type matching
-- **Abstract-to-Paper Dependencies**: Automatic creation and scheduling of required abstracts
-- **Working Days Only**: Optional restriction to business days with weekend/holiday exclusion
-- **Soft Block Model**: PCCP modifications within ±2 months with penalties
-- **Single Conference Policy**: One venue per paper per annual cycle enforcement
-- **Conference Response Time**: Buffer time for conference response processing
-- **Blackout Periods**: Federal holidays and custom blackout date enforcement
-- **Slack Cost Optimization**: Monthly slip penalties and full-year deferral penalties
-- **Missed Opportunity Penalties**: Penalties for missed abstract-only submission windows
+#### 1. Backtracking Greedy (`BacktrackingGreedyScheduler`)
+- **Undo decisions**: Can backtrack when stuck to find better solutions
+- **Recovery mechanism**: Removes recent decisions to try different paths
+- **Configurable**: `max_backtracks` parameter controls backtracking attempts
+- **Key Features**:
+  - Conflict resolution through backtracking
+  - Rescheduling of active submissions
+  - Earlier start date exploration
+  - Comprehensive validation during backtracking
+- **Use Case**: Complex dependency scenarios with tight constraints
+
+#### 2. Lookahead Greedy (`LookaheadGreedyScheduler`)
+- **Future consideration**: Adds lookahead buffer to deadline checking
+- **Dependency awareness**: Prioritizes submissions that block others
+- **Configurable**: `lookahead_days` parameter (default: 30 days)
+- **Key Features**:
+  - Predictive constraint validation
+  - Future deadline consideration
+  - Long-term resource utilization optimization
+- **Use Case**: Better resource utilization and deadline management
+
+#### 3. Stochastic Greedy (`StochasticGreedyScheduler`)
+- **Randomness**: Adds random noise to priority calculations
+- **Exploration**: Helps avoid local optima through probabilistic methods
+- **Configurable**: `randomness_factor` parameter controls exploration
+- **Key Features**:
+  - Probabilistic priority adjustment
+  - Multi-objective optimization
+  - Adaptive parameter adjustment
+- **Use Case**: Complex constraint scenarios requiring exploration
+
+### Validation System
+
+#### Comprehensive Constraint Validation
+
+All schedulers use a shared validation system:
+
+##### 1. Deadline Validation (`src/validation/deadline.py`)
+- **Deadline compliance**: Ensures all submissions meet conference deadlines
+- **Blackout date validation**: Prevents scheduling on blackout dates
+- **Lead time validation**: Ensures sufficient preparation time
+- **Key Functions**:
+  - `validate_deadline_constraints()`: Main validation function
+  - `_validate_deadline_violations()`: Detailed violation detection
+  - `_validate_blackout_dates()`: Blackout date checking
+  - `_validate_paper_lead_time_months()`: Lead time validation
+
+##### 2. Resource Validation (`src/validation/resources.py`)
+- **Concurrency limits**: Enforces maximum concurrent submissions
+- **Resource utilization**: Tracks and optimizes resource usage
+- **Peak load analysis**: Identifies resource bottlenecks
+- **Key Features**:
+  - Concurrent submission tracking
+  - Resource utilization calculation
+  - Peak load identification
+  - Efficiency scoring
+
+##### 3. Schedule Validation (`src/validation/schedule.py`)
+- **Comprehensive validation**: All constraint types in one place
+- **Analytics**: Schedule quality and efficiency analysis
+- **Structured results**: Detailed validation reports
+- **Key Functions**:
+  - `validate_schedule_constraints()`: Main validation function
+  - `_validate_dependency_satisfaction()`: Dependency validation
+  - `_analyze_schedule_with_scoring()`: Analytics and scoring
+  - `_validate_schedule_constraints_structured()`: Structured validation
+
+##### 4. Venue Validation (`src/validation/venue.py`)
+- **Conference compatibility**: Validates submission-conference matching
+- **Submission type validation**: Ensures correct submission types for conferences
+- **Single conference policy**: Enforces one venue per paper per cycle
+- **Key Functions**:
+  - `validate_venue_constraints()`: Main venue validation
+  - `_validate_conference_compatibility()`: Conference type matching
+  - `_validate_conference_submission_compatibility()`: Submission type validation
+  - `_validate_single_conference_policy()`: Single conference enforcement
+  - `_validate_venue_compatibility()`: Comprehensive compatibility checking
+
+##### 5. Submission Validation (`src/validation/submission.py`)
+- **Individual submission validation**: Validates single submissions
+- **Dependency satisfaction**: Checks dependency requirements
+- **Constraint checking**: All constraints for single submissions
+- **Key Functions**:
+  - `validate_submission_constraints()`: Main submission validation
+  - `_validate_dependencies_satisfied()`: Dependency checking
+
+### Advanced Scheduler Features
+
+#### 1. Abstract-to-Paper Dependencies
+- **Automatic linking**: Creates abstract submissions for papers when required
+- **Dependency enforcement**: Ensures abstracts are scheduled before papers
+- **Conference-specific rules**: Different conferences have different abstract requirements
+- **Key Functions**:
+  - `_auto_link_abstract_paper()`: Automatic abstract creation
+  - `generate_abstract_id()`: Abstract ID generation
+  - `create_abstract_submission()`: Abstract submission creation
+  - `ensure_abstract_paper_dependency()`: Dependency enforcement
+
+#### 2. Conference Assignment
+- **Automatic assignment**: Assigns conferences to papers based on compatibility
+- **Compatibility matrix**: Validates conference-submission type matching
+- **Family-based assignment**: Groups conferences by family for assignment
+- **Key Functions**:
+  - `_assign_conferences()`: Conference assignment logic
+  - `_check_conference_compatibility()`: Compatibility validation
+
+#### 3. Early Abstract Scheduling
+- **Advance scheduling**: Abstracts can be scheduled earlier than deadlines
+- **Configurable advance**: Adjustable advance days for early abstract scheduling
+- **Abstract-only venues**: Special handling for abstract-only conference venues
+- **Key Functions**:
+  - `_apply_early_abstract_scheduling()`: Early abstract logic
+  - `_schedule_early_abstracts()`: Early abstract scheduling
+
+#### 4. Working Days Only
+- **Business day scheduling**: Optional restriction to business days only
+- **Weekend exclusion**: Automatic exclusion of weekends (Saturday/Sunday)
+- **Blackout date integration**: Integration with blackout periods
+- **Key Functions**:
+  - `is_working_day()`: Working day calculation
+  - `_advance_date_if_needed()`: Date advancement for non-working days
+
+### Usage Examples
+
+#### Basic Usage
+```python
+from src.schedulers.base import BaseScheduler
+from src.core.models import SchedulerStrategy, Config
+
+# Load configuration
+config = Config.load("config.json")
+
+# Create scheduler by strategy
+scheduler = BaseScheduler.create_scheduler(SchedulerStrategy.GREEDY, config)
+schedule = scheduler.schedule()
+
+# Use specific scheduler
+from src.schedulers.greedy import GreedyScheduler
+greedy = GreedyScheduler(config)
+schedule = greedy.schedule()
+```
+
+#### Heuristic Scheduling
+```python
+from src.schedulers.heuristic import HeuristicScheduler, HeuristicStrategy
+
+# Earliest deadline strategy
+heuristic = HeuristicScheduler(config, HeuristicStrategy.EARLIEST_DEADLINE)
+schedule = heuristic.schedule()
+
+# Critical path strategy
+heuristic = HeuristicScheduler(config, HeuristicStrategy.CRITICAL_PATH)
+schedule = heuristic.schedule()
+```
+
+#### Advanced Scheduling
+```python
+from src.schedulers.backtracking import BacktrackingGreedyScheduler
+from src.schedulers.optimal import OptimalScheduler
+
+# Backtracking with 5 max backtracks
+backtracking = BacktrackingGreedyScheduler(config, max_backtracks=5)
+schedule = backtracking.schedule()
+
+# Optimal with minimize makespan objective
+optimal = OptimalScheduler(config, optimization_objective="minimize_makespan")
+schedule = optimal.schedule()
+```
+
+#### Random Baseline
+```python
+from src.schedulers.random import RandomScheduler
+
+# Random with seed for reproducibility
+random_scheduler = RandomScheduler(config, seed=42)
+schedule = random_scheduler.schedule()
+```
+
+### Strategy Comparison
+
+| Strategy | Speed | Quality | Use Case | Complexity |
+|----------|-------|---------|----------|------------|
+| **Greedy** | Fast | Good | Default, baseline | Low |
+| **Heuristic** | Medium | Good | Domain-specific | Medium |
+| **Backtracking** | Slow | Very Good | Complex dependencies | High |
+| **Lookahead** | Medium | Good | Resource optimization | Medium |
+| **Stochastic** | Medium | Good | Exploration | Medium |
+| **Random** | Fast | Variable | Baseline comparison | Low |
+| **Optimal** | Very Slow | Best | Best possible schedule | Very High |
+
+### Benefits of New Architecture
+
+1. **Clear separation**: Each scheduler has a distinct purpose and algorithm
+2. **Shared validation**: All schedulers use the same comprehensive validation system
+3. **Extensible**: Easy to add new schedulers by inheriting from base
+4. **Testable**: Each scheduler can be tested independently
+5. **Comparable**: Different approaches can be compared fairly
+6. **Comprehensive**: All business rules integrated into scheduling process
+7. **Robust**: Fallback mechanisms when optimization fails
+8. **Configurable**: Extensive configuration options for all schedulers
+
+### Migration from Old Architecture
+
+The old architecture had:
+- `BaseScheduler` (was actually greedy)
+- `GreedyScheduler` (redundant)
+- Various greedy variants
+
+The new architecture has:
+- `BaseScheduler` (truly abstract with shared utilities)
+- `GreedyScheduler` (implements greedy algorithm)
+- `HeuristicScheduler` (different heuristics)
+- `OptimalScheduler` (MILP optimization)
+- `RandomScheduler` (baseline comparison)
+- Greedy variants (inherit from `GreedyScheduler`)
+
+This provides a much clearer, more maintainable, and more comprehensive structure with proper separation of concerns and extensive validation capabilities.
 
 ## Advanced Features
 
