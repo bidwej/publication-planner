@@ -16,6 +16,16 @@ class SubmissionType(str, Enum):
     POSTER = "poster"
 
 
+class SubmissionWorkflow(str, Enum):
+    """Workflow types for submissions."""
+    ABSTRACT_ONLY = "abstract_only"          # Only submit as abstract
+    PAPER_ONLY = "paper_only"               # Only submit as paper  
+    POSTER_ONLY = "poster_only"             # Only submit as poster
+    ABSTRACT_THEN_PAPER = "abstract_then_paper"  # Submit abstract first, then paper
+    PAPER_OR_ABSTRACT = "paper_or_abstract"      # Can submit as either (conference decides)
+    ANY = "any"                             # Open to any submission type
+
+
 
 class ConferenceSubmissionType(str, Enum):
     """Types of conference submission requirements."""
@@ -53,6 +63,7 @@ class Submission:
     earliest_start_date: Optional[date] = None
     candidate_conferences: Optional[List[str]] = None  # Suggested conferences
     candidate_kinds: Optional[List[SubmissionType]] = None  # Preferred submission types at conferences (in priority order)
+    submission_workflow: Optional[SubmissionWorkflow] = None  # How this submission should be handled
     
     # Additional fields for unified schema (both mods and papers now have these)
     engineering_ready_date: Optional[date] = None  # When engineering work completes and data is available

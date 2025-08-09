@@ -9,6 +9,7 @@
       "CVPR",
       "NeurIPS"
     ],
+    "submission_workflow": "abstract_then_paper",
     "depends_on": [
       "mod_1"
     ],
@@ -27,6 +28,7 @@
       "ARS",
       "IFAR"
     ],
+    "submission_workflow": "abstract_then_paper",
     "depends_on": [
       "mod_2"
     ],

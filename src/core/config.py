@@ -9,7 +9,7 @@ from dateutil.parser import parse as parse_date
 
 from src.core.models import (
     Conference, ConferenceRecurrence, ConferenceType, ConferenceSubmissionType, Config, Submission, 
-    SubmissionType
+    SubmissionType, SubmissionWorkflow
 )
 from src.core.constants import SCHEDULING_CONSTANTS, PENALTY_CONSTANTS
 
@@ -57,6 +57,15 @@ def _parse_candidate_kinds(json_data: Dict) -> Optional[List[SubmissionType]]:
         return None
 
 
+def _parse_submission_workflow(json_data: Dict) -> Optional[SubmissionWorkflow]:
+    """Parse submission workflow from JSON data."""
+    workflow = json_data.get('submission_workflow')
+    if workflow:
+        return SubmissionWorkflow(workflow)
+    else:
+        return None
+
+
 def _build_deadlines_dict(conf_data: Dict) -> Dict[SubmissionType, date]:
     """Build deadlines dict from JSON data."""
     deadlines = {}
@@ -86,6 +95,7 @@ def _map_paper_data(json_data: Dict) -> Dict:
         "lead_time_from_parents": json_data.get("lead_time_from_parents", 0),
         "candidate_conferences": json_data.get("candidate_conferences", []),
         "candidate_kinds": _parse_candidate_kinds(json_data),  # Preferred submission types
+        "submission_workflow": _parse_submission_workflow(json_data),  # How this submission should be handled
         # Unified schema fields
         "engineering_ready_date": parse_date(json_data["engineering_ready_date"]).date() if json_data.get("engineering_ready_date") else None,
         "free_slack_months": json_data.get("free_slack_months", 1),
@@ -110,6 +120,7 @@ def _map_mod_data(json_data: Dict) -> Dict:
         "conference_id": None,  # No pre-assigned conference
         "candidate_conferences": json_data.get("candidate_conferences", []),  # Map candidate conferences
         "candidate_kinds": _parse_candidate_kinds(json_data),  # Preferred submission types
+        "submission_workflow": _parse_submission_workflow(json_data),  # How this submission should be handled
         "depends_on": json_data.get("depends_on", []),
         "draft_window_months": json_data.get("draft_window_months", 2),  # Use actual draft window
         "lead_time_from_parents": json_data.get("lead_time_from_parents", 0),

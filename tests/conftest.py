@@ -57,7 +57,7 @@ def create_flexible_submission(
     submission_id: str,
     title: str,
     candidate_conferences: Optional[List[str]] = None,
-    candidate_kind: Optional[SubmissionType] = None,
+    candidate_kinds: Optional[List[SubmissionType]] = None,
     **kwargs: Any
 ) -> Submission:
     """Create a submission for testing flexible assignment behavior."""
@@ -71,7 +71,7 @@ def create_flexible_submission(
         kind=SubmissionType.PAPER,  # Base type
         conference_id=None,  # No assigned conference
         candidate_conferences=candidate_conferences,
-        candidate_kind=candidate_kind,
+        candidate_kinds=candidate_kinds,
         **kwargs
     )
 
@@ -232,3 +232,20 @@ def sample_config() -> Config:
             "mods": "mods.json"
         }
     )
+
+
+@pytest.fixture
+def empty_schedule() -> Dict[str, date]:
+    """Fixture to provide an empty schedule for testing."""
+    return {}
+
+
+@pytest.fixture
+def sample_schedule() -> Dict[str, date]:
+    """Fixture to provide a sample schedule for testing."""
+    return {
+        "mod1-wrk": date(2024, 12, 1),
+        "paper1-pap": date(2025, 1, 15),
+        "mod2-wrk": date(2025, 1, 1),
+        "paper2-pap": date(2025, 2, 1)
+    }

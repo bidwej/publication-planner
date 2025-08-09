@@ -4,7 +4,7 @@ import pytest
 import json
 from datetime import date
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 
 from src.core.models import (
     Submission, SubmissionType, Config, Conference, ConferenceType, ConferenceRecurrence
@@ -142,7 +142,6 @@ def config():
         deadlines={SubmissionType.ABSTRACT: date(2026, 8, 1)}
     )
     
-    from src.core.models import Config
     return Config(
         min_abstract_lead_time_days=30,
         min_paper_lead_time_days=90,
@@ -182,3 +181,18 @@ def mock_schedule_summary():
         deadline_compliance=90.5,
         resource_utilization=0.75
     )
+
+
+@pytest.fixture
+def empty_schedule():
+    """Fixture to provide an empty schedule for testing."""
+    return {}
+
+
+@pytest.fixture
+def sample_schedule():
+    """Fixture to provide a sample schedule for testing."""
+    return {
+        "paper1": date(2025, 1, 15),
+        "paper2": date(2025, 2, 1)
+    }
