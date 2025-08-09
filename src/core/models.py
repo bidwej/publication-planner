@@ -177,7 +177,6 @@ class Conference:
     recurrence: ConferenceRecurrence
     deadlines: Dict[SubmissionType, date]
     submission_types: Optional[ConferenceSubmissionType] = None  # What types of submissions are accepted
-    requires_abstract_before_paper_explicit: Optional[bool] = None  # Explicit requirement for abstract before paper
     
     def __post_init__(self):
         # Auto-determine submission type based on deadlines if not specified
@@ -223,11 +222,6 @@ class Conference:
     
     def requires_abstract_before_paper(self) -> bool:
         """Check if conference requires abstract submission before paper submission."""
-        # Use explicit specification if available
-        if self.requires_abstract_before_paper_explicit is not None:
-            return self.requires_abstract_before_paper_explicit
-        
-        # Fall back to checking submission type (only ABSTRACT_AND_PAPER requires abstract before paper)
         return self.submission_types == ConferenceSubmissionType.ABSTRACT_AND_PAPER
     
     def get_required_dependencies(self, submission_type: SubmissionType) -> List[str]:

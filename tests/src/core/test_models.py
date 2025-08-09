@@ -4,7 +4,7 @@ from datetime import date
 from typing import Dict, List, Any, Optional
 
 from src.core.models import (
-    Config, Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence,
+    Config, Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence, ConferenceSubmissionType,
     ValidationResult, ScoringResult, ScheduleResult, ScheduleSummary, ScheduleMetrics,
     PenaltyBreakdown, EfficiencyMetrics, TimelineMetrics, DeadlineValidation, DependencyValidation, ResourceValidation
 )
@@ -437,7 +437,7 @@ class TestConfig:
     
     def test_config_abstract_paper_dependency_validation(self) -> None:
         """Test config validation of abstract-paper dependencies."""
-        # Create conference that requires abstracts
+        # Create conference that explicitly requires abstracts before papers
         conference: Conference = Conference(
             id="conf1",
             name="Test Conference",
@@ -446,7 +446,8 @@ class TestConfig:
             deadlines={
                 SubmissionType.ABSTRACT: date(2024, 3, 1),
                 SubmissionType.PAPER: date(2024, 6, 1)
-            }
+            },
+            submission_types=ConferenceSubmissionType.ABSTRACT_AND_PAPER
         )
         
         # Paper without required abstract
@@ -471,7 +472,7 @@ class TestConfig:
     
     def test_config_ensure_abstract_paper_dependencies(self) -> None:
         """Test automatic creation of abstract dependencies."""
-        # Create conference that requires abstracts
+        # Create conference that explicitly requires abstracts before papers
         conference: Conference = Conference(
             id="conf1",
             name="Test Conference",
@@ -480,7 +481,8 @@ class TestConfig:
             deadlines={
                 SubmissionType.ABSTRACT: date(2024, 3, 1),
                 SubmissionType.PAPER: date(2024, 6, 1)
-            }
+            },
+            submission_types=ConferenceSubmissionType.ABSTRACT_AND_PAPER
         )
         
         # Paper without abstract
@@ -618,7 +620,7 @@ class TestConfig:
         assert not any("requires abstract" in error for error in errors)
         
         # Test with paper that already has abstract
-        conference_with_abstract = Conference(
+        conference_requiring_abstracts = Conference(
             id="conf_with_abstract",
             name="Abstract Required Conference",
             conf_type=ConferenceType.MEDICAL,
@@ -626,7 +628,8 @@ class TestConfig:
             deadlines={
                 SubmissionType.ABSTRACT: date(2024, 3, 1),
                 SubmissionType.PAPER: date(2024, 6, 1)
-            }
+            },
+            submission_types=ConferenceSubmissionType.ABSTRACT_AND_PAPER
         )
         
         existing_abstract = Submission(
@@ -646,7 +649,7 @@ class TestConfig:
         
         config_with_abstract = Config(
             submissions=[paper_with_abstract, existing_abstract],
-            conferences=[conference_with_abstract],
+            conferences=[conference_requiring_abstracts],
             min_abstract_lead_time_days=30,
             min_paper_lead_time_days=90,
             max_concurrent_submissions=3
@@ -667,7 +670,7 @@ class TestConfig:
         
         config_before_abstract = Config(
             submissions=[paper_before_abstract],
-            conferences=[conference_with_abstract],
+            conferences=[conference_requiring_abstracts],
             min_abstract_lead_time_days=30,
             min_paper_lead_time_days=90,
             max_concurrent_submissions=3,

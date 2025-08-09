@@ -193,7 +193,7 @@ The system enforces comprehensive academic scheduling constraints:
 
 ### Core Constraints
 - **Deadline Compliance**: All submissions must meet conference deadlines
-- **Dependencies**: Papers may require corresponding abstracts
+- **Dependencies**: Papers submitted to `ABSTRACT_AND_PAPER` conferences automatically get required abstracts created
 - **Resource Limits**: Maximum concurrent submissions (default: 2)
 - **Conference Compatibility**: Submission preferences must match conference opportunities
 

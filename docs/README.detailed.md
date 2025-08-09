@@ -160,12 +160,12 @@ The system automatically classifies conferences based on their deadline structur
 - **ABSTRACT_ONLY**: Conference accepts only abstracts (has abstract deadline, no paper deadline)
 - **PAPER_ONLY**: Conference accepts only papers (has paper deadline, no abstract deadline)  
 - **ABSTRACT_OR_PAPER**: Conference accepts either abstracts OR papers (has both deadlines, allows direct submission)
-- **ABSTRACT_AND_PAPER**: Conference requires abstract before paper (explicitly configured)
+- **ABSTRACT_AND_PAPER**: Conference requires abstract submission before paper submission (enforced automatically)
 - **ALL_TYPES**: Conference accepts abstracts, papers, and posters
 
-**Key Point**: Having both abstract and paper deadlines does NOT automatically mean abstract is required before paper. Most conferences with both deadlines accept direct paper submissions.
+**Key Point**: Use `ABSTRACT_AND_PAPER` to specify conferences that require abstract before paper. Most conferences with both deadlines should use `ABSTRACT_OR_PAPER` (direct paper submissions allowed).
 
-**Explicit Configuration**: To specify that a conference requires abstract before paper, add `"requires_abstract_before_paper": true` to the conference JSON data.
+**Configuration**: Set `"submission_types": "abstract_and_paper"` in the conference JSON data to require abstracts before papers.
 
 #### Conference Matching Logic
 - **Conference rules determine opportunities**: System respects what each conference actually accepts
