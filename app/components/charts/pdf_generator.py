@@ -20,7 +20,7 @@ from app.components.charts.gantt_chart import create_gantt_chart, generate_gantt
 class TimelinePDFGenerator:
     """Generate PDF reports for timeline charts."""
     
-    def __init__(self, output_dir: str = "reports"):
+    def __init__(self, output_dir: str = "."):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
         self.styles = getSampleStyleSheet()
@@ -258,7 +258,7 @@ class TimelinePDFGenerator:
 def generate_timeline_pdf(
     schedule: Dict[str, date],
     config: Config,
-    output_dir: str = "reports",
+    output_dir: str = ".",
     filename: Optional[str] = None
 ) -> str:
     """

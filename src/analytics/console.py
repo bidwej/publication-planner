@@ -136,7 +136,11 @@ def print_metrics_summary(schedule: Dict[str, date], config: Config) -> None:
     print(f"Penalty score: ${penalty_breakdown.total_penalty:.2f}")
     print(f"Quality score: {quality_score:.3f}")
     print(f"Efficiency score: {efficiency_score:.3f}")
-    print(f"Deadline compliance: {deadline_validation.compliance_rate:.1f}%")
+    if hasattr(deadline_validation, 'compliance_rate'):
+        print(f"Deadline compliance: {deadline_validation.compliance_rate:.1f}%")
+    else:
+        compliance_rate = deadline_validation.get('compliance_rate', 0.0) if isinstance(deadline_validation, dict) else 0.0
+        print(f"Deadline compliance: {compliance_rate:.1f}%")
     print()
 
 
@@ -178,17 +182,35 @@ def print_schedule_analysis(schedule: Dict[str, date], config: Config, strategy_
         # Deadline compliance
         if 'deadlines' in constraints:
             deadline_val = constraints['deadlines']
-            print(f"  Deadline Compliance: {deadline_val.compliance_rate:.1f}% ({deadline_val.compliant_submissions}/{deadline_val.total_submissions})")
+            if isinstance(deadline_val, dict):
+                compliance_rate = deadline_val.get('compliance_rate', 0.0)
+                compliant_subs = deadline_val.get('compliant_submissions', 0)
+                total_subs = deadline_val.get('total_submissions', 0)
+                print(f"  Deadline Compliance: {compliance_rate:.1f}% ({compliant_subs}/{total_subs})")
+            else:
+                print(f"  Deadline Compliance: {deadline_val.compliance_rate:.1f}% ({deadline_val.compliant_submissions}/{deadline_val.total_submissions})")
         
-        # Dependency satisfaction
+        # Dependency satisfaction  
         if 'dependencies' in constraints:
             dep_val = constraints['dependencies']
-            print(f"  Dependency Satisfaction: {dep_val.satisfaction_rate:.1f}% ({dep_val.satisfied_dependencies}/{dep_val.total_dependencies})")
+            if isinstance(dep_val, dict):
+                satisfaction_rate = dep_val.get('satisfaction_rate', 0.0)
+                satisfied_deps = dep_val.get('satisfied_dependencies', 0)
+                total_deps = dep_val.get('total_dependencies', 0)
+                print(f"  Dependency Satisfaction: {satisfaction_rate:.1f}% ({satisfied_deps}/{total_deps})")
+            else:
+                print(f"  Dependency Satisfaction: {dep_val.satisfaction_rate:.1f}% ({dep_val.satisfied_dependencies}/{dep_val.total_dependencies})")
         
         # Resource constraints
         if 'resources' in constraints:
             res_val = constraints['resources']
-            print(f"  Resource Constraints: {'✓' if res_val.is_valid else '✗'} (Max: {res_val.max_observed}/{res_val.max_concurrent})")
+            if isinstance(res_val, dict):
+                is_valid = res_val.get('is_valid', True)
+                max_observed = res_val.get('max_observed', 0)
+                max_concurrent = res_val.get('max_concurrent', 2)
+                print(f"  Resource Constraints: {'✓' if is_valid else '✗'} (Max: {max_observed}/{max_concurrent})")
+            else:
+                print(f"  Resource Constraints: {'✓' if res_val.is_valid else '✗'} (Max: {res_val.max_observed}/{res_val.max_concurrent})")
         
         # Additional constraints from README
         constraint_checks = [
