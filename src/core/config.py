@@ -9,7 +9,7 @@ from dateutil.parser import parse as parse_date
 
 from src.core.models import (
     Conference, ConferenceRecurrence, ConferenceType, Config, Submission, 
-    SubmissionType, create_abstract_submission, generate_abstract_id
+    SubmissionType, SubmissionSource, create_abstract_submission, generate_abstract_id
 )
 
 # Regex patterns for robust ID matching
@@ -62,10 +62,15 @@ def _map_paper_data(json_data: Dict) -> Dict:
     # Get depends_on directly (already consolidated)
     depends_on = json_data.get("depends_on", [])
     
+    # Parse author field
+    author_str = json_data.get("author", "ed")
+    author = SubmissionSource(author_str) if author_str in [s.value for s in SubmissionSource] else SubmissionSource.ED
+    
     return {
         "id": json_data["id"],
         "title": json_data["title"],
         "kind": SubmissionType.PAPER,
+        "author": author,  # Explicit author field
         "conference_id": None,  # Will be assigned later
         "depends_on": depends_on if depends_on else None,
         "draft_window_months": json_data.get("draft_window_months", 3),
@@ -84,14 +89,19 @@ def _map_mod_data(json_data: Dict) -> Dict:
     if json_data.get("engineering_ready_date"):
         engineering_ready_date = parse_date(json_data["engineering_ready_date"]).date()
     
+    # Parse author field
+    author_str = json_data.get("author", "pccp")
+    author = SubmissionSource(author_str) if author_str in [s.value for s in SubmissionSource] else SubmissionSource.PCCP
+    
     return {
         "id": json_data['id'],  # Use ID as-is from JSON (already has mod_ prefix)
         "title": json_data["title"],
-        "kind": SubmissionType.ABSTRACT,  # Mods are work items (abstracts)
-        "conference_id": None,  # Work items don't have conference assignment
+        "kind": SubmissionType.PAPER,  # Mods are papers (PCCP research papers)
+        "author": author,  # Explicit author field
+        "conference_id": None,  # No pre-assigned conference
         "depends_on": json_data.get("depends_on", []),
-        "draft_window_months": 1,  # Short duration for work items
-        "lead_time_from_parents": 0,
+        "draft_window_months": json_data.get("draft_window_months", 2),  # Use actual draft window
+        "lead_time_from_parents": json_data.get("lead_time_from_parents", 0),
         "penalty_cost_per_day": json_data.get("penalty_cost_per_month", 1000.0) / 30.0,
         "engineering": json_data.get("engineering", False),
         "earliest_start_date": engineering_ready_date,

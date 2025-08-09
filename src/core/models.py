@@ -15,6 +15,8 @@ class SubmissionType(str, Enum):
     ABSTRACT = "abstract"
     POSTER = "poster"
 
+
+
 class ConferenceSubmissionType(str, Enum):
     """Types of conference submission requirements."""
     ABSTRACT_ONLY = "abstract_only"      # Only accepts abstracts
@@ -41,6 +43,7 @@ class Submission:
     id: str
     title: str
     kind: SubmissionType
+    author: Optional[str] = None  # Explicit author field ("pccp" or "ed")
     conference_id: Optional[str] = None  # Optional - None for work items
     depends_on: Optional[List[str]] = None
     draft_window_months: int = 3
@@ -60,6 +63,9 @@ class Submission:
             self.depends_on = []
         if self.candidate_conferences is None:
             self.candidate_conferences = []
+        # Set author from ID pattern if not explicitly provided (for backward compatibility)
+        if self.author is None:
+            self.author = self._derive_author_from_id()
     
     def validate(self) -> List[str]:
         """Validate submission and return list of errors."""
@@ -84,13 +90,36 @@ class Submission:
             errors.append("Free slack months cannot be negative")
         return errors
     
+    def _derive_author_from_id(self) -> SubmissionSource:
+        """Derive author from ID pattern (for backward compatibility)."""
+        if self.id.startswith('mod_'):
+            return SubmissionSource.PCCP
+        elif self.id.startswith('J'):
+            return SubmissionSource.ED
+        else:
+            return SubmissionSource.UNKNOWN
+    
+    def get_author(self) -> SubmissionSource:
+        """Get the author/source of this submission."""
+        return self.author or SubmissionSource.UNKNOWN
+    
     def get_priority_score(self, config: 'Config') -> float:
         """Calculate priority score based on config weights."""
         if not config.priority_weights:
             return 1.0
         
-        # Base weight from submission type
-        type_key = f"{self.kind.value}_paper" if self.kind == SubmissionType.PAPER else self.kind.value
+        # Base weight from submission type and author
+        if self.kind == SubmissionType.PAPER:
+            author = self.get_author()
+            if author == SubmissionSource.PCCP:
+                type_key = "pccp_paper"  # PCCP research papers
+            elif author == SubmissionSource.ED:
+                type_key = "ed_paper"   # Ed's suggested papers
+            else:
+                type_key = "paper"      # Generic papers
+        else:
+            type_key = self.kind.value
+            
         base_weight = config.priority_weights.get(type_key, 1.0)
         
         # Engineering bonus

@@ -6,7 +6,9 @@
   "priority_weights": {
     "engineering_paper": 2.0,
     "medical_paper": 1.0,
-    "mod": 1.5,
+    "pccp_paper": 1.5,
+    "ed_paper": 1.0,
+    "paper": 1.0,
     "abstract": 0.5
   },
   "penalty_costs": {
@@ -18,8 +20,6 @@
     "resource_violation_penalty": 200.0
   },
   "scheduling_options": {
-    "enable_early_abstract_scheduling": true,
-    "abstract_advance_days": 30,
     "enable_blackout_periods": true,
     "conference_response_time_days": 90,
     "enable_priority_weighting": true,

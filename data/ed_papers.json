@@ -15,8 +15,8 @@
     "lead_time_from_parents": 0,
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-
-    "engineering_ready_date": null
+    "engineering_ready_date": null,
+    "author": "ed"
   },
   {
     "id": "J2",
@@ -33,8 +33,8 @@
     "lead_time_from_parents": 0,
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-
-    "engineering_ready_date": null
+    "engineering_ready_date": null,
+    "author": "ed"
   },
   {
     "id": "J3",
@@ -52,8 +52,8 @@
     ],
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-
-    "engineering_ready_date": null
+    "engineering_ready_date": null,
+    "author": "ed"
   },
   {
     "id": "J4",
@@ -71,8 +71,8 @@
     ],
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-
-    "engineering_ready_date": null
+    "engineering_ready_date": null,
+    "author": "ed"
   },
   {
     "id": "J5",
@@ -89,8 +89,8 @@
     "lead_time_from_parents": 0,
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-
-    "engineering_ready_date": null
+    "engineering_ready_date": null,
+    "author": "ed"
   },
   {
     "id": "J6",
@@ -108,8 +108,8 @@
     ],
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-
-    "engineering_ready_date": null
+    "engineering_ready_date": null,
+    "author": "ed"
   },
   {
     "id": "J7",
@@ -126,8 +126,8 @@
     "lead_time_from_parents": 0,
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-
-    "engineering_ready_date": null
+    "engineering_ready_date": null,
+    "author": "ed"
   },
   {
     "id": "J8",
@@ -145,8 +145,8 @@
     ],
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-
-    "engineering_ready_date": null
+    "engineering_ready_date": null,
+    "author": "ed"
   },
   {
     "id": "J9",
@@ -164,8 +164,8 @@
     ],
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-
-    "engineering_ready_date": null
+    "engineering_ready_date": null,
+    "author": "ed"
   },
   {
     "id": "J10",
@@ -182,8 +182,8 @@
     ],
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-
-    "engineering_ready_date": null
+    "engineering_ready_date": null,
+    "author": "ed"
   },
   {
     "id": "J11",
@@ -200,8 +200,8 @@
     "lead_time_from_parents": 0,
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-
-    "engineering_ready_date": null
+    "engineering_ready_date": null,
+    "author": "ed"
   },
   {
     "id": "J12",
@@ -219,8 +219,8 @@
     ],
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-
-    "engineering_ready_date": null
+    "engineering_ready_date": null,
+    "author": "ed"
   },
   {
     "id": "J13",
@@ -238,8 +238,8 @@
     ],
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-
-    "engineering_ready_date": null
+    "engineering_ready_date": null,
+    "author": "ed"
   },
   {
     "id": "J14",
@@ -255,8 +255,8 @@
     "lead_time_from_parents": 0,
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-
-    "engineering_ready_date": null
+    "engineering_ready_date": null,
+    "author": "ed"
   },
   {
     "id": "J15",
@@ -274,8 +274,8 @@
     ],
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-
-    "engineering_ready_date": null
+    "engineering_ready_date": null,
+    "author": "ed"
   },
   {
     "id": "J16",
@@ -293,8 +293,8 @@
     ],
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-
-    "engineering_ready_date": null
+    "engineering_ready_date": null,
+    "author": "ed"
   },
   {
     "id": "J17",
@@ -311,8 +311,8 @@
     ],
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-
-    "engineering_ready_date": null
+    "engineering_ready_date": null,
+    "author": "ed"
   },
   {
     "id": "J18",
@@ -328,8 +328,8 @@
     "lead_time_from_parents": 0,
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-
-    "engineering_ready_date": null
+    "engineering_ready_date": null,
+    "author": "ed"
   },
   {
     "id": "J19",
@@ -345,8 +345,8 @@
     "lead_time_from_parents": 0,
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-
-    "engineering_ready_date": null
+    "engineering_ready_date": null,
+    "author": "ed"
   },
   {
     "id": "J20",
@@ -363,7 +363,7 @@
     ],
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-
-    "engineering_ready_date": null
+    "engineering_ready_date": null,
+    "author": "ed"
   }
 ]

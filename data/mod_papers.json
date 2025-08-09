@@ -2,19 +2,18 @@
   {
     "id": "mod_1",
     "title": "Samurai Automated 2D",
-
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
     "depends_on": [],
     "draft_window_months": 2,
     "lead_time_from_parents": 0,
-    "engineering_ready_date": "2025-06-01"
+    "engineering_ready_date": "2025-06-01",
+    "author": "pccp"
   },
   {
     "id": "mod_2",
     "title": "Samurai Manual-Verified 2D",
-
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -23,12 +22,12 @@
     ],
     "draft_window_months": 2,
     "lead_time_from_parents": 0,
-    "engineering_ready_date": "2025-07-01"
+    "engineering_ready_date": "2025-07-01",
+    "author": "pccp"
   },
   {
     "id": "mod_3",
     "title": "SLAM Infrastructure",
-
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -37,12 +36,12 @@
     ],
     "draft_window_months": 2,
     "lead_time_from_parents": 0,
-    "engineering_ready_date": "2026-06-01"
+    "engineering_ready_date": "2026-06-01",
+    "author": "pccp"
   },
   {
     "id": "mod_4",
     "title": "Bayesian Evidence",
-
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -51,12 +50,12 @@
     ],
     "draft_window_months": 2,
     "lead_time_from_parents": 0,
-    "engineering_ready_date": "2026-07-01"
+    "engineering_ready_date": "2026-07-01",
+    "author": "pccp"
   },
   {
     "id": "mod_5",
     "title": "Coverage Visualization",
-
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -65,12 +64,12 @@
     ],
     "draft_window_months": 2,
     "lead_time_from_parents": 0,
-    "engineering_ready_date": "2026-08-01"
+    "engineering_ready_date": "2026-08-01",
+    "author": "pccp"
   },
   {
     "id": "mod_6",
     "title": "SLAM 3-D Label Tracking",
-
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -79,12 +78,12 @@
     ],
     "draft_window_months": 2,
     "lead_time_from_parents": 0,
-    "engineering_ready_date": "2026-09-01"
+    "engineering_ready_date": "2026-09-01",
+    "author": "pccp"
   },
   {
     "id": "mod_7",
     "title": "Polyp Instance Counting",
-
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -93,12 +92,12 @@
     ],
     "draft_window_months": 2,
     "lead_time_from_parents": 0,
-    "engineering_ready_date": "2027-06-01"
+    "engineering_ready_date": "2027-06-01",
+    "author": "pccp"
   },
   {
     "id": "mod_8",
     "title": "Polyp Size Measurement",
-
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -107,12 +106,12 @@
     ],
     "draft_window_months": 2,
     "lead_time_from_parents": 0,
-    "engineering_ready_date": "2027-07-01"
+    "engineering_ready_date": "2027-07-01",
+    "author": "pccp"
   },
   {
     "id": "mod_9",
     "title": "Swelling Detection",
-
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -121,12 +120,12 @@
     ],
     "draft_window_months": 2,
     "lead_time_from_parents": 0,
-    "engineering_ready_date": "2027-08-01"
+    "engineering_ready_date": "2027-08-01",
+    "author": "pccp"
   },
   {
     "id": "mod_10",
     "title": "Septal Deviation",
-
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -135,12 +134,12 @@
     ],
     "draft_window_months": 2,
     "lead_time_from_parents": 0,
-    "engineering_ready_date": "2027-09-01"
+    "engineering_ready_date": "2027-09-01",
+    "author": "pccp"
   },
   {
     "id": "mod_11",
     "title": "Septal Perforation",
-
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -149,12 +148,12 @@
     ],
     "draft_window_months": 2,
     "lead_time_from_parents": 0,
-    "engineering_ready_date": "2027-10-01"
+    "engineering_ready_date": "2027-10-01",
+    "author": "pccp"
   },
   {
     "id": "mod_12",
     "title": "Evidence Sufficiency",
-
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -163,12 +162,12 @@
     ],
     "draft_window_months": 2,
     "lead_time_from_parents": 0,
-    "engineering_ready_date": "2027-11-01"
+    "engineering_ready_date": "2027-11-01",
+    "author": "pccp"
   },
   {
     "id": "mod_13",
     "title": "CT Registration",
-
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -177,12 +176,12 @@
     ],
     "draft_window_months": 2,
     "lead_time_from_parents": 0,
-    "engineering_ready_date": "2028-06-01"
+    "engineering_ready_date": "2028-06-01",
+    "author": "pccp"
   },
   {
     "id": "mod_14",
     "title": "CT Auto-Label Back-proj",
-
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -191,12 +190,12 @@
     ],
     "draft_window_months": 2,
     "lead_time_from_parents": 0,
-    "engineering_ready_date": "2028-07-01"
+    "engineering_ready_date": "2028-07-01",
+    "author": "pccp"
   },
   {
     "id": "mod_15",
     "title": "SLAM Manual-3D Verify",
-
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -205,12 +204,12 @@
     ],
     "draft_window_months": 2,
     "lead_time_from_parents": 0,
-    "engineering_ready_date": "2028-08-01"
+    "engineering_ready_date": "2028-08-01",
+    "author": "pccp"
   },
   {
     "id": "mod_16",
     "title": "CT Manual-3D Verify",
-
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -219,12 +218,12 @@
     ],
     "draft_window_months": 2,
     "lead_time_from_parents": 0,
-    "engineering_ready_date": "2028-09-01"
+    "engineering_ready_date": "2028-09-01",
+    "author": "pccp"
   },
   {
     "id": "mod_17",
     "title": "IMU-Enhanced Tracking",
-
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -233,6 +232,7 @@
     ],
     "draft_window_months": 2,
     "lead_time_from_parents": 0,
-    "engineering_ready_date": "2028-12-01"
+    "engineering_ready_date": "2028-12-01",
+    "author": "pccp"
   }
 ]
