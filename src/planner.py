@@ -139,9 +139,9 @@ class Planner:
             return schedule
             
         except ValueError as e:
-            raise RuntimeError(f"Schedule generation failed: {e}")
+            raise RuntimeError(f"Schedule generation failed: {e}") from e
         except Exception as e:
-            raise RuntimeError(f"Unexpected error during schedule generation: {e}")
+            raise RuntimeError(f"Unexpected error during schedule generation: {e}") from e
     
     def validate_schedule(self, schedule: Dict[str, date]) -> bool:
         """
@@ -282,7 +282,7 @@ class Planner:
             schedule=schedule,
             summary=schedule_summary,
             metrics=schedule_metrics,
-            tables={"monthly": monthly_table},
+            tables={"monthly": monthly_table, "metadata": [{"strategy": strategy.value}]},
             validation=validation_result,
             scoring=scoring_result
         )

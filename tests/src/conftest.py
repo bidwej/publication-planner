@@ -9,61 +9,6 @@ from typing import Dict, List, Any, Optional
 from src.core.models import (
     Submission, SubmissionType, Config, Conference, ConferenceType, ConferenceRecurrence
 )
-from src.schedulers.greedy import GreedyScheduler
-
-
-def create_mock_submission(submission_id, title, submission_type, conference_id, **kwargs):
-    """Create a mock submission with all required attributes."""
-    submission: Submission = Submission(
-        id=submission_id,
-        title=title,
-        kind=submission_type,
-        conference_id=conference_id,
-        author=kwargs.get('author', 'test'),  # Add default author
-        draft_window_months=kwargs.get('draft_window_months', 3),
-        earliest_start_date=kwargs.get('earliest_start_date', date(2024, 1, 1)),
-        depends_on=kwargs.get('depends_on', []),
-        engineering=kwargs.get('engineering', False)
-    )
-    return submission
-
-
-def create_mock_conference(conference_id, name, deadlines):
-    """Create a mock conference with all required attributes."""
-    conference: Conference = Conference(
-        id=conference_id,
-        name=name,
-        conf_type=ConferenceType.MEDICAL,
-        recurrence=ConferenceRecurrence.ANNUAL,
-        deadlines=deadlines
-    )
-    return conference
-
-
-def create_mock_config(submissions, conferences):
-    """Create a mock config with all required attributes."""
-    config: Config = Config(
-        min_abstract_lead_time_days=30,
-        min_paper_lead_time_days=90,
-        max_concurrent_submissions=3,
-        submissions=submissions,
-        conferences=conferences,
-        blackout_dates=[],
-        scheduling_options={"enable_early_abstract_scheduling": False},
-        priority_weights={
-            "engineering_paper": 2.0,
-            "medical_paper": 1.0,
-            "mod": 1.5,
-            "abstract": 0.5
-        },
-        penalty_costs={"default_mod_penalty_per_day": 1000},
-        data_files={
-            "conferences": "conferences.json",
-            "mods": "mods.json",
-            "papers": "papers.json"
-        }
-    )
-    return config
 
 
 @pytest.fixture
@@ -82,8 +27,8 @@ def test_config_path(tmp_path):
         "default_paper_lead_time_months": 3,
         "data_files": {
             "conferences": "conferences.json",
-            "mods": "mods.json",
-            "papers": "papers.json"
+            "mods": "mod_papers.json",
+            "papers": "ed_papers.json"
         },
         "priority_weights": {
             "engineering_paper": 2.0,
@@ -143,11 +88,11 @@ def test_config_path(tmp_path):
     with open(conferences_file, 'w', encoding='utf-8') as f:
         json.dump(conferences_data, f)
     
-    mods_file = tmp_path / "mods.json"
+    mods_file = tmp_path / "mod_papers.json"
     with open(mods_file, 'w', encoding='utf-8') as f:
         json.dump(mods_data, f)
     
-    papers_file = tmp_path / "papers.json"
+    papers_file = tmp_path / "ed_papers.json"
     with open(papers_file, 'w', encoding='utf-8') as f:
         json.dump(papers_data, f)
     
@@ -155,83 +100,76 @@ def test_config_path(tmp_path):
 
 
 @pytest.fixture
-def sample_config():
-    """Fixture to provide a sample config for testing."""
+def config():
+    """Fixture to provide a config for testing (alias for sample_config)."""
     # Create sample submissions
-    submission1 = create_mock_submission(
-        "paper1", "Test Paper 1", SubmissionType.PAPER, "conf1"
+    submission1 = Submission(
+        id="paper1", 
+        title="Test Paper 1", 
+        kind=SubmissionType.PAPER,
+        conference_id="conf1",
+        author="test",
+        draft_window_months=3,
+        earliest_start_date=date(2024, 1, 1),
+        depends_on=[],
+        engineering=False
     )
-    submission2 = create_mock_submission(
-        "paper2", "Test Paper 2", SubmissionType.ABSTRACT, "conf2"
+    submission2 = Submission(
+        id="paper2", 
+        title="Test Paper 2", 
+        kind=SubmissionType.ABSTRACT,
+        conference_id="conf2", 
+        author="test",
+        draft_window_months=1,
+        earliest_start_date=date(2024, 1, 1),
+        depends_on=[],
+        engineering=False
     )
     
     # Create sample conferences
-    conference1 = create_mock_conference(
-        "conf1", "Test Conference 1", 
-        {SubmissionType.PAPER: date(2026, 6, 1)}
+    conference1 = Conference(
+        id="conf1", 
+        name="Test Conference 1",
+        conf_type=ConferenceType.MEDICAL,
+        recurrence=ConferenceRecurrence.ANNUAL,
+        deadlines={SubmissionType.PAPER: date(2026, 6, 1)}
     )
-    conference2 = create_mock_conference(
-        "conf2", "Test Conference 2", 
-        {SubmissionType.ABSTRACT: date(2026, 8, 1)}
-    )
-    
-    return create_mock_config([submission1, submission2], [conference1, conference2])
-
-
-@pytest.fixture
-def config(sample_config):
-    """Alias for sample_config to match test expectations."""
-    return sample_config
-
-
-@pytest.fixture
-def empty_config():
-    """Fixture to provide an empty config for testing."""
-    return create_mock_config([], [])
-
-
-@pytest.fixture
-def minimal_config():
-    """Fixture to provide a minimal config for testing."""
-    # Create minimal submissions
-    submission1 = create_mock_submission(
-        "test-pap", "Test Paper", SubmissionType.PAPER, "conf1"
+    conference2 = Conference(
+        id="conf2", 
+        name="Test Conference 2",
+        conf_type=ConferenceType.MEDICAL,
+        recurrence=ConferenceRecurrence.ANNUAL,
+        deadlines={SubmissionType.ABSTRACT: date(2026, 8, 1)}
     )
     
-    # Create minimal conference
-    conference1 = create_mock_conference(
-        "conf1", "Test Conference", 
-        {SubmissionType.PAPER: date(2026, 6, 1)}
+    from src.core.models import Config
+    return Config(
+        min_abstract_lead_time_days=30,
+        min_paper_lead_time_days=90,
+        max_concurrent_submissions=3,
+        submissions=[submission1, submission2],
+        conferences=[conference1, conference2],
+        blackout_dates=[],
+        scheduling_options={"enable_early_abstract_scheduling": False},
+        priority_weights={
+            "engineering_paper": 2.0,
+            "medical_paper": 1.0,
+            "mod": 1.5,
+            "abstract": 0.5
+        },
+        penalty_costs={"default_mod_penalty_per_day": 1000},
+        data_files={
+            "conferences": "conferences.json",
+            "mods": "mod_papers.json",
+            "papers": "ed_papers.json"
+        }
     )
-    
-    return create_mock_config([submission1], [conference1])
 
 
-@pytest.fixture
-def empty_schedule():
-    """Fixture to provide an empty schedule for testing."""
-    return {}
-
-
-@pytest.fixture
-def sample_schedule():
-    """Fixture to provide a sample schedule for testing."""
-    return {
-        "paper1": date(2024, 5, 1),
-        "paper2": date(2024, 7, 1)
-    }
-
-
-@pytest.fixture
-def sample_scheduler(sample_config):
-    """Fixture to provide a sample scheduler for testing."""
-    return GreedyScheduler(sample_config)
-
-
-@pytest.fixture
+@pytest.fixture 
 def mock_schedule_summary():
     """Fixture to provide a mock schedule summary for testing."""
-    from core.models import ScheduleSummary
+    from src.core.models import ScheduleSummary
     
     return ScheduleSummary(
         total_submissions=5,

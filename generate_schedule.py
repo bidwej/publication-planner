@@ -115,7 +115,7 @@ Examples:
     )
     
     parser.add_argument('--strategy', '-s', type=str, help='Scheduling strategy to use')
-    parser.add_argument('--config', '-c', type=str, default='data/config.json', help='Path to configuration file')
+    parser.add_argument('--config', '-c', type=str, default='config.json', help='Path to configuration file')
     parser.add_argument('--compare', '-C', action='store_true', help='Compare all available strategies')
     parser.add_argument('--output', '-o', type=str, help='Output file for comparison results')
     parser.add_argument('--csv-dir', type=str, help='Directory to save CSV exports')

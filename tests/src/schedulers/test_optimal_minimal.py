@@ -264,7 +264,6 @@ class TestOptimalSchedulerMinimal:
         paper.candidate_kinds = [SubmissionType.POSTER, SubmissionType.ABSTRACT]  # Your exact use case
         
         # Create conference that offers all three options
-        from src.core.models import Conference
         conference = Conference(
             id="test_conf",
             name="Test Conference",
@@ -278,7 +277,7 @@ class TestOptimalSchedulerMinimal:
             submission_types=None  # Auto-determine as ALL_TYPES
         )
         
-        config = create_minimal_config([paper], [conference])
+        create_minimal_config([paper], [conference])
         errors = conference.validate_submission_compatibility(paper)
         
         # Should be compatible (conference accepts poster and abstract)
