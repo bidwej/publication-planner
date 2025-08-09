@@ -50,24 +50,17 @@ class Submission:
     earliest_start_date: Optional[date] = None
     candidate_conferences: Optional[List[str]] = None  # Suggested conferences
     
-    # Additional fields to handle data structure mismatches
-    mod_dependencies: Optional[List[int]] = None  # For papers that depend on mods
-    parent_papers: Optional[List[str]] = None  # For papers that depend on other papers
-    est_data_ready: Optional[date] = None  # For mods - estimated data ready date
-    free_slack_months: Optional[int] = None  # For mods - free slack time
-    penalty_cost_per_month: Optional[float] = None  # For mods - monthly penalty cost
-    next_mod: Optional[int] = None  # For mods - next mod in sequence
-    phase: Optional[int] = None  # For mods - development phase
+    # Additional fields for unified schema (both mods and papers now have these)
+    engineering_ready_date: Optional[date] = None  # When engineering work completes and data is available
+    free_slack_months: Optional[int] = None  # Buffer time in months
+    penalty_cost_per_month: Optional[float] = None  # Monthly penalty cost for delays
+    phase: Optional[int] = None  # Development phase (1-5)
     
     def __post_init__(self):
         if self.depends_on is None:
             self.depends_on = []
         if self.candidate_conferences is None:
             self.candidate_conferences = []
-        if self.mod_dependencies is None:
-            self.mod_dependencies = []
-        if self.parent_papers is None:
-            self.parent_papers = []
     
     def validate(self) -> List[str]:
         """Validate submission and return list of errors."""

@@ -42,7 +42,11 @@ class GreedyScheduler(BaseScheduler):
     
     def _find_earliest_valid_start(self, submission: Submission, schedule: Dict[str, date]) -> Optional[date]:
         """Find the earliest valid start date for a submission with comprehensive constraint validation."""
-     
+        
+        # If submission doesn't have a conference assigned, try to assign one
+        if submission.conference_id is None and hasattr(submission, 'candidate_conferences') and submission.candidate_conferences:
+            self._assign_best_conference(submission)
+        
         # For work items (no conference), start with earliest start date if available
         # For conference submissions, start with today
         if submission.conference_id is None and submission.earliest_start_date:
@@ -111,3 +115,4 @@ class GreedyScheduler(BaseScheduler):
             print(f"Warning: Could not find valid start date for {submission.id} after {max_iterations} iterations")
         
         return None  # Could not find valid start date 
+    

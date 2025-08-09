@@ -36,16 +36,6 @@ wheels/
 # ─── Other artifacts ──────────────────────────────────
 *.pyc
 .env
-test_output/*
-comparison_results.json
-chart_debug.html
-chart_inspection.png
-chart_current.png
-dashboard.png
-timeline.png
-web_dashboard.png
-web_timeline.png
-test_output.json
-venv1/Scripts/python.exe
+test_output*
 reports/*
-direct_timeline*
+**/*.png

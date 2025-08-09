@@ -59,19 +59,8 @@ def _build_deadlines_dict(conf_data: Dict) -> Dict[SubmissionType, date]:
 
 def _map_paper_data(json_data: Dict) -> Dict:
     """Map JSON paper data to model fields."""
-    # Map mod_dependencies to depends_on
-    depends_on = []
-    mod_dependencies = []
-    if "mod_dependencies" in json_data:
-        for mod_id in json_data["mod_dependencies"]:
-            depends_on.append(f"mod_{mod_id}")
-            mod_dependencies.append(mod_id)
-    
-    # Add parent_papers to depends_on
-    parent_papers = []
-    if "parent_papers" in json_data:
-        depends_on.extend(json_data["parent_papers"])
-        parent_papers = json_data["parent_papers"]
+    # Get depends_on directly (already consolidated)
+    depends_on = json_data.get("depends_on", [])
     
     return {
         "id": json_data["id"],
@@ -82,33 +71,36 @@ def _map_paper_data(json_data: Dict) -> Dict:
         "draft_window_months": json_data.get("draft_window_months", 3),
         "lead_time_from_parents": json_data.get("lead_time_from_parents", 0),
         "candidate_conferences": json_data.get("candidate_conferences", []),
-        "mod_dependencies": mod_dependencies,
-        "parent_papers": parent_papers
+        # Unified schema fields
+        "engineering_ready_date": parse_date(json_data["engineering_ready_date"]).date() if json_data.get("engineering_ready_date") else None,
+        "free_slack_months": json_data.get("free_slack_months", 1),
+        "penalty_cost_per_month": json_data.get("penalty_cost_per_month", 1000.0),
+        "phase": json_data.get("phase", 1)
     }
 
 
 def _map_mod_data(json_data: Dict) -> Dict:
     """Map JSON mod data to model fields."""
-    est_data_ready = None
-    if json_data.get("est_data_ready"):
-        est_data_ready = parse_date(json_data["est_data_ready"]).date()
+    engineering_ready_date = None
+    if json_data.get("engineering_ready_date"):
+        engineering_ready_date = parse_date(json_data["engineering_ready_date"]).date()
     
     return {
-        "id": f"mod_{json_data['id']}",
+        "id": json_data['id'],  # Use ID as-is from JSON (already has mod_ prefix)
         "title": json_data["title"],
         "kind": SubmissionType.ABSTRACT,  # Mods are work items (abstracts)
         "conference_id": None,  # Work items don't have conference assignment
-        "depends_on": None,
+        "depends_on": json_data.get("depends_on", []),
         "draft_window_months": 1,  # Short duration for work items
         "lead_time_from_parents": 0,
         "penalty_cost_per_day": json_data.get("penalty_cost_per_month", 1000.0) / 30.0,
-        "engineering": json_data.get("engineering", False),  # Use engineering flag from JSON data
-        "earliest_start_date": est_data_ready,
-        "candidate_conferences": json_data.get("candidate_conferences", []),  # Use candidate conferences from JSON data
-        "est_data_ready": est_data_ready,
+        "engineering": json_data.get("engineering", False),
+        "earliest_start_date": engineering_ready_date,
+        "candidate_conferences": json_data.get("candidate_conferences", []),
+        # Unified schema fields
+        "engineering_ready_date": engineering_ready_date,
         "free_slack_months": json_data.get("free_slack_months"),
         "penalty_cost_per_month": json_data.get("penalty_cost_per_month"),
-        "next_mod": json_data.get("next_mod"),
         "phase": json_data.get("phase")
     }
 
@@ -289,91 +281,64 @@ def _load_submissions_with_abstracts(
     conferences: List[Conference],
     config_data: Dict[str, Any]
 ) -> List[Submission]:
-    """Load submissions and create proper abstract-paper dependencies."""
+    """Load submissions without creating combinatorial explosions.
+    
+    This creates only the necessary base submissions:
+    - Work items (mods) as-is
+    - Papers as-is (without conference-specific variants)
+    
+    Conference assignment happens during scheduling, not during loading.
+    """
     submissions = []
     
     # Load penalty costs
     penalty_costs = config_data.get("penalty_costs", {})
     
-    # Load mods (work items)
-    mods = _load_mods(mods_path)
-    submissions.extend(mods)
+    # Create a map of conference names for validation
+    conference_names = {conf.name for conf in conferences}
     
-    # Load papers and create abstracts as needed
+    # Load both mods and papers - both need conference validation now
+    mods = _load_mods(mods_path)
     papers = _load_papers(papers_path)
     
-    for paper in papers:
-        # Create submissions for each compatible conference
-        for conf in conferences:
-            if paper.candidate_conferences and conf.name not in paper.candidate_conferences:
-                continue
-            
-            # Check if conference requires abstracts
-            has_abstract_deadline = SubmissionType.ABSTRACT in conf.deadlines
-            has_paper_deadline = SubmissionType.PAPER in conf.deadlines
-            
-            # Create abstract submission if conference requires it
-            if has_abstract_deadline:
-                abstract_submission = create_abstract_submission(paper, conf.id, penalty_costs)
-                submissions.append(abstract_submission)
-            
-            # Create paper submission if conference requires it
-            if has_paper_deadline:
-                paper_id_suffix = f"{paper.id}-pap-{conf.id}"
-                
-                # Paper depends on abstract if conference requires both
-                paper_dependencies = []
-                if paper.depends_on:
-                    # For paper dependencies, we need to create conference-specific dependencies
-                    for dep_id in paper.depends_on:
-                        # Check if this is a paper dependency (starts with J)
-                        if dep_id.startswith('J'):
-                            # Find the parent paper to check if it supports this conference
-                            parent_paper = next((p for p in papers if p.id == dep_id), None)
-                            if parent_paper and conf.name in parent_paper.candidate_conferences:
-                                # Create dependency to the same conference's paper submission
-                                dep_paper_id = f"{dep_id}-pap-{conf.id}"
-                                paper_dependencies.append(dep_paper_id)
-                            # If parent paper doesn't support this conference, skip the dependency
-                        else:
-                            # For non-paper dependencies (like mods), keep as is
-                            paper_dependencies.append(dep_id)
-                
-                if has_abstract_deadline:
-                    abstract_id = generate_abstract_id(paper.id, conf.id)
-                    paper_dependencies.append(abstract_id)
-                
-                paper_submission = Submission(
-                    id=paper_id_suffix,
-                    title=paper.title,
-                    kind=SubmissionType.PAPER,
-                    conference_id=conf.id,
-                    depends_on=paper_dependencies,
-                    draft_window_months=paper.draft_window_months,
-                    lead_time_from_parents=paper.lead_time_from_parents,
-                    penalty_cost_per_day=penalty_costs.get("default_paper_penalty_per_day", 0.0),
-                    engineering=paper.engineering,
-                    earliest_start_date=paper.earliest_start_date,
-                    candidate_conferences=[conf.name],  # Specific to this conference
-                )
-                submissions.append(paper_submission)
+    # Process all submissions (mods + papers) uniformly
+    all_submissions = mods + papers
+    for submission_data in all_submissions:
+        # Validate candidate conferences exist
+        valid_candidates = []
+        if hasattr(submission_data, 'candidate_conferences') and submission_data.candidate_conferences:
+            for conf_name in submission_data.candidate_conferences:
+                if conf_name in conference_names:
+                    valid_candidates.append(conf_name)
+                else:
+                    print(f"Warning: {submission_data.id} references unknown conference: {conf_name}")
         
-        # If no conferences were compatible, create a generic paper submission
-        if not paper.candidate_conferences or not any(conf.name in paper.candidate_conferences for conf in conferences):
-            generic_paper = Submission(
-                id=f"{paper.id}-pap",
-                title=paper.title,
+        # Determine submission type and properties
+        if hasattr(submission_data, 'kind'):
+            # Already a Submission object (from mods), just validate conferences
+            submission_data.candidate_conferences = valid_candidates
+            submissions.append(submission_data)
+        else:
+            # Paper object - create Submission
+            paper_submission = Submission(
+                id=submission_data.id,  # Keep original ID
+                title=submission_data.title,
                 kind=SubmissionType.PAPER,
-                conference_id=None,  # None initially - can be assigned later
-                depends_on=paper.depends_on.copy() if paper.depends_on else [],
-                draft_window_months=paper.draft_window_months,
-                lead_time_from_parents=paper.lead_time_from_parents,
+                conference_id=None,  # Will be assigned by scheduler
+                depends_on=submission_data.depends_on.copy() if submission_data.depends_on else [],
+                draft_window_months=submission_data.draft_window_months,
+                lead_time_from_parents=submission_data.lead_time_from_parents,
                 penalty_cost_per_day=penalty_costs.get("default_paper_penalty_per_day", 0.0),
-                engineering=paper.engineering,
-                earliest_start_date=paper.earliest_start_date,
-                candidate_conferences=paper.candidate_conferences,
+                engineering=submission_data.engineering,
+                earliest_start_date=submission_data.earliest_start_date,
+                candidate_conferences=valid_candidates,  # Only valid conferences
+                # Copy additional fields from JSON
+                mod_dependencies=getattr(submission_data, 'mod_dependencies', []),
+                parent_papers=getattr(submission_data, 'parent_papers', [])
             )
-            submissions.append(generic_paper)
+            submissions.append(paper_submission)
+    
+    print(f"Created {len(submissions)} total submissions: {len(mods)} mods + {len(papers)} papers")
     
     return submissions
 

@@ -354,27 +354,35 @@ class BaseScheduler(ABC):
             if submission.conference_id:
                 continue
                 
-            # For work items (abstracts), assign from candidates
-            if submission.kind == SubmissionType.ABSTRACT and submission.candidate_conferences:
-                # Assign to first compatible candidate
-                for conf_id in submission.candidate_conferences:
-                    if conf_id in self.conferences:
-                        conf = self.conferences[conf_id]
-                        if conf.accepts_submission_type(SubmissionType.ABSTRACT):
-                            submission.conference_id = conf_id
-                            break
-            
-            # For papers, assign from candidates
-            elif submission.kind == SubmissionType.PAPER and submission.candidate_conferences:
-                # Assign to first compatible candidate
-                for conf_id in submission.candidate_conferences:
-                    if conf_id in self.conferences:
-                        conf = self.conferences[conf_id]
-                        if conf.accepts_submission_type(SubmissionType.PAPER):
-                            submission.conference_id = conf_id
-                            break
+            # Assign conference using the new logic
+            self._assign_best_conference(submission)
         
         return schedule
+    
+    def _assign_best_conference(self, submission: Submission) -> None:
+        """Assign the best available conference to a submission."""
+        if not hasattr(submission, 'candidate_conferences') or not submission.candidate_conferences:
+            return
+            
+        # Try to find the best conference for this submission
+        for conf_name in submission.candidate_conferences:
+            # Find conference by name
+            conf = None
+            for c in self.conferences.values():
+                if c.name == conf_name:
+                    conf = c
+                    break
+                    
+            if conf and submission.kind in conf.deadlines:
+                # Check if we can meet the deadline
+                deadline = conf.deadlines[submission.kind]
+                duration = submission.get_duration_days(self.config)
+                latest_start = deadline - timedelta(days=duration)
+                
+                # Check if this conference is compatible
+                if self._check_conference_compatibility(submission, conf):
+                    submission.conference_id = conf.id
+                    return
     
     def _check_conference_compatibility(self, submission: Submission, conference: 'Conference') -> bool:
         """Check if a submission is compatible with a conference based on the compatibility matrix."""
