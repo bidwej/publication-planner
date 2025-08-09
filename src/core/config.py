@@ -11,6 +11,7 @@ from src.core.models import (
     Conference, ConferenceRecurrence, ConferenceType, ConferenceSubmissionType, Config, Submission, 
     SubmissionType
 )
+from src.core.constants import SCHEDULING_CONSTANTS, PENALTY_CONSTANTS
 
 # Regex patterns for robust ID matching
 MOD_ID_PATTERN = re.compile(r'^mod_(\d+)$')
@@ -80,7 +81,7 @@ def _map_paper_data(json_data: Dict) -> Dict:
         # Unified schema fields
         "engineering_ready_date": parse_date(json_data["engineering_ready_date"]).date() if json_data.get("engineering_ready_date") else None,
         "free_slack_months": json_data.get("free_slack_months", 1),
-        "penalty_cost_per_month": json_data.get("penalty_cost_per_month", 1000.0)
+        "penalty_cost_per_month": json_data.get("penalty_cost_per_month", PENALTY_CONSTANTS.default_mod_penalty_per_day * SCHEDULING_CONSTANTS.days_per_month)
     }
 
 
@@ -104,7 +105,7 @@ def _map_mod_data(json_data: Dict) -> Dict:
         "depends_on": json_data.get("depends_on", []),
         "draft_window_months": json_data.get("draft_window_months", 2),  # Use actual draft window
         "lead_time_from_parents": json_data.get("lead_time_from_parents", 0),
-        "penalty_cost_per_day": json_data.get("penalty_cost_per_month", 1000.0) / 30.0,
+        "penalty_cost_per_day": json_data.get("penalty_cost_per_month", PENALTY_CONSTANTS.default_mod_penalty_per_day * SCHEDULING_CONSTANTS.days_per_month) / SCHEDULING_CONSTANTS.days_per_month,
         "engineering": json_data.get("engineering", False),
         "earliest_start_date": engineering_ready_date,
         # Unified schema fields
@@ -163,11 +164,11 @@ def load_config(config_path: str) -> Config:
         config = Config(
             submissions=submissions,
             conferences=conferences,
-            min_abstract_lead_time_days=config_data.get("min_abstract_lead_time_days", 30),
-            min_paper_lead_time_days=config_data.get("min_paper_lead_time_days", 90),
-            max_concurrent_submissions=config_data.get("max_concurrent_submissions", 2),
-            default_paper_lead_time_months=config_data.get("default_paper_lead_time_months", 3),
-            work_item_duration_days=config_data.get("work_item_duration_days", 14),
+            min_abstract_lead_time_days=config_data.get("min_abstract_lead_time_days", SCHEDULING_CONSTANTS.min_abstract_lead_time_days),
+            min_paper_lead_time_days=config_data.get("min_paper_lead_time_days", SCHEDULING_CONSTANTS.min_paper_lead_time_days),
+            max_concurrent_submissions=config_data.get("max_concurrent_submissions", SCHEDULING_CONSTANTS.max_concurrent_submissions),
+            default_paper_lead_time_months=config_data.get("default_paper_lead_time_months", SCHEDULING_CONSTANTS.default_paper_lead_time_months),
+            work_item_duration_days=config_data.get("work_item_duration_days", SCHEDULING_CONSTANTS.work_item_duration_days),
             penalty_costs=config_data.get("penalty_costs", {}),
             priority_weights=config_data.get("priority_weights", {}),
             scheduling_options=config_data.get("scheduling_options", {}),

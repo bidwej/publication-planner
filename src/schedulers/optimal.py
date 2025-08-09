@@ -6,7 +6,8 @@ from datetime import date, timedelta
 import pulp
 import math
 
-from src.core.models import SchedulerStrategy
+from src.core.models import SchedulerStrategy, SubmissionType
+from src.core.constants import PENALTY_CONSTANTS, SCHEDULING_CONSTANTS, EFFICIENCY_CONSTANTS
 from src.schedulers.base import BaseScheduler
 
 
@@ -182,12 +183,15 @@ class OptimalScheduler(BaseScheduler):
         # Use config penalty costs
         if self.config.penalty_costs:
             if submission.kind == SubmissionType.PAPER:
-                return self.config.penalty_costs.get("default_paper_penalty_per_day", 100.0)
+                return self.config.penalty_costs.get("default_paper_penalty_per_day", PENALTY_CONSTANTS.default_paper_penalty_per_day)
             else:
-                return self.config.penalty_costs.get("default_mod_penalty_per_day", 50.0)
+                return self.config.penalty_costs.get("default_mod_penalty_per_day", PENALTY_CONSTANTS.default_mod_penalty_per_day)
         
-        # Default penalty
-        return 100.0
+        # Default penalty from constants
+        if submission.kind == SubmissionType.PAPER:
+            return PENALTY_CONSTANTS.default_paper_penalty_per_day
+        else:
+            return PENALTY_CONSTANTS.default_mod_penalty_per_day
     
     def _add_dependency_constraints(self, prob: Any, start_vars: Dict[str, Any]) -> None:
         """Add soft dependency constraints to the MILP model."""
@@ -325,7 +329,7 @@ class OptimalScheduler(BaseScheduler):
         
         try:
             # Solve the model with a time limit to prevent hanging
-            solver = pulp.PULP_CBC_CMD(msg=False, timeLimit=10)  # 10 second time limit
+            solver = pulp.PULP_CBC_CMD(msg=False, timeLimit=EFFICIENCY_CONSTANTS.milp_timeout_seconds)  # MILP timeout
             model.solve(solver)
             
             # Check if solution was found
@@ -358,31 +362,47 @@ class OptimalScheduler(BaseScheduler):
         start_date, _ = self._get_scheduling_window()
         
         try:
+            # Get all variables from the problem to avoid recursion
+            all_vars = {}
+            if hasattr(solution, 'variables'):
+                try:
+                    # Try to get variables list directly
+                    vars_list = solution.variables()
+                    if hasattr(vars_list, '__iter__'):
+                        for var in vars_list:
+                            if hasattr(var, 'name') and hasattr(var, 'varValue'):
+                                all_vars[var.name] = var.varValue
+                except:
+                    pass
+            
             for submission_id in self.submissions:
                 var_name = f"start_{submission_id}"
-                
-                # Try to get the variable value
                 var_value = None
                 
-                # Method 1: Direct access
-                if hasattr(solution, var_name):
-                    var = getattr(solution, var_name)
-                    if hasattr(var, 'value') and var.value() is not None:
-                        var_value = var.value()
+                # Use the pre-extracted variables to avoid recursion
+                if var_name in all_vars:
+                    var_value = all_vars[var_name]
                 
-                # Method 2: Through variables() method
-                if var_value is None and hasattr(solution, 'variables'):
-                    vars_dict = solution.variables()
-                    if var_name in vars_dict:
-                        var = vars_dict[var_name]
-                        if hasattr(var, 'value') and var.value() is not None:
-                            var_value = var.value()
+                # Fallback: try direct variable access (but with recursion limit)
+                if var_value is None:
+                    try:
+                        if hasattr(solution, var_name):
+                            var = getattr(solution, var_name)
+                            # Use varValue property instead of value() method to avoid recursion
+                            if hasattr(var, 'varValue'):
+                                var_value = var.varValue
+                            elif hasattr(var, 'value'):
+                                # Only call value() once, don't chain calls
+                                val = var.value()
+                                if val is not None:
+                                    var_value = val
+                    except RecursionError:
+                        print(f"Recursion error accessing variable {var_name}, skipping")
+                        continue
+                    except Exception:
+                        pass
                 
-                # Method 3: Through varValue method
-                if var_value is None and hasattr(solution, 'varValue'):
-                    var_value = solution.varValue(var_name)
-                
-                if var_value is not None:
+                if var_value is not None and var_value >= 0:
                     # Convert days from start to actual date
                     days_from_start = int(var_value)
                     actual_start_date = start_date + timedelta(days=days_from_start)
@@ -390,6 +410,9 @@ class OptimalScheduler(BaseScheduler):
                 else:
                     print(f"Warning: Could not extract value for variable {var_name}")
                     
+        except RecursionError as e:
+            print(f"Recursion error extracting schedule from MILP solution: {e}")
+            return {}
         except Exception as e:
             print(f"Error extracting schedule from MILP solution: {e}")
             return {}

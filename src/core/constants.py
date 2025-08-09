@@ -48,6 +48,8 @@ class EfficiencyConstants:
     ideal_days_per_submission: int = 30
     randomness_factor: float = 0.1  # For stochastic algorithms
     lookahead_bonus_increment: float = 0.5  # For lookahead algorithms
+    max_algorithm_iterations: int = 1000  # Safety limit for greedy algorithms
+    milp_timeout_seconds: int = 10  # MILP solver timeout in seconds
 
 @dataclass
 class QualityConstants:

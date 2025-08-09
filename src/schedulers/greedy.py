@@ -6,7 +6,7 @@ from datetime import date, timedelta
 from src.schedulers.base import BaseScheduler
 from src.core.dates import is_working_day
 from src.core.models import SchedulerStrategy
-from src.core.constants import SCHEDULING_CONSTANTS
+from src.core.constants import SCHEDULING_CONSTANTS, EFFICIENCY_CONSTANTS
 from src.core.models import Submission
 
 
@@ -79,7 +79,7 @@ class GreedyScheduler(BaseScheduler):
         
         # Check resource constraints and all other constraints
         max_concurrent = self.config.max_concurrent_submissions
-        max_iterations = 1000  # Safety limit to prevent infinite loops
+        max_iterations = EFFICIENCY_CONSTANTS.max_algorithm_iterations  # Safety limit to prevent infinite loops
         iteration_count = 0
         
         while current_date <= date.today() + timedelta(days=365) and iteration_count < max_iterations:  # Reasonable limit

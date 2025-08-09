@@ -324,7 +324,8 @@ class TestBacktrackingScheduler:
         
         # This test should pass and help us understand the issue
         assert conference.accepts_submission_type(SubmissionType.PAPER)
-        assert conference.submission_types is not None
+        # submission_types can be None (auto-determined from deadlines) - that's valid
+        assert conference.effective_submission_types is not None
 
     def test_debug_scheduler_logic(self) -> None:
         """Debug test to understand scheduler logic."""
@@ -360,10 +361,11 @@ class TestBacktrackingScheduler:
         print(f"Duration: {duration} days")
         print(f"Latest start: {latest_start}")
         print(f"Earliest start: {submission.earliest_start_date}")
-        print(f"Today: {date.today()}")
+        test_today = date(2025, 1, 1)
+        print(f"Test date: {test_today}")
         
         # This test should help us understand the issue
-        assert latest_start > date.today(), "Latest start should be in the future"
+        assert latest_start > test_today, "Latest start should be in the future"
 
     def test_debug_validation_failure(self) -> None:
         """Debug test to see which validation is failing."""

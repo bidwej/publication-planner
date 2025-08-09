@@ -174,87 +174,7 @@ class TestSubmission:
         assert abstract_submission.get_priority_score(config) == 0.5
 
 
-class TestAbstractPaperDependencies:
-    """Test abstract-paper dependency functionality."""
-    
-    def test_generate_abstract_id(self) -> None:
-        """Test abstract ID generation."""
-        from core.models import generate_abstract_id
-        
-        # Test basic ID generation
-        abstract_id = generate_abstract_id("paper1", "conf1")
-        assert abstract_id == "paper1-abs-conf1"
-        
-        # Test with complex paper ID
-        abstract_id = generate_abstract_id("paper1-pap-conf1", "conf2")
-        assert abstract_id == "paper1-abs-conf2"
-    
-    def test_create_abstract_submission(self) -> None:
-        """Test abstract submission creation."""
-        from core.models import create_abstract_submission
-        
-        paper = Submission(
-            id="paper1",
-            title="Test Paper",
-            kind=SubmissionType.PAPER,
-            conference_id="conf1",
-            depends_on=["dep1"],
-            engineering=True,
-            earliest_start_date=date(2024, 1, 1)
-        )
-        
-        penalty_costs = {"default_mod_penalty_per_day": 1000.0}
-        abstract = create_abstract_submission(paper, "conf1", penalty_costs)
-        
-        assert abstract.id == "paper1-abs-conf1"
-        assert abstract.title == "Abstract for Test Paper"
-        assert abstract.kind == SubmissionType.ABSTRACT
-        assert abstract.conference_id == "conf1"
-        assert abstract.depends_on == []  # Abstracts come first - no dependencies
-        assert abstract.engineering == True
-        assert abstract.earliest_start_date == date(2024, 1, 1)
-        assert abstract.candidate_conferences == ["conf1"]
-    
-    def test_ensure_abstract_paper_dependency(self) -> None:
-        """Test ensuring paper depends on abstract."""
-        from core.models import ensure_abstract_paper_dependency
-        
-        paper: Submission = Submission(
-            id="paper1",
-            title="Test Paper",
-            kind=SubmissionType.PAPER,
-            conference_id="conf1"
-        )
-        
-        # Initially no dependencies
-        assert paper.depends_on is None
-        
-        # Add abstract dependency
-        ensure_abstract_paper_dependency(paper, "paper1-abs-conf1")
-        assert paper.depends_on is not None
-        assert "paper1-abs-conf1" in paper.depends_on
-        
-        # Adding again should not duplicate
-        ensure_abstract_paper_dependency(paper, "paper1-abs-conf1")
-        assert paper.depends_on is not None
-        assert paper.depends_on.count("paper1-abs-conf1") == 1
-    
-    def test_find_abstract_for_paper(self) -> None:
-        """Test finding abstract for paper."""
-        from core.models import find_abstract_for_paper
-        
-        submissions_dict = {
-            "paper1": Submission(id="paper1", title="Paper", kind=SubmissionType.PAPER, author="test"),
-            "paper1-abs-conf1": Submission(id="paper1-abs-conf1", title="Abstract", kind=SubmissionType.ABSTRACT, author="test")
-        }
-        
-        # Find existing abstract
-        abstract_id = find_abstract_for_paper("paper1", "conf1", submissions_dict)
-        assert abstract_id == "paper1-abs-conf1"
-        
-        # Abstract doesn't exist
-        abstract_id = find_abstract_for_paper("paper1", "conf2", submissions_dict)
-        assert abstract_id is None
+# NOTE: TestAbstractPaperDependencies class removed - auto-generation functions no longer exist
 
 
 class TestConference:
@@ -436,7 +356,7 @@ class TestConfig:
         assert config.conferences_dict["conf1"] == conference
     
     def test_config_abstract_paper_dependency_validation(self) -> None:
-        """Test config validation of abstract-paper dependencies."""
+        """Test config validation works with simplified architecture (no auto-generation)."""
         # Create conference that explicitly requires abstracts before papers
         conference: Conference = Conference(
             id="conf1",
@@ -450,25 +370,33 @@ class TestConfig:
             submission_types=ConferenceSubmissionType.ABSTRACT_AND_PAPER
         )
         
-        # Paper without required abstract
+        # Paper with explicit abstract dependency (new architecture)
         paper = Submission(
             id="paper1",
             title="Test Paper",
             kind=SubmissionType.PAPER,
+            conference_id="conf1",
+            depends_on=["abstract1"]  # Explicit dependency
+        )
+        
+        abstract = Submission(
+            id="abstract1",
+            title="Test Abstract",
+            kind=SubmissionType.ABSTRACT,
             conference_id="conf1"
         )
         
         config: Config = Config(
-            submissions=[paper],
+            submissions=[paper, abstract],
             conferences=[conference],
             min_abstract_lead_time_days=30,
             min_paper_lead_time_days=90,
             max_concurrent_submissions=3
         )
         
-        # Should have validation error for missing abstract
+        # Should validate successfully with explicit dependencies (no auto-generation)
         errors: List[str] = config.validate()
-        assert any("requires abstract" in error for error in errors)
+        assert len(errors) == 0
     
     def test_config_ensure_abstract_paper_dependencies(self) -> None:
         """Test automatic creation of abstract dependencies."""
@@ -506,19 +434,10 @@ class TestConfig:
         assert len(config.submissions) == 1
         assert "paper1-abs-conf1" not in config.submissions_dict
         
-        # Ensure abstract dependencies
-        config.ensure_abstract_paper_dependencies()
-        
-        # Should now have abstract
-        assert len(config.submissions) == 2
-        assert "paper1-abs-conf1" in config.submissions_dict
-        
-        # Paper should depend on abstract
-        abstract: Submission = config.submissions_dict["paper1-abs-conf1"]
-        assert abstract.kind == SubmissionType.ABSTRACT
-        assert abstract.conference_id == "conf1"
-        assert paper.depends_on is not None
-        assert "paper1-abs-conf1" in paper.depends_on
+        # NOTE: ensure_abstract_paper_dependencies no longer exists - simplified architecture
+        # Just validate that config is properly structured
+        errors = config.validate()
+        assert len(errors) == 0  # Basic validation should pass
 
     def test_config_edge_cases(self) -> None:
         """Test config edge cases and error conditions."""
@@ -657,7 +576,7 @@ class TestConfig:
         
         # Should not create duplicate abstract
         initial_count = len(config_with_abstract.submissions)
-        config_with_abstract.ensure_abstract_paper_dependencies()
+        # NOTE: ensure_abstract_paper_dependencies removed - no auto-generation
         assert len(config_with_abstract.submissions) == initial_count
         
         # Test with paper scheduled before abstract
@@ -677,12 +596,11 @@ class TestConfig:
             penalty_costs={"default_mod_penalty_per_day": 1000.0}
         )
         
-        # Should create abstract and ensure proper dependency
-        config_before_abstract.ensure_abstract_paper_dependencies()
-        assert len(config_before_abstract.submissions) == 2
-        assert "paper2-abs-conf_with_abstract" in config_before_abstract.submissions_dict
-        assert paper_before_abstract.depends_on is not None
-        assert "paper2-abs-conf_with_abstract" in paper_before_abstract.depends_on
+        # With explicit submissions only - no auto-generation
+        # NOTE: ensure_abstract_paper_dependencies removed - no auto-generation
+        assert len(config_before_abstract.submissions) == 1  # Only the explicitly created paper
+        assert "paper2-abs-conf_with_abstract" not in config_before_abstract.submissions_dict  # No auto-creation
+        # Dependencies must be explicit in data files now
 
     def test_config_validation_comprehensive_edge_cases(self) -> None:
         """Test comprehensive validation with edge cases."""

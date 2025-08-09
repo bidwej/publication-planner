@@ -212,6 +212,10 @@ class BaseScheduler(ABC):
             
             submission = self.submissions[submission_id]
             
+            # IMPORTANT: Try to assign conference BEFORE validation if not assigned
+            if submission.conference_id is None and hasattr(submission, 'candidate_conferences') and submission.candidate_conferences:
+                self._assign_best_conference(submission)
+            
             # Check deadline constraint
             if not self._meets_deadline(submission, current_date):
                 continue
@@ -286,7 +290,7 @@ class BaseScheduler(ABC):
             # Use specific candidate conferences
             candidate_conferences = submission.candidate_conferences
         else:
-            # Empty candidate_conferences means try all appropriate conferences
+            # None or empty candidate_conferences means try all appropriate conferences
             # If candidate_kind is None, try all conferences that accept any submission type
             if submission.candidate_kind is None:
                 # Open to any opportunity - find conferences that accept any submission type

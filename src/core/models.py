@@ -7,7 +7,7 @@ from dataclasses import asdict, dataclass
 from enum import Enum
 from dateutil.parser import parse as parse_date
 
-from src.core.constants import SCHEDULING_CONSTANTS
+from src.core.constants import SCHEDULING_CONSTANTS, PENALTY_CONSTANTS, EFFICIENCY_CONSTANTS
 
 class SubmissionType(str, Enum):
     """Types of submissions."""
@@ -160,7 +160,7 @@ class Submission:
     def get_duration_days(self, config: 'Config') -> int:
         """Calculate the duration in days for this submission."""
         # Fixed time constants
-        days_per_month = 30
+        days_per_month = SCHEDULING_CONSTANTS.days_per_month
         
         if self.kind == SubmissionType.ABSTRACT:
             # Work items (abstracts) should have meaningful duration for timeline visibility
@@ -308,12 +308,12 @@ class Config:
     min_abstract_lead_time_days: int
     min_paper_lead_time_days: int
     max_concurrent_submissions: int
-    default_paper_lead_time_months: int = 3
-    work_item_duration_days: int = 14  # Duration for work items (abstracts)
-    conference_response_time_days: int = 90
-    max_backtrack_days: int = 30
-    randomness_factor: float = 0.1
-    lookahead_bonus_increment: float = 0.5
+    default_paper_lead_time_months: int = SCHEDULING_CONSTANTS.default_paper_lead_time_months
+    work_item_duration_days: int = SCHEDULING_CONSTANTS.work_item_duration_days
+    conference_response_time_days: int = SCHEDULING_CONSTANTS.conference_response_time_days
+    max_backtrack_days: int = SCHEDULING_CONSTANTS.backtrack_limit_days
+    randomness_factor: float = EFFICIENCY_CONSTANTS.randomness_factor
+    lookahead_bonus_increment: float = EFFICIENCY_CONSTANTS.lookahead_bonus_increment
     penalty_costs: Optional[Dict[str, float]] = None
     priority_weights: Optional[Dict[str, float]] = None
     scheduling_options: Optional[Dict[str, Any]] = None
@@ -323,10 +323,10 @@ class Config:
     @classmethod
     def create_default(cls) -> 'Config':
         """Create a default configuration with minimal data for app initialization."""
-        # Default penalty costs
+        # Default penalty costs from constants
         default_penalty_costs = {
-            "default_mod_penalty_per_day": 1000.0,
-            "default_paper_penalty_per_day": 2000.0
+            "default_mod_penalty_per_day": PENALTY_CONSTANTS.default_mod_penalty_per_day,
+            "default_paper_penalty_per_day": PENALTY_CONSTANTS.default_paper_penalty_per_day
         }
         
         # Default priority weights
@@ -350,10 +350,10 @@ class Config:
         return cls(
             submissions=[],  # Empty for app initialization
             conferences=[],  # Empty for app initialization
-            min_abstract_lead_time_days=30,
-            min_paper_lead_time_days=90,
-            max_concurrent_submissions=3,
-            default_paper_lead_time_months=3,
+            min_abstract_lead_time_days=SCHEDULING_CONSTANTS.min_abstract_lead_time_days,
+            min_paper_lead_time_days=SCHEDULING_CONSTANTS.min_paper_lead_time_days,
+            max_concurrent_submissions=SCHEDULING_CONSTANTS.max_concurrent_submissions,
+            default_paper_lead_time_months=SCHEDULING_CONSTANTS.default_paper_lead_time_months,
             penalty_costs=default_penalty_costs,
             priority_weights=default_priority_weights,
             scheduling_options=default_scheduling_options,
@@ -508,7 +508,7 @@ class Config:
         
         if latest_deadlines:
             latest_deadline = max(latest_deadlines)
-            return latest_deadline + timedelta(days=90)  # 3 months buffer after latest deadline
+            return latest_deadline + timedelta(days=SCHEDULING_CONSTANTS.conference_response_time_days)  # 3 months buffer after latest deadline
         else:
             return date.today() + timedelta(days=365)
 

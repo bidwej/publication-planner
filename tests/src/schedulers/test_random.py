@@ -41,7 +41,7 @@ class TestRandomScheduler:
         # Create mock conference
         conference = create_mock_conference(
             "conf1", "Test Conference", 
-            {SubmissionType.PAPER: date(2024, 6, 1)}
+            {SubmissionType.PAPER: date(2026, 6, 1)}
         )
         
         config = create_mock_config([submission], [conference])
@@ -70,12 +70,12 @@ class TestRandomScheduler:
         # Create mock conferences
         conference1 = create_mock_conference(
             "conf1", "Test Conference 1", 
-            {SubmissionType.PAPER: date(2024, 6, 1)}
+            {SubmissionType.PAPER: date(2026, 6, 1)}
         )
         
         conference2 = create_mock_conference(
             "conf2", "Test Conference 2", 
-            {SubmissionType.ABSTRACT: date(2024, 8, 1)},
+            {SubmissionType.ABSTRACT: date(2026, 8, 1)},
             conf_type=ConferenceType.MEDICAL
         )
         
@@ -108,12 +108,12 @@ class TestRandomScheduler:
         
         conference1 = create_mock_conference(
             "conf1", "Test Conference 1", 
-            {SubmissionType.PAPER: date(2024, 6, 1)}
+            {SubmissionType.PAPER: date(2026, 6, 1)}
         )
         
         conference2 = create_mock_conference(
             "conf2", "Test Conference 2", 
-            {SubmissionType.ABSTRACT: date(2024, 8, 1)},
+            {SubmissionType.ABSTRACT: date(2026, 8, 1)},
             conf_type=ConferenceType.MEDICAL
         )
         
@@ -138,11 +138,11 @@ class TestRandomScheduler:
         
         conference = create_mock_conference(
             "conf1", "Test Conference", 
-            {SubmissionType.PAPER: date(2024, 6, 1)}
+            {SubmissionType.PAPER: date(2026, 6, 1)}
         )
         
         config = create_mock_config([submission], [conference])
-        config.blackout_dates = [date(2024, 5, 15), date(2024, 5, 16)]
+        config.blackout_dates = [date(2026, 5, 15), date(2026, 5, 16)]
         
         scheduler: Any = RandomScheduler(config)
         
@@ -198,12 +198,12 @@ class TestRandomScheduler:
         
         conference1 = create_mock_conference(
             "conf1", "Test Conference 1", 
-            {SubmissionType.PAPER: date(2024, 6, 1)}
+            {SubmissionType.PAPER: date(2026, 6, 1)}
         )
         
         conference2 = create_mock_conference(
             "conf2", "Test Conference 2", 
-            {SubmissionType.PAPER: date(2024, 6, 1)}
+            {SubmissionType.PAPER: date(2026, 6, 1)}
         )
         
         config = create_mock_config([submission1, submission2], [conference1, conference2])
@@ -230,7 +230,7 @@ class TestRandomScheduler:
         
         conference = create_mock_conference(
             "conf1", "Test Conference", 
-            {SubmissionType.PAPER: date(2024, 6, 1)}
+            {SubmissionType.PAPER: date(2026, 6, 1)}
         )
         
         config = create_mock_config([submission], [conference])
@@ -266,7 +266,7 @@ class TestRandomScheduler:
         
         conference = create_mock_conference(
             "conf1", "Test Conference", 
-            {SubmissionType.PAPER: date(2024, 6, 1)}
+            {SubmissionType.PAPER: date(2026, 6, 1)}
         )
         
         config = create_mock_config([submission1, submission2, submission3], [conference])
@@ -297,7 +297,7 @@ class TestRandomScheduler:
         
         conference = create_mock_conference(
             "conf1", "Test Conference", 
-            {SubmissionType.PAPER: date(2024, 6, 1)}
+            {SubmissionType.PAPER: date(2026, 6, 1)}
         )
         
         config = create_mock_config([submission], [conference])
@@ -313,5 +313,5 @@ class TestRandomScheduler:
         # Check that all results are valid dates
         for scheduled_date in results:
             assert isinstance(scheduled_date, date)
-            assert scheduled_date >= date(2024, 1, 1)
-            assert scheduled_date <= date(2024, 6, 1)  # Before deadline
+            assert scheduled_date >= date(2025, 1, 1)  # Can schedule from reasonable start date
+            assert scheduled_date <= date(2026, 6, 1)  # Before deadline

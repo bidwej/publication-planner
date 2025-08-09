@@ -6,7 +6,7 @@ from datetime import date, timedelta
 import json
 import csv
 from src.core.models import Config, SubmissionType, ScheduleSummary
-from src.core.constants import DISPLAY_CONSTANTS
+from src.core.constants import DISPLAY_CONSTANTS, SCHEDULING_CONSTANTS
 from pathlib import Path
 
 
@@ -273,7 +273,7 @@ def format_schedule_table(schedule: Dict[str, date], config: Config) -> List[Dic
         
         # Calculate end date
         # Fixed time constants
-        days_per_month = 30
+        days_per_month = SCHEDULING_CONSTANTS.days_per_month
         
         if sub.kind == SubmissionType.ABSTRACT:
             end_date = start_date
@@ -395,7 +395,7 @@ def format_deadline_table(schedule: Dict[str, date], config: Config) -> List[Dic
                 
                 # Calculate end date
                 # Fixed time constants
-                days_per_month = 30
+                days_per_month = SCHEDULING_CONSTANTS.days_per_month
                 
                 if sub.kind == SubmissionType.ABSTRACT:
                     end_date = start_date

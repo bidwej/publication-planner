@@ -88,7 +88,7 @@ class TestOptimalScheduler:
         
         prob = LpProblem("Test", 1)  # Minimize
         start_vars = {}
-        start_date = date.today()
+        start_date = date(2025, 1, 1)
         
         # Create test variables
         for submission_id in scheduler.submissions:
@@ -127,7 +127,7 @@ class TestOptimalScheduler:
         
         prob = LpProblem("Test", 1)  # Minimize
         start_vars = {}
-        start_date = date.today()
+        start_date = date(2025, 1, 1)
         
         # Create test variables
         for submission_id in scheduler.submissions:
@@ -145,7 +145,7 @@ class TestOptimalScheduler:
         
         prob = LpProblem("Test", 1)  # Minimize
         start_vars = {}
-        start_date = date.today()
+        start_date = date(2025, 1, 1)
         
         # Create test variables
         for submission_id in scheduler.submissions:
@@ -301,7 +301,7 @@ class TestOptimalScheduler:
         from datetime import date, timedelta
         
         # Create test conferences that accept different submission types
-        today = date.today()
+        today = date(2025, 1, 1)
         conferences = [
             Conference(
                 id="conf_abstract_only",

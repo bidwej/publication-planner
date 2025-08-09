@@ -5,6 +5,7 @@ from typing import Dict, List
 from datetime import date, timedelta, datetime
 import statistics
 from pathlib import Path
+from src.core.constants import SCHEDULING_CONSTANTS
 
 
 from src.validation.deadline import validate_deadline_constraints
@@ -126,7 +127,7 @@ def generate_schedule_metrics(schedule: Dict[str, date], config: Config) -> Sche
         
         # Calculate duration
         # Fixed time constants
-        days_per_month = 30
+        days_per_month = SCHEDULING_CONSTANTS.days_per_month
         
         if sub.kind == SubmissionType.ABSTRACT:
             duration_days = 0
