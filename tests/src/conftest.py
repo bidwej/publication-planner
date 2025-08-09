@@ -19,6 +19,7 @@ def create_mock_submission(submission_id, title, submission_type, conference_id,
         title=title,
         kind=submission_type,
         conference_id=conference_id,
+        author=kwargs.get('author', 'test'),  # Add default author
         draft_window_months=kwargs.get('draft_window_months', 3),
         earliest_start_date=kwargs.get('earliest_start_date', date(2024, 1, 1)),
         depends_on=kwargs.get('depends_on', []),

@@ -40,6 +40,10 @@ def create_mock_submission(
     if isinstance(submission_type, str):
         submission_type = SubmissionType(submission_type)
     
+    # Set default author if not provided
+    if 'author' not in kwargs:
+        kwargs['author'] = "test"
+    
     return Submission(
         id=submission_id,
         title=title,

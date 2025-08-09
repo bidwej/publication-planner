@@ -164,6 +164,7 @@ def sample_config():
             title="Test Paper 1",
             kind=SubmissionType.PAPER,
             conference_id="conf1",
+            author="test",
             engineering=True
         ),
         Submission(
@@ -171,6 +172,7 @@ def sample_config():
             title="Test Abstract 1",
             kind=SubmissionType.ABSTRACT,
             conference_id="conf1",
+            author="test",
             engineering=True
         )
     ]

@@ -240,8 +240,8 @@ class TestAbstractPaperDependencies:
         from core.models import find_abstract_for_paper
         
         submissions_dict = {
-            "paper1": Submission(id="paper1", title="Paper", kind=SubmissionType.PAPER),
-            "paper1-abs-conf1": Submission(id="paper1-abs-conf1", title="Abstract", kind=SubmissionType.ABSTRACT)
+            "paper1": Submission(id="paper1", title="Paper", kind=SubmissionType.PAPER, author="test"),
+            "paper1-abs-conf1": Submission(id="paper1-abs-conf1", title="Abstract", kind=SubmissionType.ABSTRACT, author="test")
         }
         
         # Find existing abstract
