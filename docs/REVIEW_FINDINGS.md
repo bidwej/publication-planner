@@ -21,7 +21,6 @@ This document summarizes the findings from a thorough review of the Paper Planne
   - `free_slack_months: Optional[int] = None`
   - `penalty_cost_per_month: Optional[float] = None`
   - `next_mod: Optional[int] = None`
-  - `phase: Optional[int] = None`
 
 - **Updated `src/core/config.py`** to properly map JSON data to model fields:
   - Enhanced `_map_paper_data()` to handle both `mod_dependencies` and `parent_papers`

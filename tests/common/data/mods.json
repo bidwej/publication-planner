@@ -1,155 +1,238 @@
 [
   {
-    "id": 1,
+    "id": "mod_1",
     "title": "Samurai Automated 2D",
-    "phase": 1,
-    "est_data_ready": "2025-06-01",
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
-    "next_mod": 2
+    "candidate_conferences": [],
+    "depends_on": [],
+    "draft_window_months": 2,
+    "lead_time_from_parents": 0,
+    "engineering_ready_date": "2025-06-01"
   },
   {
-    "id": 2,
+    "id": "mod_2",
     "title": "Samurai Manual-Verified 2D",
-    "phase": 1,
-    "est_data_ready": "2025-07-01",
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
-    "next_mod": 3
+    "candidate_conferences": [],
+    "depends_on": [
+      "mod_1"
+    ],
+    "draft_window_months": 2,
+    "lead_time_from_parents": 0,
+    "engineering_ready_date": "2025-07-01"
   },
   {
-    "id": 3,
+    "id": "mod_3",
     "title": "SLAM Infrastructure",
-    "phase": 2,
-    "est_data_ready": "2026-06-01",
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
-    "next_mod": 4
+    "candidate_conferences": [],
+    "depends_on": [
+      "mod_2"
+    ],
+    "draft_window_months": 2,
+    "lead_time_from_parents": 0,
+    "engineering_ready_date": "2026-06-01"
   },
   {
-    "id": 4,
+    "id": "mod_4",
     "title": "Bayesian Evidence",
-    "phase": 2,
-    "est_data_ready": "2026-07-01",
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
-    "next_mod": 5
+    "candidate_conferences": [],
+    "depends_on": [
+      "mod_3"
+    ],
+    "draft_window_months": 2,
+    "lead_time_from_parents": 0,
+    "engineering_ready_date": "2026-07-01"
   },
   {
-    "id": 5,
+    "id": "mod_5",
     "title": "Coverage Visualization",
-    "phase": 2,
-    "est_data_ready": "2026-08-01",
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
-    "next_mod": 6
+    "candidate_conferences": [],
+    "depends_on": [
+      "mod_4"
+    ],
+    "draft_window_months": 2,
+    "lead_time_from_parents": 0,
+    "engineering_ready_date": "2026-08-01"
   },
   {
-    "id": 6,
+    "id": "mod_6",
     "title": "SLAM 3-D Label Tracking",
-    "phase": 2,
-    "est_data_ready": "2026-09-01",
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
-    "next_mod": 7
+    "candidate_conferences": [],
+    "depends_on": [
+      "mod_5"
+    ],
+    "draft_window_months": 2,
+    "lead_time_from_parents": 0,
+    "engineering_ready_date": "2026-09-01"
   },
   {
-    "id": 7,
+    "id": "mod_7",
     "title": "Polyp Instance Counting",
-    "phase": 3,
-    "est_data_ready": "2027-06-01",
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
-    "next_mod": 8
+    "candidate_conferences": [],
+    "depends_on": [
+      "mod_6"
+    ],
+    "draft_window_months": 2,
+    "lead_time_from_parents": 0,
+    "engineering_ready_date": "2027-06-01"
   },
   {
-    "id": 8,
+    "id": "mod_8",
     "title": "Polyp Size Measurement",
-    "phase": 3,
-    "est_data_ready": "2027-07-01",
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
-    "next_mod": 9
+    "candidate_conferences": [],
+    "depends_on": [
+      "mod_7"
+    ],
+    "draft_window_months": 2,
+    "lead_time_from_parents": 0,
+    "engineering_ready_date": "2027-07-01"
   },
   {
-    "id": 9,
+    "id": "mod_9",
     "title": "Swelling Detection",
-    "phase": 3,
-    "est_data_ready": "2027-08-01",
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
-    "next_mod": 10
+    "candidate_conferences": [],
+    "depends_on": [
+      "mod_8"
+    ],
+    "draft_window_months": 2,
+    "lead_time_from_parents": 0,
+    "engineering_ready_date": "2027-08-01"
   },
   {
-    "id": 10,
+    "id": "mod_10",
     "title": "Septal Deviation",
-    "phase": 3,
-    "est_data_ready": "2027-09-01",
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
-    "next_mod": 11
+    "candidate_conferences": [],
+    "depends_on": [
+      "mod_9"
+    ],
+    "draft_window_months": 2,
+    "lead_time_from_parents": 0,
+    "engineering_ready_date": "2027-09-01"
   },
   {
-    "id": 11,
+    "id": "mod_11",
     "title": "Septal Perforation",
-    "phase": 3,
-    "est_data_ready": "2027-10-01",
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
-    "next_mod": 12
+    "candidate_conferences": [],
+    "depends_on": [
+      "mod_10"
+    ],
+    "draft_window_months": 2,
+    "lead_time_from_parents": 0,
+    "engineering_ready_date": "2027-10-01"
   },
   {
-    "id": 12,
+    "id": "mod_12",
     "title": "Evidence Sufficiency",
-    "phase": 3,
-    "est_data_ready": "2027-11-01",
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
-    "next_mod": 13
+    "candidate_conferences": [],
+    "depends_on": [
+      "mod_11"
+    ],
+    "draft_window_months": 2,
+    "lead_time_from_parents": 0,
+    "engineering_ready_date": "2027-11-01"
   },
   {
-    "id": 13,
+    "id": "mod_13",
     "title": "CT Registration",
-    "phase": 4,
-    "est_data_ready": "2028-06-01",
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
-    "next_mod": 14
+    "candidate_conferences": [],
+    "depends_on": [
+      "mod_12"
+    ],
+    "draft_window_months": 2,
+    "lead_time_from_parents": 0,
+    "engineering_ready_date": "2028-06-01"
   },
   {
-    "id": 14,
+    "id": "mod_14",
     "title": "CT Auto-Label Back-proj",
-    "phase": 4,
-    "est_data_ready": "2028-07-01",
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
-    "next_mod": 15
+    "candidate_conferences": [],
+    "depends_on": [
+      "mod_13"
+    ],
+    "draft_window_months": 2,
+    "lead_time_from_parents": 0,
+    "engineering_ready_date": "2028-07-01"
   },
   {
-    "id": 15,
+    "id": "mod_15",
     "title": "SLAM Manual-3D Verify",
-    "phase": 4,
-    "est_data_ready": "2028-08-01",
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
-    "next_mod": 16
+    "candidate_conferences": [],
+    "depends_on": [
+      "mod_14"
+    ],
+    "draft_window_months": 2,
+    "lead_time_from_parents": 0,
+    "engineering_ready_date": "2028-08-01"
   },
   {
-    "id": 16,
+    "id": "mod_16",
     "title": "CT Manual-3D Verify",
-    "phase": 4,
-    "est_data_ready": "2028-09-01",
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
-    "next_mod": 17
+    "candidate_conferences": [],
+    "depends_on": [
+      "mod_15"
+    ],
+    "draft_window_months": 2,
+    "lead_time_from_parents": 0,
+    "engineering_ready_date": "2028-09-01"
   },
   {
-    "id": 17,
+    "id": "mod_17",
     "title": "IMU-Enhanced Tracking",
-    "phase": 5,
-    "est_data_ready": "2028-12-01",
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
-    "next_mod": null
+    "candidate_conferences": [],
+    "depends_on": [
+      "mod_16"
+    ],
+    "draft_window_months": 2,
+    "lead_time_from_parents": 0,
+    "engineering_ready_date": "2028-12-01"
   }
 ]

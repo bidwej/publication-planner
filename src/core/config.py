@@ -74,8 +74,7 @@ def _map_paper_data(json_data: Dict) -> Dict:
         # Unified schema fields
         "engineering_ready_date": parse_date(json_data["engineering_ready_date"]).date() if json_data.get("engineering_ready_date") else None,
         "free_slack_months": json_data.get("free_slack_months", 1),
-        "penalty_cost_per_month": json_data.get("penalty_cost_per_month", 1000.0),
-        "phase": json_data.get("phase", 1)
+        "penalty_cost_per_month": json_data.get("penalty_cost_per_month", 1000.0)
     }
 
 
@@ -100,8 +99,7 @@ def _map_mod_data(json_data: Dict) -> Dict:
         # Unified schema fields
         "engineering_ready_date": engineering_ready_date,
         "free_slack_months": json_data.get("free_slack_months"),
-        "penalty_cost_per_month": json_data.get("penalty_cost_per_month"),
-        "phase": json_data.get("phase")
+        "penalty_cost_per_month": json_data.get("penalty_cost_per_month")
     }
 
 
@@ -110,7 +108,7 @@ def load_config(config_path: str) -> Config:
     try:
         config_file = Path(config_path)
         if not config_file.exists():
-            print(f"Configuration file not found: %s {config_path}")
+            print(f"Configuration file not found: {config_path}")
             print("Using default configuration with sample data")
             return Config.create_default()
         
@@ -126,7 +124,7 @@ def load_config(config_path: str) -> Config:
         papers_path = config_dir / data_files.get("papers", "data/papers.json")
         blackouts_path = config_dir / data_files.get("blackouts", "data/blackout.json")
         
-        print(f"DEBUG: Data file paths:")
+        print("DEBUG: Data file paths:")
         print(f"  Conferences: {conferences_path} (exists: {conferences_path.exists()})")
         print(f"  Mods: {mods_path} (exists: {mods_path.exists()})")
         print(f"  Papers: {papers_path} (exists: {papers_path.exists()})")
@@ -331,10 +329,7 @@ def _load_submissions_with_abstracts(
                 penalty_cost_per_day=penalty_costs.get("default_paper_penalty_per_day", 0.0),
                 engineering=submission_data.engineering,
                 earliest_start_date=submission_data.earliest_start_date,
-                candidate_conferences=valid_candidates,  # Only valid conferences
-                # Copy additional fields from JSON
-                mod_dependencies=getattr(submission_data, 'mod_dependencies', []),
-                parent_papers=getattr(submission_data, 'parent_papers', [])
+                candidate_conferences=valid_candidates  # Only valid conferences
             )
             submissions.append(paper_submission)
     
@@ -423,6 +418,6 @@ def save_config(config: Config, config_path: str) -> None:
             json.dump(config_dict, f, indent=2, ensure_ascii=False)
             
     except Exception as e:
-        raise RuntimeError(f"Failed to save configuration: {e}")
+        raise RuntimeError(f"Failed to save configuration: {e}") from e
 
  

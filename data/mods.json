@@ -2,7 +2,7 @@
   {
     "id": "mod_1",
     "title": "Samurai Automated 2D",
-    "phase": 1,
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -14,7 +14,7 @@
   {
     "id": "mod_2",
     "title": "Samurai Manual-Verified 2D",
-    "phase": 1,
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -28,7 +28,7 @@
   {
     "id": "mod_3",
     "title": "SLAM Infrastructure",
-    "phase": 2,
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -42,7 +42,7 @@
   {
     "id": "mod_4",
     "title": "Bayesian Evidence",
-    "phase": 2,
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -56,7 +56,7 @@
   {
     "id": "mod_5",
     "title": "Coverage Visualization",
-    "phase": 2,
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -70,7 +70,7 @@
   {
     "id": "mod_6",
     "title": "SLAM 3-D Label Tracking",
-    "phase": 2,
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -84,7 +84,7 @@
   {
     "id": "mod_7",
     "title": "Polyp Instance Counting",
-    "phase": 3,
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -98,7 +98,7 @@
   {
     "id": "mod_8",
     "title": "Polyp Size Measurement",
-    "phase": 3,
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -112,7 +112,7 @@
   {
     "id": "mod_9",
     "title": "Swelling Detection",
-    "phase": 3,
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -126,7 +126,7 @@
   {
     "id": "mod_10",
     "title": "Septal Deviation",
-    "phase": 3,
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -140,7 +140,7 @@
   {
     "id": "mod_11",
     "title": "Septal Perforation",
-    "phase": 3,
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -154,7 +154,7 @@
   {
     "id": "mod_12",
     "title": "Evidence Sufficiency",
-    "phase": 3,
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -168,7 +168,7 @@
   {
     "id": "mod_13",
     "title": "CT Registration",
-    "phase": 4,
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -182,7 +182,7 @@
   {
     "id": "mod_14",
     "title": "CT Auto-Label Back-proj",
-    "phase": 4,
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -196,7 +196,7 @@
   {
     "id": "mod_15",
     "title": "SLAM Manual-3D Verify",
-    "phase": 4,
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -210,7 +210,7 @@
   {
     "id": "mod_16",
     "title": "CT Manual-3D Verify",
-    "phase": 4,
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],
@@ -224,7 +224,7 @@
   {
     "id": "mod_17",
     "title": "IMU-Enhanced Tracking",
-    "phase": 5,
+
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000,
     "candidate_conferences": [],

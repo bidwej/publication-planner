@@ -642,7 +642,6 @@ class TestConferenceMappingAndEngineering:
             {
                 "id": 1,  # Numeric ID like actual data
                 "title": "Test Mod 1",
-                "phase": 1,
                 "est_data_ready": "2025-01-01",
                 "free_slack_months": 1,
                 "penalty_cost_per_month": 1000,

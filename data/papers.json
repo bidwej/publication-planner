@@ -15,7 +15,7 @@
     "lead_time_from_parents": 0,
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-    "phase": 1,
+
     "engineering_ready_date": null
   },
   {
@@ -33,7 +33,7 @@
     "lead_time_from_parents": 0,
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-    "phase": 1,
+
     "engineering_ready_date": null
   },
   {
@@ -52,7 +52,7 @@
     ],
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-    "phase": 1,
+
     "engineering_ready_date": null
   },
   {
@@ -71,7 +71,7 @@
     ],
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-    "phase": 1,
+
     "engineering_ready_date": null
   },
   {
@@ -89,7 +89,7 @@
     "lead_time_from_parents": 0,
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-    "phase": 1,
+
     "engineering_ready_date": null
   },
   {
@@ -108,7 +108,7 @@
     ],
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-    "phase": 1,
+
     "engineering_ready_date": null
   },
   {
@@ -126,7 +126,7 @@
     "lead_time_from_parents": 0,
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-    "phase": 1,
+
     "engineering_ready_date": null
   },
   {
@@ -145,7 +145,7 @@
     ],
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-    "phase": 1,
+
     "engineering_ready_date": null
   },
   {
@@ -164,7 +164,7 @@
     ],
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-    "phase": 1,
+
     "engineering_ready_date": null
   },
   {
@@ -182,7 +182,7 @@
     ],
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-    "phase": 1,
+
     "engineering_ready_date": null
   },
   {
@@ -200,7 +200,7 @@
     "lead_time_from_parents": 0,
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-    "phase": 1,
+
     "engineering_ready_date": null
   },
   {
@@ -219,7 +219,7 @@
     ],
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-    "phase": 1,
+
     "engineering_ready_date": null
   },
   {
@@ -238,7 +238,7 @@
     ],
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-    "phase": 1,
+
     "engineering_ready_date": null
   },
   {
@@ -255,7 +255,7 @@
     "lead_time_from_parents": 0,
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-    "phase": 1,
+
     "engineering_ready_date": null
   },
   {
@@ -274,7 +274,7 @@
     ],
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-    "phase": 1,
+
     "engineering_ready_date": null
   },
   {
@@ -293,7 +293,7 @@
     ],
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-    "phase": 1,
+
     "engineering_ready_date": null
   },
   {
@@ -311,7 +311,7 @@
     ],
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-    "phase": 1,
+
     "engineering_ready_date": null
   },
   {
@@ -328,7 +328,7 @@
     "lead_time_from_parents": 0,
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-    "phase": 1,
+
     "engineering_ready_date": null
   },
   {
@@ -345,7 +345,7 @@
     "lead_time_from_parents": 0,
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-    "phase": 1,
+
     "engineering_ready_date": null
   },
   {
@@ -363,7 +363,7 @@
     ],
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
-    "phase": 1,
+
     "engineering_ready_date": null
   }
 ]

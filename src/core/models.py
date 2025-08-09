@@ -54,7 +54,6 @@ class Submission:
     engineering_ready_date: Optional[date] = None  # When engineering work completes and data is available
     free_slack_months: Optional[int] = None  # Buffer time in months
     penalty_cost_per_month: Optional[float] = None  # Monthly penalty cost for delays
-    phase: Optional[int] = None  # Development phase (1-5)
     
     def __post_init__(self):
         if self.depends_on is None:
@@ -83,8 +82,6 @@ class Submission:
             errors.append("Penalty cost per month cannot be negative")
         if self.free_slack_months is not None and self.free_slack_months < 0:
             errors.append("Free slack months cannot be negative")
-        if self.phase is not None and self.phase < 1:
-            errors.append("Phase must be at least 1")
         return errors
     
     def get_priority_score(self, config: 'Config') -> float:
