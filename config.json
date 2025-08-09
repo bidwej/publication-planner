@@ -1,7 +1,7 @@
 {
   "min_abstract_lead_time_days": 0,
   "min_paper_lead_time_days": 60,
-  "max_concurrent_submissions": 2,
+  "max_concurrent_submissions": 5,
   "default_paper_lead_time_months": 3,
   "priority_weights": {
     "engineering_paper": 2.0,
@@ -25,7 +25,7 @@
     "enable_priority_weighting": true,
     "enable_dependency_tracking": true,
     "enable_concurrency_control": true,
-    "enable_working_days_only": true
+    "enable_working_days_only": false
   },
   "blackout_dates": [],
   "data_files": {
