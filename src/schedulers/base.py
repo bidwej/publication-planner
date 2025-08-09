@@ -361,11 +361,23 @@ class BaseScheduler(ABC):
     
     def _assign_best_conference(self, submission: Submission) -> None:
         """Assign the best available conference to a submission."""
-        if not hasattr(submission, 'candidate_conferences') or not submission.candidate_conferences:
+        candidate_conferences = []
+        
+        if hasattr(submission, 'candidate_conferences') and submission.candidate_conferences:
+            # Use specific candidate conferences
+            candidate_conferences = submission.candidate_conferences
+        else:
+            # Empty candidate_conferences means try all appropriate conferences
+            # Get all conference names that accept this submission type
+            for conf in self.conferences.values():
+                if submission.kind in conf.deadlines:
+                    candidate_conferences.append(conf.name)
+        
+        if not candidate_conferences:
             return
             
         # Try to find the best conference for this submission
-        for conf_name in submission.candidate_conferences:
+        for conf_name in candidate_conferences:
             # Find conference by name
             conf = None
             for c in self.conferences.values():

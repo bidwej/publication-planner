@@ -42,7 +42,7 @@ class Submission:
     """A submission to a conference."""
     id: str
     title: str
-    kind: SubmissionType
+    kind: SubmissionType  # Base type (PAPER for both mods and ed papers)
     author: Optional[str] = None  # Explicit author field ("pccp" or "ed")
     conference_id: Optional[str] = None  # Optional - None for work items
     depends_on: Optional[List[str]] = None
@@ -52,6 +52,7 @@ class Submission:
     engineering: bool = False
     earliest_start_date: Optional[date] = None
     candidate_conferences: Optional[List[str]] = None  # Suggested conferences
+    candidate_kind: Optional[SubmissionType] = None  # Preferred submission type at conferences
     
     # Additional fields for unified schema (both mods and papers now have these)
     engineering_ready_date: Optional[date] = None  # When engineering work completes and data is available
@@ -63,6 +64,9 @@ class Submission:
             self.depends_on = []
         if self.candidate_conferences is None:
             self.candidate_conferences = []
+        # If candidate_kind is not specified, default to the base kind
+        if self.candidate_kind is None:
+            self.candidate_kind = self.kind
 
     
     def validate(self) -> List[str]:
@@ -74,8 +78,9 @@ class Submission:
             errors.append("Missing title")
         # Conference ID is optional for work items (mods)
         # Papers can have conference_id or candidate_conferences
-        if self.kind == SubmissionType.PAPER and not self.conference_id and not self.candidate_conferences:
-            errors.append("Papers must have either conference_id or candidate_conferences")
+        # Empty candidate_conferences means "open to any appropriate opportunity"
+        if self.kind == SubmissionType.PAPER and not self.conference_id and self.candidate_conferences is None:
+            errors.append("Papers must have either conference_id or candidate_conferences (empty list means any conference)")
         if self.draft_window_months < 0:
             errors.append("Draft window months cannot be negative")
         if self.lead_time_from_parents < 0:

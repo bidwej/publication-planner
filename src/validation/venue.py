@@ -254,4 +254,6 @@ def _validate_venue_compatibility(submissions: Dict[str, Submission],
                         if not conf.accepts_submission_type(SubmissionType.PAPER):
                             raise ValueError(f"Submission {sub_id} not compatible with conference {conf_id}")
             else:
-                raise ValueError(f"Submission {sub_id} must have either conference_id or candidate_conferences")
+                # Empty candidate_conferences means the submission can be assigned to any appropriate conference
+                # This is valid - the scheduler will assign the best available conference
+                pass
