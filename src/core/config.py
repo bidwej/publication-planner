@@ -322,7 +322,23 @@ def _load_submissions_with_abstracts(
                 paper_id_suffix = f"{paper.id}-pap-{conf.id}"
                 
                 # Paper depends on abstract if conference requires both
-                paper_dependencies = paper.depends_on.copy() if paper.depends_on else []
+                paper_dependencies = []
+                if paper.depends_on:
+                    # For paper dependencies, we need to create conference-specific dependencies
+                    for dep_id in paper.depends_on:
+                        # Check if this is a paper dependency (starts with J)
+                        if dep_id.startswith('J'):
+                            # Find the parent paper to check if it supports this conference
+                            parent_paper = next((p for p in papers if p.id == dep_id), None)
+                            if parent_paper and conf.name in parent_paper.candidate_conferences:
+                                # Create dependency to the same conference's paper submission
+                                dep_paper_id = f"{dep_id}-pap-{conf.id}"
+                                paper_dependencies.append(dep_paper_id)
+                            # If parent paper doesn't support this conference, skip the dependency
+                        else:
+                            # For non-paper dependencies (like mods), keep as is
+                            paper_dependencies.append(dep_id)
+                
                 if has_abstract_deadline:
                     abstract_id = generate_abstract_id(paper.id, conf.id)
                     paper_dependencies.append(abstract_id)

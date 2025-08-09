@@ -6,8 +6,8 @@ from datetime import date, timedelta
 import json
 import statistics
 from pathlib import Path
-from core.models import Config, SchedulerStrategy
-from core.constants import DISPLAY_CONSTANTS
+from src.core.models import Config, SchedulerStrategy
+from src.core.constants import DISPLAY_CONSTANTS
 from src.validation.deadline import validate_deadline_constraints
 from src.validation.schedule import validate_schedule_constraints
 from scoring.penalties import calculate_penalty_score

@@ -185,19 +185,20 @@ class GanttChartBuilder:
         # Calculate timeline duration
         timeline_days = (self.max_date - self.min_date).days
         
-        # Determine interval size based on timeline length
+        # Use larger intervals to prevent performance issues
         if timeline_days <= 90:  # 3 months or less
-            interval_days = 7  # Weekly
+            interval_days = 14  # Bi-weekly
         elif timeline_days <= 365:  # 1 year or less
-            interval_days = 30  # Monthly
+            interval_days = 60  # Bi-monthly
         else:  # More than 1 year
-            interval_days = 90  # Quarterly
+            interval_days = 120  # Quarterly
         
-        # Add alternating bands
+        # Add alternating bands with strict limit
         current_day = 0
         band_count = 0
+        max_bands = 12  # Strict limit to prevent hanging
         
-        while current_day <= timeline_days:
+        while current_day <= timeline_days and band_count < max_bands:
             end_day = min(current_day + interval_days, timeline_days)
             
             # Alternate colors for bands

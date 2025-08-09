@@ -4,8 +4,8 @@ from typing import Dict, Any
 from datetime import date, timedelta
 from collections import defaultdict
 
-from core.models import Config, PenaltyBreakdown, SubmissionType, ConferenceType
-from core.constants import (
+from src.core.models import Config, PenaltyBreakdown, SubmissionType, ConferenceType
+from src.core.constants import (
     PENALTY_CONSTANTS, REPORT_CONSTANTS
 )
 # Note: Penalty costs moved to config.json because they are project-specific

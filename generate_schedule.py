@@ -16,8 +16,8 @@ from datetime import date
 os.environ['PYTHONPATH'] = str(Path(__file__).parent / "src") + os.pathsep + os.environ.get('PYTHONPATH', '')
 
 # Import after adding src to path - pylint: disable=wrong-import-position
-from core.config import load_config
-from core.models import SchedulerStrategy
+from src.core.config import load_config
+from src.core.models import SchedulerStrategy
 from schedulers.base import BaseScheduler
 from src.analytics.console import print_schedule_analysis, print_strategy_comparison, print_available_strategies
 from src.analytics.exporters.csv_exporter import CSVExporter

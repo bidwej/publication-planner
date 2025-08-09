@@ -5,8 +5,8 @@ from datetime import date, timedelta
 from collections import defaultdict
 import statistics
 
-from core.models import Config, EfficiencyMetrics, TimelineMetrics
-from core.constants import (
+from src.core.models import Config, EfficiencyMetrics, TimelineMetrics
+from src.core.constants import (
     EFFICIENCY_CONSTANTS, SCORING_CONSTANTS, REPORT_CONSTANTS, QUALITY_CONSTANTS
 )
 
