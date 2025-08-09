@@ -124,17 +124,18 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ## Core Concepts
 
 ### Submission Structure
-The system uses a dual-type approach for maximum flexibility:
+The system uses a unified approach where all work items and papers are treated as submissions with explicit dependencies:
 
-#### Base Types (`kind`)
-- **Papers**: Both mods and ed papers are classified as papers in the data model
-- **Abstracts**: Standalone abstract submissions
-- **Posters**: Poster presentation submissions
+#### Submission Types
+- **Mods** (`mod_papers.json`): Work items/preparation phases (kind: "paper", but represent research phases)
+- **Ed Papers** (`ed_papers.json`): Final papers that depend on completed mods (kind: "paper")
+- **Both are `Submission` entities** with explicit dependency relationships
 
-#### Submission Classification
-- **Mods**: PCCP research papers (author: "pccp") - technical/engineering focus
-- **Ed Papers**: Ed's suggested papers (author: "ed") - various focus areas
-- **Both are `kind: PAPER`** in the data model for unified handling
+#### How Dependencies Work
+- **Mods** are the foundational work items (like research phases or data collection)
+- **Papers** depend on completed mods: `"depends_on": ["mod_1", "mod_2"]`
+- **No Auto-Generation**: All dependencies are explicit in the JSON files
+- **Uniform Scheduling**: All submissions follow the same scheduling logic
 
 #### Conference Matching (`candidate_kind` + `candidate_conferences`)
 The system determines what type of submission opportunity to pursue:
@@ -169,9 +170,10 @@ The system automatically classifies conferences based on their deadline structur
 
 #### Conference Matching Logic
 - **Conference rules determine opportunities**: System respects what each conference actually accepts
-- **Smart dependency creation**: Only creates abstract→paper dependencies when explicitly required
-- **Preference respected**: If you specify abstract-only, won't pursue paper opportunities  
-- **Flexible when open**: Empty preferences allow system to find best available opportunity
+- **Explicit dependencies**: All work item → paper dependencies are defined in JSON files  
+- **Abstract-before-paper handling**: If a paper is submitted to a conference requiring abstracts first, the system automatically assigns it as an abstract submission
+- **No auto-generation**: System doesn't create new submissions, but intelligently assigns submission types
+- **Conference assignment**: Happens during scheduling based on candidate_conferences and conference requirements
 
 #### Practical Examples
 
@@ -207,15 +209,25 @@ The system automatically classifies conferences based on their deadline structur
 ```
 → Try any appropriate conference (medical/engineering). Accept abstract-only, paper-only, or abstract+paper opportunities.
 
-**Example 4: Current Mods/Papers in Data**
+**Example 4: Current Architecture (Mods + Papers)**
 ```json
+// In mod_papers.json - Work items/research phases
 {
-  "id": "mod_1",
-  "kind": "paper",
-  "candidate_conferences": []
+  "id": "mod_1", 
+  "title": "Samurai Automated 2D",
+  "candidate_conferences": [],  // No conference needed for work items
+  "depends_on": []
+}
+
+// In ed_papers.json - Final papers that depend on mods
+{
+  "id": "J1",
+  "title": "Computer Vision endoscopy review", 
+  "candidate_conferences": ["ICML", "MIDL"],
+  "depends_on": ["mod_1"]  // Paper depends on completed mod
 }
 ```
-→ Since `candidate_kind` not specified, defaults to "paper". Empty `candidate_conferences` means try any appropriate conference.
+→ This creates a clear dependency: paper J1 can only start after mod_1 is completed.
 
 ### Conference Types
 - **Medical/Clinical**: Healthcare-focused conferences (e.g., SAGES, DDW)
@@ -340,13 +352,13 @@ The system automatically classifies conferences based on their deadline structur
 - **Automatic Detection**: Conference submission types are auto-detected from deadline configuration
 - **Compatibility Validation**: Ensures submissions match conference requirements
 
-### 15. Abstract-to-Paper Dependencies
-- **Required Dependencies**: Papers at conferences requiring abstracts must have corresponding abstract submissions
-- **Timing Validation**: Abstracts must be scheduled before their corresponding papers
-- **Naming Convention**: Abstract submissions follow pattern `{paper_id}-abs` for automatic linking
-- **Missing Abstract Detection**: Identifies papers missing required abstract submissions
-- **Timing Violation Detection**: Identifies papers scheduled before their required abstracts
-- **Conference-Specific Rules**: Different conferences have different abstract requirements
+### 15. Work Item Dependencies (Mods → Papers)
+- **Explicit Dependencies**: Papers depend on completed work items (mods) as defined in JSON
+- **Timing Validation**: Work items must be completed before dependent papers can start
+- **Clear Data Model**: All dependencies are explicit in the data files, no auto-generation
+- **Dependency Chain Tracking**: System validates complete dependency chains
+- **Timing Violation Detection**: Identifies papers scheduled before their dependencies complete
+- **Flexible Structure**: Any submission can depend on any other submission
 
 ## Scoring System
 
@@ -546,33 +558,23 @@ All schedulers use a shared validation system:
 
 ### Advanced Scheduler Features
 
-#### 1. Abstract-to-Paper Dependencies
-- **Automatic linking**: Creates abstract submissions for papers when required
-- **Dependency enforcement**: Ensures abstracts are scheduled before papers
-- **Conference-specific rules**: Different conferences have different abstract requirements
+#### 1. Work Item Dependencies (Simplified)
+- **Explicit dependencies**: All dependencies defined in JSON data files
+- **Uniform scheduling**: All submissions (mods, papers) scheduled using same logic
+- **No auto-generation**: System schedules exactly what's in the data files
 - **Key Functions**:
-  - `_auto_link_abstract_paper()`: Automatic abstract creation
-  - `generate_abstract_id()`: Abstract ID generation
-  - `create_abstract_submission()`: Abstract submission creation
-  - `ensure_abstract_paper_dependency()`: Dependency enforcement
+  - `are_dependencies_satisfied()`: Check if submission's dependencies are met
+  - Centralized dependency validation in `Submission` model
 
 #### 2. Conference Assignment
-- **Automatic assignment**: Assigns conferences to papers based on compatibility
-- **Compatibility matrix**: Validates conference-submission type matching
-- **Family-based assignment**: Groups conferences by family for assignment
+- **Dynamic assignment**: Conferences assigned during scheduling based on preferences
+- **Candidate validation**: Only valid conferences from candidate_conferences used
+- **Compatibility checking**: Ensures submission types match conference requirements
 - **Key Functions**:
-  - `_assign_conferences()`: Conference assignment logic
+  - `_assign_best_conference()`: Conference assignment logic
   - `_check_conference_compatibility()`: Compatibility validation
 
-#### 3. Early Abstract Scheduling
-- **Advance scheduling**: Abstracts can be scheduled earlier than deadlines
-- **Configurable advance**: Adjustable advance days for early abstract scheduling
-- **Abstract-only venues**: Special handling for abstract-only conference venues
-- **Key Functions**:
-  - `_apply_early_abstract_scheduling()`: Early abstract logic
-  - `_schedule_early_abstracts()`: Early abstract scheduling
-
-#### 4. Working Days Only
+#### 3. Working Days Only
 - **Business day scheduling**: Optional restriction to business days only
 - **Weekend exclusion**: Automatic exclusion of weekends (Saturday/Sunday)
 - **Blackout date integration**: Integration with blackout periods

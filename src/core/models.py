@@ -131,6 +131,32 @@ class Submission:
                 
         return False
     
+    def are_dependencies_satisfied(self, schedule: Dict[str, date], 
+                                 submissions_dict: Dict[str, 'Submission'], 
+                                 config: 'Config', current_date: date) -> bool:
+        """Check if all dependencies are satisfied for this submission."""
+        if not self.depends_on:
+            return True
+        
+        for dep_id in self.depends_on:
+            # Check if dependency exists
+            if dep_id not in submissions_dict:
+                return False
+            
+            # Check if dependency is scheduled
+            if dep_id not in schedule:
+                return False
+            
+            # Check if dependency is completed
+            dep = submissions_dict[dep_id]
+            dep_start = schedule[dep_id]
+            dep_end = dep.get_end_date(dep_start, config)
+            
+            if current_date < dep_end:
+                return False
+        
+        return True
+    
     def get_duration_days(self, config: 'Config') -> int:
         """Calculate the duration in days for this submission."""
         # Fixed time constants
@@ -246,12 +272,6 @@ class Conference:
         if not self.accepts_submission_type(submission_type_to_check):
             errors.append(f"Conference {self.id} does not accept {submission_type_to_check.value} submissions")
         
-        # Check if submission has required dependencies
-        if submission.kind == SubmissionType.PAPER and self.requires_abstract_before_paper():
-            abstract_id = generate_abstract_id(submission.id, self.id)
-            if abstract_id not in (submission.depends_on or []):
-                errors.append(f"Paper {submission.id} must depend on abstract {abstract_id} for conference {self.id}")
-        
         return errors
     
     def validate(self) -> List[str]:
@@ -277,51 +297,7 @@ class Conference:
         return submission_type in self.deadlines
 
 
-# Utility functions for abstract-paper dependencies
-def generate_abstract_id(paper_id: str, conference_id: str) -> str:
-    """Generate abstract ID for paper."""
-    # Extract base paper ID (e.g., "paper1" from "paper1-pap-conf1")
-    base_paper_id = paper_id.split('-')[0]
-    return f"{base_paper_id}-abs-{conference_id}"  # Include conference ID in abstract ID
 
-
-def create_abstract_submission(paper: Submission, conference_id: str, 
-                             penalty_costs: Dict[str, float]) -> Submission:
-    """Create abstract submission for a paper.
-    
-    Abstracts are submitted first in academic workflow, so they have no dependencies.
-    The paper will depend on the abstract being submitted and accepted.
-    """
-    abstract_id = generate_abstract_id(paper.id, conference_id)
-    
-    return Submission(
-        id=abstract_id,
-        title=f"Abstract for {paper.title}",
-        kind=SubmissionType.ABSTRACT,
-        conference_id=conference_id,
-        depends_on=[],  # Abstracts come first - no dependencies
-        draft_window_months=1,
-        lead_time_from_parents=0,
-        penalty_cost_per_day=penalty_costs.get("default_mod_penalty_per_day", 1000.0),
-        engineering=paper.engineering,
-        earliest_start_date=paper.earliest_start_date,
-        candidate_conferences=[conference_id]
-    )
-
-
-def ensure_abstract_paper_dependency(paper: Submission, abstract_id: str) -> None:
-    """Ensure a paper depends on its corresponding abstract."""
-    # Create new depends_on list to avoid mutating the original
-    current_deps = paper.depends_on or []
-    if abstract_id not in current_deps:
-        paper.depends_on = current_deps + [abstract_id]
-
-
-def find_abstract_for_paper(paper_id: str, conference_id: str, 
-                          submissions_dict: Dict[str, Submission]) -> Optional[str]:
-    """Find the abstract ID for a paper at a specific conference."""
-    abstract_id = generate_abstract_id(paper_id, conference_id)
-    return abstract_id if abstract_id in submissions_dict else None
 
 
 @dataclass
@@ -441,29 +417,10 @@ class Config:
         return errors
 
     def _validate_abstract_paper_dependencies(self) -> List[str]:
-        """Validate that papers have required abstract dependencies."""
-        errors = []
-        submission_dict = {sub.id: sub for sub in self.submissions}
-        conference_dict = {conf.id: conf for conf in self.conferences}
-
-        for submission in self.submissions:
-            if submission.kind == SubmissionType.PAPER and submission.conference_id:
-                conference = conference_dict.get(submission.conference_id)
-                if conference and conference.requires_abstract_before_paper():
-                    # Check if required abstract exists using full format with conference
-                    abstract_id = generate_abstract_id(submission.id, submission.conference_id)
-                    if abstract_id not in submission_dict:
-                        errors.append(f"Paper {submission.id} requires abstract {abstract_id} for conference {submission.conference_id}")
-                    else:
-                        # Check if paper depends on its abstract
-                        abstract = submission_dict[abstract_id]
-                        if abstract_id not in (submission.depends_on or []):
-                            errors.append(f"Paper {submission.id} must depend on its abstract {abstract_id}")
-                        # Check if abstract has the paper's conference as a candidate
-                        if submission.conference_id not in (abstract.candidate_conferences or []):
-                            errors.append(f"Abstract {abstract_id} must have conference {submission.conference_id} as candidate")
-
-        return errors
+        """Validate dependencies between submissions (simplified)."""
+        # Since we removed auto-generation, just validate that all dependencies exist
+        # The missing dependencies validation is handled elsewhere
+        return []
 
     def _validate_circular_dependencies(self) -> List[str]:
         """Validate that there are no circular dependencies."""
@@ -510,38 +467,7 @@ class Config:
         
         return errors
     
-    def ensure_abstract_paper_dependencies(self) -> None:
-        """Automatically create missing abstract submissions and dependencies."""
-        if not self.submissions or not self.conferences:
-            return
-        
-        submission_dict = {sub.id: sub for sub in self.submissions}
-        conference_dict = {conf.id: conf for conf in self.conferences}
-        penalty_costs = self.penalty_costs or {}
-        
-        # Find papers that need abstracts
-        papers_needing_abstracts = []
-        for submission in self.submissions:
-            if (submission.kind == SubmissionType.PAPER and 
-                submission.conference_id and 
-                submission.conference_id in conference_dict):
-                
-                conference = conference_dict[submission.conference_id]
-                if conference.requires_abstract_before_paper():
-                    # Use full abstract ID format with conference
-                    abstract_id = generate_abstract_id(submission.id, submission.conference_id)
-                    if abstract_id not in submission_dict:
-                        papers_needing_abstracts.append((submission, abstract_id))
-        
-        # Create missing abstracts
-        for paper, abstract_id in papers_needing_abstracts:
-            abstract = create_abstract_submission(paper, paper.conference_id, penalty_costs)
-            abstract.id = abstract_id  # Use full ID format
-            self.submissions.append(abstract)
-            submission_dict[abstract_id] = abstract
-            
-            # Ensure paper depends on abstract
-            ensure_abstract_paper_dependency(paper, abstract_id)
+
     
     # Computed properties
     @property

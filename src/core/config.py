@@ -9,7 +9,7 @@ from dateutil.parser import parse as parse_date
 
 from src.core.models import (
     Conference, ConferenceRecurrence, ConferenceType, ConferenceSubmissionType, Config, Submission, 
-    SubmissionType, create_abstract_submission, generate_abstract_id
+    SubmissionType
 )
 
 # Regex patterns for robust ID matching

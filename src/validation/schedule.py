@@ -219,42 +219,39 @@ def _validate_dependency_satisfaction(schedule: Dict[str, date], config: Config)
         for dep_id in sub.depends_on:
             total_dependencies += 1
             
-            # Check if dependency exists in schedule
-            if dep_id not in schedule:
-                violations.append(DependencyViolation(
-                    submission_id=sid,
-                    description=f"Dependency {dep_id} not scheduled",
-                    dependency_id=dep_id,
-                    issue="missing_dependency",
-                    severity="high"
-                ))
-                continue
-            
-            # Check if dependency is completed before this submission starts
-            dep_start = schedule[dep_id]
-            dep_sub = config.submissions_dict.get(dep_id)
-            if not dep_sub:
-                violations.append(DependencyViolation(
-                    submission_id=sid,
-                    description=f"Dependency {dep_id} not found in submissions",
-                    dependency_id=dep_id,
-                    issue="invalid_dependency",
-                    severity="high"
-                ))
-                continue
-            
-            dep_end = dep_sub.get_end_date(dep_start, config)
-            
-            if start_date < dep_end:
-                days_violation = (dep_end - start_date).days
-                violations.append(DependencyViolation(
-                    submission_id=sid,
-                    description=f"Submission {sid} starts before dependency {dep_id} completes",
-                    dependency_id=dep_id,
-                    issue="timing_violation",
-                    days_violation=days_violation,
-                    severity="medium"
-                ))
+            # Use the centralized dependency checking logic
+            if not sub.are_dependencies_satisfied(schedule, config.submissions_dict, config, start_date):
+                # Determine the specific issue for detailed reporting
+                if dep_id not in schedule:
+                    violations.append(DependencyViolation(
+                        submission_id=sid,
+                        description=f"Dependency {dep_id} not scheduled",
+                        dependency_id=dep_id,
+                        issue="missing_dependency",
+                        severity="high"
+                    ))
+                elif dep_id not in config.submissions_dict:
+                    violations.append(DependencyViolation(
+                        submission_id=sid,
+                        description=f"Dependency {dep_id} not found in submissions",
+                        dependency_id=dep_id,
+                        issue="invalid_dependency",
+                        severity="high"
+                    ))
+                else:
+                    # Timing violation
+                    dep_start = schedule[dep_id]
+                    dep_sub = config.submissions_dict[dep_id]
+                    dep_end = dep_sub.get_end_date(dep_start, config)
+                    days_violation = (dep_end - start_date).days
+                    violations.append(DependencyViolation(
+                        submission_id=sid,
+                        description=f"Submission {sid} starts before dependency {dep_id} completes",
+                        dependency_id=dep_id,
+                        issue="timing_violation",
+                        days_violation=days_violation,
+                        severity="medium"
+                    ))
             else:
                 satisfied_dependencies += 1
     
