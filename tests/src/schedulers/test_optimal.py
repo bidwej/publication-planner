@@ -294,8 +294,8 @@ class TestOptimalScheduler:
             # If MILP fails, that's okay - we just want to test the integration
             assert "solver" in str(e).lower() or "pulp" in str(e).lower() or "infeasible" in str(e).lower()
     
-    def test_candidate_kind_none_scenarios(self) -> None:
-        """Test scheduling with candidate_kind=None and empty candidate_conferences."""
+    def test_candidate_kinds_none_scenarios(self) -> None:
+        """Test scheduling with candidate_kinds=None and empty candidate_conferences."""
         from src.core.models import Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence
         from src.core.config import Config
         from datetime import date, timedelta
@@ -332,23 +332,23 @@ class TestOptimalScheduler:
         
         # Create test submissions with different scenarios
         submissions = [
-            # Scenario 1: candidate_kind=None, candidate_conferences=[] 
+            # Scenario 1: candidate_kinds=None, candidate_conferences=[] 
             # Should try any conference, preferring poster->abstract->paper
             Submission(
                 id="sub_open_to_any",
                 title="Open to Any Opportunity",
                 kind=SubmissionType.PAPER,
-                candidate_kind=None,  # Open to any opportunity
+                candidate_kinds=None,  # Open to any opportunity
                 candidate_conferences=[],  # Any conference
                 earliest_start_date=today
             ),
-            # Scenario 2: candidate_kind=None, specific conferences
+            # Scenario 2: candidate_kinds=None, specific conferences
             # Should try poster->abstract->paper in specified conferences only  
             Submission(
                 id="sub_open_specific_conf",
                 title="Open Opportunity at Specific Conference",
                 kind=SubmissionType.PAPER, 
-                candidate_kind=None,  # Open to any opportunity
+                candidate_kinds=None,  # Open to any opportunity
                 candidate_conferences=["All Types Conference"],  # Specific conference
                 earliest_start_date=today
             ),
@@ -358,7 +358,7 @@ class TestOptimalScheduler:
                 id="sub_abstract_any_conf",
                 title="Abstract at Any Conference",
                 kind=SubmissionType.PAPER,
-                candidate_kind=SubmissionType.ABSTRACT,  # Want abstract specifically
+                candidate_kinds=[SubmissionType.ABSTRACT],  # Want abstract specifically
                 candidate_conferences=[],  # Any conference that accepts abstracts
                 earliest_start_date=today
             )
@@ -396,7 +396,7 @@ class TestOptimalScheduler:
         if sub3.conference_id:
             assigned_conf = next(c for c in conferences if c.id == sub3.conference_id)
             assert SubmissionType.ABSTRACT in assigned_conf.deadlines
-            assert sub3.candidate_kind == SubmissionType.ABSTRACT
+            assert sub3.candidate_kinds == [SubmissionType.ABSTRACT]
 
 
 class TestOptimalSchedulerIntegration:

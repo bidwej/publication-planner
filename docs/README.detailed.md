@@ -171,8 +171,9 @@ The system automatically classifies conferences based on their deadline structur
 #### Conference Matching Logic
 - **Conference rules determine opportunities**: System respects what each conference actually accepts
 - **Explicit dependencies**: All work item → paper dependencies are defined in JSON files  
-- **Abstract-before-paper handling**: If a paper is submitted to a conference requiring abstracts first, the system automatically assigns it as an abstract submission
-- **No auto-generation**: System doesn't create new submissions, but intelligently assigns submission types
+- **Intelligent type assignment**: Uses `candidate_kind` to dynamically assign submission types based on conference requirements
+- **Abstract-before-paper handling**: Papers automatically assigned as abstracts (`candidate_kind: ABSTRACT`) when conferences require abstract-first
+- **No duplicate entities**: System doesn't create new submissions, just intelligently assigns submission types using `candidate_kind`
 - **Conference assignment**: Happens during scheduling based on candidate_conferences and conference requirements
 
 #### Practical Examples
@@ -186,7 +187,7 @@ The system automatically classifies conferences based on their deadline structur
   "candidate_conferences": ["ICML", "MICCAI"]
 }
 ```
-→ Only pursue paper opportunities at ICML or MICCAI. If ICML requires abstract+paper, system will create abstract dependency.
+→ Only pursue paper opportunities at ICML or MICCAI. If ICML requires abstract+paper, system will automatically assign `candidate_kind: ABSTRACT`.
 
 **Example 2: Abstract-Only Interest** 
 ```json
@@ -209,12 +210,25 @@ The system automatically classifies conferences based on their deadline structur
 ```
 → Try any appropriate conference (medical/engineering). Accept abstract-only, paper-only, or abstract+paper opportunities.
 
-**Example 4: Current Architecture (Mods + Papers)**
+**Example 4: Intelligent Type Assignment with `candidate_kind`**
+```json
+// Paper that can be submitted as either paper or abstract
+{
+  "id": "flexible_paper",
+  "kind": "paper",
+  "candidate_kind": "abstract",  // Prefer to submit as abstract
+  "candidate_conferences": ["ICML", "RSNA"]
+}
+```
+→ System will submit as abstract at RSNA (abstract-only) and ICML (if abstract+paper), but as paper at paper-only conferences.
+
+**Example 5: Current Architecture (Mods + Papers)**
 ```json
 // In mod_papers.json - Work items/research phases
 {
   "id": "mod_1", 
   "title": "Samurai Automated 2D",
+  "kind": "paper",  // All submissions are kind=paper
   "candidate_conferences": [],  // No conference needed for work items
   "depends_on": []
 }
@@ -222,12 +236,14 @@ The system automatically classifies conferences based on their deadline structur
 // In ed_papers.json - Final papers that depend on mods
 {
   "id": "J1",
-  "title": "Computer Vision endoscopy review", 
+  "title": "Computer Vision endoscopy review",
+  "kind": "paper", 
+  "candidate_kind": "paper",  // Prefer paper submissions
   "candidate_conferences": ["ICML", "MIDL"],
   "depends_on": ["mod_1"]  // Paper depends on completed mod
 }
 ```
-→ This creates a clear dependency: paper J1 can only start after mod_1 is completed.
+→ Creates clear dependency: J1 starts after mod_1 completes. If ICML requires abstract-first, system automatically sets `candidate_kind: ABSTRACT` during scheduling.
 
 ### Conference Types
 - **Medical/Clinical**: Healthcare-focused conferences (e.g., SAGES, DDW)
@@ -352,7 +368,19 @@ The system automatically classifies conferences based on their deadline structur
 - **Automatic Detection**: Conference submission types are auto-detected from deadline configuration
 - **Compatibility Validation**: Ensures submissions match conference requirements
 
-### 15. Work Item Dependencies (Mods → Papers)
+### 15. Intelligent Submission Type Assignment (`candidate_kind`)
+- **Dynamic Type Assignment**: Uses `candidate_kind` to adapt submission types to conference requirements
+- **Preference Specification**: `candidate_kind` specifies the preferred submission type at conferences
+- **Automatic Fallback**: System falls back to `kind` when `candidate_kind` is not compatible
+- **Abstract-Before-Paper**: Automatically assigns `candidate_kind: ABSTRACT` for conferences requiring abstract-first
+- **No Duplicate Entities**: System doesn't create new submissions, just intelligently assigns types
+- **Conference Compatibility**: Uses `candidate_kind` for conference compatibility checking
+- **Example Use Cases**:
+  - Paper that prefers to be submitted as abstract: `kind: PAPER, candidate_kind: ABSTRACT`
+  - Abstract-only submission: `kind: PAPER, candidate_kind: ABSTRACT` (same entity, different target)
+  - Flexible submission: `candidate_kind: null` (use conference requirements to decide)
+
+### 16. Work Item Dependencies (Mods → Papers)
 - **Explicit Dependencies**: Papers depend on completed work items (mods) as defined in JSON
 - **Timing Validation**: Work items must be completed before dependent papers can start
 - **Clear Data Model**: All dependencies are explicit in the data files, no auto-generation
@@ -375,7 +403,17 @@ The system automatically classifies conferences based on their deadline structur
 - **Peak Load Optimization**: Minimize maximum concurrent submissions
 - **Average Load Optimization**: Optimize average daily workload
 
-### Penalty System
+### Penalty System - Centralized Architecture
+
+**🔧 Single Source of Truth**: All penalty calculations are centralized in `src/scoring/penalties.py`
+
+#### Architecture
+- **Single Public Function**: `calculate_penalty_score(schedule, config) -> PenaltyBreakdown`
+- **Validation Modules**: Only detect violations, never calculate penalties
+- **Analytics Modules**: Call penalty engine, never recalculate penalties
+- **Consistency**: All penalty logic in one place ensures consistent calculations
+
+#### Penalty Types
 - **Deadline Violations**: Per-day penalties (100-3000/day)
 - **Dependency Violations**: 50 points per day of violation
 - **Resource Violations**: 200 points per excess submission
@@ -391,7 +429,17 @@ The system automatically classifies conferences based on their deadline structur
 - **Soft Block Violations**: Penalties for PCCP model violations
 - **Single Conference Violations**: Penalties for multiple venue assignments
 - **Response Time Violations**: Penalties for insufficient conference response time
-- **Slack Cost Penalties**: Monthly slip penalties and full-year deferral penalties
+
+#### Usage Pattern
+```python
+# ✅ Good Pattern - Use centralized penalty engine
+from src.scoring.penalties import calculate_penalty_score
+penalty_breakdown = calculate_penalty_score(schedule, config)
+total_penalty = penalty_breakdown.total_penalty
+
+# ❌ Bad Pattern - Don't calculate penalties directly
+penalty = days_late * penalty_per_day  # DON'T DO THIS
+```
 
 ## Scheduling Algorithms
 
@@ -939,10 +987,11 @@ src/
 │   ├── lookahead.py  # Lookahead scheduling
 │   ├── heuristic.py  # Heuristic algorithms
 │   └── random.py   # Random baseline
-├── scoring/        # Scoring and evaluation
-│   ├── quality.py  # Quality metrics
-│   ├── efficiency.py  # Efficiency metrics
-│   └── penalties.py  # Penalty calculations
+├── scoring/        # Scoring and evaluation (centralized penalty system)
+│   ├── quality.py     # calculate_quality_score()
+│   ├── efficiency.py  # calculate_efficiency_score()
+│   ├── penalties.py   # calculate_penalty_score() - SINGLE SOURCE OF TRUTH
+│   └── aggregator.py  # calculate_schedule_aggregation() - combines all scoring
 ├── output/         # Output generation
 │   ├── reports.py  # Report generation
 │   ├── analytics.py # Analysis functions
@@ -991,6 +1040,7 @@ When adding new features:
 3. Update constants in `src/core/constants.py`
 4. Document business rules in this README
 5. Ensure all constraints are properly validated
+6. **Penalty Calculations**: Always use `src/scoring/penalties.calculate_penalty_score()` - never calculate penalties directly in other modules
 
 ## Performance
 

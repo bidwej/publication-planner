@@ -12,7 +12,7 @@ from src.scoring.quality import calculate_quality_score
 from src.scoring.penalties import calculate_penalty_score
 from src.scoring.efficiency import calculate_efficiency_score, calculate_efficiency_resource, calculate_efficiency_timeline
 from src.validation.schedule import validate_schedule_constraints, validate_schedule
-from src.scoring.metrics import get_schedule_metrics
+from src.scoring.aggregator import calculate_schedule_aggregation
 from src.schedulers.base import BaseScheduler
 # Import scheduler implementations to register them
 from src.schedulers.greedy import GreedyScheduler
@@ -173,7 +173,7 @@ class Planner:
         Dict[str, Any]
             Dictionary containing various schedule metrics
         """
-        return get_schedule_metrics(schedule, self.config)
+        return calculate_schedule_aggregation(schedule, self.config)
     
     def get_comprehensive_result(self, schedule: Dict[str, date], strategy: SchedulerStrategy) -> ScheduleResult:
         """

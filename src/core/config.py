@@ -49,6 +49,14 @@ def _map_conference_data(json_data: Dict) -> Dict:
     }
 
 
+def _parse_candidate_kinds(json_data: Dict) -> Optional[List[SubmissionType]]:
+    """Parse candidate_kinds from JSON."""
+    if json_data.get("candidate_kinds"):
+        return [SubmissionType(t) for t in json_data["candidate_kinds"]]
+    else:
+        return None
+
+
 def _build_deadlines_dict(conf_data: Dict) -> Dict[SubmissionType, date]:
     """Build deadlines dict from JSON data."""
     deadlines = {}
@@ -77,7 +85,7 @@ def _map_paper_data(json_data: Dict) -> Dict:
         "draft_window_months": json_data.get("draft_window_months", 3),
         "lead_time_from_parents": json_data.get("lead_time_from_parents", 0),
         "candidate_conferences": json_data.get("candidate_conferences", []),
-        "candidate_kind": SubmissionType(json_data["candidate_kind"]) if json_data.get("candidate_kind") else None,  # Preferred submission type
+        "candidate_kinds": _parse_candidate_kinds(json_data),  # Preferred submission types
         # Unified schema fields
         "engineering_ready_date": parse_date(json_data["engineering_ready_date"]).date() if json_data.get("engineering_ready_date") else None,
         "free_slack_months": json_data.get("free_slack_months", 1),
@@ -101,7 +109,7 @@ def _map_mod_data(json_data: Dict) -> Dict:
         "author": author,  # Explicit author field
         "conference_id": None,  # No pre-assigned conference
         "candidate_conferences": json_data.get("candidate_conferences", []),  # Map candidate conferences
-        "candidate_kind": SubmissionType(json_data["candidate_kind"]) if json_data.get("candidate_kind") else None,  # Preferred submission type
+        "candidate_kinds": _parse_candidate_kinds(json_data),  # Preferred submission types
         "depends_on": json_data.get("depends_on", []),
         "draft_window_months": json_data.get("draft_window_months", 2),  # Use actual draft window
         "lead_time_from_parents": json_data.get("lead_time_from_parents", 0),

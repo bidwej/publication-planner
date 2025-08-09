@@ -52,7 +52,7 @@ class Submission:
     engineering: bool = False
     earliest_start_date: Optional[date] = None
     candidate_conferences: Optional[List[str]] = None  # Suggested conferences
-    candidate_kind: Optional[SubmissionType] = None  # Preferred submission type at conferences
+    candidate_kinds: Optional[List[SubmissionType]] = None  # Preferred submission types at conferences (in priority order)
     
     # Additional fields for unified schema (both mods and papers now have these)
     engineering_ready_date: Optional[date] = None  # When engineering work completes and data is available
@@ -267,10 +267,20 @@ class Conference:
         """Validate that a submission is compatible with this conference."""
         errors = []
         
-        # Check if conference accepts this submission type (use candidate_kind for compatibility)
-        submission_type_to_check = submission.candidate_kind if submission.candidate_kind else submission.kind
-        if not self.accepts_submission_type(submission_type_to_check):
-            errors.append(f"Conference {self.id} does not accept {submission_type_to_check.value} submissions")
+        # Check if conference accepts any of the candidate submission types
+        candidate_types = submission.candidate_kinds if submission.candidate_kinds else [submission.kind]
+        
+        # Find first compatible type
+        compatible_type = None
+        for submission_type in candidate_types:
+            if self.accepts_submission_type(submission_type):
+                compatible_type = submission_type
+                break
+        
+        if compatible_type is None:
+            # No compatible type found
+            types_str = ", ".join([t.value for t in candidate_types])
+            errors.append(f"Conference {self.id} does not accept any of the requested submission types: {types_str}")
         
         return errors
     

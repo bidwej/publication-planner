@@ -12,7 +12,19 @@ from src.core.constants import (
 # and should be configurable by users. Only algorithm constants remain in constants.py.
 
 def calculate_penalty_score(schedule: Dict[str, date], config: Config) -> PenaltyBreakdown:
-    """Calculate penalty score for a schedule."""
+    """
+    Calculate penalty score for a schedule - SINGLE SOURCE OF TRUTH for all penalties.
+    
+    This is the only public function for penalty calculations. All other penalty
+    calculations in the system should call this function to ensure consistency.
+    
+    Args:
+        schedule: Dictionary mapping submission_id to start_date
+        config: Configuration object with penalty costs and constraints
+        
+    Returns:
+        PenaltyBreakdown with total and categorized penalty amounts
+    """
     if not schedule:
         return PenaltyBreakdown(
             total_penalty=0.0,
@@ -98,7 +110,7 @@ def _calculate_deadline_penalties(schedule: Dict[str, date], config: Config) -> 
         if end_date > deadline:
             days_late = (end_date - deadline).days
             # Use config penalty costs (project-specific) instead of constants
-            penalty_per_day = sub.penalty_cost_per_day or (config.penalty_costs or {}).get("default_mod_penalty_per_day", PENALTY_CONSTANTS.default_mod_penalty_per_day)
+            penalty_per_day = sub.penalty_cost_per_day or (config.penalty_costs or {}).get("default_mod_penalty_per_day", 1000.0)
             total_penalty += days_late * penalty_per_day
     
     return total_penalty
@@ -115,7 +127,7 @@ def _calculate_dependency_penalties(schedule: Dict[str, date], config: Config) -
         for dep_id in (sub.depends_on or []):
             if dep_id not in schedule:
                 # Missing dependency - use config penalty (project-specific)
-                monthly_penalty = (config.penalty_costs or {}).get("default_monthly_slip_penalty", PENALTY_CONSTANTS.default_monthly_slip_penalty)
+                monthly_penalty = (config.penalty_costs or {}).get("default_monthly_slip_penalty", 1000.0)
                 total_penalty += monthly_penalty
                 continue
             
@@ -168,7 +180,7 @@ def _calculate_resource_penalties(schedule: Dict[str, date], config: Config) -> 
         if load > max_concurrent:
             excess = load - max_concurrent
             # Use config penalty costs (project-specific) instead of constants
-            penalty_per_excess = (config.penalty_costs or {}).get("resource_violation_penalty", PENALTY_CONSTANTS.default_dependency_violation_penalty)
+            penalty_per_excess = (config.penalty_costs or {}).get("resource_violation_penalty", 200.0)
             total_penalty += excess * penalty_per_excess
     
     return total_penalty
@@ -316,7 +328,7 @@ def _calculate_slack_cost_penalties(schedule: Dict[str, date], config: Config) -
     Y_j = (config.penalty_costs or {}).get("default_full_year_deferral_penalty", 5000.0)
     
     # Calculate different missed opportunity penalties
-    A_j = (config.penalty_costs or {}).get("missed_abstract_penalty", PENALTY_CONSTANTS.missed_abstract_penalty)  # Missed abstract-only opportunity
+    A_j = (config.penalty_costs or {}).get("missed_abstract_penalty", 3000.0)  # Missed abstract-only opportunity
     P_missed = (config.penalty_costs or {}).get("missed_poster_penalty", 2000.0)  # Missed poster opportunity
     AP_missed = (config.penalty_costs or {}).get("missed_abstract_paper_penalty", 4000.0)  # Missed abstract+paper opportunity
     

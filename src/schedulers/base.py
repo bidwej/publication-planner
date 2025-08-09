@@ -291,17 +291,19 @@ class BaseScheduler(ABC):
             candidate_conferences = submission.candidate_conferences
         else:
             # None or empty candidate_conferences means try all appropriate conferences
-            # If candidate_kind is None, try all conferences that accept any submission type
-            if submission.candidate_kind is None:
+            # If candidate_kinds is None, try all conferences that accept any submission type
+            if submission.candidate_kinds is None:
                 # Open to any opportunity - find conferences that accept any submission type
                 for conf in self.conferences.values():
                     # Accept conference if it has any deadline (abstract, paper, poster)
                     if conf.deadlines:
                         candidate_conferences.append(conf.name)
             else:
-                # Use specific candidate_kind
+                # Use specific candidate_kinds
                 for conf in self.conferences.values():
-                    if submission.candidate_kind in conf.deadlines:
+                    # Check if any candidate_kinds are accepted by this conference
+                    candidate_types = submission.candidate_kinds if submission.candidate_kinds else [submission.kind]
+                    if any(ctype in conf.deadlines for ctype in candidate_types):
                         candidate_conferences.append(conf.name)
         
         if not candidate_conferences:
@@ -318,9 +320,9 @@ class BaseScheduler(ABC):
                     
             if conf:
                 # Determine what submission type to use
-                if submission.candidate_kind is not None:
-                    # Use specified candidate_kind
-                    submission_types_to_try = [submission.candidate_kind]
+                if submission.candidate_kinds is not None:
+                    # Use specified candidate_kinds in priority order
+                    submission_types_to_try = submission.candidate_kinds
                 else:
                     # Open to any opportunity - try in order of preference: poster, abstract, paper
                     submission_types_to_try = [SubmissionType.POSTER, SubmissionType.ABSTRACT, SubmissionType.PAPER]
@@ -342,11 +344,13 @@ class BaseScheduler(ABC):
                                     # This preserves the business requirement that abstracts come before papers
                                     if SubmissionType.ABSTRACT in conf.deadlines:
                                         submission.conference_id = conf.id
-                                        submission.candidate_kind = SubmissionType.ABSTRACT  # Submit as abstract first
+                                        submission.candidate_kinds = [SubmissionType.ABSTRACT]  # Submit as abstract first
                                         return
                                 else:
                                     submission.conference_id = conf.id
-                                    submission.candidate_kind = submission_type_to_check  # Set the chosen type
+                                    # Update candidate_kinds to reflect the chosen type
+                                    if submission.candidate_kinds is None:
+                                        submission.candidate_kinds = [submission_type_to_check]
                                     return
     
     def _check_conference_compatibility_for_type(self, conference: 'Conference', submission_type: SubmissionType) -> bool:
@@ -364,11 +368,17 @@ class BaseScheduler(ABC):
         """Check if a submission is compatible with a conference based on the compatibility matrix."""
         from src.core.models import ConferenceType
         
-        # Use candidate_kind if available, otherwise use kind
-        submission_type_to_check = submission.candidate_kind if submission.candidate_kind else submission.kind
+        # Check if conference accepts any of the candidate submission types
+        candidate_types = submission.candidate_kinds if submission.candidate_kinds else [submission.kind]
         
-        # Check if conference accepts the submission type
-        if submission_type_to_check not in conference.deadlines:
+        # Try each candidate type in priority order
+        for submission_type in candidate_types:
+            if submission_type in conference.deadlines:
+                # Found a compatible type - conference accepts this submission type
+                submission_type_to_check = submission_type
+                break
+        else:
+            # No compatible type found
             return False
         
         # Check if conference is abstract-only (no paper deadline)
