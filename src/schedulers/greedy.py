@@ -43,8 +43,14 @@ class GreedyScheduler(BaseScheduler):
     def _find_earliest_valid_start(self, submission: Submission, schedule: Dict[str, date]) -> Optional[date]:
         """Find the earliest valid start date for a submission with comprehensive constraint validation."""
      
-        # Start with today
-        current_date = date.today()
+        # For work items (no conference), start with earliest start date if available
+        # For conference submissions, start with today
+        if submission.conference_id is None and submission.earliest_start_date:
+            # Work items should be scheduled at their intended start date
+            current_date = submission.earliest_start_date
+        else:
+            # Conference submissions start with today
+            current_date = date.today()
         
         # Check dependencies
         if submission.depends_on:
@@ -53,8 +59,8 @@ class GreedyScheduler(BaseScheduler):
                     dep_end = self._get_end_date(schedule[dep_id], self.submissions[dep_id])
                     current_date = max(current_date, dep_end)
         
-        # Check earliest start date constraint
-        if submission.earliest_start_date:
+        # Check earliest start date constraint for conference submissions
+        if submission.conference_id and submission.earliest_start_date:
             current_date = max(current_date, submission.earliest_start_date)
         
         # Check deadline constraint
