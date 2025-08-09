@@ -1078,12 +1078,20 @@ When adding new features:
 - **Configuration Management**: Advanced configuration options
 - **Data Models**: Rich data structures for complex scenarios
 
+### ✅ Recently Implemented Features
+
+- **CSV Export**: Comprehensive CSV export functionality with multiple formats (schedule, metrics, deadlines, violations, penalties)
+- **Advanced Penalty Terms**: Sophisticated penalty calculations including SlackCost, conference compatibility, and dependency violations
+- **Quarterly Re-solve**: Dynamic rescheduling system with progress tracking and automated re-scheduling
+- **Type Safety**: Complete type annotations across all test files (49 files updated) for better code quality and IDE support
+- **PDF Export**: Professional PDF report generation with charts and analytics
+
 ### 🚧 Planned Features (Not Yet Implemented)
 
-- **MILP Optimization**: Mathematical optimization using PuLP / OR‑Tools
-- **Quarterly Re-solve**: Automated re-scheduling as real-world dates slip
-- **Advanced Penalty Terms**: SlackCost, VenuePenalty, FDA delay terms
-- **CSV Export**: Direct CSV export functionality (partially implemented)
+- **MILP Optimization**: Mathematical optimization using PuLP / OR‑Tools (partially implemented, needs fallback fix)
+- **NetworkX Integration**: Advanced dependency graph analysis using NetworkX library
+- **Machine Learning Features**: ML-based optimization recommendations using scikit-learn
+- **Excel Export**: Direct Excel export functionality (.xlsx format)
 
 ## Quick Start
 
