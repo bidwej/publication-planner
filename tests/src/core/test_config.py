@@ -125,8 +125,8 @@ class TestLoadSubmissions:
     
     def test_load_valid_submissions(self, test_data_dir) -> None:
         """Test loading valid submission data."""
-        mods_path = Path(test_data_dir) / 'mods.json'
-        papers_path = Path(test_data_dir) / 'papers.json'
+        mods_path = Path(test_data_dir) / 'mod_papers.json'
+        papers_path = Path(test_data_dir) / 'ed_papers.json'
         
         # Create minimal conferences for testing
         conferences = [
@@ -158,8 +158,8 @@ class TestLoadSubmissions:
     
     def test_submission_attributes(self, test_data_dir) -> None:
         """Test that submissions have all required attributes."""
-        mods_path = Path(test_data_dir) / 'mods.json'
-        papers_path = Path(test_data_dir) / 'papers.json'
+        mods_path = Path(test_data_dir) / 'mod_papers.json'
+        papers_path = Path(test_data_dir) / 'ed_papers.json'
         
         conferences = [
             Conference(
@@ -197,8 +197,8 @@ class TestLoadSubmissions:
     
     def test_paper_dependencies_conversion(self, test_data_dir) -> None:
         """Test that paper dependencies are correctly converted."""
-        mods_path = Path(test_data_dir) / 'mods.json'
-        papers_path = Path(test_data_dir) / 'papers.json'
+        mods_path = Path(test_data_dir) / 'mod_papers.json'
+        papers_path = Path(test_data_dir) / 'ed_papers.json'
         
         conferences = [
             Conference(

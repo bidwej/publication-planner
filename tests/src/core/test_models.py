@@ -135,9 +135,9 @@ class TestSubmission:
             min_paper_lead_time_days=90,
             max_concurrent_submissions=3,
             priority_weights={
-                "paper_paper": 2.0,
+                "paper": 1.0,
                 "abstract": 0.5,
-                "engineering_paper": 1.5
+                "engineering_paper": 2.0
             }
         )
         
@@ -146,9 +146,10 @@ class TestSubmission:
             id="test-pap",
             title="Test Paper",
             kind=SubmissionType.PAPER,
-            conference_id="conf1"
+            conference_id="conf1",
+            author="test"
         )
-        assert paper_submission.get_priority_score(config) == 2.0
+        assert paper_submission.get_priority_score(config) == 1.0
         
         # Test engineering paper
         eng_paper: Submission = Submission(
@@ -156,16 +157,18 @@ class TestSubmission:
             title="Engineering Paper",
             kind=SubmissionType.PAPER,
             conference_id="conf1",
+            author="test",
             engineering=True
         )
-        assert eng_paper.get_priority_score(config) == 3.0  # 2.0 * 1.5
+        assert eng_paper.get_priority_score(config) == 2.0  # 1.0 * 2.0
         
         # Test abstract
         abstract_submission: Submission = Submission(
             id="test-abs",
             title="Test Abstract",
             kind=SubmissionType.ABSTRACT,
-            conference_id="conf1"
+            conference_id="conf1",
+            author="test"
         )
         assert abstract_submission.get_priority_score(config) == 0.5
 

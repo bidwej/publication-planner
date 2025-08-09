@@ -97,13 +97,13 @@ def _map_mod_data(json_data: Dict) -> Dict:
         "kind": SubmissionType.PAPER,  # Mods are papers (PCCP research papers)
         "author": author,  # Explicit author field
         "conference_id": None,  # No pre-assigned conference
+        "candidate_conferences": json_data.get("candidate_conferences", []),  # Map candidate conferences
         "depends_on": json_data.get("depends_on", []),
         "draft_window_months": json_data.get("draft_window_months", 2),  # Use actual draft window
         "lead_time_from_parents": json_data.get("lead_time_from_parents", 0),
         "penalty_cost_per_day": json_data.get("penalty_cost_per_month", 1000.0) / 30.0,
         "engineering": json_data.get("engineering", False),
         "earliest_start_date": engineering_ready_date,
-        "candidate_conferences": json_data.get("candidate_conferences", []),
         # Unified schema fields
         "engineering_ready_date": engineering_ready_date,
         "free_slack_months": json_data.get("free_slack_months"),
