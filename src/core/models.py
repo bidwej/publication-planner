@@ -63,9 +63,7 @@ class Submission:
             self.depends_on = []
         if self.candidate_conferences is None:
             self.candidate_conferences = []
-        # Set author from ID pattern if not explicitly provided (for backward compatibility)
-        if self.author is None:
-            self.author = self._derive_author_from_id()
+
     
     def validate(self) -> List[str]:
         """Validate submission and return list of errors."""
@@ -90,35 +88,24 @@ class Submission:
             errors.append("Free slack months cannot be negative")
         return errors
     
-    def _derive_author_from_id(self) -> SubmissionSource:
-        """Derive author from ID pattern (for backward compatibility)."""
-        if self.id.startswith('mod_'):
-            return SubmissionSource.PCCP
-        elif self.id.startswith('J'):
-            return SubmissionSource.ED
-        else:
-            return SubmissionSource.UNKNOWN
+
     
-    def get_author(self) -> SubmissionSource:
-        """Get the author/source of this submission."""
-        return self.author or SubmissionSource.UNKNOWN
+    def get_author(self) -> str:
+        """Get the author of this submission."""
+        return self.author or "unknown"
     
     def get_priority_score(self, config: 'Config') -> float:
         """Calculate priority score based on config weights."""
         if not config.priority_weights:
             return 1.0
         
-        # Base weight from submission type and author
-        if self.kind == SubmissionType.PAPER:
-            author = self.get_author()
-            if author == SubmissionSource.PCCP:
-                type_key = "pccp_paper"  # PCCP research papers
-            elif author == SubmissionSource.ED:
-                type_key = "ed_paper"   # Ed's suggested papers
-            else:
-                type_key = "paper"      # Generic papers
+        # For abstracts that are required for papers, inherit the paper's priority
+        if self.kind == SubmissionType.ABSTRACT and self._is_required_abstract(config):
+            # Required abstracts get paper priority, not abstract priority
+            type_key = "paper"
         else:
-            type_key = self.kind.value
+            # Normal priority based on submission type
+            type_key = self.kind.value  # "paper", "abstract", etc.
             
         base_weight = config.priority_weights.get(type_key, 1.0)
         
@@ -128,6 +115,25 @@ class Submission:
             base_weight *= engineering_bonus
         
         return base_weight
+    
+    def _is_required_abstract(self, config: 'Config') -> bool:
+        """Check if this abstract is required for a paper submission."""
+        if self.kind != SubmissionType.ABSTRACT:
+            return False
+            
+        # Check if this abstract ID matches the pattern for required abstracts
+        # Required abstracts have IDs like "paper1-abs-conf1"
+        if '-abs-' not in self.id:
+            return False
+            
+        # Find if there's a corresponding paper that depends on this abstract
+        for submission in config.submissions:
+            if (submission.kind == SubmissionType.PAPER and 
+                submission.depends_on and 
+                self.id in submission.depends_on):
+                return True
+                
+        return False
     
     def get_duration_days(self, config: 'Config') -> int:
         """Calculate the duration in days for this submission."""

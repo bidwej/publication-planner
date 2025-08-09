@@ -9,7 +9,7 @@ from dateutil.parser import parse as parse_date
 
 from src.core.models import (
     Conference, ConferenceRecurrence, ConferenceType, Config, Submission, 
-    SubmissionType, SubmissionSource, create_abstract_submission, generate_abstract_id
+    SubmissionType, create_abstract_submission, generate_abstract_id
 )
 
 # Regex patterns for robust ID matching
@@ -63,8 +63,7 @@ def _map_paper_data(json_data: Dict) -> Dict:
     depends_on = json_data.get("depends_on", [])
     
     # Parse author field
-    author_str = json_data.get("author", "ed")
-    author = SubmissionSource(author_str) if author_str in [s.value for s in SubmissionSource] else SubmissionSource.ED
+    author = json_data.get("author", "ed")
     
     return {
         "id": json_data["id"],
@@ -90,8 +89,7 @@ def _map_mod_data(json_data: Dict) -> Dict:
         engineering_ready_date = parse_date(json_data["engineering_ready_date"]).date()
     
     # Parse author field
-    author_str = json_data.get("author", "pccp")
-    author = SubmissionSource(author_str) if author_str in [s.value for s in SubmissionSource] else SubmissionSource.PCCP
+    author = json_data.get("author", "pccp")
     
     return {
         "id": json_data['id'],  # Use ID as-is from JSON (already has mod_ prefix)

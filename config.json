@@ -6,8 +6,6 @@
   "priority_weights": {
     "engineering_paper": 2.0,
     "medical_paper": 1.0,
-    "pccp_paper": 1.5,
-    "ed_paper": 1.0,
     "paper": 1.0,
     "abstract": 0.5
   },
