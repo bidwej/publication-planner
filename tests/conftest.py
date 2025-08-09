@@ -53,6 +53,29 @@ def create_mock_submission(
     )
 
 
+def create_flexible_submission(
+    submission_id: str,
+    title: str,
+    candidate_conferences: Optional[List[str]] = None,
+    candidate_kind: Optional[SubmissionType] = None,
+    **kwargs: Any
+) -> Submission:
+    """Create a submission for testing flexible assignment behavior."""
+    # Set default author if not provided
+    if 'author' not in kwargs:
+        kwargs['author'] = "test"
+    
+    return Submission(
+        id=submission_id,
+        title=title,
+        kind=SubmissionType.PAPER,  # Base type
+        conference_id=None,  # No assigned conference
+        candidate_conferences=candidate_conferences,
+        candidate_kind=candidate_kind,
+        **kwargs
+    )
+
+
 def create_mock_conference(
     conference_id: str, 
     name: str, 

@@ -123,11 +123,99 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ## Core Concepts
 
-### Submission Types
-- **Papers**: Full research papers with extended timelines
-- **Abstracts**: Conference abstracts with shorter timelines  
-- **Posters**: Poster presentations with minimal timelines
-- **Mods**: Modified versions of existing papers
+### Submission Structure
+The system uses a dual-type approach for maximum flexibility:
+
+#### Base Types (`kind`)
+- **Papers**: Both mods and ed papers are classified as papers in the data model
+- **Abstracts**: Standalone abstract submissions
+- **Posters**: Poster presentation submissions
+
+#### Submission Classification
+- **Mods**: PCCP research papers (author: "pccp") - technical/engineering focus
+- **Ed Papers**: Ed's suggested papers (author: "ed") - various focus areas
+- **Both are `kind: PAPER`** in the data model for unified handling
+
+#### Conference Matching (`candidate_kind` + `candidate_conferences`)
+The system determines what type of submission opportunity to pursue:
+
+1. **Specific Preference** (`candidate_kind` specified):
+   - If `candidate_kind: "paper"` → Only interested in paper opportunities
+   - If `candidate_kind: "abstract"` → Only interested in abstract opportunities  
+   - If `candidate_kind: "poster"` → Only interested in poster opportunities
+
+2. **Open to Any Opportunity** (`candidate_kind` not specified):
+   - Defaults to base `kind` (usually "paper")
+   - Will consider any appropriate submission type the conference accepts
+
+3. **Conference Selection** (`candidate_conferences`):
+   - **Specific conferences**: `["ICML", "MICCAI"]` → Only try these conferences
+   - **Empty list**: `[]` → Try any appropriate conference (medical or engineering)
+   - **Not specified**: `null` → Invalid (must be specified, even if empty)
+
+#### Conference Classification System
+
+The system automatically classifies conferences based on their deadline structure:
+
+- **ABSTRACT_ONLY**: Conference accepts only abstracts (has abstract deadline, no paper deadline)
+- **PAPER_ONLY**: Conference accepts only papers (has paper deadline, no abstract deadline)  
+- **ABSTRACT_OR_PAPER**: Conference accepts either abstracts OR papers (has both deadlines, allows direct submission)
+- **ABSTRACT_AND_PAPER**: Conference requires abstract before paper (explicitly configured)
+- **ALL_TYPES**: Conference accepts abstracts, papers, and posters
+
+**Key Point**: Having both abstract and paper deadlines does NOT automatically mean abstract is required before paper. Most conferences with both deadlines accept direct paper submissions.
+
+**Explicit Configuration**: To specify that a conference requires abstract before paper, add `"requires_abstract_before_paper": true` to the conference JSON data.
+
+#### Conference Matching Logic
+- **Conference rules determine opportunities**: System respects what each conference actually accepts
+- **Smart dependency creation**: Only creates abstract→paper dependencies when explicitly required
+- **Preference respected**: If you specify abstract-only, won't pursue paper opportunities  
+- **Flexible when open**: Empty preferences allow system to find best available opportunity
+
+#### Practical Examples
+
+**Example 1: Specific Paper Goal**
+```json
+{
+  "id": "my_paper",
+  "kind": "paper",
+  "candidate_kind": "paper",
+  "candidate_conferences": ["ICML", "MICCAI"]
+}
+```
+→ Only pursue paper opportunities at ICML or MICCAI. If ICML requires abstract+paper, system will create abstract dependency.
+
+**Example 2: Abstract-Only Interest** 
+```json
+{
+  "id": "quick_abstract", 
+  "kind": "paper",
+  "candidate_kind": "abstract",
+  "candidate_conferences": ["RSNA", "IFAR"]
+}
+```
+→ Only pursue abstract opportunities. Won't consider paper options even if available.
+
+**Example 3: Open to Any Opportunity**
+```json
+{
+  "id": "flexible_submission",
+  "kind": "paper", 
+  "candidate_conferences": []
+}
+```
+→ Try any appropriate conference (medical/engineering). Accept abstract-only, paper-only, or abstract+paper opportunities.
+
+**Example 4: Current Mods/Papers in Data**
+```json
+{
+  "id": "mod_1",
+  "kind": "paper",
+  "candidate_conferences": []
+}
+```
+→ Since `candidate_kind` not specified, defaults to "paper". Empty `candidate_conferences` means try any appropriate conference.
 
 ### Conference Types
 - **Medical/Clinical**: Healthcare-focused conferences (e.g., SAGES, DDW)

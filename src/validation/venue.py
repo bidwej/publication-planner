@@ -130,17 +130,20 @@ def _validate_conference_submission_compatibility(schedule: Dict[str, date], con
             })
             continue
         
-        # Check if conference accepts this submission type
-        if not conf.accepts_submission_type(sub.kind):
-            submission_type_str = conf.submission_types.value if conf.submission_types else "unknown"
-            violations.append({
-                "submission_id": sid,
-                "description": f"Submission {sid} ({sub.kind.value}) not accepted by conference {sub.conference_id} ({submission_type_str})",
-                "severity": "high",
-                "submission_type": sub.kind.value,
-                "conference_submission_type": submission_type_str
-            })
-            continue
+        # Check if conference accepts this submission type (use candidate_kind for compatibility)
+        if sub.candidate_kind is not None:
+            submission_type_to_check = sub.candidate_kind
+            if not conf.accepts_submission_type(submission_type_to_check):
+                submission_type_str = conf.submission_types.value if conf.submission_types else "unknown"
+                violations.append({
+                    "submission_id": sid,
+                    "description": f"Submission {sid} ({submission_type_to_check.value}) not accepted by conference {sub.conference_id} ({submission_type_str})",
+                    "severity": "high",
+                    "submission_type": submission_type_to_check.value,
+                    "conference_submission_type": submission_type_str
+                })
+                continue
+        # If candidate_kind is None, submission is open to any opportunity - skip this check
         
         compatible_submissions += 1
     
@@ -232,11 +235,14 @@ def _validate_venue_compatibility(submissions: Dict[str, Submission],
         if submission.kind == SubmissionType.ABSTRACT:
             # Abstracts are work items, validate against candidate conferences
             if submission.candidate_conferences:
-                for conf_id in submission.candidate_conferences:
-                    if conf_id in conferences:
-                        conf = conferences[conf_id]
-                        if not conf.accepts_submission_type(SubmissionType.ABSTRACT):
-                            raise ValueError(f"Abstract {sub_id} not compatible with conference {conf_id}")
+                # If candidate_kind is None, skip validation (open to any opportunity)
+                if submission.candidate_kind is not None:
+                    submission_type_to_check = submission.candidate_kind
+                    for conf_id in submission.candidate_conferences:
+                        if conf_id in conferences:
+                            conf = conferences[conf_id]
+                            if not conf.accepts_submission_type(submission_type_to_check):
+                                raise ValueError(f"Submission {sub_id} ({submission_type_to_check.value}) not compatible with conference {conf_id}")
             # Work items without candidate conferences are valid
         elif submission.kind == SubmissionType.PAPER:
             # Papers should have conference_id or candidate_conferences
@@ -244,15 +250,21 @@ def _validate_venue_compatibility(submissions: Dict[str, Submission],
                 if submission.conference_id not in conferences:
                     raise ValueError(f"Submission {sub_id} references unknown conference {submission.conference_id}")
                 conf = conferences[submission.conference_id]
-                if not conf.accepts_submission_type(SubmissionType.PAPER):
-                    raise ValueError(f"Submission {sub_id} not compatible with conference {submission.conference_id}")
+                # If candidate_kind is None, skip validation (open to any opportunity)
+                if submission.candidate_kind is not None:
+                    submission_type_to_check = submission.candidate_kind
+                    if not conf.accepts_submission_type(submission_type_to_check):
+                        raise ValueError(f"Submission {sub_id} ({submission_type_to_check.value}) not compatible with conference {submission.conference_id}")
             elif submission.candidate_conferences:
                 # Validate against candidate conferences
-                for conf_id in submission.candidate_conferences:
-                    if conf_id in conferences:
-                        conf = conferences[conf_id]
-                        if not conf.accepts_submission_type(SubmissionType.PAPER):
-                            raise ValueError(f"Submission {sub_id} not compatible with conference {conf_id}")
+                # If candidate_kind is None, skip validation (open to any opportunity)
+                if submission.candidate_kind is not None:
+                    submission_type_to_check = submission.candidate_kind
+                    for conf_id in submission.candidate_conferences:
+                        if conf_id in conferences:
+                            conf = conferences[conf_id]
+                            if not conf.accepts_submission_type(submission_type_to_check):
+                                raise ValueError(f"Submission {sub_id} ({submission_type_to_check.value}) not compatible with conference {conf_id}")
             else:
                 # Empty candidate_conferences means the submission can be assigned to any appropriate conference
                 # This is valid - the scheduler will assign the best available conference

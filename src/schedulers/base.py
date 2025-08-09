@@ -368,10 +368,18 @@ class BaseScheduler(ABC):
             candidate_conferences = submission.candidate_conferences
         else:
             # Empty candidate_conferences means try all appropriate conferences
-            # Get all conference names that accept this submission type
-            for conf in self.conferences.values():
-                if submission.kind in conf.deadlines:
-                    candidate_conferences.append(conf.name)
+            # If candidate_kind is None, try all conferences that accept any submission type
+            if submission.candidate_kind is None:
+                # Open to any opportunity - find conferences that accept any submission type
+                for conf in self.conferences.values():
+                    # Accept conference if it has any deadline (abstract, paper, poster)
+                    if conf.deadlines:
+                        candidate_conferences.append(conf.name)
+            else:
+                # Use specific candidate_kind
+                for conf in self.conferences.values():
+                    if submission.candidate_kind in conf.deadlines:
+                        candidate_conferences.append(conf.name)
         
         if not candidate_conferences:
             return
@@ -385,23 +393,49 @@ class BaseScheduler(ABC):
                     conf = c
                     break
                     
-            if conf and submission.kind in conf.deadlines:
-                # Check if we can meet the deadline
-                deadline = conf.deadlines[submission.kind]
-                duration = submission.get_duration_days(self.config)
-                latest_start = deadline - timedelta(days=duration)
+            if conf:
+                # Determine what submission type to use
+                if submission.candidate_kind is not None:
+                    # Use specified candidate_kind
+                    submission_types_to_try = [submission.candidate_kind]
+                else:
+                    # Open to any opportunity - try in order of preference: poster, abstract, paper
+                    submission_types_to_try = [SubmissionType.POSTER, SubmissionType.ABSTRACT, SubmissionType.PAPER]
                 
-                # Check if this conference is compatible
-                if self._check_conference_compatibility(submission, conf):
-                    submission.conference_id = conf.id
-                    return
+                # Try each submission type in order
+                for submission_type_to_check in submission_types_to_try:
+                    if submission_type_to_check in conf.deadlines:
+                        # Check if we can meet the deadline
+                        deadline = conf.deadlines[submission_type_to_check]
+                        duration = submission.get_duration_days(self.config)
+                        latest_start = deadline - timedelta(days=duration)
+                        
+                        # Check if this conference is compatible
+                        if self._check_conference_compatibility_for_type(submission, conf, submission_type_to_check):
+                            submission.conference_id = conf.id
+                            submission.candidate_kind = submission_type_to_check  # Set the chosen type
+                            return
+    
+    def _check_conference_compatibility_for_type(self, submission: Submission, conference: 'Conference', submission_type: SubmissionType) -> bool:
+        """Check if a submission is compatible with a conference for a specific submission type."""
+        from src.core.models import ConferenceType
+        
+        # Check if conference accepts the submission type
+        if submission_type not in conference.deadlines:
+            return False
+        
+        # Conference accepts this submission type, so it's compatible
+        return True
     
     def _check_conference_compatibility(self, submission: Submission, conference: 'Conference') -> bool:
         """Check if a submission is compatible with a conference based on the compatibility matrix."""
         from src.core.models import ConferenceType
         
+        # Use candidate_kind if available, otherwise use kind
+        submission_type_to_check = submission.candidate_kind if submission.candidate_kind else submission.kind
+        
         # Check if conference accepts the submission type
-        if submission.kind not in conference.deadlines:
+        if submission_type_to_check not in conference.deadlines:
             return False
         
         # Check if conference is abstract-only (no paper deadline)

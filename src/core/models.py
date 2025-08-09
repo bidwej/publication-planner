@@ -64,9 +64,8 @@ class Submission:
             self.depends_on = []
         if self.candidate_conferences is None:
             self.candidate_conferences = []
-        # If candidate_kind is not specified, default to the base kind
-        if self.candidate_kind is None:
-            self.candidate_kind = self.kind
+        # If candidate_kind is not specified, leave it as None
+        # This means "open to any available opportunity" - will be determined by conference capabilities
 
     
     def validate(self) -> List[str]:
@@ -186,6 +185,7 @@ class Conference:
     recurrence: ConferenceRecurrence
     deadlines: Dict[SubmissionType, date]
     submission_types: Optional[ConferenceSubmissionType] = None  # What types of submissions are accepted
+    requires_abstract_before_paper_explicit: Optional[bool] = None  # Explicit requirement for abstract before paper
     
     def __post_init__(self):
         # Auto-determine submission type based on deadlines if not specified
@@ -198,16 +198,18 @@ class Conference:
         has_paper = SubmissionType.PAPER in self.deadlines
         has_poster = SubmissionType.POSTER in self.deadlines
         
-        if has_abstract and has_paper:
-            return ConferenceSubmissionType.ABSTRACT_AND_PAPER
+        if has_abstract and has_paper and has_poster:
+            return ConferenceSubmissionType.ALL_TYPES
+        elif has_abstract and has_paper:
+            # Default to ABSTRACT_OR_PAPER unless explicitly specified as requiring abstract before paper
+            # This means the conference accepts either abstracts OR papers, not necessarily both in sequence
+            return ConferenceSubmissionType.ABSTRACT_OR_PAPER
         elif has_abstract and not has_paper:
             return ConferenceSubmissionType.ABSTRACT_ONLY
         elif has_paper and not has_abstract:
             return ConferenceSubmissionType.PAPER_ONLY
         elif has_poster and not has_abstract and not has_paper:
             return ConferenceSubmissionType.POSTER_ONLY
-        elif has_abstract and has_paper and has_poster:
-            return ConferenceSubmissionType.ALL_TYPES
         else:
             return ConferenceSubmissionType.ABSTRACT_OR_PAPER
     
@@ -229,6 +231,11 @@ class Conference:
     
     def requires_abstract_before_paper(self) -> bool:
         """Check if conference requires abstract submission before paper submission."""
+        # Use explicit specification if available
+        if self.requires_abstract_before_paper_explicit is not None:
+            return self.requires_abstract_before_paper_explicit
+        
+        # Fall back to checking submission type (only ABSTRACT_AND_PAPER requires abstract before paper)
         return self.submission_types == ConferenceSubmissionType.ABSTRACT_AND_PAPER
     
     def get_required_dependencies(self, submission_type: SubmissionType) -> List[str]:
@@ -248,9 +255,10 @@ class Conference:
         """Validate that a submission is compatible with this conference."""
         errors = []
         
-        # Check if conference accepts this submission type
-        if not self.accepts_submission_type(submission.kind):
-            errors.append(f"Conference {self.id} does not accept {submission.kind.value} submissions")
+        # Check if conference accepts this submission type (use candidate_kind for compatibility)
+        submission_type_to_check = submission.candidate_kind if submission.candidate_kind else submission.kind
+        if not self.accepts_submission_type(submission_type_to_check):
+            errors.append(f"Conference {self.id} does not accept {submission_type_to_check.value} submissions")
         
         # Check if submission has required dependencies
         if submission.kind == SubmissionType.PAPER and self.requires_abstract_before_paper():

@@ -43,7 +43,8 @@ def _map_conference_data(json_data: Dict) -> Dict:
         "name": json_data["name"],
         "conf_type": ConferenceType(json_data.get("conference_type", "MEDICAL")),
         "recurrence": ConferenceRecurrence(json_data.get("recurrence", "annual")),
-        "deadlines": _build_deadlines_dict(json_data)
+        "deadlines": _build_deadlines_dict(json_data),
+        "requires_abstract_before_paper_explicit": json_data.get("requires_abstract_before_paper")
     }
 
 
@@ -75,6 +76,7 @@ def _map_paper_data(json_data: Dict) -> Dict:
         "draft_window_months": json_data.get("draft_window_months", 3),
         "lead_time_from_parents": json_data.get("lead_time_from_parents", 0),
         "candidate_conferences": json_data.get("candidate_conferences", []),
+        "candidate_kind": SubmissionType(json_data["candidate_kind"]) if json_data.get("candidate_kind") else None,  # Preferred submission type
         # Unified schema fields
         "engineering_ready_date": parse_date(json_data["engineering_ready_date"]).date() if json_data.get("engineering_ready_date") else None,
         "free_slack_months": json_data.get("free_slack_months", 1),
@@ -98,6 +100,7 @@ def _map_mod_data(json_data: Dict) -> Dict:
         "author": author,  # Explicit author field
         "conference_id": None,  # No pre-assigned conference
         "candidate_conferences": json_data.get("candidate_conferences", []),  # Map candidate conferences
+        "candidate_kind": SubmissionType(json_data["candidate_kind"]) if json_data.get("candidate_kind") else None,  # Preferred submission type
         "depends_on": json_data.get("depends_on", []),
         "draft_window_months": json_data.get("draft_window_months", 2),  # Use actual draft window
         "lead_time_from_parents": json_data.get("lead_time_from_parents", 0),

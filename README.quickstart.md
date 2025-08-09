@@ -195,7 +195,13 @@ The system enforces comprehensive academic scheduling constraints:
 - **Deadline Compliance**: All submissions must meet conference deadlines
 - **Dependencies**: Papers may require corresponding abstracts
 - **Resource Limits**: Maximum concurrent submissions (default: 2)
-- **Conference Compatibility**: Paper type must match conference type
+- **Conference Compatibility**: Submission preferences must match conference opportunities
+
+### Submission Types & Preferences
+- **Mods & Ed Papers**: Both are papers in the data model with unified handling
+- **Conference Preference**: Use `candidate_kind` to specify preferred submission type (paper/abstract/poster)
+- **Conference Selection**: Use `candidate_conferences` to specify target conferences (empty = any appropriate)
+- **Smart Matching**: System respects preferences while following conference rules
 
 ### Advanced Features
 - **Working Days Only**: Optional business day restriction

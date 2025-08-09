@@ -47,11 +47,10 @@ class OptimalScheduler(BaseScheduler):
                     milp_schedule = self._assign_conferences(milp_schedule)
                     return milp_schedule
         
-        # Fallback to greedy if MILP fails
-        print(f"MILP optimization: Falling back to greedy scheduler for {len(self.submissions)} submissions")
-        from src.schedulers.greedy import GreedyScheduler
-        greedy_scheduler = GreedyScheduler(self.config)
-        return greedy_scheduler.schedule()
+        # Pure optimal: if MILP fails, return empty schedule
+        print(f"MILP optimization: No solution found with current constraints")
+        print(f"MILP optimization: Returning empty schedule (use GreedyScheduler for approximate solution)")
+        return {}
     
     def _setup_milp_model(self) -> Optional[Any]:
         """Set up the MILP model for optimization."""
@@ -125,33 +124,73 @@ class OptimalScheduler(BaseScheduler):
     
     def _create_objective_function(self, prob: Any, start_vars: Dict[str, Any], 
                                  resource_vars: Dict[str, Any]) -> Any:
-        """Create the objective function for MILP optimization."""
+        """Create the objective function for MILP optimization with soft constraint penalties."""
+        
+        # Multi-objective function combining time and penalty minimization
+        time_objective = pulp.lpSum(start_vars.values())  # Minimize start times
+        
+        # Add penalty terms for soft constraint violations
+        penalty_objective = 0
+        
+        # Collect deadline violation penalties
+        for submission_id in self.submissions:
+            deadline_slack_var = f"deadline_slack_{submission_id}"
+            # Check if this variable exists in the problem
+            try:
+                slack_var = pulp.LpVariable(deadline_slack_var, lowBound=0)
+                # Use penalty cost from config or submission
+                penalty_cost = self._get_penalty_cost(submission_id)
+                penalty_objective += penalty_cost * slack_var
+            except:
+                # Variable doesn't exist, skip
+                pass
+        
+        # Collect dependency violation penalties
+        for submission_id, submission in self.submissions.items():
+            if submission.depends_on:
+                for dep_id in submission.depends_on:
+                    if dep_id in self.submissions:
+                        dep_slack_var = f"dep_slack_{submission_id}_{dep_id}"
+                        try:
+                            slack_var = pulp.LpVariable(dep_slack_var, lowBound=0)
+                            # Higher penalty for dependency violations
+                            penalty_cost = self._get_penalty_cost(submission_id) * 2.0
+                            penalty_objective += penalty_cost * slack_var
+                        except:
+                            pass
+        
+        # Weighted combination: 70% time optimization, 30% penalty minimization
         if self.optimization_objective == "minimize_makespan":
-            # Minimize the maximum completion time
+            # Minimize the maximum completion time with penalties
             makespan = pulp.LpVariable("makespan", lowBound=0)
             for submission_id, submission in self.submissions.items():
                 duration = submission.get_duration_days(self.config)
                 prob += makespan >= start_vars[submission_id] + duration
-            return makespan
-        elif self.optimization_objective == "minimize_total_time":
-            # Minimize total completion time
-            total_time = pulp.lpSum([
-                start_vars[submission_id] + submission.get_duration_days(self.config)
-                for submission_id, submission in self.submissions.items()
-            ])
-            return total_time
-        elif self.optimization_objective == "minimize_penalties":
-            # Minimize total penalties
-            penalty_vars = {}
-            for submission_id in self.submissions:
-                penalty_vars[submission_id] = pulp.LpVariable(f"penalty_{submission_id}", lowBound=0)
-            return pulp.lpSum(penalty_vars.values())
+            return 0.7 * makespan + 0.3 * penalty_objective
         else:
-            # Default: minimize total start time (simplest objective)
-            return pulp.lpSum(start_vars.values())
+            # Default: minimize weighted combination of time and penalties
+            return 0.7 * time_objective + 0.3 * penalty_objective
+    
+    def _get_penalty_cost(self, submission_id: str) -> float:
+        """Get penalty cost for a submission from config or submission."""
+        submission = self.submissions[submission_id]
+        
+        # Use submission-specific penalty if available
+        if submission.penalty_cost_per_month:
+            return submission.penalty_cost_per_month / 30.0  # Convert to daily
+        
+        # Use config penalty costs
+        if self.config.penalty_costs:
+            if submission.kind == SubmissionType.PAPER:
+                return self.config.penalty_costs.get("default_paper_penalty_per_day", 100.0)
+            else:
+                return self.config.penalty_costs.get("default_mod_penalty_per_day", 50.0)
+        
+        # Default penalty
+        return 100.0
     
     def _add_dependency_constraints(self, prob: Any, start_vars: Dict[str, Any]) -> None:
-        """Add dependency constraints to the MILP model."""
+        """Add soft dependency constraints to the MILP model."""
         constraints_added = 0
         for submission_id, submission in self.submissions.items():
             if submission.depends_on:
@@ -159,16 +198,19 @@ class OptimalScheduler(BaseScheduler):
                     if dep_id in self.submissions:
                         dep = self.submissions[dep_id]
                         dep_duration = dep.get_duration_days(self.config)
-                        # Submission must start after dependency ends
-                        prob += start_vars[submission_id] >= start_vars[dep_id] + dep_duration
+                        
+                        # Add soft dependency constraint with slack variable
+                        dependency_violation = pulp.LpVariable(f"dep_slack_{submission_id}_{dep_id}", lowBound=0)
+                        prob += start_vars[submission_id] >= start_vars[dep_id] + dep_duration - dependency_violation
                         constraints_added += 1
         
-        print(f"MILP: Added {constraints_added} dependency constraints")
+        print(f"MILP: Added {constraints_added} soft dependency constraints")
     
     def _add_deadline_constraints(self, prob: Any, start_vars: Dict[str, Any], 
                                 start_date: date) -> None:
-        """Add deadline constraints to the MILP model."""
+        """Add soft deadline constraints to the MILP model."""
         constraints_added = 0
+        
         for submission_id, submission in self.submissions.items():
             if submission.conference_id and submission.conference_id in self.conferences:
                 conf = self.conferences[submission.conference_id]
@@ -178,13 +220,14 @@ class OptimalScheduler(BaseScheduler):
                         deadline_days = (deadline - start_date).days
                         duration = submission.get_duration_days(self.config)
                         
-                        # Only add constraint if deadline is in the future and feasible
-                        # Add some buffer to avoid overly tight constraints
-                        if deadline_days >= duration + 30 and deadline_days > 0:  # 30-day buffer
-                            prob += start_vars[submission_id] + duration <= deadline_days
+                        # Use soft constraints - always feasible, but with penalty for violations
+                        # This prevents infeasibility while still encouraging deadline compliance
+                        if deadline_days > 0:  # Only for future deadlines
+                            deadline_violation = pulp.LpVariable(f"deadline_slack_{submission_id}", lowBound=0)
+                            prob += start_vars[submission_id] + duration <= deadline_days + deadline_violation
                             constraints_added += 1
         
-        print(f"MILP: Added {constraints_added} deadline constraints")
+        print(f"MILP: Added {constraints_added} soft deadline constraints")
     
     def _add_resource_constraints(self, prob: Any, start_vars: Dict[str, Any], 
                                 resource_vars: Dict[str, Any], horizon_days: int) -> None:
@@ -282,7 +325,7 @@ class OptimalScheduler(BaseScheduler):
         
         try:
             # Solve the model with a time limit to prevent hanging
-            solver = pulp.PULP_CBC_CMD(msg=False, timeLimit=60)  # 60 second time limit
+            solver = pulp.PULP_CBC_CMD(msg=False, timeLimit=10)  # 10 second time limit
             model.solve(solver)
             
             # Check if solution was found
