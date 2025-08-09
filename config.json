@@ -30,8 +30,8 @@
   "blackout_dates": [],
   "data_files": {
     "conferences": "data/conferences.json",
-    "mods": "data/mods.json",
-    "papers": "data/papers.json",
+    "mods": "data/mod_papers.json",
+    "papers": "data/ed_papers.json",
     "blackouts": "data/blackout.json"
   }
 }
