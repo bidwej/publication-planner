@@ -4,6 +4,7 @@ from typing import Dict, Any
 from datetime import date
 
 from src.core.models import Config
+from src.core.dates import calculate_schedule_duration
 
 
 def analyze_schedule_with_scoring(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
@@ -20,21 +21,8 @@ def analyze_schedule_with_scoring(schedule: Dict[str, date], config: Config) -> 
 
 def _calculate_schedule_span(schedule: Dict[str, date]) -> int:
     """Calculate the span of the schedule in days."""
-    if not schedule:
-        return 0
-    
-    start_dates = []
-    for date_val in schedule.values():
-        if isinstance(date_val, str):
-            from datetime import datetime
-            start_dates.append(datetime.strptime(date_val, "%Y-%m-%d").date())
-        else:
-            start_dates.append(date_val)
-    
-    if not start_dates:
-        return 0
-    
-    return (max(start_dates) - min(start_dates)).days
+    # Use the centralized schedule duration calculation
+    return calculate_schedule_duration(schedule)
 
 
 def _calculate_average_daily_load(schedule: Dict[str, date], config: Config) -> float:

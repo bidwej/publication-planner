@@ -8,11 +8,11 @@ from datetime import date
 from src.core.config import load_config
 from src.core.models import Config, SchedulerStrategy, ValidationResult, ScoringResult, ScheduleResult, ScheduleSummary, ScheduleMetrics
 from src.core.constants import QUALITY_CONSTANTS
+from src.core.dates import calculate_schedule_duration
 from src.scoring.quality import calculate_quality_score
 from src.scoring.penalties import calculate_penalty_score
 from src.scoring.efficiency import calculate_efficiency_score, calculate_efficiency_resource, calculate_efficiency_timeline
 from src.validation.schedule import validate_schedule_constraints, validate_schedule
-from src.scoring.aggregator import calculate_schedule_aggregation
 from src.schedulers.base import BaseScheduler
 # Import scheduler implementations to register them
 from src.schedulers.greedy import GreedyScheduler
@@ -173,7 +173,23 @@ class Planner:
         Dict[str, Any]
             Dictionary containing various schedule metrics
         """
-        return calculate_schedule_aggregation(schedule, self.config)
+        # Call the three scoring functions directly
+        penalty_breakdown = calculate_penalty_score(schedule, self.config)
+        quality_score = calculate_quality_score(schedule, self.config)
+        efficiency_score = calculate_efficiency_score(schedule, self.config)
+        
+        # Add basic schedule statistics using shared utility
+        total_submissions = len(schedule)
+        duration_days = calculate_schedule_duration(schedule)
+        
+        return {
+            "total_submissions": total_submissions,
+            "duration_days": duration_days,
+            "penalty_score": penalty_breakdown.total_penalty,
+            "quality_score": quality_score,
+            "efficiency_score": efficiency_score,
+            "penalty_breakdown": penalty_breakdown
+        }
     
     def get_comprehensive_result(self, schedule: Dict[str, date], strategy: SchedulerStrategy) -> ScheduleResult:
         """
@@ -230,7 +246,7 @@ class Planner:
         if schedule:
             start_date = min(schedule.values())
             end_date = max(schedule.values())
-            schedule_span = (end_date - start_date).days
+            schedule_span = calculate_schedule_duration(schedule)
         else:
             start_date = None
             end_date = None

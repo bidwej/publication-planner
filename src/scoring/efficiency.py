@@ -9,6 +9,7 @@ from src.core.models import Config, EfficiencyMetrics, TimelineMetrics
 from src.core.constants import (
     EFFICIENCY_CONSTANTS, SCORING_CONSTANTS, REPORT_CONSTANTS, QUALITY_CONSTANTS
 )
+from src.core.dates import calculate_schedule_duration
 
 
 def calculate_efficiency_score(schedule: Dict[str, date], config: Config) -> float:
@@ -175,7 +176,7 @@ def calculate_efficiency_timeline(schedule: Dict[str, date], config: Config) -> 
     
     start_date = min(start_dates)
     end_date = max(end_dates)
-    duration_days = (end_date - start_date).days + 1
+    duration_days = calculate_schedule_duration({str(i): d for i, d in enumerate(start_dates)}) + 1
     
     # Calculate average daily load
     total_submissions = len(schedule)

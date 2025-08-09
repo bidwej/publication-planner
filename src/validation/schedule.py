@@ -8,6 +8,7 @@ from src.core.constants import QUALITY_CONSTANTS
 from src.validation.deadline import validate_deadline_constraints
 from src.validation.resources import validate_resources_constraints
 from src.validation.venue import validate_venue_constraints
+from src.core.dates import calculate_schedule_duration
 
 
 def validate_schedule_constraints(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
@@ -106,12 +107,7 @@ def validate_schedule_constraints(schedule: Dict[str, date], config: Config) -> 
     completion_rate = (scheduled_submissions / total_submissions * 100) if total_submissions > 0 else 100.0
     
     # Calculate duration
-    if schedule:
-        start_date = min(schedule.values())
-        end_date = max(schedule.values())
-        duration_days = (end_date - start_date).days
-    else:
-        duration_days = 0
+    duration_days = calculate_schedule_duration(schedule)
     
     # Calculate peak load
     daily_load = {}

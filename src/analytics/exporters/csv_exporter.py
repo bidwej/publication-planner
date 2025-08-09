@@ -9,6 +9,7 @@ import json
 from collections import defaultdict
 
 from src.core.models import Config, ScheduleSummary, ScheduleMetrics, SubmissionType
+from src.core.dates import calculate_schedule_duration
 from src.analytics.tables import (
     generate_schedule_table, generate_metrics_table, generate_deadline_table,
     generate_violations_table, generate_penalties_table
@@ -311,7 +312,7 @@ class CSVExporter:
         total_submissions = len(schedule)
         start_date = min(schedule.values())
         end_date = max(schedule.values())
-        schedule_span = (end_date - start_date).days
+        schedule_span = calculate_schedule_duration(schedule)
         
         # Calculate resource utilization
         daily_load = defaultdict(int)
@@ -451,7 +452,7 @@ class CSVExporter:
         total_submissions = len(schedule)
         start_date = min(schedule.values())
         end_date = max(schedule.values())
-        schedule_span = (end_date - start_date).days
+        schedule_span = calculate_schedule_duration(schedule)
         
         # Count by submission type
         submission_types = defaultdict(int)

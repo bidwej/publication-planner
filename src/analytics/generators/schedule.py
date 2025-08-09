@@ -13,6 +13,7 @@ from src.validation.resources import validate_resources_constraints
 from src.core.models import Config, ScheduleSummary, ScheduleMetrics, SubmissionType
 from src.analytics.tables import save_schedule_json, save_table_csv, save_metrics_json
 from src.analytics.exporters.csv_exporter import CSVExporter
+from src.core.dates import calculate_schedule_duration
 from src.scoring.efficiency import calculate_efficiency_score
 from src.scoring.penalties import calculate_penalty_score
 from src.scoring.quality import calculate_quality_score
@@ -76,7 +77,7 @@ def generate_schedule_summary(schedule: Dict[str, date], config: Config) -> Sche
     # Basic schedule metrics
     start_date = min(schedule.values())
     end_date = max(schedule.values())
-    schedule_span = (end_date - start_date).days
+    schedule_span = calculate_schedule_duration(schedule)
     
     # Calculate scores
     penalty = calculate_penalty_score(schedule, config)
@@ -114,7 +115,7 @@ def generate_schedule_metrics(schedule: Dict[str, date], config: Config) -> Sche
     # Calculate makespan
     start_date = min(schedule.values())
     end_date = max(schedule.values())
-    makespan = (end_date - start_date).days
+    makespan = calculate_schedule_duration(schedule)
     
     # Calculate utilization
     daily_load = {}

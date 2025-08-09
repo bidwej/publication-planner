@@ -6,6 +6,28 @@ from datetime import date, timedelta
 from src.core.models import Conference, SubmissionType
 
 
+def calculate_schedule_duration(schedule: Dict[str, date]) -> int:
+    """
+    Calculate the duration of a schedule in days.
+    
+    Parameters
+    ----------
+    schedule : Dict[str, date]
+        Mapping of submission_id to start_date
+        
+    Returns
+    -------
+    int
+        Duration in days (0 if schedule is empty)
+    """
+    if not schedule:
+        return 0
+    
+    start_date = min(schedule.values())
+    end_date = max(schedule.values())
+    return (end_date - start_date).days
+
+
 def is_working_day(check_date: date, blackout_dates: list[date] | None = None) -> bool:
     """
     Check if a date is a working day (not weekend and not blackout).
