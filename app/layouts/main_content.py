@@ -3,8 +3,9 @@ Main content layout component for the Paper Planner web application.
 """
 
 from dash import html, dcc
+from typing import Any
 
-def create_main_content():
+def create_main_content() -> Any:
     """Create the main content area with charts and tables."""
     return html.Main([
         # Dashboard Header

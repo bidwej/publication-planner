@@ -82,40 +82,12 @@ class BaseScheduler(ABC):
     
     def _validate_all_constraints(self, sub: Submission, start: date, schedule: Dict[str, date]) -> bool:
         """Validate all constraints for a submission at a given start date."""
+        # Use the centralized submission validation - it already calls all necessary validations
         from src.validation.submission import validate_submission_constraints
-        from src.validation.deadline import validate_deadline_constraints
-        from src.validation.resources import validate_resources_constraints
-        from src.validation.venue import validate_venue_constraints
-        from src.validation.schedule import validate_schedule_constraints
-
-        # Use the submission validation function for individual submission
-        if not validate_submission_constraints(sub, start, schedule, self.config):
-            return False
         
-        # Create temporary schedule with this submission
-        temp_schedule = {**schedule, sub.id: start}
-        
-        # Validate deadline constraints
-        deadline_result = validate_deadline_constraints(temp_schedule, self.config)
-        if not deadline_result.is_valid:
-            return False
-        
-        # Validate resource constraints
-        resource_result = validate_resources_constraints(temp_schedule, self.config)
-        if not resource_result.is_valid:
-            return False
-        
-        # Validate venue constraints
-        venue_result = validate_venue_constraints(temp_schedule, self.config)
-        if not venue_result["is_valid"]:
-            return False
-        
-        # Validate complete schedule constraints
-        schedule_result = validate_schedule_constraints(temp_schedule, self.config)
-        if not schedule_result["summary"]["overall_valid"]:
-            return False
-        
-        return True
+        # This single call handles deadline, dependency, and venue validation
+        # No need to duplicate validation calls
+        return validate_submission_constraints(sub, start, schedule, self.config)
     
     def _run_common_scheduling_setup(self) -> tuple[Dict[str, date], List[str], date, date]:
         """

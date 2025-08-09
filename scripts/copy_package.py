@@ -62,7 +62,7 @@ def copy_package(
             shutil.copy2(item, dst_file)
             print("Copied: %s", relative_path)
 
-def main():
+def main() -> None:
     """Main function."""
     parser = argparse.ArgumentParser(description="Copy a package to a new location")
     parser.add_argument("source", help="Source directory")

@@ -9,6 +9,7 @@ import asyncio
 import logging
 import sys
 from pathlib import Path
+from typing import Dict
 
 # Add the project root to Python path
 import os
@@ -25,7 +26,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def run_dashboard():
+def run_dashboard() -> int:
     """Run the dashboard normally."""
     try:
         from app.main import main
@@ -35,6 +36,7 @@ def run_dashboard():
         
         # Run the main function
         main()
+        return 0
         
     except ImportError as e:
         print("[ERROR] Error importing dashboard app: %s", e)
@@ -44,7 +46,7 @@ def run_dashboard():
         print("[ERROR] Error starting dashboard: %s", e)
         return 1
 
-def run_timeline():
+def run_timeline() -> int:
     """Run the timeline normally."""
     try:
         logger.info("[START] Starting Paper Planner Timeline Server")
@@ -69,16 +71,17 @@ def run_timeline():
         
         # Run the main function
         app_main()
+        return 0
         
     except KeyboardInterrupt:
         logger.info("[STOP] Timeline server stopped by user")
-        sys.exit(0)
+        return 0
     except Exception as e:
         logger.error("[ERROR] Error starting timeline: %s", e)
         logger.error("[TIP] Check the logs for more details")
-        sys.exit(1)
+        return 1
 
-async def capture_dashboard_screenshots():
+async def capture_dashboard_screenshots() -> None:
     """Capture screenshots of all dashboard schedulers."""
     try:
         from tests.common.headless_browser import capture_all_scheduler_options
@@ -99,7 +102,7 @@ async def capture_dashboard_screenshots():
         print("[ERROR] Error capturing screenshots: %s", e)
         sys.exit(1)
 
-async def capture_timeline_screenshot():
+async def capture_timeline_screenshot() -> None:
     """Capture screenshot of the timeline."""
     try:
         from tests.common.headless_browser import capture_timeline_screenshots
@@ -116,7 +119,7 @@ async def capture_timeline_screenshot():
         print("[ERROR] Error capturing timeline screenshot: %s", e)
         sys.exit(1)
 
-def main():
+def main() -> None:
     """Main entry point with mode and screenshot options."""
     parser = argparse.ArgumentParser(description="Paper Planner Web Charts Runner")
     parser.add_argument(

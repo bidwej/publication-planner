@@ -32,27 +32,8 @@ def _validate_dependencies_satisfied(sub: Submission, schedule: Dict[str, date],
                                   submissions_dict: Dict[str, Submission], config: Config, 
                                   current_date: date) -> bool:
     """Check if all dependencies are satisfied for one submission."""
-    if not sub.depends_on:
-        return True
-    
-    for dep_id in sub.depends_on:
-        # Check if dependency exists
-        if dep_id not in submissions_dict:
-            return False
-        
-        # Check if dependency is scheduled
-        if dep_id not in schedule:
-            return False
-        
-        # Check if dependency is completed
-        dep = submissions_dict[dep_id]
-        dep_start = schedule[dep_id]
-        dep_end = dep.get_end_date(dep_start, config)
-        
-        if current_date < dep_end:
-            return False
-    
-    return True
+    # Use the shared dependency checking logic from models.py
+    return sub.are_dependencies_satisfied(schedule, submissions_dict, config, current_date)
 
 
 

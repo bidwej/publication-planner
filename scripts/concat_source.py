@@ -70,7 +70,7 @@ def concat_source_files(
     
     print("Concatenated %s files into %s", len(source_files), output_file)
 
-def main():
+def main() -> None:
     """Main function."""
     parser = argparse.ArgumentParser(description="Concatenate source files")
     parser.add_argument("input_folder", help="Input folder path")

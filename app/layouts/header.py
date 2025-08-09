@@ -3,8 +3,9 @@ Header layout component for the Paper Planner web application.
 """
 
 from dash import html
+from typing import Any
 
-def create_header():
+def create_header() -> Any:
     """Create the application header."""
     return html.Header([
         # Logo and title

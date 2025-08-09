@@ -178,10 +178,10 @@ class Conference:
     deadlines: Dict[SubmissionType, date]
     submission_types: Optional[ConferenceSubmissionType] = None  # What types of submissions are accepted
     
-    def __post_init__(self):
-        # Auto-determine submission type based on deadlines if not specified
-        if self.submission_types is None:
-            self.submission_types = self._determine_submission_type()
+    @property
+    def effective_submission_types(self) -> ConferenceSubmissionType:
+        """Get submission types, auto-determined from deadlines if not explicitly set."""
+        return self.submission_types if self.submission_types is not None else self._determine_submission_type()
     
     def _determine_submission_type(self) -> ConferenceSubmissionType:
         """Determine submission type based on available deadlines."""
@@ -206,23 +206,23 @@ class Conference:
     
     def accepts_submission_type(self, submission_type: SubmissionType) -> bool:
         """Check if conference accepts this submission type."""
-        if self.submission_types == ConferenceSubmissionType.ALL_TYPES:
+        if self.effective_submission_types == ConferenceSubmissionType.ALL_TYPES:
             return True
-        elif self.submission_types == ConferenceSubmissionType.ABSTRACT_ONLY:
+        elif self.effective_submission_types == ConferenceSubmissionType.ABSTRACT_ONLY:
             return submission_type == SubmissionType.ABSTRACT
-        elif self.submission_types == ConferenceSubmissionType.PAPER_ONLY:
+        elif self.effective_submission_types == ConferenceSubmissionType.PAPER_ONLY:
             return submission_type == SubmissionType.PAPER
-        elif self.submission_types == ConferenceSubmissionType.POSTER_ONLY:
+        elif self.effective_submission_types == ConferenceSubmissionType.POSTER_ONLY:
             return submission_type == SubmissionType.POSTER
-        elif self.submission_types == ConferenceSubmissionType.ABSTRACT_AND_PAPER:
+        elif self.effective_submission_types == ConferenceSubmissionType.ABSTRACT_AND_PAPER:
             return submission_type in [SubmissionType.ABSTRACT, SubmissionType.PAPER]
-        elif self.submission_types == ConferenceSubmissionType.ABSTRACT_OR_PAPER:
+        elif self.effective_submission_types == ConferenceSubmissionType.ABSTRACT_OR_PAPER:
             return submission_type in [SubmissionType.ABSTRACT, SubmissionType.PAPER]
         return False
     
     def requires_abstract_before_paper(self) -> bool:
         """Check if conference requires abstract submission before paper submission."""
-        return self.submission_types == ConferenceSubmissionType.ABSTRACT_AND_PAPER
+        return self.effective_submission_types == ConferenceSubmissionType.ABSTRACT_AND_PAPER
     
     def get_required_dependencies(self, submission_type: SubmissionType) -> List[str]:
         """Get list of required dependencies for this submission type at this conference."""

@@ -4,8 +4,9 @@ Sidebar layout component for the Paper Planner web application.
 
 from dash import html, dcc
 from src.core.models import SchedulerStrategy
+from typing import Any
 
-def create_sidebar():
+def create_sidebar() -> Any:
     """Create the application sidebar with controls."""
     return html.Aside([
         # Strategy Selection
