@@ -134,7 +134,7 @@ def _validate_conference_submission_compatibility(schedule: Dict[str, date], con
         if sub.candidate_kind is not None:
             submission_type_to_check = sub.candidate_kind
             if not conf.accepts_submission_type(submission_type_to_check):
-                submission_type_str = conf.submission_types.value if conf.submission_types else "unknown"
+                submission_type_str = conf.effective_submission_types.value
                 violations.append({
                     "submission_id": sid,
                     "description": f"Submission {sid} ({submission_type_to_check.value}) not accepted by conference {sub.conference_id} ({submission_type_str})",

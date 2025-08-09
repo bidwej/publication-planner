@@ -14,7 +14,7 @@ import dash
 import pytest
 
 from app.main import create_dashboard_app
-from core.models import Conference, Config, Submission, SubmissionType
+from src.core.models import Conference, Config, Submission, SubmissionType
 
 
 class TestWebAppEndpoints:

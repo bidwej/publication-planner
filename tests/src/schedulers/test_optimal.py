@@ -205,13 +205,14 @@ class TestOptimalScheduler:
         schedule = scheduler._extract_schedule_from_solution(mock_solution)
         assert isinstance(schedule, dict)
     
-    def test_fallback_to_greedy(self, scheduler) -> None:
-        """Test that the scheduler falls back to greedy when MILP fails."""
+    def test_pure_optimal_behavior(self, scheduler) -> None:
+        """Test that the scheduler returns empty schedule when MILP fails."""
         # Mock MILP to fail
         with patch.object(scheduler, '_setup_milp_model', return_value=None):
             schedule = scheduler.schedule()
-            # Should still return a schedule (from greedy fallback)
+            # Should return empty schedule (pure optimal behavior)
             assert isinstance(schedule, dict)
+            assert len(schedule) == 0  # Empty schedule when MILP fails
     
     def test_optimization_objectives(self, config) -> None:
         """Test different optimization objectives."""

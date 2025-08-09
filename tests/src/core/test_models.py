@@ -64,7 +64,7 @@ class TestSubmission:
         assert submission.title == "Test Paper"
         assert submission.kind == SubmissionType.PAPER
         assert submission.conference_id == "conf1"
-        assert submission.depends_on == []
+        assert submission.depends_on is None
     
     def test_submission_with_dependencies(self) -> None:
         """Test submission with dependencies."""
@@ -111,7 +111,8 @@ class TestSubmission:
             id="",
             title="",
             kind=SubmissionType.PAPER,
-            conference_id="",
+            conference_id=None,  # None instead of empty string
+            candidate_conferences=None,  # This should trigger the validation error
             draft_window_months=-1,
             lead_time_from_parents=-1,
             penalty_cost_per_day=-100
@@ -226,7 +227,7 @@ class TestAbstractPaperDependencies:
         )
         
         # Initially no dependencies
-        assert paper.depends_on == []
+        assert paper.depends_on is None
         
         # Add abstract dependency
         ensure_abstract_paper_dependency(paper, "paper1-abs-conf1")

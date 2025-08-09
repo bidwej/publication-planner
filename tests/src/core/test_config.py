@@ -184,15 +184,16 @@ class TestLoadSubmissions:
         for submission in submissions:
             # Check for actual data format: mod_1, mod_2, etc. for mods
             # and J1-pap-test_conf, J2-pap-test_conf, etc. for papers
+            # Unified schema: mod_* (pccp), J* (ed), or generated abstracts (*-abs)
             assert (submission.id.startswith('mod_') or 
-                   submission.id.endswith('-pap') or 
+                   submission.id.startswith('J') or 
                    submission.id.endswith('-abs'))
             assert submission.title is not None
             assert submission.kind in [SubmissionType.ABSTRACT, SubmissionType.PAPER]
-            assert isinstance(submission.depends_on, list)
+            assert submission.depends_on is None or isinstance(submission.depends_on, list)
             assert isinstance(submission.draft_window_months, int)
             assert isinstance(submission.lead_time_from_parents, int)
-            assert isinstance(submission.penalty_cost_per_day, float)
+            assert submission.penalty_cost_per_day is None or isinstance(submission.penalty_cost_per_day, float)
             assert isinstance(submission.engineering, bool)
     
     def test_paper_dependencies_conversion(self, test_data_dir) -> None:
@@ -618,8 +619,8 @@ class TestDataclassesSerialization:
 class TestConferenceMappingAndEngineering:
     """Test conference mapping and engineering flag inference."""
     
-    def test_conference_mapping_by_family(self, tmp_path) -> None:
-        """Test that conferences are mapped by family name."""
+    def test_conference_mapping_by_candidate_conferences(self, tmp_path) -> None:
+        """Test that conferences are mapped by candidate_conferences."""
         # Create conferences with different types
         conferences_data = [
             {
@@ -640,22 +641,26 @@ class TestConferenceMappingAndEngineering:
         # Create mods that can go to both types
         mods_data = [
             {
-                "id": 1,  # Numeric ID like actual data
-                "title": "Test Mod 1",
-                "est_data_ready": "2025-01-01",
+                "id": "mod_1",  # String ID matching unified schema
+                "title": "Test Mod 1", 
+                "author": "pccp",
+                "kind": "paper",
+                "engineering_ready_date": "2025-01-01",
                 "free_slack_months": 1,
                 "penalty_cost_per_month": 1000,
-                "next_mod": 2
+                "depends_on": []
             }
         ]
         
         # Create papers that depend on mods
         papers_data = [
             {
-                "id": "paper1",
+                "id": "paper1", 
                 "title": "Test Paper 1",
-                "candidate_conferences": ["IEEE_ICRA"],  # Use correct field name
-                "mod_dependencies": [1]  # Use correct field name
+                "author": "ed",
+                "kind": "paper",
+                "candidate_conferences": ["IEEE_ICRA"],
+                "depends_on": ["mod_1"]  # Use correct field name and ID format
             }
         ]
         
@@ -667,10 +672,10 @@ class TestConferenceMappingAndEngineering:
         conferences_file = tmp_path / "conferences.json"
         conferences_file.write_text(json.dumps(conferences_data))
         
-        mods_file = tmp_path / "mods.json"
+        mods_file = tmp_path / "mod_papers.json"
         mods_file.write_text(json.dumps(mods_data))
         
-        papers_file = tmp_path / "papers.json"
+        papers_file = tmp_path / "ed_papers.json"
         papers_file.write_text(json.dumps(papers_data))
         
         # Create config file
@@ -680,8 +685,8 @@ class TestConferenceMappingAndEngineering:
             "max_concurrent_submissions": 3,
             "data_files": {
                 "conferences": "conferences.json",
-                "mods": "mods.json",
-                "papers": "papers.json"
+                "mods": "mod_papers.json",
+                "papers": "ed_papers.json"
             }
         }
         
@@ -706,13 +711,14 @@ class TestConferenceMappingAndEngineering:
         mod_submission = find_mod_by_number(config.submissions, 1)
         assert mod_submission is not None, f"Mod 1 not found in submissions: {[s.id for s in config.submissions]}"
         
-        # Find paper by base ID and conference (robust)
-        paper_submission = find_paper_by_base_and_conference(config.submissions, "paper1", "IEEE_ICRA")
-        assert paper_submission is not None, f"Paper paper1-pap-ieee_icra not found in submissions: {[s.id for s in config.submissions]}"
+        # Find paper by ID directly (unified schema keeps original IDs)
+        paper_submission = next((s for s in config.submissions if s.id == "paper1"), None)
+        assert paper_submission is not None, f"Paper paper1 not found in submissions: {[s.id for s in config.submissions]}"
         
-        # Mods don't get conference assignments (they are internal work items)
+        # In unified schema, both mods and papers start unassigned
         assert mod_submission.conference_id is None
-        assert paper_submission.conference_id == "ieee_icra"
+        assert paper_submission.conference_id is None  # Assigned later by scheduler
+        assert paper_submission.candidate_conferences == ["IEEE_ICRA"]  # Candidates available
         assert "mod_1" in (paper_submission.depends_on or [])
     
     def test_engineering_flag_inference(self, tmp_path) -> None:
@@ -736,11 +742,14 @@ class TestConferenceMappingAndEngineering:
         # Create mods that can go to both types
         mods_data = [
             {
-                "id": "mod1",
+                "id": "mod_1",  # Use unified schema format
                 "title": "Test Mod 1",
+                "author": "pccp",
+                "kind": "paper",
                 "candidate_conferences": ["IEEE_ICRA", "MICCAI"],
                 "engineering": True,  # Explicitly set engineering flag
-                "est_data_ready": "2025-01-01"
+                "engineering_ready_date": "2025-01-01",
+                "depends_on": []
             }
         ]
         
@@ -779,7 +788,7 @@ class TestConferenceMappingAndEngineering:
         # Check that engineering flag is inferred correctly
         # The test creates a mod with candidate_conferences that include engineering conferences
         # So the engineering flag should be inferred as True
-        mod_submission = next(s for s in config.submissions if s.id == "mod_mod1")
+        mod_submission = next(s for s in config.submissions if s.id == "mod_1")
         # Should be engineering since it can go to engineering conferences
         assert mod_submission.engineering is True
     

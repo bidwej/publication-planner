@@ -136,7 +136,7 @@ class TestServerManagement:
         
         result: Any = is_server_running("http://localhost:8080")
         assert result is True
-        mock_get.assert_called_once_with("http://localhost:8080", timeout=2)
+        mock_get.assert_called_once_with("http://localhost:8080", timeout=1)
     
     @patch('requests.get')
     def test_is_server_running_failure(self, mock_get: Mock) -> None:

@@ -9,18 +9,13 @@ from datetime import date
 from unittest.mock import Mock
 import os
 
-# Add the src directory to the path for imports
-import os
-src_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'src')
-os.environ['PYTHONPATH'] = src_path + os.pathsep + os.environ.get('PYTHONPATH', '')
-
-from components.tables.schedule_table import (
+from app.components.tables.schedule_table import (
     create_schedule_table,
     create_violations_table,
     create_metrics_table,
     create_analytics_table
 )
-from core.models import Config, Submission, SubmissionType, Conference
+from src.core.models import Config, Submission, SubmissionType, Conference
 
 
 class TestScheduleTable:

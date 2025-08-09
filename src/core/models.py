@@ -59,14 +59,6 @@ class Submission:
     free_slack_months: Optional[int] = None  # Buffer time in months
     penalty_cost_per_month: Optional[float] = None  # Monthly penalty cost for delays
     
-    def __post_init__(self):
-        if self.depends_on is None:
-            self.depends_on = []
-        if self.candidate_conferences is None:
-            self.candidate_conferences = []
-        # If candidate_kind is not specified, leave it as None
-        # This means "open to any available opportunity" - will be determined by conference capabilities
-
     
     def validate(self) -> List[str]:
         """Validate submission and return list of errors."""
@@ -76,10 +68,10 @@ class Submission:
         if not self.title:
             errors.append("Missing title")
         # Conference ID is optional for work items (mods)
-        # Papers can have conference_id or candidate_conferences
-        # Empty candidate_conferences means "open to any appropriate opportunity"
+        # Papers can have conference_id or candidate_conferences  
+        # None means "not specified", empty list means "open to any conference"
         if self.kind == SubmissionType.PAPER and not self.conference_id and self.candidate_conferences is None:
-            errors.append("Papers must have either conference_id or candidate_conferences (empty list means any conference)")
+            errors.append("Papers must have either conference_id or candidate_conferences")
         if self.draft_window_months < 0:
             errors.append("Draft window months cannot be negative")
         if self.lead_time_from_parents < 0:
@@ -325,11 +317,10 @@ def create_abstract_submission(paper: Submission, conference_id: str,
 
 def ensure_abstract_paper_dependency(paper: Submission, abstract_id: str) -> None:
     """Ensure a paper depends on its corresponding abstract."""
-    if paper.depends_on is None:
-        paper.depends_on = []
-    
-    if abstract_id not in paper.depends_on:
-        paper.depends_on.append(abstract_id)
+    # Create new depends_on list to avoid mutating the original
+    current_deps = paper.depends_on or []
+    if abstract_id not in current_deps:
+        paper.depends_on = current_deps + [abstract_id]
 
 
 def find_abstract_for_paper(paper_id: str, conference_id: str, 
