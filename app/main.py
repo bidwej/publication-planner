@@ -103,6 +103,15 @@ def create_dashboard_app():
         """Generate a new schedule using the selected strategy."""
         try:
             config = load_config('config.json')
+            # Import schedulers to ensure registration
+            from src.schedulers.greedy import GreedyScheduler
+            from src.schedulers.stochastic import StochasticGreedyScheduler
+            from src.schedulers.lookahead import LookaheadGreedyScheduler
+            from src.schedulers.backtracking import BacktrackingGreedyScheduler
+            from src.schedulers.random import RandomScheduler
+            from src.schedulers.heuristic import HeuristicScheduler
+            from src.schedulers.optimal import OptimalScheduler
+            
             scheduler = BaseScheduler.create_scheduler(SchedulerStrategy(strategy), config)
             schedule = scheduler.schedule()
             
@@ -164,7 +173,9 @@ def generate_schedule(config_data=None):
     global _current_schedule_data
     try:
         config = load_config('config.json')
-        scheduler = BaseScheduler.create_scheduler(SchedulerStrategy('greedy'), config)
+        # Import scheduler to ensure registration
+        from src.schedulers.greedy import GreedyScheduler
+        scheduler = BaseScheduler.create_scheduler(SchedulerStrategy.GREEDY, config)
         schedule = scheduler.schedule()
         _current_schedule_data = schedule
         return schedule
@@ -249,7 +260,9 @@ def create_timeline_app():
         """Generate timeline chart."""
         try:
             config = load_config('config.json')
-            scheduler = BaseScheduler.create_scheduler(SchedulerStrategy('greedy'), config)
+            # Import scheduler to ensure registration
+            from src.schedulers.greedy import GreedyScheduler
+            scheduler = BaseScheduler.create_scheduler(SchedulerStrategy.GREEDY, config)
             schedule = scheduler.schedule()
             
             # Store the current schedule data for PDF export

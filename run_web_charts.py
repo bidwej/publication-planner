@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Unified runner script for the Paper Planner Web Charts.
-This runs either the dashboard or timeline with optional screenshot capture.
+This runs either the dashboard or timeline with optional chart generation.
 """
 
 import argparse
@@ -9,7 +9,8 @@ import asyncio
 import logging
 import sys
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
+from datetime import date, timedelta
 
 # Add the project root to Python path
 import os
@@ -81,46 +82,213 @@ def run_timeline() -> int:
         logger.error("[TIP] Check the logs for more details")
         return 1
 
-async def capture_dashboard_screenshots() -> None:
-    """Capture screenshots of all dashboard schedulers."""
+def _create_standardized_config(timeline_range: Optional[str]) -> Dict:
+    """Create a standardized config for consistent timeline ranges."""
+    if not timeline_range:
+        return {}  # Use default behavior
+    
+    # Calculate start and end dates for the specified range
+    today = date.today()
+    
+    if timeline_range == "1year":
+        start_date = today
+        end_date = today + timedelta(days=365)
+    elif timeline_range == "6months":
+        start_date = today
+        end_date = today + timedelta(days=180)
+    elif timeline_range == "2years":
+        start_date = today
+        end_date = today + timedelta(days=730)
+    else:
+        # Try to parse as number of days
+        try:
+            days = int(timeline_range)
+            start_date = today
+            end_date = today + timedelta(days=days)
+        except ValueError:
+            print(f"[WARNING] Invalid timeline range '{timeline_range}', using default")
+            return {}
+    
+    return {
+        "timeline_start": start_date,
+        "timeline_end": end_date,
+        "force_timeline_range": True
+    }
+
+def _generate_chart_with_timeline_range(schedule: Dict[str, date], config, filename: str, timeline_config: Dict) -> str:
+    """Generate a chart with standardized timeline range."""
     try:
-        from tests.common.headless_browser import capture_all_scheduler_options
+        from app.components.charts.gantt_chart import create_gantt_chart
         
-        print("[CHART] Capturing dashboard screenshots")
-        results = await capture_all_scheduler_options()
+        # Create the chart
+        fig = create_gantt_chart(schedule, config)
         
-        print("\n[SCATTER] Results:")
-        for scheduler, success in results.items():
-            status = "[OK]" if success else "[ERROR]"
-            print("  %s %s", status, scheduler)
+        # Force the timeline range if specified
+        if timeline_config and timeline_config.get("force_timeline_range"):
+            start_date = timeline_config["timeline_start"]
+            end_date = timeline_config["timeline_end"]
+            
+            # Convert dates to days for x-axis
+            start_days = (start_date - min(schedule.values()) if schedule else start_date - date.today()).days
+            end_days = (end_date - min(schedule.values()) if schedule else end_date - date.today()).days
+            
+            # Update x-axis range
+            fig.update_xaxes(range=[start_days, end_days])
+            
+            # Update title to show the timeline range
+            fig.update_layout(
+                title=f"Schedule Timeline ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})"
+            )
         
-        success_count = sum(results.values())
-        total_count = len(results)
-        print("\n[CHART] Overall: %s/%s schedulers captured", success_count, total_count)
+        # Save as PNG
+        fig.write_image(
+            filename, 
+            width=1200, 
+            height=600, 
+            scale=2,
+            format='png'
+        )
+        
+        print("✅ Gantt chart saved as %s", filename)
+        return filename
+    except Exception as e:
+        print(f"❌ Error generating PNG: {e}")
+        return ""
+
+def generate_dashboard_charts(timeline_range: Optional[str] = None) -> Dict[str, bool]:
+    """Generate actual chart PNGs for all scheduler options."""
+    try:
+        print("[CHART] Generating dashboard charts...")
+        if timeline_range:
+            print(f"[TIMELINE] Using standardized range: {timeline_range}")
+        
+        # Import required modules
+        from src.core.config import load_config
+        from src.schedulers.greedy import GreedyScheduler
+        from src.schedulers.stochastic import StochasticGreedyScheduler
+        from src.schedulers.lookahead import LookaheadGreedyScheduler
+        from src.schedulers.backtracking import BacktrackingGreedyScheduler
+        from src.schedulers.random import RandomScheduler
+        from src.schedulers.heuristic import HeuristicScheduler
+        from src.schedulers.optimal import OptimalScheduler
+        
+        # Load configuration
+        config = load_config('data/config.json')
+        print("[OK] Configuration loaded")
+        
+        # Create standardized timeline config if specified
+        timeline_config = _create_standardized_config(timeline_range)
+        
+        # Define schedulers to test
+        schedulers = {
+            'greedy': GreedyScheduler(config),
+            'stochastic': StochasticGreedyScheduler(config),
+            'lookahead': LookaheadGreedyScheduler(config),
+            'backtracking': BacktrackingGreedyScheduler(config),
+            'random': RandomScheduler(config),
+            'heuristic': HeuristicScheduler(config),
+            'optimal': OptimalScheduler(config)
+        }
+        
+        results = {}
+        
+        for scheduler_name, scheduler in schedulers.items():
+            try:
+                print(f"[CHART] Generating chart for {scheduler_name} scheduler...")
+                
+                # Generate schedule using this scheduler
+                schedule = scheduler.schedule()
+                
+                if schedule:
+                    # Generate PNG chart with standardized timeline if specified
+                    filename = f"chart_{scheduler_name}.png"
+                    
+                    if timeline_config:
+                        # Use the standardized timeline range
+                        output_path = _generate_chart_with_timeline_range(
+                            schedule, 
+                            config, 
+                            filename,
+                            timeline_config
+                        )
+                    else:
+                        # Use default behavior
+                        from app.components.charts.gantt_chart import generate_gantt_png
+                        output_path = generate_gantt_png(schedule, config, filename)
+                    
+                    if output_path:
+                        print(f"[OK] {scheduler_name} chart saved as {filename}")
+                        results[scheduler_name] = True
+                    else:
+                        print(f"[ERROR] Failed to save {scheduler_name} chart")
+                        results[scheduler_name] = False
+                else:
+                    print(f"[WARNING] {scheduler_name} scheduler returned no schedule")
+                    results[scheduler_name] = False
+                    
+            except Exception as e:
+                print(f"[ERROR] Error generating {scheduler_name} chart: {e}")
+                results[scheduler_name] = False
+        
+        return results
         
     except Exception as e:
-        print("[ERROR] Error capturing screenshots: %s", e)
-        sys.exit(1)
+        print(f"[ERROR] Error generating dashboard charts: {e}")
+        return {}
 
-async def capture_timeline_screenshot() -> None:
-    """Capture screenshot of the timeline."""
+def generate_timeline_chart(timeline_range: Optional[str] = None) -> bool:
+    """Generate timeline chart PNG."""
     try:
-        from tests.common.headless_browser import capture_timeline_screenshots
+        print("[TIMELINE] Generating timeline chart...")
+        if timeline_range:
+            print(f"[TIMELINE] Using standardized range: {timeline_range}")
         
-        print("[TIMELINE] Capturing timeline screenshot")
-        success = await capture_timeline_screenshots()
+        # Import required modules
+        from src.core.config import load_config
+        from src.schedulers.greedy import GreedyScheduler
         
-        if success:
-            print("[OK] Timeline screenshot captured successfully!")
+        # Load configuration
+        config = load_config('data/config.json')
+        print("[OK] Configuration loaded")
+        
+        # Use greedy scheduler for timeline (fast and reliable)
+        scheduler = GreedyScheduler(config)
+        schedule = scheduler.schedule()
+        
+        if schedule:
+            # Generate PNG chart with standardized timeline if specified
+            filename = "timeline_chart.png"
+            
+            if timeline_range:
+                # Create standardized timeline config
+                timeline_config = _create_standardized_config(timeline_range)
+                output_path = _generate_chart_with_timeline_range(
+                    schedule, 
+                    config, 
+                    filename,
+                    timeline_config
+                )
+            else:
+                # Use default behavior
+                from app.components.charts.gantt_chart import generate_gantt_png
+                output_path = generate_gantt_png(schedule, config, filename)
+            
+            if output_path:
+                print(f"[OK] Timeline chart saved as {filename}")
+                return True
+            else:
+                print("[ERROR] Failed to save timeline chart")
+                return False
         else:
-            print("[ERROR] Timeline screenshot capture failed!")
+            print("[WARNING] Timeline scheduler returned no schedule")
+            return False
             
     except Exception as e:
-        print("[ERROR] Error capturing timeline screenshot: %s", e)
-        sys.exit(1)
+        print(f"[ERROR] Error generating timeline chart: {e}")
+        return False
 
 def main() -> None:
-    """Main entry point with mode and screenshot options."""
+    """Main entry point with mode and chart generation options."""
     parser = argparse.ArgumentParser(description="Paper Planner Web Charts Runner")
     parser.add_argument(
         '--mode',
@@ -129,19 +297,38 @@ def main() -> None:
         help='Mode to run: dashboard or timeline (default: dashboard)'
     )
     parser.add_argument(
-        '--capture',
+        '--generate',
         action='store_true',
-        help='Capture screenshots and exit (works with both modes)'
+        help='Generate chart PNGs and exit (works with both modes)'
+    )
+    parser.add_argument(
+        '--timeline-range',
+        choices=['1year', '6months', '2years'],
+        help='Standardize timeline range for all charts (default: auto-fit to data)'
     )
     
     args = parser.parse_args()
     
-    if args.capture:
-        print("[START] Capturing %s screenshots", args.mode)
+    if args.generate:
+        print("[START] Generating %s charts", args.mode)
         if args.mode == 'dashboard':
-            asyncio.run(capture_dashboard_screenshots())
+            results = generate_dashboard_charts(args.timeline_range)
+            
+            print("\n[CHART] Results:")
+            for scheduler, success in results.items():
+                status = "[OK]" if success else "[ERROR]"
+                print("  %s %s", status, scheduler)
+            
+            success_count = sum(results.values())
+            total_count = len(results)
+            print("\n[CHART] Overall: %s/%s schedulers generated", success_count, total_count)
+            
         else:
-            asyncio.run(capture_timeline_screenshot())
+            success = generate_timeline_chart(args.timeline_range)
+            if success:
+                print("[OK] Timeline chart generated successfully!")
+            else:
+                print("[ERROR] Timeline chart generation failed!")
     else:
         if args.mode == 'dashboard':
             run_dashboard()

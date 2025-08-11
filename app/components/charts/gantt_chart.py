@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 
 import plotly.graph_objects as go
 
-from src.core.models import Config, Submission, SubmissionType
+from src.core.models import Config, Submission
 from app.components.charts.gantt_formatter import GanttFormatter
 
 class GanttChartBuilder:
@@ -25,6 +25,44 @@ class GanttChartBuilder:
         # Initialize Gantt formatter with consistent date names
         self.gantt_formatter = GanttFormatter(self.min_date, self.max_date)
     
+    def _get_sorted_schedule(self):
+        """Get submissions sorted by author (PCCP, then ED, then others), then by ID number."""
+        def sort_key(item):
+            submission_id = item[0]
+            submission = self.config.submissions_dict.get(submission_id)
+            if not submission:
+                return (2, submission_id)
+            
+            # Use the existing author field - much cleaner!
+            if submission.author == "pccp":
+                # For MODs, sort by the number in the ID
+                return (0, self._extract_mod_number(submission_id))
+            elif submission.author == "ed":
+                # For ED Papers, sort by the number in the ID
+                return (1, self._extract_ed_number(submission_id))
+            else:
+                return (2, submission_id)  # Others last
+        
+        return sorted(self.schedule.items(), key=sort_key)
+    
+    def _extract_mod_number(self, submission_id: str) -> int:
+        """Extract the number from a MOD ID (e.g., 'mod_1' -> 1)."""
+        if submission_id.startswith('mod_'):
+            try:
+                return int(submission_id[4:])
+            except ValueError:
+                return 0
+        return 0
+    
+    def _extract_ed_number(self, submission_id: str) -> int:
+        """Extract the number from an ED Paper ID (e.g., 'J1' -> 1)."""
+        if submission_id.startswith('J'):
+            try:
+                return int(submission_id[1:])
+            except ValueError:
+                return 0
+        return 0
+    
     def build(self) -> go.Figure:
         """Build the complete Gantt chart."""
         if not self.schedule:
@@ -39,18 +77,25 @@ class GanttChartBuilder:
         return self.fig
     
     def _add_submission_bars(self):
-        """Add submission bars using proper Gantt chart shapes."""
+        """Add submission bars showing concurrency levels."""
         submissions_dict = self.config.submissions_dict
         
-        # Sort submissions by start date for consistent ordering
-        sorted_schedule = sorted(self.schedule.items(), key=lambda x: x[1])
+        # Get sorted schedule for consistent ordering
+        sorted_schedule = self._get_sorted_schedule()
         
-        for i, (submission_id, start_date) in enumerate(sorted_schedule):
+        # Calculate concurrency levels for each paper
+        concurrency_map = self._calculate_concurrency_levels(sorted_schedule)
+        
+        # Add bars at their concurrency levels
+        for submission_id, start_date in sorted_schedule:
             submission = submissions_dict.get(submission_id)
             if not submission:
                 continue
             
-            # Work items should have a minimum duration for visibility
+            # Get concurrency level for this paper
+            concurrency_level = concurrency_map.get(submission_id, 0)
+            
+            # Calculate duration
             duration_days = submission.get_duration_days(self.config)
             if duration_days <= 0:
                 duration_days = 7  # Minimum 1 week for work items
@@ -58,9 +103,9 @@ class GanttChartBuilder:
             start_day = (start_date - self.min_date).days
             end_day = start_day + duration_days
             
-            # Create the bar as a shape with proper spacing
-            bar_height = 0.4
-            y_pos = i
+            # Create the bar at the concurrency level
+            bar_height = 0.3
+            y_pos = concurrency_level
             self.fig.add_shape(
                 type="rect",
                 x0=start_day,
@@ -72,27 +117,86 @@ class GanttChartBuilder:
                 layer="above"
             )
             
-            # Add text label outside the bar
+            # Add text label on the bar
             display_title = self._get_display_title(submission, submission_id)
-            conference_info = self._get_conference_info(submission)
-            
-            # Position label to the left of the bar
             self.fig.add_annotation(
-                x=start_day - 5,  # 5 days to the left
+                x=start_day + (end_day - start_day) / 2,  # Center of bar
                 y=y_pos,
-                text=f"{display_title}<br>{conference_info}",
+                text=display_title,
                 showarrow=False,
-                xanchor="right",
+                xanchor="center",
                 yanchor="middle",
-                font=dict(size=9, color="black"),
-                bgcolor="rgba(255, 255, 255, 0.9)",
-                bordercolor="black",
+                font=dict(size=8, color="white"),
+                bgcolor="rgba(0, 0, 0, 0.7)",
+                bordercolor="white",
                 borderwidth=1
             )
+    
+    def _calculate_concurrency_levels(self, sorted_schedule):
+        """Calculate concurrency level for each submission to avoid overlaps."""
+        concurrency_map = {}
+        active_papers = []  # List of (end_date, submission_id) tuples
+        
+        for submission_id, start_date in sorted_schedule:
+            submission = self.config.submissions_dict.get(submission_id)
+            if not submission:
+                continue
+            
+            # Calculate end date
+            duration_days = submission.get_duration_days(self.config)
+            if duration_days <= 0:
+                duration_days = 7
+            end_date = start_date + timedelta(days=duration_days)
+            
+            # Remove completed papers from active list
+            active_papers = [(end, sid) for end, sid in active_papers if end > start_date]
+            
+            # Find available concurrency level
+            concurrency_level = 0
+            while any(concurrency_level == self._get_concurrency_level(sid, start_date, end_date, concurrency_map) 
+                     for _, sid in active_papers):
+                concurrency_level += 1
+            
+            # Assign concurrency level
+            concurrency_map[submission_id] = concurrency_level
+            
+            # Add to active papers
+            active_papers.append((end_date, submission_id))
+        
+        return concurrency_map
+    
+    def _get_concurrency_level(self, submission_id, start_date, end_date, concurrency_map):
+        """Get the concurrency level for a specific submission at a given time."""
+        if submission_id not in concurrency_map:
+            return -1
+        
+        # Check if this submission overlaps with the time period
+        submission = self.config.submissions_dict.get(submission_id)
+        if not submission:
+            return -1
+        
+        sub_duration = submission.get_duration_days(self.config)
+        if sub_duration <= 0:
+            sub_duration = 7
+        
+        sub_start = start_date
+        sub_end = sub_start + timedelta(days=sub_duration)
+        
+        # Check for overlap
+        if start_date < sub_end and end_date > sub_start:
+            return concurrency_map[submission_id]
+        
+        return -1
     
     def _add_blackout_periods(self):
         """Add blackout period backgrounds with proper light gray coloring."""
         blackout_data = self._load_blackout_data()
+        
+        # Calculate maximum concurrency for Y-axis range
+        max_concurrency = 0
+        if self.schedule:
+            concurrency_map = self._calculate_concurrency_levels(self._get_sorted_schedule())
+            max_concurrency = max(concurrency_map.values()) if concurrency_map else 0
         
         # Add custom blackout periods
         custom_periods = blackout_data.get('custom_blackout_periods', [])
@@ -109,7 +213,7 @@ class GanttChartBuilder:
                     x0=start_days,
                     x1=end_days,
                     y0=0,
-                    y1=len(self.schedule),
+                    y1=max_concurrency + 1,
                     fillcolor="rgba(200, 200, 200, 0.2)",  # Light gray
                     line=dict(width=0),
                     layer="below"
@@ -117,15 +221,15 @@ class GanttChartBuilder:
         
         # Add weekend periods
         if blackout_data.get('weekends', {}).get('enabled', False):
-            self._add_weekend_periods()
+            self._add_weekend_periods(max_concurrency)
         
         # Add holiday periods
-        self._add_holiday_periods(blackout_data)
+        self._add_holiday_periods(blackout_data, max_concurrency)
         
         # Add time interval bands (monthly/quarterly)
-        self._add_time_interval_bands()
+        self._add_time_interval_bands(max_concurrency)
     
-    def _add_weekend_periods(self):
+    def _add_weekend_periods(self, max_concurrency):
         """Add weekend periods as recurring shaded rectangles."""
         current_date = self.min_date
         while current_date <= self.max_date:
@@ -137,7 +241,7 @@ class GanttChartBuilder:
                     x0=day_offset,
                     x1=day_offset + 1,
                     y0=0,
-                    y1=len(self.schedule),
+                    y1=max_concurrency + 1,
                     fillcolor="rgba(200, 200, 200, 0.2)",
                     line=dict(width=0),
                     layer="below"
@@ -145,7 +249,7 @@ class GanttChartBuilder:
             
             current_date += timedelta(days=1)
     
-    def _add_holiday_periods(self, blackout_data):
+    def _add_holiday_periods(self, blackout_data, max_concurrency):
         """Add federal holiday periods."""
         holiday_dates = set()
         
@@ -172,7 +276,7 @@ class GanttChartBuilder:
                             x0=day_offset,
                             x1=day_offset + 1,
                             y0=0,
-                            y1=len(self.schedule),
+                            y1=max_concurrency + 1,
                             fillcolor="rgba(255, 0, 0, 0.2)",
                             line=dict(width=0),
                             layer="below"
@@ -180,7 +284,7 @@ class GanttChartBuilder:
                 except ValueError:
                     continue
     
-    def _add_time_interval_bands(self):
+    def _add_time_interval_bands(self, max_concurrency):
         """Add alternating time interval bands for better readability."""
         # Calculate timeline duration
         timeline_days = (self.max_date - self.min_date).days
@@ -212,7 +316,7 @@ class GanttChartBuilder:
                 x0=current_day,
                 x1=end_day,
                 y0=0,
-                y1=len(self.schedule),
+                y1=max_concurrency + 1,
                 fillcolor=fillcolor,
                 line=dict(width=0),
                 layer="below"
@@ -222,9 +326,11 @@ class GanttChartBuilder:
             band_count += 1
     
     def _add_dependency_arrows(self):
-        """Add dependency arrows between submissions."""
+        """Add dependency arrows between submissions using concurrency levels."""
         submissions_dict = self.config.submissions_dict
-        sorted_schedule = list(enumerate(sorted(self.schedule.items(), key=lambda x: x[1])))
+        
+        # Calculate concurrency levels for positioning
+        concurrency_map = self._calculate_concurrency_levels(self._get_sorted_schedule())
         
         arrow_count = 0
         max_arrows = 20  # Limit arrows to avoid performance issues
@@ -237,15 +343,8 @@ class GanttChartBuilder:
             if not submission or not submission.depends_on:
                 continue
             
-            # Find the row index for this submission
-            current_row = None
-            for i, (sid, _) in sorted_schedule:
-                if sid == submission_id:
-                    current_row = i
-                    break
-            
-            if current_row is None:
-                continue
+            # Get concurrency level for this submission
+            current_concurrency = concurrency_map.get(submission_id, 0)
             
             for dep_id in submission.depends_on:
                 if arrow_count >= max_arrows:
@@ -261,69 +360,65 @@ class GanttChartBuilder:
                         dep_end_days = (dep_start + timedelta(days=dep_duration) - self.min_date).days
                         current_start_days = (start_date - self.min_date).days
                         
-                        # Find the row index for the dependency
-                        dep_row = None
-                        for i, (sid, _) in sorted_schedule:
-                            if sid == dep_id:
-                                dep_row = i
-                                break
+                        # Get concurrency level for the dependency
+                        dep_concurrency = concurrency_map.get(dep_id, 0)
                         
-                        if dep_row is not None:
-                            self.fig.add_annotation(
-                                x=dep_end_days,
-                                y=dep_row,
-                                xref="x",
-                                yref="y",
-                                axref="x",
-                                ayref="y",
-                                ax=current_start_days,
-                                ay=current_row,
-                                arrowhead=2,
-                                arrowsize=1,
-                                arrowwidth=2,
-                                arrowcolor="gray"
-                            )
-                            arrow_count += 1
+                        # Add arrow from dependency end to current start
+                        self.fig.add_annotation(
+                            x=dep_end_days,
+                            y=dep_concurrency,
+                            xref="x",
+                            yref="y",
+                            axref="x",
+                            ayref="y",
+                            ax=current_start_days,
+                            ay=current_concurrency,
+                            arrowhead=2,
+                            arrowsize=1,
+                            arrowwidth=2,
+                            arrowcolor="gray"
+                        )
+                        arrow_count += 1
     
     def _configure_layout(self):
-        """Configure the chart layout with single x-axis and year annotations."""
+        """Configure the chart layout with concurrency-based Y-axis."""
         # Primary x-axis (quarters) - on bottom
         primary_axis_config = self.gantt_formatter.get_axis_config()
         
         # Get year annotations to place below the axis
         year_annotations = self.gantt_formatter.get_year_annotations()
         
-        # Create y-axis labels for submissions
-        sorted_schedule = sorted(self.schedule.items(), key=lambda x: x[1])
-        y_labels = []
-        for submission_id, _ in sorted_schedule:
-            submission = self.config.submissions_dict.get(submission_id)
-            if submission:
-                display_title = self._get_display_title(submission, submission_id)
-                y_labels.append(display_title)
+        # Calculate maximum concurrency level needed
+        max_concurrency = 0
+        if self.schedule:
+            concurrency_map = self._calculate_concurrency_levels(self._get_sorted_schedule())
+            max_concurrency = max(concurrency_map.values()) if concurrency_map else 0
         
-        # Update layout with single x-axis and year annotations
+        # Y-axis should show concurrency levels (0, 1, 2, 3, etc.)
+        y_labels = [str(i) for i in range(max_concurrency + 1)]
+        
+        # Update layout with concurrency-based Y-axis
         self.fig.update_layout(
             title={
-                'text': 'Paper Submission Timeline',
+                'text': 'Paper Submission Timeline (Concurrency View)',
                 'x': 0.5,
                 'xanchor': 'center',
                 'font': {'size': 16}
             },
             xaxis=primary_axis_config,
             yaxis={
-                'title': 'Submissions',
+                'title': 'Concurrency Level',
                 'showgrid': True,
                 'gridcolor': 'lightgray',
                 'tickmode': 'array',
-                'tickvals': list(range(len(sorted_schedule))),
+                'tickvals': list(range(max_concurrency + 1)),
                 'ticktext': y_labels,
                 'tickangle': 0,
                 'tickfont': {'size': 10},
-                'range': [-0.5, len(sorted_schedule) - 0.5]
+                'range': [-0.5, max_concurrency + 0.5]
             },
             margin=self.gantt_formatter.get_margin_config(),
-            height=max(600, len(sorted_schedule) * 30),  # Dynamic height
+            height=max(600, (max_concurrency + 1) * 40),  # Dynamic height based on concurrency
             showlegend=True,
             legend={
                 'orientation': 'h',
@@ -339,50 +434,53 @@ class GanttChartBuilder:
             self.fig.add_annotation(annotation)
     
     def _get_display_title(self, submission: Submission, submission_id: str) -> str:
-        """Get display title for submission."""
-        if submission.title and submission.title.strip():
-            return submission.title
-        
-        if submission_id.endswith('-wrk'):
-            mod_id = submission_id[:-4]
-            return f"Work {mod_id}"
-        if submission_id.endswith('-pap'):
-            paper_id = submission_id[:-4]
-            return f"Paper {paper_id}"
-        return submission_id
+        """Get a clean, simple display title for the chart."""
+        # Use the existing author field - no need to parse IDs!
+        if submission.author == "pccp":
+            # For MODs, just show the number from the ID
+            if submission_id.startswith('mod_'):
+                return f"MOD {self._extract_mod_number(submission_id)}"
+            else:
+                return submission_id.replace('_', ' ').title()
+        elif submission.author == "ed":
+            # For ED Papers, just show the number from the ID
+            if submission_id.startswith('J'):
+                return f"ED Paper {self._extract_ed_number(submission_id)}"
+            else:
+                return submission_id.replace('_', ' ').title()
+        else:
+            # For other submissions, use a clean version
+            return submission_id.replace('_', ' ').title()
     
     def _get_submission_color(self, submission: Submission) -> str:
-        """Get color for submission."""
-        if submission.kind == SubmissionType.PAPER:
-            # Papers: Blue for engineering, Purple for medical
-            return '#2E86AB' if submission.engineering else '#A23B72'
-        # Abstract/Work item
-        # Work items: Orange for engineering, Red for medical
-        return '#F18F01' if submission.engineering else '#C73E1D'
+        """Get color based on submission author (PCCP vs ED)."""
+        # Use the existing author field - much cleaner!
+        if submission.author == "pccp":
+            return "#2E86AB"  # Blue for PCCP (MODs)
+        elif submission.author == "ed":
+            return "#A23B72"  # Purple for ED Papers
+        else:
+            # Default colors for other types
+            if submission.kind.value == "paper":
+                return "#F18F01"  # Orange for other papers
+            else:
+                return "#C73E1D"  # Red for work items
     
     def _get_conference_info(self, submission: Submission) -> str:
-        """Get conference information for display."""
-        if submission.conference_id:
-            conference = self.config.conferences_dict.get(submission.conference_id)
-            if conference:
-                return conference.name
-        
-        if submission.candidate_conferences:
-            # Truncate if too many conferences
-            families = submission.candidate_conferences
-            if len(families) > 3:
-                families = families[:3] + ['...']
-            return f"Suggested: {', '.join(families)}"
-        
-        return "No conference assigned"
+        """Get simplified conference info - just the type, not the venue name."""
+        # Don't show conference names - just show if it's a paper or work item
+        if submission.kind.value == "paper":
+            return "Paper"
+        else:
+            return "Work Item"
     
     def _add_legend(self):
         """Add a legend to explain the color coding."""
         legend_items = [
-            ("Engineering Papers", "#2E86AB"),
-            ("Medical Papers", "#A23B72"),
-            ("Engineering Work", "#F18F01"),
-            ("Medical Work", "#C73E1D")
+            ("MOD Papers", "#2E86AB"),
+            ("ED Papers", "#A23B72"),
+            ("Other Papers", "#F18F01"),
+            ("Work Items", "#C73E1D")
         ]
         
         for i, (label, color) in enumerate(legend_items):
