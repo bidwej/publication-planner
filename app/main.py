@@ -1,191 +1,24 @@
 """
-Main Dash application for the Paper Planner web interface.
-Supports both dashboard and timeline modes.
+Main entry point for Paper Planner web applications.
+Creates a gantt chart timeline view.
 """
 
-import dash
-from dash import html, dcc, Input, Output, State, callback_context, exceptions
-from typing import Any, Dict
 import argparse
 import sys
+import dash
+from dash import html, dcc, Input, Output, callback_context, exceptions
+from datetime import datetime
 
-# Import core functionality
 from src.core.config import load_config
-from src.core.models import Config, SchedulerStrategy
-from app.models import WebAppState
-from src.validation.schedule import validate_schedule_constraints
-
+from src.core.models import Config, SchedulerStrategy, ScheduleState
 from src.schedulers.base import BaseScheduler
-# Import scheduler implementations to register them
-from src.schedulers.greedy import GreedyScheduler
-from src.schedulers.stochastic import StochasticGreedyScheduler
-from src.schedulers.lookahead import LookaheadGreedyScheduler
-from src.schedulers.backtracking import BacktrackingGreedyScheduler
-from src.schedulers.random import RandomScheduler
-from src.schedulers.heuristic import HeuristicScheduler
-from src.schedulers.optimal import OptimalScheduler
 
-
-# Import app components
-from app.layouts.header import create_header
-from app.layouts.sidebar import create_sidebar
-from app.layouts.main_content import create_main_content
 from app.components.gantt.chart import create_gantt_chart
-from app.components.charts.metrics_chart import create_metrics_chart
-from app.components.tables.schedule_table import create_schedule_table, create_violations_table
-
-# Global state for the application
-_current_schedule_data = None
-
-def create_dashboard_app():
-    """Create the full dashboard application."""
-    app = dash.Dash(
-        __name__,
-        title="Paper Planner - Academic Schedule Optimizer",
-        suppress_callback_exceptions=True,
-        external_stylesheets=[
-            "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
-        ]
-    )
-    
-    # Initialize application state
-    app_state = WebAppState()
-    
-    def create_app_layout():
-        """Create the main application layout."""
-        return html.Div([
-            create_header(),
-            
-            html.Div([
-                create_sidebar(),
-                create_main_content()
-            ], className="app-container"),
-            
-            # Store components for data persistence
-            dcc.Store(id='schedule-store', storage_type='memory')
-        ], className="app-wrapper")
-    
-    # Set the layout
-    app.layout = create_app_layout()
-    
-    # Callbacks
-    @app.callback(
-        [Output('gantt-chart', 'figure'),
-         Output('metrics-chart', 'figure'),
-         Output('schedule-table-container', 'children'),
-         Output('violations-table-container', 'children'),
-         Output('summary-metrics', 'children')],
-        [Input('generate-schedule-btn', 'n_clicks'),
-         Input('load-schedule-btn', 'n_clicks')],
-        [State('strategy-selector', 'value')]
-    )
-    def update_schedule(n_generate, n_load, strategy):
-        """Update schedule display based on user actions."""
-        ctx = callback_context
-        
-        # Only run callback if a button was actually clicked
-        if not ctx.triggered:
-            raise exceptions.PreventUpdate
-        
-        trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
-        
-        # Check if buttons were actually clicked (not just initialized)
-        if trigger_id == 'generate-schedule-btn' and n_generate and n_generate > 0:
-            return _generate_new_schedule(strategy)
-        elif trigger_id == 'load-schedule-btn' and n_load and n_load > 0:
-            return _load_saved_schedule()
-        else:
-            raise exceptions.PreventUpdate
-    
-
-    
-    def _generate_new_schedule(strategy: str) -> tuple:
-        """Generate a new schedule using the selected strategy."""
-        try:
-            config = load_config('config.json')
-            # Import schedulers to ensure registration
-            from src.schedulers.greedy import GreedyScheduler
-            from src.schedulers.stochastic import StochasticGreedyScheduler
-            from src.schedulers.lookahead import LookaheadGreedyScheduler
-            from src.schedulers.backtracking import BacktrackingGreedyScheduler
-            from src.schedulers.random import RandomScheduler
-            from src.schedulers.heuristic import HeuristicScheduler
-            from src.schedulers.optimal import OptimalScheduler
-            
-            scheduler = BaseScheduler.create_scheduler(SchedulerStrategy(strategy), config)
-            schedule = scheduler.schedule()
-            
-            # Store the current schedule data
-            global _current_schedule_data
-            _current_schedule_data = schedule
-            
-            # Validate the schedule
-            validation_result = validate_schedule_constraints(schedule, config)
-            
-            # Create charts and tables
-            gantt_fig = create_gantt_chart(schedule, config)
-            metrics_fig = create_metrics_chart(schedule, config)
-            schedule_table = create_schedule_table(schedule, config)
-            violations_table = create_violations_table(validation_result)
-            summary_metrics = _create_summary_metrics(validation_result)
-            
-            return gantt_fig, metrics_fig, schedule_table, violations_table, summary_metrics
-            
-        except Exception as e:
-            print("Error generating schedule: %s", e)
-            return _create_default_figures()
-    
-    def _load_saved_schedule() -> tuple:
-        """Load a previously saved schedule."""
-        # Implementation for loading saved schedules
-        return _create_default_figures()
-    
-    def _create_default_figures() -> tuple:
-        """Create default empty figures."""
-        empty_gantt = create_gantt_chart({}, Config.create_default())
-        empty_metrics = create_metrics_chart({}, Config.create_default())
-        empty_table = html.Div("No schedule loaded")
-        empty_violations = html.Div("No violations to display")
-        empty_summary = html.Div("No metrics available")
-        
-        return empty_gantt, empty_metrics, empty_table, empty_violations, empty_summary
-    
-    def _create_summary_metrics(validation_result: Dict[str, Any]) -> html.Div:
-        """Create summary metrics display."""
-        return html.Div([
-            html.H4("Schedule Summary"),
-            html.P(f"Total Tasks: {len(validation_result.get('schedule', {}))}"),
-            html.P(f"Violations: {len(validation_result.get('violations', []))}"),
-            html.P(f"Score: {validation_result.get('score', 'N/A')}")
-        ])
-    
-    return app
-
-
-def get_current_schedule_data():
-    """Get the current schedule data."""
-    global _current_schedule_data
-    return _current_schedule_data
-
-
-def generate_schedule(config_data=None):
-    """Generate a new schedule."""
-    global _current_schedule_data
-    try:
-        config = load_config('config.json')
-        # Import scheduler to ensure registration
-        from src.schedulers.greedy import GreedyScheduler
-        scheduler = BaseScheduler.create_scheduler(SchedulerStrategy.GREEDY, config)
-        schedule = scheduler.schedule()
-        _current_schedule_data = schedule
-        return schedule
-    except Exception as e:
-        print("Error generating schedule: %s", e)
-        return {}
+from app.models import WebAppState
 
 
 def create_timeline_app():
-    """Create the minimal timeline application."""
+    """Create a simple timeline app that's just a gantt chart."""
     app = dash.Dash(
         __name__,
         title="Paper Planner - Timeline",
@@ -195,156 +28,119 @@ def create_timeline_app():
         ]
     )
     
-    def create_minimal_layout():
-        """Create a truly minimal layout with just the timeline."""
-        return html.Div([
-            # Control buttons at top
-            html.Div([
-                html.Button([
-                    html.I(className="fas fa-play"),
-                    " Generate Timeline"
-                ], id="generate-btn", className="btn btn-primary", style={'margin': '10px'}),
-                html.Button([
-                    html.I(className="fas fa-file-pdf"),
-                    " Export PDF"
-                ], id="export-pdf-btn", className="btn btn-success", style={'margin': '10px'})
-            ], style={'textAlign': 'center'}),
-            
-            # Timeline Chart - full screen
-            dcc.Graph(
-                id='timeline-chart',
-                style={'height': '90vh', 'width': '100%'},
-                config={
-                    'displayModeBar': True,
-                    'displaylogo': False,
-                    'modeBarButtonsToRemove': ['pan2d', 'lasso2d', 'select2d'],
-                    'toImageButtonOptions': {
-                        'format': 'png',
-                        'filename': 'schedule_timeline',
-                        'height': 600,
-                        'width': 1200,
-                        'scale': 2
-                    }
-                }
-            )
-        ], style={'height': '100vh', 'width': '100%', 'margin': 0, 'padding': 0})
+    app_state = WebAppState()
+    app.layout = _create_timeline_layout()
     
-    # Set the layout
-    app.layout = create_minimal_layout()
-    
-    # Callbacks
     @app.callback(
         Output('timeline-chart', 'figure'),
-        [Input('generate-btn', 'n_clicks'),
-         Input('export-pdf-btn', 'n_clicks')]
+        Input('generate-btn', 'n_clicks')
     )
-    def update_timeline(n_generate, n_export):
+    def update_timeline(n_clicks):
         """Update timeline chart when generate button is clicked."""
-        ctx = callback_context
-        
-        # Only run callback if a button was actually clicked
-        if not ctx.triggered:
+        if not n_clicks or n_clicks <= 0:
             raise exceptions.PreventUpdate
         
-        trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
-        
-        # Check if buttons were actually clicked (not just initialized)
-        if trigger_id == 'generate-btn' and n_generate and n_generate > 0:
-            return _generate_timeline()
-        elif trigger_id == 'export-pdf-btn' and n_export and n_export > 0:
-            return _export_timeline_pdf()
-        else:
-            raise exceptions.PreventUpdate
-    
-    def _generate_timeline():
-        """Generate timeline chart."""
         try:
             config = load_config('config.json')
-            # Import scheduler to ensure registration
-            from src.schedulers.greedy import GreedyScheduler
             scheduler = BaseScheduler.create_scheduler(SchedulerStrategy.GREEDY, config)
             schedule = scheduler.schedule()
             
-            # Store the current schedule data for PDF export
-            global _current_schedule_data
-            _current_schedule_data = schedule
+            # Create proper ScheduleState
+            schedule_state = ScheduleState(
+                schedule=schedule,
+                config=config,
+                strategy=SchedulerStrategy.GREEDY,
+                metadata={'source': 'web_app'},
+                timestamp=datetime.now().isoformat()
+            )
             
-            # Create timeline chart
-            timeline_fig = create_gantt_chart(schedule, config)
-            return timeline_fig
+            # Store in app state
+            app_state.current_schedule = schedule_state
             
-        except Exception as e:
-            print("Error generating schedule: %s", e)
-            return create_gantt_chart({}, Config.create_default())
-    
-    def _export_timeline_pdf():
-        """Export timeline as PDF."""
-        try:
-            if not _current_schedule_data:
-                print("No schedule data available. Please generate a timeline first.")
-                return create_gantt_chart({}, Config.create_default())
-            
-            config = load_config('config.json')
-            
-            # Import PDF generator
-            from app.components.charts.pdf_generator import generate_timeline_pdf
-            
-            # Generate PDF
-            pdf_path = generate_timeline_pdf(_current_schedule_data, config)
-            print(f"✅ PDF exported: {pdf_path}")
-            
-            # Return the current chart (don't change the display)
-            return create_gantt_chart(_current_schedule_data, config)
+            return create_gantt_chart(schedule_state)
             
         except Exception as e:
-            print("Error exporting PDF: %s", e)
-            return create_gantt_chart({}, Config.create_default())
+            print(f"Error generating schedule: {e}")
+            # Create empty ScheduleState for error case
+            empty_state = ScheduleState(
+                schedule={},
+                config=Config.create_default(),
+                strategy=SchedulerStrategy.GREEDY,
+                metadata={'error': str(e)},
+                timestamp=datetime.now().isoformat()
+            )
+            return create_gantt_chart(empty_state)
     
     return app
 
+
+def _create_timeline_layout():
+    """Create a minimal timeline layout with just the chart."""
+    return html.Div([
+        # Simple generate button
+        html.Div([
+            html.Button([
+                html.I(className="fas fa-play"),
+                " Generate Timeline"
+            ], id="generate-btn", className="btn btn-primary", style={'margin': '10px'})
+        ], style={'textAlign': 'center'}),
+        
+        # Timeline Chart
+        dcc.Graph(
+            id='timeline-chart',
+            style={'height': '90vh', 'width': '100%'},
+            config={
+                'displayModeBar': True,
+                'displaylogo': False,
+                'modeBarButtonsToRemove': ['pan2d', 'lasso2d', 'select2d'],
+                'toImageButtonOptions': {
+                    'format': 'png',
+                    'filename': 'schedule_timeline',
+                    'height': 600,
+                    'width': 1200,
+                    'scale': 2
+                }
+            }
+        )
+    ], style={'height': '100vh', 'width': '100%', 'margin': 0, 'padding': 0})
+
+
 def main():
-    """Main entry point that determines which app to run."""
+    """Main entry point that creates the timeline app."""
     parser = argparse.ArgumentParser(description='Paper Planner Web Application')
-    parser.add_argument('--mode', choices=['dashboard', 'timeline'], default='dashboard',
-                       help='Application mode: dashboard (default) or timeline')
     parser.add_argument('--port', type=int, default=8050, help='Port to run the server on')
     parser.add_argument('--host', default='127.0.0.1', help='Host to run the server on')
     parser.add_argument('--debug', action='store_true', help='Run in debug mode')
     
     args = parser.parse_args()
     
-    # Create the appropriate app based on mode
-    if args.mode == 'timeline':
-        app = create_timeline_app()
-        print("[START] Starting Paper Planner Timeline")
-        print("[CHART] Timeline will be available at: http://127.0.0.1:8050")
-    else:
-        app = create_dashboard_app()
-        print("[START] Starting Paper Planner Web Application")
-        print("[CHART] Dashboard will be available at: http://127.0.0.1:8050")
-    
+    # Create the timeline app (gantt chart)
+    app = create_timeline_app()
+    print("[START] Starting Paper Planner Timeline")
+    print("[CHART] Timeline will be available at: http://127.0.0.1:8050")
     print("[REFRESH] Press Ctrl+C to stop the server")
     print("-" * 50)
     
-    # Run the app with improved timeout handling
+    # Run the app
     try:
         app.run(
             debug=args.debug,
             host=args.host,
             port=args.port,
-            threaded=True,  # Enable threading for better performance
-            use_reloader=False  # Disable reloader to avoid issues
+            threaded=True,
+            use_reloader=False
         )
     except OSError as e:
         if "Address already in use" in str(e):
-            print("[ERROR] Port %d is already in use. Please stop the existing server or use a different port.", args.port)
+            print(f"[ERROR] Port {args.port} is already in use. Please stop the existing server or use a different port.")
             sys.exit(1)
         else:
-            print("[ERROR] Server error: %s", e)
+            print(f"[ERROR] Server error: {e}")
             sys.exit(1)
     except Exception as e:
-        print("[ERROR] Unexpected error starting server: %s", e)
+        print(f"[ERROR] Unexpected error starting server: {e}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

@@ -1,98 +1,63 @@
-"""Activity-related functions for Gantt charts."""
+"""
+Activity-related functions for Gantt charts.
+Handles bars, labels, and dependency arrows.
+"""
 
 import plotly.graph_objects as go
 from datetime import date, timedelta
-from typing import Dict, Any, List, Tuple
+from typing import Dict
 
 from src.core.models import Config, Submission
 
 
 def add_activity_bars(fig: go.Figure, schedule: Dict[str, date], config: Config,
                      concurrency_map: Dict[str, int], timeline_start: date) -> None:
-    """Add beautiful submission bars to the gantt chart."""
-    try:
-        # Sort schedule by start date for consistent positioning
-        sorted_schedule = _get_sorted_schedule(schedule)
+    """Add activity bars to the gantt chart using proper row positioning."""
+    for submission_id, start_date in schedule.items():
+        submission = config.submissions_dict.get(submission_id)
+        if not submission:
+            continue
         
-        # Calculate row positions based on schedule order (no concurrency conflicts)
-        row_positions = {}
-        current_row = 0
+        # Get row position from concurrency map
+        row = concurrency_map.get(submission_id, 0)
         
-        for submission_id, start_date in sorted_schedule:
-            row_positions[submission_id] = current_row
-            current_row += 1
+        # Calculate duration and end date
+        duration_days = max(submission.get_duration_days(config), 7)
+        end_date = start_date + timedelta(days=duration_days)
         
-        # Add bars for each submission
-        for submission_id, start_date in sorted_schedule:
-            submission = config.submissions_dict.get(submission_id)
-            if not submission:
-                continue
-            
-            duration_days = max(submission.get_duration_days(config), 7)
-            end_date = start_date + timedelta(days=duration_days)
-            row = row_positions[submission_id]
-            
-            # Add the bar
-            _add_elegant_bar(fig, submission, start_date, end_date, row)
-            
-            # Add label
-            _add_bar_label(fig, submission, start_date, end_date, row)
-            
-    except Exception as e:
-        fig.add_annotation(
-            text=f"Error rendering bars: {str(e)}",
-            xref="paper", yref="paper",
-            x=0.5, y=0.5,
-            xanchor='center', yanchor='middle',
-            font={'size': 14, 'color': '#e74c3c'},
-            showarrow=False
-        )
+        # Add the bar
+        _add_elegant_bar(fig, submission, start_date, end_date, row)
+        
+        # Add label
+        _add_bar_label(fig, submission, start_date, end_date, row)
 
 
 def add_dependency_arrows(fig: go.Figure, schedule: Dict[str, date], config: Config,
                          concurrency_map: Dict[str, int], timeline_start: date) -> None:
-    """Add elegant dependency arrows between submissions."""
-    try:
-        # Find dependencies and add arrows
-        for submission_id, start_date in schedule.items():
-            submission = config.submissions_dict.get(submission_id)
-            if not submission or not submission.depends_on:
+    """Add dependency arrows between activities using proper row positioning."""
+    for submission_id, start_date in schedule.items():
+        submission = config.submissions_dict.get(submission_id)
+        if not submission or not submission.depends_on:
+            continue
+        
+        for dep_id in submission.depends_on:
+            dep_start = schedule.get(dep_id)
+            if not dep_start:
                 continue
             
-            for dep_id in submission.depends_on:
-                dep_start = schedule.get(dep_id)
-                if not dep_start:
-                    continue
-                
-                # Calculate positions for arrow
-                dep_submission = config.submissions_dict.get(dep_id)
-                if not dep_submission:
-                    continue
-                
-                dep_duration = max(dep_submission.get_duration_days(config), 7)
-                dep_end = dep_start + timedelta(days=dep_duration)
-                
-                # Find row positions (simplified - just use submission order)
-                submission_order = list(schedule.keys())
-                from_row = submission_order.index(dep_id)
-                to_row = submission_order.index(submission_id)
-                
-                _add_dependency_arrow(fig, dep_end, from_row, start_date, to_row)
-                
-    except Exception as e:
-        fig.add_annotation(
-            text=f"Error rendering dependencies: {str(e)}",
-            xref="paper", yref="paper",
-            x=0.5, y=0.4,
-            xanchor='center', yanchor='middle',
-            font={'size': 14, 'color': '#e74c3c'},
-            showarrow=False
-        )
-
-
-def _get_sorted_schedule(schedule: Dict[str, date]) -> List[Tuple[str, date]]:
-    """Get schedule sorted by start date."""
-    return sorted(schedule.items(), key=lambda x: x[1])
+            # Calculate positions for arrow
+            dep_submission = config.submissions_dict.get(dep_id)
+            if not dep_submission:
+                continue
+            
+            dep_duration = max(dep_submission.get_duration_days(config), 7)
+            dep_end = dep_start + timedelta(days=dep_duration)
+            
+            # Get row positions from concurrency map
+            from_row = concurrency_map.get(dep_id, 0)
+            to_row = concurrency_map.get(submission_id, 0)
+            
+            _add_dependency_arrow(fig, dep_end, from_row, start_date, to_row)
 
 
 def _add_elegant_bar(fig: go.Figure, submission: Submission, start_date: date, 
@@ -187,14 +152,15 @@ def _get_display_title(submission: Submission) -> str:
     title = submission.title
     
     # Extract MOD number if present
-    mod_number = _extract_mod_number(title)
-    if mod_number:
-        return f"MOD {mod_number}"
+    import re
+    mod_match = re.search(r'MOD\s*(\d+)', title, re.IGNORECASE)
+    if mod_match:
+        return f"MOD {mod_match.group(1)}"
     
     # Extract ED number if present
-    ed_number = _extract_ed_number(title)
-    if ed_number:
-        return f"ED {ed_number}"
+    ed_match = re.search(r'ED\s*(\d+)', title, re.IGNORECASE)
+    if ed_match:
+        return f"ED {ed_match.group(1)}"
     
     # Truncate long titles
     max_length = 25
@@ -203,17 +169,3 @@ def _get_display_title(submission: Submission) -> str:
     
     truncated = title[:max_length-3]
     return (truncated + "...") if truncated else title[:max_length-3] + "..."
-
-
-def _extract_mod_number(title: str) -> str:
-    """Extract MOD number from title."""
-    import re
-    match = re.search(r'MOD\s*(\d+)', title, re.IGNORECASE)
-    return match.group(1) if match else ""
-
-
-def _extract_ed_number(title: str) -> str:
-    """Extract ED number from title."""
-    import re
-    match = re.search(r'ED\s*(\d+)', title, re.IGNORECASE)
-    return match.group(1) if match else ""
