@@ -120,25 +120,8 @@ def _generate_chart_with_timeline_range(schedule: Dict[str, date], config, filen
     try:
         from app.components.charts.gantt_chart import create_gantt_chart
         
-        # Create the chart
-        fig = create_gantt_chart(schedule, config)
-        
-        # Force the timeline range if specified
-        if timeline_config and timeline_config.get("force_timeline_range"):
-            start_date = timeline_config["timeline_start"]
-            end_date = timeline_config["timeline_end"]
-            
-            # Convert dates to days for x-axis
-            start_days = (start_date - min(schedule.values()) if schedule else start_date - date.today()).days
-            end_days = (end_date - min(schedule.values()) if schedule else end_date - date.today()).days
-            
-            # Update x-axis range
-            fig.update_xaxes(range=[start_days, end_days])
-            
-            # Update title to show the timeline range
-            fig.update_layout(
-                title=f"Schedule Timeline ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})"
-            )
+        # Create the chart with the forced timeline range
+        fig = create_gantt_chart(schedule, config, timeline_config)
         
         # Save as PNG
         fig.write_image(

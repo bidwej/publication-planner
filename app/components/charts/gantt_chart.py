@@ -16,14 +16,45 @@ from app.components.charts.gantt_formatter import GanttFormatter, GanttStyler
 class GanttChartBuilder:
     """Builder class for creating Gantt charts with proper separation of concerns."""
     
-    def __init__(self, schedule: Dict[str, date], config: Config):
+    def __init__(self, schedule: Dict[str, date], config: Config, forced_timeline: Optional[Dict] = None):
         self.schedule = schedule
         self.config = config
-        self.min_date = min(schedule.values()) if schedule else date.today()
-        self.max_date = max(schedule.values()) + timedelta(days=90) if schedule else date.today()
+        
+        # Handle forced timeline range if specified
+        if forced_timeline and forced_timeline.get("force_timeline_range"):
+            self.min_date = forced_timeline["timeline_start"]
+            self.max_date = forced_timeline["timeline_end"]
+            # CRITICAL: When using forced timeline, bars must be positioned relative to timeline start
+            self.timeline_start = forced_timeline["timeline_start"]
+        else:
+            # Calculate dates naturally from schedule
+            self.min_date = min(schedule.values()) if schedule else date.today()
+            # Calculate max_date more precisely - find the actual end of the last submission
+            if schedule:
+                max_start = max(schedule.values())
+                # Find the submission with the latest end date
+                max_end_date = max_start
+                for submission_id, start_date in schedule.items():
+                    submission = config.submissions_dict.get(submission_id)
+                    if submission:
+                        duration = submission.get_duration_days(config)
+                        if duration <= 0:
+                            duration = 7
+                        end_date = start_date + timedelta(days=duration)
+                        if end_date > max_end_date:
+                            max_end_date = end_date
+                
+                # Add a small buffer (30 days instead of 90) for visual spacing
+                self.max_date = max_end_date + timedelta(days=30)
+            else:
+                self.max_date = date.today()
+            # For natural timeline, timeline start = min_date
+            self.timeline_start = self.min_date
+        
         self.fig = go.Figure()
         
-        # Initialize Gantt formatter with consistent date names
+        # Initialize Gantt formatter with EXACTLY the same date range used for bar positioning
+        # This ensures timeline ticks align perfectly with bar positions
         self.gantt_formatter = GanttFormatter(self.min_date, self.max_date)
         
         # Calculate concurrency levels once upfront - simple and logical
@@ -161,7 +192,7 @@ class GanttChartBuilder:
             if duration_days <= 0:
                 duration_days = 7  # Minimum 1 week for work items
             
-            start_day = (start_date - self.min_date).days
+            start_day = (start_date - self.timeline_start).days
             end_day = start_day + duration_days
             
             # Get colors and borders from the styler
@@ -573,9 +604,9 @@ class GanttChartBuilder:
         )
         return fig
 
-def create_gantt_chart(schedule: Dict[str, date], config: Config) -> go.Figure:
+def create_gantt_chart(schedule: Dict[str, date], config: Config, forced_timeline: Optional[Dict] = None) -> go.Figure:
     """Create an interactive Gantt chart for the schedule."""
-    builder = GanttChartBuilder(schedule, config)
+    builder = GanttChartBuilder(schedule, config, forced_timeline)
     return builder.build()
 
 def generate_gantt_png(schedule: Dict[str, date], config: Config, filename: str = "chart_current.png") -> str:
