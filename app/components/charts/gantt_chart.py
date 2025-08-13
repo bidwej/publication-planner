@@ -234,7 +234,7 @@ class GanttChartBuilder:
             )
     
     def _add_blackout_periods(self):
-        """Add blackout period backgrounds with proper light gray coloring."""
+        """Add blackout period backgrounds using existing blackout data."""
         blackout_data = self._load_blackout_data()
         
         # Calculate proper Y-axis range based on bar height
@@ -247,9 +247,9 @@ class GanttChartBuilder:
             start_date = date.fromisoformat(period['start'])
             end_date = date.fromisoformat(period['end'])
             
-            if start_date <= self.max_date and end_date >= self.min_date:
-                start_days = max(0, (start_date - self.min_date).days)
-                end_days = (end_date - self.min_date).days
+            if start_date <= self.max_date and end_date >= self.timeline_start:
+                start_days = max(0, (start_date - self.timeline_start).days)
+                end_days = (end_date - self.timeline_start).days
                 
                 self.fig.add_shape(
                     type="rect",
@@ -257,32 +257,32 @@ class GanttChartBuilder:
                     x1=end_days,
                     y0=-y_margin,
                     y1=self.max_concurrency + y_margin,
-                    fillcolor="rgba(200, 200, 200, 0.2)",  # Light gray
+                    fillcolor="rgba(200, 200, 200, 0.3)",  # Light gray
                     line=dict(width=0),
                     layer="below"
                 )
         
-        # Add weekend periods
-        if blackout_data.get('weekends', {}).get('enabled', False):
-            self._add_weekend_periods()
+        # Add weekends (using the same logic as is_working_day)
+        self._add_weekend_periods()
         
-        # Add holiday periods
-        self._add_holiday_periods(blackout_data)
+        # Add holidays from the existing blackout data
+        self._add_holiday_periods_from_data(blackout_data)
         
         # Add time interval bands (monthly/quarterly)
         self._add_time_interval_bands()
     
     def _add_weekend_periods(self):
-        """Add weekend periods as recurring shaded rectangles."""
-        current_date = self.min_date
+        """Add weekend periods using the same logic as is_working_day."""
+        current_date = self.timeline_start
         
         # Calculate proper Y-axis range based on bar height
         bar_height = 0.8
         y_margin = bar_height / 2 + 0.2
         
         while current_date <= self.max_date:
-            if current_date.weekday() in [5, 6]:  # Saturday=5, Sunday=6
-                day_offset = (current_date - self.min_date).days
+            # Same weekend logic as is_working_day: Saturday=5, Sunday=6
+            if current_date.weekday() >= 5:
+                day_offset = (current_date - self.timeline_start).days
                 
                 self.fig.add_shape(
                     type="rect",
@@ -290,56 +290,78 @@ class GanttChartBuilder:
                     x1=day_offset + 1,
                     y0=-y_margin,
                     y1=self.max_concurrency + y_margin,
-                    fillcolor="rgba(200, 200, 200, 0.2)",
+                    fillcolor="rgba(200, 200, 200, 0.2)",  # Very light gray for weekends
                     line=dict(width=0),
                     layer="below"
                 )
             
             current_date += timedelta(days=1)
     
-    def _add_holiday_periods(self, blackout_data):
-        """Add federal holiday periods."""
-        holiday_dates = set()
-        
+    def _add_holiday_periods_from_data(self, blackout_data):
+        """Add holiday periods from the existing blackout data."""
         # Calculate proper Y-axis range based on bar height
         bar_height = 0.8
         y_margin = bar_height / 2 + 0.2
         
-        # Use current year and next year for holiday generation
-        current_year = date.today().year
-        for year in [str(current_year), str(current_year + 1)]:
-            holidays = blackout_data.get(f'federal_holidays_{year}', [])
-            for holiday_str in holidays:
-                holiday_date = date.fromisoformat(holiday_str)
-                holiday_dates.add((holiday_date.month, holiday_date.day))
+        # Add federal holidays (new format)
+        for year in [2025, 2026]:
+            federal_holidays_key = f"federal_holidays_{year}"
+            if federal_holidays_key in blackout_data:
+                for date_str in blackout_data[federal_holidays_key]:
+                    try:
+                        holiday_date = date.fromisoformat(date_str)
+                        if self.timeline_start <= holiday_date <= self.max_date:
+                            day_offset = (holiday_date - self.timeline_start).days
+                            
+                            self.fig.add_shape(
+                                type="rect",
+                                x0=day_offset,
+                                x1=day_offset + 1,
+                                y0=-y_margin,
+                                y1=self.max_concurrency + y_margin,
+                                fillcolor="rgba(255, 0, 0, 0.2)",  # Red for holidays
+                                line=dict(width=0),
+                                layer="below"
+                            )
+                    except ValueError:
+                        continue
         
-        start_year = self.min_date.year
-        end_year = self.max_date.year
-        
-        for year in range(start_year, end_year + 1):
-            for month, day in holiday_dates:
-                try:
-                    holiday_date = date(year, month, day)
-                    if self.min_date <= holiday_date <= self.max_date:
-                        day_offset = (holiday_date - self.min_date).days
-                        
-                        self.fig.add_shape(
-                            type="rect",
-                            x0=day_offset,
-                            x1=day_offset + 1,
-                            y0=-y_margin,
-                            y1=self.max_concurrency + y_margin,
-                            fillcolor="rgba(255, 0, 0, 0.2)",
-                            line=dict(width=0),
-                            layer="below"
-                        )
-                except ValueError:
-                    continue
+        # Add recurring holidays (old format)
+        recurring_holidays = blackout_data.get('recurring_holidays', [])
+        for holiday in recurring_holidays:
+            try:
+                month = holiday.get("month", 1)
+                day = holiday.get("day", 1)
+                
+                # Add for the timeline range years
+                start_year = self.timeline_start.year
+                end_year = self.max_date.year
+                
+                for year in range(start_year, end_year + 1):
+                    try:
+                        holiday_date = date(year, month, day)
+                        if self.timeline_start <= holiday_date <= self.max_date:
+                            day_offset = (holiday_date - self.timeline_start).days
+                            
+                            self.fig.add_shape(
+                                type="rect",
+                                x0=day_offset,
+                                x1=day_offset + 1,
+                                y0=-y_margin,
+                                y1=self.max_concurrency + y_margin,
+                                fillcolor="rgba(255, 0, 0, 0.2)",  # Red for holidays
+                                line=dict(width=0),
+                                layer="below"
+                            )
+                    except ValueError:
+                        continue
+            except (KeyError, ValueError):
+                continue
     
     def _add_time_interval_bands(self):
         """Add alternating time interval bands for better readability."""
         # Calculate timeline duration
-        timeline_days = (self.max_date - self.min_date).days
+        timeline_days = (self.max_date - self.timeline_start).days
         
         # Calculate proper Y-axis range based on bar height
         bar_height = 0.8
@@ -410,8 +432,8 @@ class GanttChartBuilder:
                         dep_duration = dep_submission.get_duration_days(self.config)
                         if dep_duration <= 0:
                             dep_duration = 7  # Minimum duration for work items
-                        dep_end_days = (dep_start + timedelta(days=dep_duration) - self.min_date).days
-                        current_start_days = (start_date - self.min_date).days
+                        dep_end_days = (dep_start + timedelta(days=dep_duration) - self.timeline_start).days
+                        current_start_days = (start_date - self.timeline_start).days
                         
                         # Get concurrency level for the dependency
                         dep_concurrency = self.concurrency_map.get(dep_id, 0)
