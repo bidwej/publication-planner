@@ -5,7 +5,7 @@ Interactive Gantt chart component for schedule visualization.
 import json
 from datetime import date, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple, Any
 
 import plotly.graph_objects as go
 
@@ -51,6 +51,19 @@ class GanttChartBuilder:
             # For natural timeline, timeline start = min_date
             self.timeline_start = self.min_date
         
+        # Initialize chart properties
+        self.timeline_start = forced_timeline["timeline_start"] if forced_timeline else self.min_date
+        self.bar_height = 0.8
+        self.y_margin = self.bar_height / 2 + 0.2
+        
+        # Calculate concurrency levels using existing utility
+        concurrency_result = self._calculate_simple_concurrency()
+        if isinstance(concurrency_result, tuple):
+            self.concurrency_map, self.max_concurrency = concurrency_result
+        else:
+            self.concurrency_map = concurrency_result
+            self.max_concurrency = max(self.concurrency_map.values()) if self.concurrency_map else 0
+        
         self.fig = go.Figure()
         
         # Initialize Gantt formatter with EXACTLY the same date range used for bar positioning
@@ -58,11 +71,8 @@ class GanttChartBuilder:
         self.gantt_formatter = GanttFormatter(self.min_date, self.max_date)
         
         # Calculate concurrency levels once upfront - simple and logical
-        self.concurrency_map = {}
-        self.max_concurrency = 0
-        if self.schedule:
-            self.concurrency_map = self._calculate_simple_concurrency()
-            self.max_concurrency = max(self.concurrency_map.values()) if self.concurrency_map else 0
+        # self.concurrency_map = {} # This line is now redundant as it's calculated in __init__
+        # self.max_concurrency = 0 # This line is now redundant as it's calculated in __init__
     
     def _calculate_simple_concurrency(self) -> Dict[str, int]:
         """Calculate concurrency levels simply: start at row 0, only go to row 1 if overlap."""
@@ -120,7 +130,7 @@ class GanttChartBuilder:
         
         return False
     
-    def _get_sorted_schedule(self):
+    def _get_sorted_schedule(self) -> List[Tuple[str, date]]:
         """Get submissions sorted by author (PCCP, then ED, then others), then by ID number."""
         def sort_key(item):
             submission_id = item[0]
@@ -171,7 +181,7 @@ class GanttChartBuilder:
         
         return self.fig
     
-    def _add_submission_bars(self):
+    def _add_submission_bars(self) -> None:
         """Add submission bars showing concurrency levels with proper styling and borders."""
         submissions_dict = self.config.submissions_dict
         
@@ -233,7 +243,7 @@ class GanttChartBuilder:
                 borderwidth=1
             )
     
-    def _add_blackout_periods(self):
+    def _add_blackout_periods(self) -> None:
         """Add blackout period backgrounds using existing blackout data."""
         blackout_data = self._load_blackout_data()
         
@@ -262,103 +272,67 @@ class GanttChartBuilder:
                     layer="below"
                 )
         
-        # Add weekends (using the same logic as is_working_day)
-        self._add_weekend_periods()
-        
-        # Add holidays from the existing blackout data
-        self._add_holiday_periods_from_data(blackout_data)
+        # Add non-working days (weekends + holidays) efficiently
+        self._add_non_working_days()
         
         # Add time interval bands (monthly/quarterly)
         self._add_time_interval_bands()
     
-    def _add_weekend_periods(self):
-        """Add weekend periods using the same logic as is_working_day."""
-        current_date = self.timeline_start
+    def _add_non_working_days(self) -> None:
+        """Add non-working days efficiently using existing is_working_day function."""
+        from src.core.dates import is_working_day
         
-        # Calculate proper Y-axis range based on bar height
-        bar_height = 0.8
-        y_margin = bar_height / 2 + 0.2
+        # Get blackout dates from config
+        blackout_dates = getattr(self.config, 'blackout_dates', []) or []
+        
+        # Calculate proper Y-axis range
+        y_margin = self.bar_height / 2 + 0.2
+        
+        # Group consecutive non-working days to minimize shapes
+        non_working_periods = self._get_non_working_periods(blackout_dates)
+        
+        # Add shapes for each period
+        for start_date, end_date in non_working_periods:
+            start_offset = (start_date - self.timeline_start).days
+            end_offset = (end_date - self.timeline_start).days + 1
+            
+            self.fig.add_shape(
+                type="rect",
+                x0=start_offset,
+                x1=end_offset,
+                y0=-y_margin,
+                y1=self.max_concurrency + y_margin,
+                fillcolor="rgba(200, 200, 200, 0.2)",
+                line=dict(width=0),
+                layer="below"
+            )
+    
+    def _get_non_working_periods(self, blackout_dates: List[date]) -> List[Tuple[date, date]]:
+        """Get consecutive non-working day periods efficiently."""
+        from src.core.dates import is_working_day
+        
+        periods = []
+        current_date = self.timeline_start
+        period_start = None
         
         while current_date <= self.max_date:
-            # Same weekend logic as is_working_day: Saturday=5, Sunday=6
-            if current_date.weekday() >= 5:
-                day_offset = (current_date - self.timeline_start).days
-                
-                self.fig.add_shape(
-                    type="rect",
-                    x0=day_offset,
-                    x1=day_offset + 1,
-                    y0=-y_margin,
-                    y1=self.max_concurrency + y_margin,
-                    fillcolor="rgba(200, 200, 200, 0.2)",  # Very light gray for weekends
-                    line=dict(width=0),
-                    layer="below"
-                )
+            is_working = is_working_day(current_date, blackout_dates)
+            
+            if not is_working and period_start is None:
+                period_start = current_date
+            elif is_working and period_start is not None:
+                periods.append((period_start, current_date - timedelta(days=1)))
+                period_start = None
             
             current_date += timedelta(days=1)
-    
-    def _add_holiday_periods_from_data(self, blackout_data):
-        """Add holiday periods from the existing blackout data."""
-        # Calculate proper Y-axis range based on bar height
-        bar_height = 0.8
-        y_margin = bar_height / 2 + 0.2
         
-        # Add federal holidays (new format)
-        for year in [2025, 2026]:
-            federal_holidays_key = f"federal_holidays_{year}"
-            if federal_holidays_key in blackout_data:
-                for date_str in blackout_data[federal_holidays_key]:
-                    try:
-                        holiday_date = date.fromisoformat(date_str)
-                        if self.timeline_start <= holiday_date <= self.max_date:
-                            day_offset = (holiday_date - self.timeline_start).days
-                            
-                            self.fig.add_shape(
-                                type="rect",
-                                x0=day_offset,
-                                x1=day_offset + 1,
-                                y0=-y_margin,
-                                y1=self.max_concurrency + y_margin,
-                                fillcolor="rgba(255, 0, 0, 0.2)",  # Red for holidays
-                                line=dict(width=0),
-                                layer="below"
-                            )
-                    except ValueError:
-                        continue
+        # Handle case where non-working period extends to end of timeline
+        if period_start is not None:
+            periods.append((period_start, self.max_date))
         
-        # Add recurring holidays (old format)
-        recurring_holidays = blackout_data.get('recurring_holidays', [])
-        for holiday in recurring_holidays:
-            try:
-                month = holiday.get("month", 1)
-                day = holiday.get("day", 1)
-                
-                # Add for the timeline range years
-                start_year = self.timeline_start.year
-                end_year = self.max_date.year
-                
-                for year in range(start_year, end_year + 1):
-                    try:
-                        holiday_date = date(year, month, day)
-                        if self.timeline_start <= holiday_date <= self.max_date:
-                            day_offset = (holiday_date - self.timeline_start).days
-                            
-                            self.fig.add_shape(
-                                type="rect",
-                                x0=day_offset,
-                                x1=day_offset + 1,
-                                y0=-y_margin,
-                                y1=self.max_concurrency + y_margin,
-                                fillcolor="rgba(255, 0, 0, 0.2)",  # Red for holidays
-                                line=dict(width=0),
-                                layer="below"
-                            )
-                    except ValueError:
-                        continue
-            except (KeyError, ValueError):
-                continue
+        return periods
     
-    def _add_time_interval_bands(self):
+    def _add_time_interval_bands(self) -> None:
         """Add alternating time interval bands for better readability."""
         # Calculate timeline duration
         timeline_days = (self.max_date - self.timeline_start).days
@@ -403,7 +377,7 @@ class GanttChartBuilder:
             current_day = end_day
             band_count += 1
     
-    def _add_dependency_arrows(self):
+    def _add_dependency_arrows(self) -> None:
         """Add dependency arrows between submissions using concurrency levels."""
         submissions_dict = self.config.submissions_dict
         
@@ -456,7 +430,7 @@ class GanttChartBuilder:
                         )
                         arrow_count += 1
     
-    def _configure_layout(self):
+    def _configure_layout(self) -> None:
         """Configure the chart layout with concurrency-based Y-axis."""
         # Primary x-axis (quarters) - on bottom
         primary_axis_config = self.gantt_formatter.get_axis_config()
@@ -534,7 +508,7 @@ class GanttChartBuilder:
             # For other submissions, use a clean version
             return submission_id.replace('_', ' ').title()
     
-    def _add_legend(self):
+    def _add_legend(self) -> None:
         """Add a comprehensive legend explaining all the styling."""
         legend_items = GanttStyler.get_legend_items()
         
@@ -593,7 +567,7 @@ class GanttChartBuilder:
                 borderwidth=1
             )
     
-    def _load_blackout_data(self) -> Dict:
+    def _load_blackout_data(self) -> Dict[str, Any]:
         """Load blackout data from file."""
         try:
             blackout_path = Path('data/blackout.json')
