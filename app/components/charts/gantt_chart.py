@@ -10,9 +10,8 @@ from typing import Dict, List, Optional
 import plotly.graph_objects as go
 
 from src.core.models import Config, Submission
-from src.validation.resources import _calculate_daily_load
 from src.analytics.formatters.dates import format_month_year
-from app.components.charts.gantt_formatter import GanttFormatter
+from app.components.charts.gantt_formatter import GanttFormatter, GanttStyler
 
 class GanttChartBuilder:
     """Builder class for creating Gantt charts with proper separation of concerns."""
@@ -27,18 +26,15 @@ class GanttChartBuilder:
         # Initialize Gantt formatter with consistent date names
         self.gantt_formatter = GanttFormatter(self.min_date, self.max_date)
         
-        # Calculate concurrency levels once upfront using existing function
+        # Calculate concurrency levels once upfront - simple and logical
         self.concurrency_map = {}
         self.max_concurrency = 0
         if self.schedule:
-            # Use existing daily load calculation
-            daily_load = _calculate_daily_load(self.schedule, self.config)
-            # Convert daily load to concurrency levels for each submission
-            self.concurrency_map = self._assign_concurrency_levels(daily_load)
+            self.concurrency_map = self._calculate_simple_concurrency()
             self.max_concurrency = max(self.concurrency_map.values()) if self.concurrency_map else 0
     
-    def _assign_concurrency_levels(self, daily_load: Dict[date, int]) -> Dict[str, int]:
-        """Assign concurrency levels to submissions based on daily load."""
+    def _calculate_simple_concurrency(self) -> Dict[str, int]:
+        """Calculate concurrency levels simply: start at row 0, only go to row 1 if overlap."""
         concurrency_map = {}
         
         # Sort submissions by start date to process them chronologically
@@ -55,18 +51,43 @@ class GanttChartBuilder:
                 duration_days = 7  # Minimum 1 week for work items
             end_date = start_date + timedelta(days=duration_days)
             
-            # Find the highest concurrency level needed for this submission's duration
-            max_concurrency_needed = 0
-            current_date = start_date
-            while current_date < end_date:
-                if current_date in daily_load:
-                    max_concurrency_needed = max(max_concurrency_needed, daily_load[current_date])
-                current_date += timedelta(days=1)
+            # Find the lowest available row (start at 0)
+            row = 0
+            while self._row_has_overlap(row, start_date, end_date, submission_id, concurrency_map):
+                row += 1
             
-            # Assign concurrency level (0-based)
-            concurrency_map[submission_id] = max_concurrency_needed - 1 if max_concurrency_needed > 0 else 0
+            concurrency_map[submission_id] = row
         
         return concurrency_map
+    
+    def _row_has_overlap(self, row: int, start_date: date, end_date: date, 
+                         current_id: str, concurrency_map: Dict[str, int]) -> bool:
+        """Check if a specific row has overlap with the current submission."""
+        for other_id, other_row in concurrency_map.items():
+            if other_id == current_id:
+                continue
+            
+            if other_row != row:
+                continue
+            
+            # Check if there's time overlap
+            other_submission = self.config.submissions_dict.get(other_id)
+            if not other_submission:
+                continue
+            
+            other_start = self.schedule[other_id]
+            other_duration = other_submission.get_duration_days(self.config)
+            if other_duration <= 0:
+                other_duration = 7
+            
+            other_end = other_start + timedelta(days=other_duration)
+            
+            # Check for overlap: two submissions overlap if one starts before the other ends
+            # and the other starts before the first ends
+            if start_date < other_end and end_date > other_start:
+                return True
+        
+        return False
     
     def _get_sorted_schedule(self):
         """Get submissions sorted by author (PCCP, then ED, then others), then by ID number."""
@@ -120,7 +141,7 @@ class GanttChartBuilder:
         return self.fig
     
     def _add_submission_bars(self):
-        """Add submission bars showing concurrency levels."""
+        """Add submission bars showing concurrency levels with proper styling and borders."""
         submissions_dict = self.config.submissions_dict
         
         # Get sorted schedule for consistent ordering
@@ -143,17 +164,26 @@ class GanttChartBuilder:
             start_day = (start_date - self.min_date).days
             end_day = start_day + duration_days
             
-            # Create the bar at the concurrency level
-            bar_height = 0.3
+            # Get colors and borders from the styler
+            base_color = GanttStyler.get_submission_color(submission)
+            border_color = GanttStyler.get_border_color(submission, self.config)
+            matching_border_color = GanttStyler.get_matching_border_color(submission, self.config)
+            
+            # Use matching border color if available (for abstract-paper pairs)
+            final_border_color = matching_border_color or border_color or "black"
+            border_width = 3 if matching_border_color else (2 if border_color else 1)
+            
+            # Create the bar at the concurrency level with proper proportions
+            bar_height = 0.8  # Increased from 0.3 for better visibility
             y_pos = concurrency_level
             self.fig.add_shape(
                 type="rect",
                 x0=start_day,
                 x1=end_day,
-                y0=y_pos - bar_height,
-                y1=y_pos + bar_height,
-                fillcolor=self._get_submission_color(submission),
-                line=dict(color="black", width=1),
+                y0=y_pos - bar_height/2,  # Center the bar on the concurrency level
+                y1=y_pos + bar_height/2,
+                fillcolor=base_color,
+                line=dict(color=final_border_color, width=border_width),
                 layer="above"
             )
             
@@ -176,6 +206,10 @@ class GanttChartBuilder:
         """Add blackout period backgrounds with proper light gray coloring."""
         blackout_data = self._load_blackout_data()
         
+        # Calculate proper Y-axis range based on bar height
+        bar_height = 0.8
+        y_margin = bar_height / 2 + 0.2
+        
         # Add custom blackout periods
         custom_periods = blackout_data.get('custom_blackout_periods', [])
         for period in custom_periods:
@@ -190,8 +224,8 @@ class GanttChartBuilder:
                     type="rect",
                     x0=start_days,
                     x1=end_days,
-                    y0=0,
-                    y1=self.max_concurrency + 1,
+                    y0=-y_margin,
+                    y1=self.max_concurrency + y_margin,
                     fillcolor="rgba(200, 200, 200, 0.2)",  # Light gray
                     line=dict(width=0),
                     layer="below"
@@ -199,17 +233,22 @@ class GanttChartBuilder:
         
         # Add weekend periods
         if blackout_data.get('weekends', {}).get('enabled', False):
-            self._add_weekend_periods(self.max_concurrency)
+            self._add_weekend_periods()
         
         # Add holiday periods
-        self._add_holiday_periods(blackout_data, self.max_concurrency)
+        self._add_holiday_periods(blackout_data)
         
         # Add time interval bands (monthly/quarterly)
-        self._add_time_interval_bands(self.max_concurrency)
+        self._add_time_interval_bands()
     
-    def _add_weekend_periods(self, max_concurrency):
+    def _add_weekend_periods(self):
         """Add weekend periods as recurring shaded rectangles."""
         current_date = self.min_date
+        
+        # Calculate proper Y-axis range based on bar height
+        bar_height = 0.8
+        y_margin = bar_height / 2 + 0.2
+        
         while current_date <= self.max_date:
             if current_date.weekday() in [5, 6]:  # Saturday=5, Sunday=6
                 day_offset = (current_date - self.min_date).days
@@ -218,8 +257,8 @@ class GanttChartBuilder:
                     type="rect",
                     x0=day_offset,
                     x1=day_offset + 1,
-                    y0=0,
-                    y1=max_concurrency + 1,
+                    y0=-y_margin,
+                    y1=self.max_concurrency + y_margin,
                     fillcolor="rgba(200, 200, 200, 0.2)",
                     line=dict(width=0),
                     layer="below"
@@ -227,9 +266,13 @@ class GanttChartBuilder:
             
             current_date += timedelta(days=1)
     
-    def _add_holiday_periods(self, blackout_data, max_concurrency):
+    def _add_holiday_periods(self, blackout_data):
         """Add federal holiday periods."""
         holiday_dates = set()
+        
+        # Calculate proper Y-axis range based on bar height
+        bar_height = 0.8
+        y_margin = bar_height / 2 + 0.2
         
         # Use current year and next year for holiday generation
         current_year = date.today().year
@@ -253,8 +296,8 @@ class GanttChartBuilder:
                             type="rect",
                             x0=day_offset,
                             x1=day_offset + 1,
-                            y0=0,
-                            y1=max_concurrency + 1,
+                            y0=-y_margin,
+                            y1=self.max_concurrency + y_margin,
                             fillcolor="rgba(255, 0, 0, 0.2)",
                             line=dict(width=0),
                             layer="below"
@@ -262,10 +305,14 @@ class GanttChartBuilder:
                 except ValueError:
                     continue
     
-    def _add_time_interval_bands(self, max_concurrency):
+    def _add_time_interval_bands(self):
         """Add alternating time interval bands for better readability."""
         # Calculate timeline duration
         timeline_days = (self.max_date - self.min_date).days
+        
+        # Calculate proper Y-axis range based on bar height
+        bar_height = 0.8
+        y_margin = bar_height / 2 + 0.2
         
         # Use larger intervals to prevent performance issues
         if timeline_days <= 90:  # 3 months or less
@@ -293,8 +340,8 @@ class GanttChartBuilder:
                 type="rect",
                 x0=current_day,
                 x1=end_day,
-                y0=0,
-                y1=max_concurrency + 1,
+                y0=-y_margin,
+                y1=self.max_concurrency + y_margin,
                 fillcolor=fillcolor,
                 line=dict(width=0),
                 layer="below"
@@ -364,17 +411,26 @@ class GanttChartBuilder:
         # Get year annotations to place below the axis
         year_annotations = self.gantt_formatter.get_year_annotations()
         
-        # Create a nice title with date range
-        start_month_year = format_month_year(self.min_date)
-        end_month_year = format_month_year(self.max_date)
+        # Create a nice title with date range - using user's preferred format
+        start_month = self.min_date.strftime("%b")
+        end_month = self.max_date.strftime("%b")
+        start_year = self.min_date.year
+        end_year = self.max_date.year
         
-        if self.min_date.year == self.max_date.year:
-            title_text = f"Paper Submission Timeline: {start_month_year} to {end_month_year.split()[-1]}"
+        if start_year == end_year:
+            if start_month == end_month:
+                title_text = f"Paper Submission Timeline: {start_month} {start_year}"
+            else:
+                title_text = f"Paper Submission Timeline: {start_month} to {end_month}, {start_year}"
         else:
-            title_text = f"Paper Submission Timeline: {start_month_year} - {end_month_year}"
+            title_text = f"Paper Submission Timeline: {start_month} {start_year} - {end_month} {end_year}"
         
         # Y-axis should show concurrency levels (0, 1, 2, 3, etc.)
         y_labels = [str(i) for i in range(self.max_concurrency + 1)]
+        
+        # Calculate proper Y-axis range based on bar height
+        bar_height = 0.8
+        y_margin = bar_height / 2 + 0.2  # Small margin around bars
         
         # Update layout with concurrency-based Y-axis
         self.fig.update_layout(
@@ -394,10 +450,10 @@ class GanttChartBuilder:
                 'ticktext': y_labels,
                 'tickangle': 0,
                 'tickfont': {'size': 10},
-                'range': [-0.5, self.max_concurrency + 0.5]
+                'range': [-y_margin, self.max_concurrency + y_margin]  # Proper scaling
             },
             margin=self.gantt_formatter.get_margin_config(),
-            height=max(600, (self.max_concurrency + 1) * 40),  # Dynamic height based on concurrency
+            height=max(600, (self.max_concurrency + 1) * 60),  # Increased height per row
             showlegend=True,
             legend={
                 'orientation': 'h',
@@ -425,42 +481,62 @@ class GanttChartBuilder:
             # For other submissions, use a clean version
             return submission_id.replace('_', ' ').title()
     
-    def _get_submission_color(self, submission: Submission) -> str:
-        """Get color based on submission author (PCCP vs ED)."""
-        # Use the existing author field - much cleaner!
-        if submission.author == "pccp":
-            return "#2E86AB"  # Blue for PCCP (MODs)
-        elif submission.author == "ed":
-            return "#A23B72"  # Purple for ED Papers
-        else:
-            # Default colors for other types
-            if submission.kind.value == "paper":
-                return "#F18F01"  # Orange for other papers
-            else:
-                return "#C73E1D"  # Red for work items
-    
     def _add_legend(self):
-        """Add a legend to explain the color coding."""
-        legend_items = [
-            ("MOD Papers", "#2E86AB"),
-            ("ED Papers", "#A23B72"),
-            ("Other Papers", "#F18F01"),
-            ("Work Items", "#C73E1D")
-        ]
+        """Add a comprehensive legend explaining all the styling."""
+        legend_items = GanttStyler.get_legend_items()
         
-        for i, (label, color) in enumerate(legend_items):
+        for i, (label, color, description) in enumerate(legend_items):
+            # Position legend on the left side
+            x_pos = 0.02
+            y_pos = 0.95 - i * 0.06
+            
+            # For border items, show a border instead of a filled square
+            if "Border" in label:
+                # Show border example
+                self.fig.add_annotation(
+                    x=x_pos,
+                    y=y_pos,
+                    text=f"<span style='color:{color}'>▢</span> {label}",
+                    showarrow=False,
+                    xref="paper",
+                    yref="paper",
+                    xanchor="left",
+                    yanchor="top",
+                    font=dict(size=10),
+                    bgcolor="rgba(255, 255, 255, 0.9)",
+                    bordercolor="black",
+                    borderwidth=1
+                )
+            else:
+                # Show filled square for submission types
+                self.fig.add_annotation(
+                    x=x_pos,
+                    y=y_pos,
+                    text=f"<span style='color:{color}'>■</span> {label}",
+                    showarrow=False,
+                    xref="paper",
+                    yref="paper",
+                    xanchor="left",
+                    yanchor="top",
+                    font=dict(size=10),
+                    bgcolor="rgba(255, 255, 255, 0.9)",
+                    bordercolor="black",
+                    borderwidth=1
+                )
+            
+            # Add description below the label
             self.fig.add_annotation(
-                x=0.02,
-                y=0.95 - i * 0.05,
-                text=f"<span style='color:{color}'>■</span> {label}",
+                x=x_pos + 0.15,
+                y=y_pos,
+                text=f"({description})",
                 showarrow=False,
                 xref="paper",
                 yref="paper",
                 xanchor="left",
                 yanchor="top",
-                font=dict(size=10),
-                bgcolor="rgba(255, 255, 255, 0.8)",
-                bordercolor="black",
+                font=dict(size=8, color="gray"),
+                bgcolor="rgba(255, 255, 255, 0.7)",
+                bordercolor="lightgray",
                 borderwidth=1
             )
     

@@ -4,8 +4,10 @@ Handles multi-line labels, smart spacing, and timeline visualization for Gantt c
 """
 
 from datetime import date, timedelta
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 from enum import Enum
+
+from src.core.models import Submission, SubmissionType, ConferenceType
 
 
 class GanttFormat(Enum):
@@ -21,6 +23,88 @@ def format_date_display(date_obj: date, format_str: str = "%Y-%m-%d") -> str:
     if date_obj is None:
         return "N/A"
     return date_obj.strftime(format_str)
+
+
+class GanttStyler:
+    """Handles all styling for Gantt chart elements."""
+    
+    # Color scheme for different submission types
+    COLORS = {
+        SubmissionType.ABSTRACT: "#FF6B6B",      # Red for abstracts
+        SubmissionType.PAPER: "#4ECDC4",         # Teal for papers
+        SubmissionType.POSTER: "#45B7D1",        # Blue for posters
+        # Note: MODs are actually SubmissionType.PAPER with author="pccp"
+        # Work items would be SubmissionType.ABSTRACT or other types
+    }
+    
+    # Border colors for medical vs engineering
+    BORDER_COLORS = {
+        ConferenceType.MEDICAL: "#E74C3C",       # Red border for medical
+        ConferenceType.ENGINEERING: "#3498DB",   # Blue border for engineering
+    }
+    
+    # Default colors for author types
+    AUTHOR_COLORS = {
+        "pccp": "#2E86AB",                       # Blue for PCCP
+        "ed": "#A23B72",                         # Purple for ED
+    }
+    
+    @classmethod
+    def get_submission_color(cls, submission: Submission) -> str:
+        """Get the base color for a submission based on its type and author."""
+        # For MODs (PCCP papers), use the author color
+        if submission.author == "pccp":
+            return cls.AUTHOR_COLORS["pccp"]
+        elif submission.author == "ed":
+            return cls.AUTHOR_COLORS["ed"]
+        
+        # Otherwise use the submission type color
+        return cls.COLORS.get(submission.kind, "#95A5A6")  # Default gray
+    
+    @classmethod
+    def get_border_color(cls, submission: Submission, config) -> Optional[str]:
+        """Get border color based on conference type (medical vs engineering)."""
+        if not submission.conference_id:
+            return None
+        
+        conference = config.conferences_dict.get(submission.conference_id)
+        if not conference:
+            return None
+        
+        return cls.BORDER_COLORS.get(conference.conf_type)
+    
+    @classmethod
+    def get_author_color(cls, submission: Submission) -> str:
+        """Get color based on author type (PCCP vs ED)."""
+        if submission.author in cls.AUTHOR_COLORS:
+            return cls.AUTHOR_COLORS[submission.author]
+        return cls.get_submission_color(submission)
+    
+    @classmethod
+    def get_legend_items(cls) -> List[Tuple[str, str, str]]:
+        """Get legend items with labels, colors, and descriptions."""
+        return [
+            ("PCCP MODs", cls.AUTHOR_COLORS["pccp"], "PCCP MOD submissions"),
+            ("ED Papers", cls.AUTHOR_COLORS["ed"], "ED Paper submissions"),
+            ("Abstracts", cls.COLORS[SubmissionType.ABSTRACT], "Abstract submissions"),
+            ("Papers", cls.COLORS[SubmissionType.PAPER], "Paper submissions"),
+            ("Posters", cls.COLORS[SubmissionType.POSTER], "Poster submissions"),
+            ("Medical Border", cls.BORDER_COLORS[ConferenceType.MEDICAL], "Medical conference submissions"),
+            ("Engineering Border", cls.BORDER_COLORS[ConferenceType.ENGINEERING], "Engineering conference submissions"),
+        ]
+    
+    @classmethod
+    def get_matching_border_color(cls, submission: Submission, config) -> Optional[str]:
+        """Get border color for submissions that should have matching borders (abstract-paper pairs)."""
+        if not submission.conference_id:
+            return None
+        
+        conference = config.conferences_dict.get(submission.conference_id)
+        if not conference or not conference.requires_abstract_before_paper():
+            return None
+        
+        # For conferences requiring abstracts before papers, use a special color
+        return "#9B59B6"  # Purple for matching abstract-paper pairs
 
 
 class GanttFormatter:
