@@ -1,13 +1,14 @@
 """
 Main entry point for creating Gantt charts.
+Wrapper that styles the overall chart and orchestrates components.
 """
 
 import plotly.graph_objects as go
 from typing import Dict, Any
+from datetime import date
 
-from app.components.gantt.timeline import get_timeline_range, get_concurrency_map, get_title_text
-from app.components.gantt.activities import add_activity_bars, add_dependency_arrows
-from app.components.gantt.backgrounds import add_background_elements
+from app.components.gantt.timeline import get_timeline_range, get_title_text, get_concurrency_map, add_background_elements
+from app.components.gantt.activity import add_activity_bars, add_dependency_arrows
 from src.core.models import ScheduleState
 
 
@@ -19,20 +20,20 @@ def create_gantt_chart(schedule_state: ScheduleState) -> go.Figure:
     try:
         # Get timeline range and concurrency map
         timeline_range = get_timeline_range(schedule_state.schedule, schedule_state.config)
-        concurrency_map = get_concurrency_map(schedule_state.schedule, schedule_state.config)
+        concurrency_map = get_concurrency_map(schedule_state.schedule)
         
         # Create figure
         fig = go.Figure()
         
-        # Configure layout FIRST (so backgrounds can read from it)
-        _configure_layout(fig, timeline_range)
+        # Configure chart layout and styling
+        _configure_chart_layout(fig, timeline_range)
         
         # Add background elements (can now read chart dimensions from figure)
-        add_background_elements(fig, timeline_range['max_concurrency'])
+        add_background_elements(fig)
         
         # Add activities (middle layer)
-        add_activity_bars(fig, schedule_state.schedule, schedule_state.config, concurrency_map, timeline_range['timeline_start'])
-        add_dependency_arrows(fig, schedule_state.schedule, schedule_state.config, concurrency_map, timeline_range['timeline_start'])
+        add_activity_bars(fig, schedule_state.schedule, schedule_state.config, concurrency_map)
+        add_dependency_arrows(fig, schedule_state.schedule, schedule_state.config, concurrency_map)
         
         return fig
         
@@ -40,8 +41,8 @@ def create_gantt_chart(schedule_state: ScheduleState) -> go.Figure:
         return _create_error_chart(str(e))
 
 
-def _configure_layout(fig: go.Figure, timeline_range: Dict[str, Any]) -> None:
-    """Configure the chart layout."""
+def _configure_chart_layout(fig: go.Figure, timeline_range: Dict[str, Any]) -> None:
+    """Configure the overall chart layout and styling."""
     title_text = get_title_text(timeline_range)
     max_concurrency = timeline_range['max_concurrency']
     
@@ -72,7 +73,7 @@ def _configure_layout(fig: go.Figure, timeline_range: Dict[str, Any]) -> None:
 
 
 def _create_empty_chart() -> go.Figure:
-    """Create empty chart."""
+    """Create empty chart when no data is available."""
     fig = go.Figure()
     fig.update_layout(
         title={'text': 'No Schedule Data Available', 'x': 0.5, 'xanchor': 'center'},
@@ -82,7 +83,7 @@ def _create_empty_chart() -> go.Figure:
 
 
 def _create_error_chart(error_message: str) -> go.Figure:
-    """Create error chart."""
+    """Create error chart when chart creation fails."""
     fig = go.Figure()
     fig.update_layout(
         title={'text': 'Chart Creation Failed', 'x': 0.5, 'xanchor': 'center'},

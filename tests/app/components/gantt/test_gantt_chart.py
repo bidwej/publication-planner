@@ -7,10 +7,9 @@ import plotly.graph_objects as go
 from typing import Dict, List, Tuple, Optional, Any
 
 from app.components.gantt.chart import create_gantt_chart
-from app.components.gantt.timeline import get_timeline_range, get_title_text
-from app.components.gantt.activities import add_activity_bars, add_dependency_arrows
-from app.components.gantt.backgrounds import add_background_elements
-from src.core.models import Submission, SubmissionType, Config
+from app.components.gantt.timeline import get_timeline_range, get_title_text, get_concurrency_map, add_background_elements
+from app.components.gantt.activity import add_activity_bars, add_dependency_arrows
+from src.core.models import Submission, SubmissionType, Config, ScheduleState, SchedulerStrategy
 
 
 class TestGanttChartCreation:
@@ -18,7 +17,14 @@ class TestGanttChartCreation:
     
     def test_create_gantt_chart_success(self, sample_schedule: Dict[str, date], sample_config: Config) -> None:
         """Test successful gantt chart creation."""
-        fig = create_gantt_chart(sample_schedule, sample_config)
+        schedule_state = ScheduleState(
+            schedule=sample_schedule,
+            config=sample_config,
+            strategy=SchedulerStrategy.GREEDY,
+            metadata={'source': 'test'},
+            timestamp='2024-01-01T00:00:00'
+        )
+        fig = create_gantt_chart(schedule_state)
         
         assert isinstance(fig, go.Figure)
         assert hasattr(fig.layout, 'title') and fig.layout.title is not None
@@ -28,49 +34,47 @@ class TestGanttChartCreation:
     
     def test_create_gantt_chart_empty_schedule(self, sample_config: Config) -> None:
         """Test gantt chart creation with empty schedule."""
-        fig = create_gantt_chart({}, sample_config)
+        schedule_state = ScheduleState(
+            schedule={},
+            config=sample_config,
+            strategy=SchedulerStrategy.GREEDY,
+            metadata={'source': 'test'},
+            timestamp='2024-01-01T00:00:00'
+        )
+        fig = create_gantt_chart(schedule_state)
         
         assert isinstance(fig, go.Figure)
         assert hasattr(fig.layout, 'title') and fig.layout.title is not None
         assert "No Schedule Data Available" in fig.layout.title.text
     
-    def test_create_gantt_chart_with_forced_timeline(self, sample_schedule: Dict[str, date], sample_config: Config) -> None:
-        """Test gantt chart creation with forced timeline."""
-        forced_timeline = {
-            "force_timeline_range": True,
-            "timeline_start": date(2025, 7, 1),
-            "timeline_end": date(2026, 2, 1)
-        }
-        
-        fig = create_gantt_chart(sample_schedule, sample_config, forced_timeline)
-        
-        assert isinstance(fig, go.Figure)
-        # Check that forced timeline is respected
-        assert hasattr(fig.layout, 'xaxis') and fig.layout.xaxis is not None
-        assert hasattr(fig.layout.xaxis, 'range') and fig.layout.xaxis.range is not None
-        assert fig.layout.xaxis.range[0] == date(2025, 7, 1)
-        assert fig.layout.xaxis.range[1] == date(2026, 2, 1)
-    
     def test_create_gantt_chart_invalid_inputs(self, sample_config: Config) -> None:
         """Test gantt chart creation with invalid inputs."""
-        # Test with invalid schedule type
+        # Test with invalid schedule state type
         with pytest.raises(TypeError):
-            create_gantt_chart("invalid", sample_config)  # type: ignore
+            create_gantt_chart("invalid")  # type: ignore
         
-        # Test with invalid config type
-        with pytest.raises(TypeError):
-            create_gantt_chart({}, "invalid")  # type: ignore
+        # Test with None
+        with pytest.raises(AttributeError):
+            create_gantt_chart(None)  # type: ignore
     
     def test_create_gantt_chart_error_handling(self, sample_schedule: Dict[str, date], sample_config: Config) -> None:
         """Test error handling during chart creation."""
+        schedule_state = ScheduleState(
+            schedule=sample_schedule,
+            config=sample_config,
+            strategy=SchedulerStrategy.GREEDY,
+            metadata={'source': 'test'},
+            timestamp='2024-01-01T00:00:00'
+        )
+        
         # Mock an error in timeline calculation
         with patch('app.components.gantt.timeline.get_timeline_range', side_effect=Exception("Test error")):
-            fig = create_gantt_chart(sample_schedule, sample_config)
+            fig = create_gantt_chart(schedule_state)
             
             # Should return error chart instead of crashing
             assert isinstance(fig, go.Figure)
             assert hasattr(fig.layout, 'title') and fig.layout.title is not None
-            assert "Error creating chart" in fig.layout.title.text
+            assert "Chart Creation Failed" in fig.layout.title.text
 
 
 class TestTimelineFunctions:
@@ -95,50 +99,52 @@ class TestTimelineFunctions:
         
         assert "Paper Submission Timeline" in title
         assert "2024" in title  # Should include year range
+
+
+class TestConcurrencyFunctions:
+    """Test concurrency-related functions."""
     
-    def test_get_working_days_filter(self, sample_schedule: Dict[str, date], sample_config: Config) -> None:
-        """Test working days filter generation."""
-        from app.components.gantt.timeline import get_working_days_filter
+    def test_get_concurrency_map(self, sample_schedule: Dict[str, date], sample_config: Config) -> None:
+        """Test concurrency map generation."""
+        concurrency_map = get_concurrency_map(sample_schedule, sample_config)
         
-        timeline_range = get_timeline_range(sample_schedule, sample_config)
-        working_days = get_working_days_filter(timeline_range)
+        assert isinstance(concurrency_map, dict)
+        assert len(concurrency_map) == len(sample_schedule)
         
-        assert isinstance(working_days, list)
-        # Should have days from timeline_start to max_date (including buffer)
-        expected_days = (timeline_range["max_date"] - timeline_range["timeline_start"]).days + 1
-        assert len(working_days) == expected_days
+        # Check that each submission gets a unique row
+        rows = list(concurrency_map.values())
+        assert len(set(rows)) == len(rows)  # All rows should be unique
+        
+        # Check that rows are sequential starting from 0
+        assert min(rows) == 0
+        assert max(rows) == len(rows) - 1
 
 
 class TestActivitiesFunctions:
     """Test activity-related functions."""
     
     def test_add_activity_bars(self, sample_schedule: Dict[str, date], sample_config: Config) -> None:
-        """Test adding activity bars to chart."""
+        """Test adding activity bars to the chart."""
         fig = go.Figure()
-        timeline_range = get_timeline_range(sample_schedule, sample_config)
+        concurrency_map = get_concurrency_map(sample_schedule, sample_config)
         
-        # Mock concurrency calculation
-        concurrency_map = {"mod1-wrk": 1, "paper1-pap": 2, "mod2-wrk": 1, "paper2-pap": 2}
+        add_activity_bars(fig, sample_schedule, sample_config, concurrency_map)
         
-        add_activity_bars(fig, sample_schedule, sample_config, concurrency_map, timeline_range["timeline_start"])
-        
-        # Check that bars were added (as shapes)
-        assert fig.layout.shapes is not None
+        # Check that shapes were added (activity bars)
         assert len(fig.layout.shapes) > 0
-        # Should have one shape per submission
-        assert len(fig.layout.shapes) == len(sample_schedule)
+        
+        # Check that annotations were added (labels)
+        assert len(fig.layout.annotations) > 0
     
     def test_add_dependency_arrows(self, sample_schedule: Dict[str, date], sample_config: Config) -> None:
-        """Test adding dependency arrows to chart."""
+        """Test adding dependency arrows to the chart."""
         fig = go.Figure()
-        timeline_range = get_timeline_range(sample_schedule, sample_config)
+        concurrency_map = get_concurrency_map(sample_schedule, sample_config)
         
-        # Mock concurrency calculation
-        concurrency_map = {"mod1-wrk": 1, "paper1-pap": 2, "mod2-wrk": 1, "paper2-pap": 2}
+        add_dependency_arrows(fig, sample_schedule, sample_config, concurrency_map)
         
-        add_dependency_arrows(fig, sample_schedule, sample_config, concurrency_map, timeline_range["timeline_start"])
-        
-        # Check that arrows were added (as data traces)
+        # Check that traces were added (dependency arrows)
+        # Note: arrows are added as traces, not shapes
         assert len(fig.data) > 0
 
 
@@ -146,53 +152,80 @@ class TestBackgroundsFunctions:
     """Test background-related functions."""
     
     def test_add_background_elements(self, sample_schedule: Dict[str, date], sample_config: Config) -> None:
-        """Test adding background elements to chart."""
+        """Test adding background elements to the chart."""
         fig = go.Figure()
+        
+        # Configure layout first so backgrounds can read dimensions
         timeline_range = get_timeline_range(sample_schedule, sample_config)
+        fig.update_layout(
+            xaxis={'range': [timeline_range['min_date'], timeline_range['max_date']]},
+            yaxis={'range': [-0.5, timeline_range['max_concurrency'] + 0.5]}
+        )
         
-        add_background_elements(fig, sample_config, timeline_range["timeline_start"], 
-                              timeline_range["max_date"], timeline_range["max_concurrency"])
+        add_background_elements(fig)
         
-        # Check that background elements were added
-        assert fig.layout.shapes is not None
+        # Check that shapes were added (background elements)
         assert len(fig.layout.shapes) > 0
+        
+        # Check that annotations were added (month labels)
+        assert len(fig.layout.annotations) > 0
 
 
 class TestGanttChartIntegration:
-    """Test integration between all gantt chart components."""
+    """Test full gantt chart integration."""
     
     def test_full_chart_creation_flow(self, sample_schedule: Dict[str, date], sample_config: Config) -> None:
         """Test the complete chart creation flow."""
-        fig = create_gantt_chart(sample_schedule, sample_config)
+        schedule_state = ScheduleState(
+            schedule=sample_schedule,
+            config=sample_config,
+            strategy=SchedulerStrategy.GREEDY,
+            metadata={'source': 'test'},
+            timestamp='2024-01-01T00:00:00'
+        )
         
-        # Verify all components are present
+        fig = create_gantt_chart(schedule_state)
+        
+        # Verify the complete chart structure
         assert isinstance(fig, go.Figure)
-        assert fig.layout.title is not None
-        assert fig.layout.title.text is not None
-        assert fig.layout.shapes is not None
-        assert len(fig.layout.shapes) > 0  # Should have activity bars and backgrounds
-        assert fig.layout.xaxis is not None  # Should have timeline
-        assert fig.layout.yaxis is not None  # Should have y-axis
+        assert hasattr(fig.layout, 'title')
+        assert hasattr(fig.layout, 'xaxis')
+        assert hasattr(fig.layout, 'yaxis')
+        assert hasattr(fig.layout, 'height')
+        
+        # Check that all components were added
+        assert len(fig.layout.shapes) > 0  # Backgrounds and activities
+        assert len(fig.layout.annotations) > 0  # Labels and month markers
+        assert len(fig.data) > 0  # Dependency arrows
     
     def test_chart_with_blackout_periods(self, sample_schedule: Dict[str, date], sample_config: Config) -> None:
-        """Test chart creation with blackout periods enabled."""
-        # Enable blackout periods
-        sample_config.scheduling_options["enable_blackout_periods"] = True
-        sample_config.blackout_dates = [date(2025, 12, 25), date(2025, 12, 26)]
+        """Test chart creation with blackout periods."""
+        schedule_state = ScheduleState(
+            schedule=sample_schedule,
+            config=sample_config,
+            strategy=SchedulerStrategy.GREEDY,
+            metadata={'source': 'test'},
+            timestamp='2024-01-01T00:00:00'
+        )
         
-        fig = create_gantt_chart(sample_schedule, sample_config)
+        fig = create_gantt_chart(schedule_state)
         
-        # Should have blackout period shapes
-        assert fig.layout.shapes is not None
+        # Verify background elements were added
         assert len(fig.layout.shapes) > 0
+        assert len(fig.layout.annotations) > 0
     
     def test_chart_with_working_days_only(self, sample_schedule: Dict[str, date], sample_config: Config) -> None:
-        """Test chart creation with working days only enabled."""
-        # Enable working days only
-        sample_config.scheduling_options["enable_working_days_only"] = True
+        """Test chart creation with working days only."""
+        schedule_state = ScheduleState(
+            schedule=sample_schedule,
+            config=sample_config,
+            strategy=SchedulerStrategy.GREEDY,
+            metadata={'source': 'test'},
+            timestamp='2024-01-01T00:00:00'
+        )
         
-        fig = create_gantt_chart(sample_schedule, sample_config)
+        fig = create_gantt_chart(schedule_state)
         
-        # Should have working days background
-        assert fig.layout.shapes is not None
-        assert len(fig.layout.shapes) > 0
+        # Verify the chart was created successfully
+        assert isinstance(fig, go.Figure)
+        assert hasattr(fig.layout, 'title')

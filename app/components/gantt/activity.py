@@ -1,6 +1,6 @@
 """
-Activity-related functions for Gantt charts.
-Handles bars, labels, and dependency arrows.
+Individual activity bar for Gantt charts.
+Handles a single activity bar with its styling and positioning.
 """
 
 import plotly.graph_objects as go
@@ -11,7 +11,7 @@ from src.core.models import Config, Submission
 
 
 def add_activity_bars(fig: go.Figure, schedule: Dict[str, date], config: Config,
-                     concurrency_map: Dict[str, int], timeline_start: date) -> None:
+                     concurrency_map: Dict[str, int]) -> None:
     """Add activity bars to the gantt chart using proper row positioning."""
     for submission_id, start_date in schedule.items():
         submission = config.submissions_dict.get(submission_id)
@@ -33,7 +33,7 @@ def add_activity_bars(fig: go.Figure, schedule: Dict[str, date], config: Config,
 
 
 def add_dependency_arrows(fig: go.Figure, schedule: Dict[str, date], config: Config,
-                         concurrency_map: Dict[str, int], timeline_start: date) -> None:
+                         concurrency_map: Dict[str, int]) -> None:
     """Add dependency arrows between activities using proper row positioning."""
     for submission_id, start_date in schedule.items():
         submission = config.submissions_dict.get(submission_id)
