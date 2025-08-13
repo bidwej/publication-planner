@@ -21,15 +21,17 @@ class TestGanttChartCreation:
         fig = create_gantt_chart(sample_schedule, sample_config)
         
         assert isinstance(fig, go.Figure)
-        assert fig.layout.title.text is not None
+        assert hasattr(fig.layout, 'title') and fig.layout.title is not None
+        assert hasattr(fig.layout.title, 'text') and fig.layout.title.text is not None
         assert "Paper Submission Timeline" in fig.layout.title.text
-        assert fig.layout.height > 400  # Should have dynamic height
+        assert hasattr(fig.layout, 'height') and fig.layout.height > 400  # Should have dynamic height
     
     def test_create_gantt_chart_empty_schedule(self, sample_config: Config) -> None:
         """Test gantt chart creation with empty schedule."""
         fig = create_gantt_chart({}, sample_config)
         
         assert isinstance(fig, go.Figure)
+        assert hasattr(fig.layout, 'title') and fig.layout.title is not None
         assert "No Schedule Data Available" in fig.layout.title.text
     
     def test_create_gantt_chart_with_forced_timeline(self, sample_schedule: Dict[str, date], sample_config: Config) -> None:
@@ -44,6 +46,8 @@ class TestGanttChartCreation:
         
         assert isinstance(fig, go.Figure)
         # Check that forced timeline is respected
+        assert hasattr(fig.layout, 'xaxis') and fig.layout.xaxis is not None
+        assert hasattr(fig.layout.xaxis, 'range') and fig.layout.xaxis.range is not None
         assert fig.layout.xaxis.range[0] == date(2025, 7, 1)
         assert fig.layout.xaxis.range[1] == date(2026, 2, 1)
     
@@ -51,11 +55,11 @@ class TestGanttChartCreation:
         """Test gantt chart creation with invalid inputs."""
         # Test with invalid schedule type
         with pytest.raises(TypeError):
-            create_gantt_chart("invalid", sample_config)
+            create_gantt_chart("invalid", sample_config)  # type: ignore
         
         # Test with invalid config type
         with pytest.raises(TypeError):
-            create_gantt_chart({}, "invalid")
+            create_gantt_chart({}, "invalid")  # type: ignore
     
     def test_create_gantt_chart_error_handling(self, sample_schedule: Dict[str, date], sample_config: Config) -> None:
         """Test error handling during chart creation."""
@@ -65,6 +69,7 @@ class TestGanttChartCreation:
             
             # Should return error chart instead of crashing
             assert isinstance(fig, go.Figure)
+            assert hasattr(fig.layout, 'title') and fig.layout.title is not None
             assert "Error creating chart" in fig.layout.title.text
 
 
@@ -79,8 +84,9 @@ class TestTimelineFunctions:
         assert "max_date" in timeline_range
         assert "timeline_start" in timeline_range
         assert "max_concurrency" in timeline_range
-        assert timeline_range["min_date"] == date(2024, 12, 1)
-        assert timeline_range["max_date"] == date(2025, 2, 1)
+        # Account for 30-day buffer added for visualization
+        assert timeline_range["min_date"] == date(2024, 11, 1)  # 30 days before earliest schedule date
+        assert timeline_range["max_date"] == date(2025, 3, 3)   # 30 days after latest schedule date
     
     def test_get_title_text(self, sample_schedule: Dict[str, date], sample_config: Config) -> None:
         """Test title text generation."""
@@ -98,7 +104,9 @@ class TestTimelineFunctions:
         working_days = get_working_days_filter(timeline_range)
         
         assert isinstance(working_days, list)
-        assert len(working_days) > 0
+        # Should have days from timeline_start to max_date (including buffer)
+        expected_days = (timeline_range["max_date"] - timeline_range["timeline_start"]).days + 1
+        assert len(working_days) == expected_days
 
 
 class TestActivitiesFunctions:
@@ -114,10 +122,11 @@ class TestActivitiesFunctions:
         
         add_activity_bars(fig, sample_schedule, sample_config, concurrency_map, timeline_range["timeline_start"])
         
-        # Check that bars were added
-        assert len(fig.data) > 0
-        # Should have one trace per submission
-        assert len(fig.data) == len(sample_schedule)
+        # Check that bars were added (as shapes)
+        assert fig.layout.shapes is not None
+        assert len(fig.layout.shapes) > 0
+        # Should have one shape per submission
+        assert len(fig.layout.shapes) == len(sample_schedule)
     
     def test_add_dependency_arrows(self, sample_schedule: Dict[str, date], sample_config: Config) -> None:
         """Test adding dependency arrows to chart."""
@@ -129,8 +138,8 @@ class TestActivitiesFunctions:
         
         add_dependency_arrows(fig, sample_schedule, sample_config, concurrency_map, timeline_range["timeline_start"])
         
-        # Check that arrows were added (as annotations)
-        assert len(fig.layout.annotations) > 0
+        # Check that arrows were added (as data traces)
+        assert len(fig.data) > 0
 
 
 class TestBackgroundsFunctions:
@@ -145,6 +154,7 @@ class TestBackgroundsFunctions:
                               timeline_range["max_date"], timeline_range["max_concurrency"])
         
         # Check that background elements were added
+        assert fig.layout.shapes is not None
         assert len(fig.layout.shapes) > 0
 
 
@@ -157,8 +167,10 @@ class TestGanttChartIntegration:
         
         # Verify all components are present
         assert isinstance(fig, go.Figure)
+        assert fig.layout.title is not None
         assert fig.layout.title.text is not None
-        assert len(fig.data) > 0  # Should have activity bars
+        assert fig.layout.shapes is not None
+        assert len(fig.layout.shapes) > 0  # Should have activity bars and backgrounds
         assert fig.layout.xaxis is not None  # Should have timeline
         assert fig.layout.yaxis is not None  # Should have y-axis
     
@@ -171,6 +183,7 @@ class TestGanttChartIntegration:
         fig = create_gantt_chart(sample_schedule, sample_config)
         
         # Should have blackout period shapes
+        assert fig.layout.shapes is not None
         assert len(fig.layout.shapes) > 0
     
     def test_chart_with_working_days_only(self, sample_schedule: Dict[str, date], sample_config: Config) -> None:
@@ -181,4 +194,5 @@ class TestGanttChartIntegration:
         fig = create_gantt_chart(sample_schedule, sample_config)
         
         # Should have working days background
+        assert fig.layout.shapes is not None
         assert len(fig.layout.shapes) > 0

@@ -30,7 +30,7 @@ from src.schedulers.optimal import OptimalScheduler
 from app.layouts.header import create_header
 from app.layouts.sidebar import create_sidebar
 from app.layouts.main_content import create_main_content
-from app.components.charts.gantt_chart import create_gantt_chart
+from app.components.gantt.chart import create_gantt_chart
 from app.components.charts.metrics_chart import create_metrics_chart
 from app.components.tables.schedule_table import create_schedule_table, create_violations_table
 
