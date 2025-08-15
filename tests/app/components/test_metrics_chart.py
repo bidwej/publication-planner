@@ -288,7 +288,7 @@ class TestMetricsChart:
     
     def test_create_timeline_metrics_chart_none_schedule(self, sample_config):
         """Test timeline metrics chart creation with None schedule."""
-        fig = create_timeline_metrics_chart(None, sample_config)  # type: ignore
+        fig = create_timeline_metrics_chart(None, sample_config)
         
         assert isinstance(fig, go.Figure)
         assert fig.layout is not None
@@ -343,7 +343,7 @@ class TestMetricsChart:
     
     def test_calculate_timeline_metrics_none_schedule(self, sample_config):
         """Test timeline metrics calculation with None schedule."""
-        result = _calculate_timeline_metrics(None, sample_config)  # type: ignore
+        result = _calculate_timeline_metrics(None, sample_config)
         
         assert isinstance(result, dict)
         assert result['dates'] == []

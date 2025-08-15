@@ -4,17 +4,18 @@ Handles timeline range, date calculations, timeline-specific styling, and backgr
 """
 
 from datetime import date, timedelta
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import plotly.graph_objects as go
+from plotly.graph_objs import Figure
 
 from src.core.models import Config
 from src.validation.resources import validate_resources_constraints
 
 
-def get_timeline_range(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
-    """Calculate timeline range with buffer for visualization."""
+def get_chart_dimensions(schedule: Optional[Dict[str, date]], config: Config) -> Dict[str, Any]:
+    """Calculate chart dimensions and display settings."""
     if not schedule:
-        # Default timeline if no schedule
+        # Default chart dimensions if no schedule
         default_start = date.today()
         default_end = default_start + timedelta(days=365)
         return {
@@ -50,10 +51,10 @@ def get_timeline_range(schedule: Dict[str, date], config: Config) -> Dict[str, A
     }
 
 
-def get_title_text(timeline_range: Dict[str, Any]) -> str:
+def get_title_text(chart_dimensions: Dict[str, Any]) -> str:
     """Generate title text for the chart."""
-    min_date = timeline_range['min_date']
-    max_date = timeline_range['max_date']
+    min_date = chart_dimensions['min_date']
+    max_date = chart_dimensions['max_date']
     
     if min_date.year == max_date.year:
         return f"Paper Submission Timeline: {min_date.strftime('%b %Y')} - {max_date.strftime('%b %Y')}"
@@ -61,7 +62,7 @@ def get_title_text(timeline_range: Dict[str, Any]) -> str:
         return f"Paper Submission Timeline: {min_date.strftime('%b %Y')} - {max_date.strftime('%b %Y')}"
 
 
-def get_concurrency_map(schedule: Dict[str, date]) -> Dict[str, int]:
+def get_concurrency_map(schedule: Optional[Dict[str, date]]) -> Dict[str, int]:
     """Get concurrency map for proper row positioning."""
     if not schedule:
         return {}

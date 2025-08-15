@@ -60,8 +60,8 @@ class TestGanttChart:
         assert fig.layout is not None
         assert fig.layout.title.text == 'No Schedule Data Available'
     
-    @patch('app.components.gantt.chart.get_timeline_range')
-    def test_create_gantt_chart_with_timeline_range(self, mock_get_timeline_range, sample_schedule_state):
+    @patch('app.components.gantt.chart.get_chart_dimensions')
+    def test_create_gantt_chart_with_timeline_range(self, mock_get_chart_dimensions, sample_schedule_state):
         """Test gantt chart creation with timeline range."""
         mock_timeline = {
             'min_date': date(2024, 4, 1),
@@ -70,19 +70,19 @@ class TestGanttChart:
             'span_days': 120,
             'max_concurrency': 3
         }
-        mock_get_timeline_range.return_value = mock_timeline
+        mock_get_chart_dimensions.return_value = mock_timeline
         
         fig = create_gantt_chart(sample_schedule_state)
         
         assert isinstance(fig, go.Figure)
-        mock_get_timeline_range.assert_called_once()
+        mock_get_chart_dimensions.assert_called_once()
     
-    @patch('app.components.gantt.chart.get_timeline_range')
+    @patch('app.components.gantt.chart.get_chart_dimensions')
     @patch('app.components.gantt.chart.add_background_elements')
     @patch('app.components.gantt.chart.add_activity_bars')
     @patch('app.components.gantt.chart.add_dependency_arrows')
     def test_create_gantt_chart_calls_components(self, mock_add_deps, mock_add_activities, 
-                                               mock_add_background, mock_get_timeline, sample_schedule_state):
+                                               mock_add_background, mock_get_chart_dimensions, sample_schedule_state):
         """Test that gantt chart creation calls all required components."""
         mock_timeline = {
             'min_date': date(2024, 4, 1),
@@ -91,18 +91,18 @@ class TestGanttChart:
             'span_days': 120,
             'max_concurrency': 3
         }
-        mock_get_timeline.return_value = mock_timeline
+        mock_get_chart_dimensions.return_value = mock_timeline
         
         fig = create_gantt_chart(sample_schedule_state)
         
-        mock_get_timeline.assert_called_once()
+        mock_get_chart_dimensions.assert_called_once()
         mock_add_background.assert_called_once()
         mock_add_activities.assert_called_once()
         mock_add_deps.assert_called_once()
     
     def test_create_gantt_chart_exception_handling(self, sample_schedule_state):
         """Test gantt chart creation handles exceptions gracefully."""
-        with patch('app.components.gantt.chart.get_timeline_range', side_effect=Exception("Test error")):
+        with patch('app.components.gantt.chart.get_chart_dimensions', side_effect=Exception("Test error")):
             fig = create_gantt_chart(sample_schedule_state)
             
             assert isinstance(fig, go.Figure)
@@ -172,8 +172,8 @@ class TestGanttChart:
     
     def test_chart_height_calculation(self, sample_schedule_state):
         """Test that chart height is calculated correctly based on concurrency."""
-        with patch('app.components.gantt.chart.get_timeline_range') as mock_get_timeline:
-            mock_get_timeline.return_value = {
+        with patch('app.components.gantt.chart.get_chart_dimensions') as mock_get_chart_dimensions:
+            mock_get_chart_dimensions.return_value = {
                 'min_date': date(2024, 4, 1),
                 'max_date': date(2024, 8, 1),
                 'timeline_start': date(2024, 4, 1),

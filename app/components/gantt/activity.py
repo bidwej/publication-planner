@@ -4,30 +4,20 @@ Handles a single activity bar with its styling and positioning.
 """
 
 import plotly.graph_objects as go
+from plotly.graph_objs import Figure
 from datetime import date, timedelta
-from typing import Dict
+from typing import Dict, Optional
 
 from src.core.models import Config, Submission
+from app.components.gantt.timeline import get_concurrency_map
 
 
-def _get_concurrency_map(schedule: Dict[str, date]) -> Dict[str, int]:
-    """Get concurrency map for proper row positioning."""
-    if not schedule:
-        return {}
-    
-    # Sort by start date for consistent row assignment
-    sorted_items = sorted(schedule.items(), key=lambda x: x[1])
-    concurrency_map = {}
-    
-    for row, (submission_id, _) in enumerate(sorted_items):
-        concurrency_map[submission_id] = row
-    
-    return concurrency_map
-
-
-def add_activity_bars(fig: go.Figure, schedule: Dict[str, date], config: Config) -> None:
+def add_activity_bars(fig: Figure, schedule: Optional[Dict[str, date]], config: Config) -> None:
     """Add activity bars to the gantt chart using proper row positioning."""
-    concurrency_map = _get_concurrency_map(schedule)
+    if not schedule:
+        return
+    
+    concurrency_map = get_concurrency_map(schedule)
     
     for submission_id, start_date in schedule.items():
         submission = config.submissions_dict.get(submission_id)
@@ -48,9 +38,12 @@ def add_activity_bars(fig: go.Figure, schedule: Dict[str, date], config: Config)
         _add_bar_label(fig, submission, start_date, end_date, row)
 
 
-def add_dependency_arrows(fig: go.Figure, schedule: Dict[str, date], config: Config) -> None:
+def add_dependency_arrows(fig: Figure, schedule: Optional[Dict[str, date]], config: Config) -> None:
     """Add dependency arrows between activities using proper row positioning."""
-    concurrency_map = _get_concurrency_map(schedule)
+    if not schedule:
+        return
+    
+    concurrency_map = get_concurrency_map(schedule)
     
     for submission_id, start_date in schedule.items():
         submission = config.submissions_dict.get(submission_id)
@@ -77,7 +70,7 @@ def add_dependency_arrows(fig: go.Figure, schedule: Dict[str, date], config: Con
             _add_dependency_arrow(fig, dep_end, from_row, start_date, to_row)
 
 
-def _add_elegant_bar(fig: go.Figure, submission: Submission, start_date: date, 
+def _add_elegant_bar(fig: Figure, submission: Submission, start_date: date, 
                      end_date: date, row: int) -> None:
     """Add an elegant bar for a submission."""
     # Get colors based on submission type
@@ -95,15 +88,70 @@ def _add_elegant_bar(fig: go.Figure, submission: Submission, start_date: date,
         line=dict(color=border_color, width=2),
         opacity=0.8
     )
+    
+    # Add type icon in upper left corner (darker background)
+    _add_type_icon(fig, submission, start_date, row)
+    
+    # Add author label in main lower left corner (simple text)
+    _add_author_label(fig, submission, start_date, row)
 
 
-def _add_bar_label(fig: go.Figure, submission: Submission, start_date: date, 
+def _add_author_label(fig: Figure, submission: Submission, start_date: date, row: int) -> None:
+    """Add author label (Author: PCCP or Author: ED) in main lower left corner of bar."""
+    # Get author for label
+    author_text = f"Author: {submission.author.upper()}" if submission.author else "Author: Unknown"
+    
+    # Add author label annotation in main lower left corner of bar
+    fig.add_annotation(
+        text=author_text,
+        x=start_date,
+        y=row - 0.3,  # Lower part of bar
+        xref="x", yref="y",
+        xanchor='left', yanchor='top',
+        font={'size': 8, 'color': '#2c3e50', 'weight': 'bold'},
+        showarrow=False,
+        bgcolor='rgba(255, 255, 255, 0.9)',  # Light background
+        bordercolor='rgba(0, 0, 0, 0.2)',
+        borderwidth=1,
+        borderpad=4
+    )
+
+
+def _add_type_icon(fig: Figure, submission: Submission, start_date: date, row: int) -> None:
+    """Add type icon (Paper/Abstract) in upper left corner with darker background."""
+    # Determine icon based on submission type
+    if submission.kind.value == "paper":
+        icon = "📄"  # Paper icon
+    elif submission.kind.value == "abstract":
+        icon = "📝"  # Abstract icon
+    elif submission.kind.value == "poster":
+        icon = "🖼️"  # Poster icon
+    else:
+        icon = "📋"  # Generic document icon
+    
+    # Add icon annotation in upper left corner of bar
+    fig.add_annotation(
+        text=icon,
+        x=start_date,
+        y=row + 0.3,  # Upper part of bar
+        xref="x", yref="y",
+        xanchor='left', yanchor='bottom',
+        font={'size': 12},
+        showarrow=False,
+        bgcolor='rgba(0, 0, 0, 0.7)',  # Darker background
+        bordercolor='rgba(0, 0, 0, 0.9)',
+        borderwidth=1,
+        borderpad=4
+    )
+
+
+def _add_bar_label(fig: Figure, submission: Submission, start_date: date, 
                    end_date: date, row: int) -> None:
     """Add a label for the bar."""
     # Calculate label position (center of bar)
     mid_date = start_date + (end_date - start_date) / 2
     
-    # Get display title
+    # Get display title (limited to 20 characters)
     display_title = _get_display_title(submission)
     
     # Add label annotation
@@ -121,7 +169,7 @@ def _add_bar_label(fig: go.Figure, submission: Submission, start_date: date,
     )
 
 
-def _add_dependency_arrow(fig: go.Figure, from_date: date, from_row: int, 
+def _add_dependency_arrow(fig: Figure, from_date: date, from_row: int, 
                          to_date: date, to_row: int) -> None:
     """Add a dependency arrow between two submissions."""
     # Calculate arrow position
@@ -143,56 +191,43 @@ def _add_dependency_arrow(fig: go.Figure, from_date: date, from_row: int,
 def _get_submission_color(submission: Submission) -> str:
     """Get elegant color for submission based on type and author."""
     if submission.kind.value == "paper":
-        # MODs (pccp) are engineering papers (blue), ED papers (ed) are medical papers (purple)
+        # MODs (pccp) are engineering papers (blue), ED papers (ed) are medical papers (orange)
         if hasattr(submission, 'author') and submission.author == "pccp":
             return "#3498db"  # Blue for MODs (engineering)
         else:
-            return "#9b59b6"  # Purple for ED papers (medical)
+            return "#e67e22"  # Orange for ED papers (medical)
     elif submission.kind.value == "abstract":
-        return "#e67e22"
+        return "#27ae60"  # Green for abstracts
     elif submission.kind.value == "poster":
-        return "#f39c12"
+        return "#f39c12"  # Yellow for posters
     else:
         # Fallback for any other types
-        return "#27ae60"
+        return "#95a5a6"  # Gray fallback
 
 
 def _get_border_color(submission: Submission) -> str:
     """Get border color for submission."""
     if submission.kind.value == "paper":
-        # MODs (pccp) have darker blue borders, ED papers have darker purple
+        # MODs (pccp) have darker blue borders, ED papers have darker orange
         if hasattr(submission, 'author') and submission.author == "pccp":
             return "#2980b9"  # Darker blue for MODs
         else:
-            return "#8e44ad"  # Darker purple for ED papers
+            return "#d35400"  # Darker orange for ED papers
     elif submission.kind.value == "abstract":
-        return "#d35400"
+        return "#229954"  # Darker green for abstracts
     elif submission.kind.value == "poster":
-        return "#e67e22"
+        return "#e67e22"  # Darker yellow for posters
     else:
         # Fallback for any other types
-        return "#229954"
+        return "#7f8c8d"  # Darker gray fallback
 
 
-def _get_display_title(submission: Submission) -> str:
-    """Get display title for submission."""
+def _get_display_title(submission: Submission, max_length: int = 20) -> str:
+    """Get display title for submission, truncated if too long."""
     title = submission.title
-    
-    # Extract MOD number if present
-    import re
-    mod_match = re.search(r'MOD\s*(\d+)', title, re.IGNORECASE)
-    if mod_match:
-        return f"MOD {mod_match.group(1)}"
-    
-    # Extract ED number if present
-    ed_match = re.search(r'ED\s*(\d+)', title, re.IGNORECASE)
-    if ed_match:
-        return f"ED {ed_match.group(1)}"
-    
-    # Truncate long titles
-    max_length = 25
     if len(title) <= max_length:
         return title
     
+    # Truncate and add ellipsis
     truncated = title[:max_length-3]
     return (truncated + "...") if truncated else title[:max_length-3] + "..."

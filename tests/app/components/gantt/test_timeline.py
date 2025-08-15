@@ -6,7 +6,7 @@ from datetime import date, timedelta
 import plotly.graph_objects as go
 
 from app.components.gantt.timeline import (
-    get_timeline_range, get_title_text, get_concurrency_map, 
+    get_chart_dimensions, get_title_text, get_concurrency_map, 
     add_background_elements
 )
 from src.core.models import Config
@@ -20,7 +20,7 @@ class TestGanttTimeline:
     
     def test_get_timeline_range_with_schedule(self, sample_schedule, sample_config):
         """Test timeline range calculation with valid schedule."""
-        result = get_timeline_range(sample_schedule, sample_config)
+        result = get_chart_dimensions(sample_schedule, sample_config)
         
         assert isinstance(result, dict)
         assert 'min_date' in result
@@ -47,7 +47,7 @@ class TestGanttTimeline:
     def test_get_timeline_range_empty_schedule(self, sample_config):
         """Test timeline range calculation with empty schedule."""
         empty_schedule = {}
-        result = get_timeline_range(empty_schedule, sample_config)
+        result = get_chart_dimensions(empty_schedule, sample_config)
         
         assert isinstance(result, dict)
         assert 'min_date' in result
@@ -65,7 +65,7 @@ class TestGanttTimeline:
     
     def test_get_timeline_range_none_schedule(self, sample_config):
         """Test timeline range calculation with None schedule."""
-        result = get_timeline_range(None, sample_config)  # type: ignore
+        result = get_chart_dimensions(None, sample_config)
         
         assert isinstance(result, dict)
         assert 'min_date' in result
@@ -84,7 +84,7 @@ class TestGanttTimeline:
     def test_get_timeline_range_single_date(self, sample_config):
         """Test timeline range calculation with single date."""
         single_schedule = {"paper1": date(2024, 6, 15)}
-        result = get_timeline_range(single_schedule, sample_config)
+        result = get_chart_dimensions(single_schedule, sample_config)
         
         assert isinstance(result, dict)
         assert result['min_date'] == date(2024, 5, 16)  # 6/15 - 30 days buffer
@@ -171,7 +171,7 @@ class TestGanttTimeline:
     
     def test_get_concurrency_map_none_schedule(self):
         """Test concurrency map generation with None schedule."""
-        result = get_concurrency_map(None)  # type: ignore
+        result = get_concurrency_map(None)
         
         assert isinstance(result, dict)
         assert len(result) == 0
@@ -254,7 +254,7 @@ class TestGanttTimeline:
     
     def test_timeline_range_buffer_calculation(self, sample_schedule, sample_config):
         """Test that timeline buffer is calculated correctly."""
-        result = get_timeline_range(sample_schedule, sample_config)
+        result = get_chart_dimensions(sample_schedule, sample_config)
         
         # Buffer should be 30 days
         buffer_days = 30
@@ -271,7 +271,7 @@ class TestGanttTimeline:
     
     def test_timeline_span_calculation(self, sample_schedule, sample_config):
         """Test that timeline span is calculated correctly."""
-        result = get_timeline_range(sample_schedule, sample_config)
+        result = get_chart_dimensions(sample_schedule, sample_config)
         
         # Span should be the difference between max and min dates
         expected_span = (result['max_date'] - result['min_date']).days
@@ -287,7 +287,7 @@ class TestGanttTimeline:
         mock_result.max_observed = 5
         mock_validate.return_value = mock_result
         
-        result = get_timeline_range(sample_schedule, sample_config)
+        result = get_chart_dimensions(sample_schedule, sample_config)
         
         assert result['max_concurrency'] == 5
         mock_validate.assert_called_once_with(sample_schedule, sample_config)

@@ -4,15 +4,16 @@ Handles chart dimensions, styling, and axis configuration.
 """
 
 import plotly.graph_objects as go
+from plotly.graph_objs import Figure
 from typing import Dict, Any
 
 from app.components.gantt.timeline import get_title_text
 
 
-def configure_gantt_layout(fig: go.Figure, timeline_range: Dict[str, Any]) -> None:
+def configure_gantt_layout(fig: Figure, chart_dimensions: Dict[str, Any]) -> None:
     """Configure the chart layout."""
-    title_text = get_title_text(timeline_range)
-    max_concurrency = timeline_range['max_concurrency']
+    title_text = get_title_text(chart_dimensions)
+    max_concurrency = chart_dimensions['max_concurrency']
     
     fig.update_layout(
         title={
@@ -26,7 +27,7 @@ def configure_gantt_layout(fig: go.Figure, timeline_range: Dict[str, Any]) -> No
         paper_bgcolor='white',
         xaxis={
             'type': 'date',
-            'range': [timeline_range['min_date'], timeline_range['max_date']],
+            'range': [chart_dimensions['min_date'], chart_dimensions['max_date']],
             'title': 'Timeline',
             'showgrid': True, 'gridcolor': '#ecf0f1'
         },

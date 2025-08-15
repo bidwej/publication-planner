@@ -4,28 +4,29 @@ Wrapper that styles the overall chart and orchestrates components.
 """
 
 import plotly.graph_objects as go
-from typing import Dict, Any
+from plotly.graph_objs import Figure
+from typing import Dict, Any, Optional
 from datetime import date
 
-from app.components.gantt.timeline import get_timeline_range, get_title_text, add_background_elements
+from app.components.gantt.timeline import get_chart_dimensions, get_title_text, add_background_elements
 from app.components.gantt.activity import add_activity_bars, add_dependency_arrows
 from src.core.models import ScheduleState
 
 
-def create_gantt_chart(schedule_state: ScheduleState) -> go.Figure:
+def create_gantt_chart(schedule_state: ScheduleState) -> Figure:
     """Create a gantt chart from schedule state."""
     if not schedule_state or not hasattr(schedule_state, 'schedule') or not schedule_state.schedule:
         return _create_empty_chart()
     
     try:
-        # Get timeline range
-        timeline_range = get_timeline_range(schedule_state.schedule, schedule_state.config)
+        # Get chart dimensions
+        chart_dimensions = get_chart_dimensions(schedule_state.schedule, schedule_state.config)
         
         # Create figure
         fig = go.Figure()
         
         # Configure chart layout and styling
-        _configure_chart_layout(fig, timeline_range)
+        _configure_chart_layout(fig, chart_dimensions)
         
         # Add background elements (can now read chart dimensions from figure)
         add_background_elements(fig)
@@ -40,10 +41,10 @@ def create_gantt_chart(schedule_state: ScheduleState) -> go.Figure:
         return _create_error_chart(str(e))
 
 
-def _configure_chart_layout(fig: go.Figure, timeline_range: Dict[str, Any]) -> None:
+def _configure_chart_layout(fig: Figure, chart_dimensions: Dict[str, Any]) -> None:
     """Configure the overall chart layout and styling."""
-    title_text = get_title_text(timeline_range)
-    max_concurrency = timeline_range['max_concurrency']
+    title_text = get_title_text(chart_dimensions)
+    max_concurrency = chart_dimensions['max_concurrency']
     
     fig.update_layout(
         title={
@@ -57,7 +58,7 @@ def _configure_chart_layout(fig: go.Figure, timeline_range: Dict[str, Any]) -> N
         paper_bgcolor='white',
         xaxis={
             'type': 'date',
-            'range': [timeline_range['min_date'], timeline_range['max_date']],
+            'range': [chart_dimensions['min_date'], chart_dimensions['max_date']],
             'title': 'Timeline',
             'showgrid': True, 'gridcolor': '#ecf0f1'
         },
@@ -71,7 +72,7 @@ def _configure_chart_layout(fig: go.Figure, timeline_range: Dict[str, Any]) -> N
     )
 
 
-def _create_empty_chart() -> go.Figure:
+def _create_empty_chart() -> Figure:
     """Create empty chart when no data is available."""
     fig = go.Figure()
     fig.update_layout(
@@ -81,7 +82,7 @@ def _create_empty_chart() -> go.Figure:
     return fig
 
 
-def _create_error_chart(error_message: str) -> go.Figure:
+def _create_error_chart(error_message: str) -> Figure:
     """Create error chart when chart creation fails."""
     fig = go.Figure()
     fig.update_layout(
@@ -93,4 +94,4 @@ def _create_error_chart(error_message: str) -> go.Figure:
         x=0.5, y=0.5, xanchor='center', yanchor='middle',
         font={'size': 14, 'color': '#e74c3c'}, showarrow=False
     )
-    return fig
+    return fig 
