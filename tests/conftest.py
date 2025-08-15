@@ -160,7 +160,7 @@ def sample_config() -> Config:
             conference_id="ICRA2026",
             depends_on=[],
             draft_window_months=0,
-            engineering=True
+            author="pccp"  # MODs are engineering papers
         ),
         Submission(
             id="paper1-pap",
@@ -169,7 +169,7 @@ def sample_config() -> Config:
             conference_id="ICRA2026",
             depends_on=["mod1-wrk"],
             draft_window_months=3,
-            engineering=True
+            author="pccp"  # MODs are engineering papers
         ),
         Submission(
             id="mod2-wrk",
@@ -178,7 +178,7 @@ def sample_config() -> Config:
             conference_id="MICCAI2026",
             depends_on=[],
             draft_window_months=0,
-            engineering=False
+            author="ed"  # ED papers are medical papers
         ),
         Submission(
             id="paper2-pap",
@@ -187,7 +187,7 @@ def sample_config() -> Config:
             conference_id="MICCAI2026",
             depends_on=["mod2-wrk"],
             draft_window_months=3,
-            engineering=False
+            author="ed"  # ED papers are medical papers
         )
     ]
     
@@ -248,4 +248,38 @@ def sample_schedule() -> Dict[str, date]:
         "paper1-pap": date(2025, 1, 15),
         "mod2-wrk": date(2025, 1, 1),
         "paper2-pap": date(2025, 2, 1)
+    }
+
+
+@pytest.fixture
+def sample_schedule_state(sample_config) -> Dict[str, Any]:
+    """Fixture to provide a sample schedule state for testing."""
+    from src.core.models import ScheduleState, SchedulerStrategy
+    
+    return ScheduleState(
+        schedule={
+            "mod1-wrk": date(2024, 12, 1),
+            "paper1-pap": date(2025, 1, 15),
+            "mod2-wrk": date(2025, 1, 1),
+            "paper2-pap": date(2025, 2, 1)
+        },
+        config=sample_config,
+        strategy=SchedulerStrategy.GREEDY,
+        metadata={
+            "scheduler": "greedy",
+            "timestamp": "2024-01-01T00:00:00"
+        },
+        timestamp="2024-01-01T00:00:00"
+    )
+
+
+@pytest.fixture
+def sample_timeline_range() -> Dict[str, date]:
+    """Fixture to provide a sample timeline range for testing."""
+    return {
+        "min_date": date(2024, 11, 1),  # 30 days before earliest schedule date
+        "max_date": date(2025, 3, 15),   # 30 days after latest schedule date
+        "max_concurrency": 4,            # Number of concurrent activities
+        "timeline_start": date(2024, 11, 1),
+        "span_days": 135                 # Total span in days
     }

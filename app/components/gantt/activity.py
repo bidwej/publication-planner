@@ -10,9 +10,25 @@ from typing import Dict
 from src.core.models import Config, Submission
 
 
-def add_activity_bars(fig: go.Figure, schedule: Dict[str, date], config: Config,
-                     concurrency_map: Dict[str, int]) -> None:
+def _get_concurrency_map(schedule: Dict[str, date]) -> Dict[str, int]:
+    """Get concurrency map for proper row positioning."""
+    if not schedule:
+        return {}
+    
+    # Sort by start date for consistent row assignment
+    sorted_items = sorted(schedule.items(), key=lambda x: x[1])
+    concurrency_map = {}
+    
+    for row, (submission_id, _) in enumerate(sorted_items):
+        concurrency_map[submission_id] = row
+    
+    return concurrency_map
+
+
+def add_activity_bars(fig: go.Figure, schedule: Dict[str, date], config: Config) -> None:
     """Add activity bars to the gantt chart using proper row positioning."""
+    concurrency_map = _get_concurrency_map(schedule)
+    
     for submission_id, start_date in schedule.items():
         submission = config.submissions_dict.get(submission_id)
         if not submission:
@@ -32,9 +48,10 @@ def add_activity_bars(fig: go.Figure, schedule: Dict[str, date], config: Config,
         _add_bar_label(fig, submission, start_date, end_date, row)
 
 
-def add_dependency_arrows(fig: go.Figure, schedule: Dict[str, date], config: Config,
-                         concurrency_map: Dict[str, int]) -> None:
+def add_dependency_arrows(fig: go.Figure, schedule: Dict[str, date], config: Config) -> None:
     """Add dependency arrows between activities using proper row positioning."""
+    concurrency_map = _get_concurrency_map(schedule)
+    
     for submission_id, start_date in schedule.items():
         submission = config.submissions_dict.get(submission_id)
         if not submission or not submission.depends_on:
@@ -124,26 +141,36 @@ def _add_dependency_arrow(fig: go.Figure, from_date: date, from_row: int,
 
 
 def _get_submission_color(submission: Submission) -> str:
-    """Get elegant color for submission based on type."""
-    if submission.kind.value == "PAPER":
-        return "#3498db" if submission.engineering else "#9b59b6"
-    elif submission.kind.value == "ABSTRACT":
+    """Get elegant color for submission based on type and author."""
+    if submission.kind.value == "paper":
+        # MODs (pccp) are engineering papers (blue), ED papers (ed) are medical papers (purple)
+        if hasattr(submission, 'author') and submission.author == "pccp":
+            return "#3498db"  # Blue for MODs (engineering)
+        else:
+            return "#9b59b6"  # Purple for ED papers (medical)
+    elif submission.kind.value == "abstract":
         return "#e67e22"
-    elif submission.kind.value == "POSTER":
+    elif submission.kind.value == "poster":
         return "#f39c12"
-    else:  # MOD
+    else:
+        # Fallback for any other types
         return "#27ae60"
 
 
 def _get_border_color(submission: Submission) -> str:
     """Get border color for submission."""
-    if submission.kind.value == "PAPER":
-        return "#2980b9" if submission.engineering else "#8e44ad"
-    elif submission.kind.value == "ABSTRACT":
+    if submission.kind.value == "paper":
+        # MODs (pccp) have darker blue borders, ED papers have darker purple
+        if hasattr(submission, 'author') and submission.author == "pccp":
+            return "#2980b9"  # Darker blue for MODs
+        else:
+            return "#8e44ad"  # Darker purple for ED papers
+    elif submission.kind.value == "abstract":
         return "#d35400"
-    elif submission.kind.value == "POSTER":
+    elif submission.kind.value == "poster":
         return "#e67e22"
-    else:  # MOD
+    else:
+        # Fallback for any other types
         return "#229954"
 
 

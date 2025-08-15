@@ -7,20 +7,19 @@ import plotly.graph_objects as go
 from typing import Dict, Any
 from datetime import date
 
-from app.components.gantt.timeline import get_timeline_range, get_title_text, get_concurrency_map, add_background_elements
+from app.components.gantt.timeline import get_timeline_range, get_title_text, add_background_elements
 from app.components.gantt.activity import add_activity_bars, add_dependency_arrows
 from src.core.models import ScheduleState
 
 
 def create_gantt_chart(schedule_state: ScheduleState) -> go.Figure:
     """Create a gantt chart from schedule state."""
-    if not schedule_state or not schedule_state.schedule:
+    if not schedule_state or not hasattr(schedule_state, 'schedule') or not schedule_state.schedule:
         return _create_empty_chart()
     
     try:
-        # Get timeline range and concurrency map
+        # Get timeline range
         timeline_range = get_timeline_range(schedule_state.schedule, schedule_state.config)
-        concurrency_map = get_concurrency_map(schedule_state.schedule)
         
         # Create figure
         fig = go.Figure()
@@ -31,9 +30,9 @@ def create_gantt_chart(schedule_state: ScheduleState) -> go.Figure:
         # Add background elements (can now read chart dimensions from figure)
         add_background_elements(fig)
         
-        # Add activities (middle layer)
-        add_activity_bars(fig, schedule_state.schedule, schedule_state.config, concurrency_map)
-        add_dependency_arrows(fig, schedule_state.schedule, schedule_state.config, concurrency_map)
+        # Add activities (middle layer) - concurrency map is generated internally
+        add_activity_bars(fig, schedule_state.schedule, schedule_state.config)
+        add_dependency_arrows(fig, schedule_state.schedule, schedule_state.config)
         
         return fig
         
