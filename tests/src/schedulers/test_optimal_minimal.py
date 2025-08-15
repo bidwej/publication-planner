@@ -6,7 +6,7 @@ from typing import Dict, List
 
 from src.core.models import (
     Submission, Conference, Config, SubmissionType, ConferenceType, 
-    ConferenceRecurrence, ConferenceSubmissionType
+    ConferenceRecurrence, SubmissionWorkflow
 )
 from src.schedulers.optimal import OptimalScheduler
 
@@ -48,7 +48,7 @@ def create_minimal_conference(conference_id: str, deadline_date: date) -> Confer
         conf_type=ConferenceType.ENGINEERING,
         recurrence=ConferenceRecurrence.ANNUAL,
         deadlines={SubmissionType.PAPER: deadline_date},
-        submission_types=ConferenceSubmissionType.PAPER_ONLY
+        submission_types=SubmissionWorkflow.PAPER_ONLY
     )
 
 

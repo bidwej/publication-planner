@@ -1084,7 +1084,7 @@ When adding new features:
 - **Advanced Penalty Terms**: Sophisticated penalty calculations including SlackCost, conference compatibility, and dependency violations
 - **Quarterly Re-solve**: Dynamic rescheduling system with progress tracking and automated re-scheduling
 - **Type Safety**: Complete type annotations across all test files (49 files updated) for better code quality and IDE support
-- **PDF Export**: Professional PDF report generation with charts and analytics
+
 
 ### 🚧 Planned Features (Not Yet Implemented)
 

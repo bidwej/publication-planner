@@ -247,7 +247,7 @@ class AdvancedAnalytics:
 **Priority**: 🟢 LOW
 
 **Missing Features**:
-- [ ] **PDF Export**: Export schedules to PDF format
+
 - [ ] **Excel Export**: Export to Excel with multiple sheets
 - [ ] **Calendar Integration**: Export to calendar formats (iCal, Google Calendar)
 - [ ] **Email Integration**: Send schedules via email
@@ -315,7 +315,7 @@ class AdvancedAnalytics:
 3. **Advanced Testing** - Comprehensive testing suite
 
 ### Phase 4 (Low Priority - 8-12 weeks)
-1. **Advanced Export Features** - PDF, Excel, calendar integration
+1. **Advanced Export Features** - Excel, calendar integration
 2. **Advanced Dashboard Features** - Collaboration, templates, mobile
 3. **Architecture Improvements** - DI, events, plugins
 

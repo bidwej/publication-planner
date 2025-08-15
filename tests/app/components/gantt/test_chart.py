@@ -77,7 +77,7 @@ class TestGanttChart:
         mock_get_timeline_range.assert_called_once()
     
     @patch('app.components.gantt.chart.get_timeline_range')
-    @patch('app.components.gantt.chart.add_background_elements')
+    @patch('app.components.gantt.layout.add_background_elements')
     @patch('app.components.gantt.chart.add_activity_bars')
     @patch('app.components.gantt.chart.add_dependency_arrows')
     def test_create_gantt_chart_calls_components(self, mock_add_deps, mock_add_activities, 

@@ -7,7 +7,7 @@ import pytest
 
 from src.core.models import (
     Config, Submission, Conference, SubmissionType, 
-    ConferenceType, ConferenceRecurrence
+    ConferenceType, ConferenceRecurrence, ScheduleState
 )
 
 
@@ -188,6 +188,15 @@ def sample_config() -> Config:
             depends_on=["mod2-wrk"],
             draft_window_months=3,
             author="ed"  # ED papers are medical papers
+        ),
+        Submission(
+            id="poster1",
+            title="Endoscope Control Interface Demo",
+            kind=SubmissionType.POSTER,
+            conference_id="ICRA2026",
+            depends_on=["mod1-wrk"],
+            draft_window_months=1,
+            author="pccp"  # Engineering poster
         )
     ]
     
@@ -247,12 +256,13 @@ def sample_schedule() -> Dict[str, date]:
         "mod1-wrk": date(2024, 12, 1),
         "paper1-pap": date(2025, 1, 15),
         "mod2-wrk": date(2025, 1, 1),
-        "paper2-pap": date(2025, 2, 1)
+        "paper2-pap": date(2025, 2, 1),
+        "poster1": date(2025, 1, 30)
     }
 
 
 @pytest.fixture
-def sample_schedule_state(sample_config) -> Dict[str, Any]:
+def sample_schedule_state(sample_config) -> ScheduleState:
     """Fixture to provide a sample schedule state for testing."""
     from src.core.models import ScheduleState, SchedulerStrategy
     
@@ -261,7 +271,8 @@ def sample_schedule_state(sample_config) -> Dict[str, Any]:
             "mod1-wrk": date(2024, 12, 1),
             "paper1-pap": date(2025, 1, 15),
             "mod2-wrk": date(2025, 1, 1),
-            "paper2-pap": date(2025, 2, 1)
+            "paper2-pap": date(2025, 2, 1),
+            "poster1": date(2025, 1, 30)
         },
         config=sample_config,
         strategy=SchedulerStrategy.GREEDY,
@@ -273,13 +284,3 @@ def sample_schedule_state(sample_config) -> Dict[str, Any]:
     )
 
 
-@pytest.fixture
-def sample_timeline_range() -> Dict[str, date]:
-    """Fixture to provide a sample timeline range for testing."""
-    return {
-        "min_date": date(2024, 11, 1),  # 30 days before earliest schedule date
-        "max_date": date(2025, 3, 15),   # 30 days after latest schedule date
-        "max_concurrency": 4,            # Number of concurrent activities
-        "timeline_start": date(2024, 11, 1),
-        "span_days": 135                 # Total span in days
-    }

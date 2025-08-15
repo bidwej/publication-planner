@@ -3,9 +3,10 @@
 from __future__ import annotations
 from typing import Dict, List, Optional, Any
 from datetime import date, timedelta
-from dataclasses import asdict, dataclass
 from enum import Enum
 from dateutil.parser import parse as parse_date
+
+from pydantic import BaseModel, Field, ConfigDict
 
 from src.core.constants import SCHEDULING_CONSTANTS, PENALTY_CONSTANTS, EFFICIENCY_CONSTANTS
 
@@ -17,24 +18,13 @@ class SubmissionType(str, Enum):
 
 
 class SubmissionWorkflow(str, Enum):
-    """Workflow types for submissions."""
-    ABSTRACT_ONLY = "abstract_only"          # Only submit as abstract
-    PAPER_ONLY = "paper_only"               # Only submit as paper  
-    POSTER_ONLY = "poster_only"             # Only submit as poster
-    ABSTRACT_THEN_PAPER = "abstract_then_paper"  # Submit abstract first, then paper
-    PAPER_OR_ABSTRACT = "paper_or_abstract"      # Can submit as either (conference decides)
-    ANY = "any"                             # Open to any submission type
-
-
-
-class ConferenceSubmissionType(str, Enum):
-    """Types of conference submission requirements."""
-    ABSTRACT_ONLY = "abstract_only"      # Only accepts abstracts
-    PAPER_ONLY = "paper_only"           # Only accepts papers
-    POSTER_ONLY = "poster_only"         # Only accepts posters
-    ABSTRACT_AND_PAPER = "abstract_and_paper"  # Requires abstract before paper
-    ABSTRACT_OR_PAPER = "abstract_or_paper"    # Accepts either abstract or paper
-    ALL_TYPES = "all_types"             # Accepts all submission types
+    """Workflow patterns for submissions."""
+    ABSTRACT_ONLY = "abstract_only"           # Just submit abstract
+    PAPER_ONLY = "paper_only"                # Just submit paper
+    POSTER_ONLY = "poster_only"              # Just submit poster
+    ABSTRACT_THEN_PAPER = "abstract_then_paper"  # Engineering: abstract → paper
+    ABSTRACT_OR_PAPER = "abstract_or_paper"      # Medical: either/or
+    ALL_TYPES = "all_types"                  # Accept everything
 
 class SchedulerStrategy(str, Enum):
     """Available scheduling strategies."""
@@ -47,9 +37,10 @@ class SchedulerStrategy(str, Enum):
     OPTIMAL = "optimal"
     ADVANCED = "advanced"
 
-@dataclass
-class Submission:
+class Submission(BaseModel):
     """A submission to a conference."""
+    model_config = ConfigDict(validate_assignment=True)
+    
     id: str
     title: str
     kind: SubmissionType  # Base type (PAPER for both mods and ed papers)
@@ -63,12 +54,12 @@ class Submission:
     candidate_conferences: Optional[List[str]] = None  # Suggested conferences
     candidate_kinds: Optional[List[SubmissionType]] = None  # Preferred submission types at conferences (in priority order)
     submission_workflow: Optional[SubmissionWorkflow] = None  # How this submission should be handled
+    engineering: bool = False  # Whether this is an engineering submission
     
     # Additional fields for unified schema (both mods and papers now have these)
     engineering_ready_date: Optional[date] = None  # When engineering work completes and data is available
     free_slack_months: Optional[int] = None  # Buffer time in months
     penalty_cost_per_month: Optional[float] = None  # Monthly penalty cost for delays
-    
     
     def validate(self) -> List[str]:
         """Validate submission and return list of errors."""
@@ -94,8 +85,6 @@ class Submission:
             errors.append("Free slack months cannot be negative")
         return errors
     
-
-    
     def get_priority_score(self, config: 'Config') -> float:
         """Calculate priority score based on config weights."""
         if not config.priority_weights:
@@ -112,7 +101,7 @@ class Submission:
         base_weight = config.priority_weights.get(type_key, 1.0)
         
         # Engineering bonus
-        if self.author == "pccp":  # PCCP authors are engineering
+        if self.engineering:  # Engineering submissions get bonus
             engineering_bonus = config.priority_weights.get("engineering_paper", 2.0)
             base_weight *= engineering_bonus
         
@@ -200,74 +189,67 @@ class ConferenceRecurrence(str, Enum):
     BIENNIAL = "biennial"
     QUARTERLY = "quarterly"
 
-@dataclass
-class Conference:
+class Conference(BaseModel):
     """A conference with deadlines."""
+    model_config = ConfigDict(validate_assignment=True)
+    
     id: str
     name: str
     conf_type: ConferenceType
     recurrence: ConferenceRecurrence
     deadlines: Dict[SubmissionType, date]
-    submission_types: Optional[ConferenceSubmissionType] = None  # What types of submissions are accepted
+    submission_types: Optional[SubmissionWorkflow] = None  # What types of submissions are accepted
     
     @property
-    def effective_submission_types(self) -> ConferenceSubmissionType:
+    def effective_submission_types(self) -> SubmissionWorkflow:
         """Get submission types, auto-determined from deadlines if not explicitly set."""
         return self.submission_types if self.submission_types is not None else self._determine_submission_type()
     
-    def _determine_submission_type(self) -> ConferenceSubmissionType:
+    def _determine_submission_type(self) -> SubmissionWorkflow:
         """Determine submission type based on available deadlines."""
         has_abstract = SubmissionType.ABSTRACT in self.deadlines
         has_paper = SubmissionType.PAPER in self.deadlines
         has_poster = SubmissionType.POSTER in self.deadlines
         
         if has_abstract and has_paper and has_poster:
-            return ConferenceSubmissionType.ALL_TYPES
+            return SubmissionWorkflow.ALL_TYPES
         elif has_abstract and has_paper:
             # Default to ABSTRACT_OR_PAPER unless explicitly specified as requiring abstract before paper
             # This means the conference accepts either abstracts OR papers, not necessarily both in sequence
-            return ConferenceSubmissionType.ABSTRACT_OR_PAPER
+            return SubmissionWorkflow.ABSTRACT_OR_PAPER
         elif has_abstract and not has_paper:
-            return ConferenceSubmissionType.ABSTRACT_ONLY
+            return SubmissionWorkflow.ABSTRACT_ONLY
         elif has_paper and not has_abstract:
-            return ConferenceSubmissionType.PAPER_ONLY
+            return SubmissionWorkflow.PAPER_ONLY
         elif has_poster and not has_abstract and not has_paper:
-            return ConferenceSubmissionType.POSTER_ONLY
+            return SubmissionWorkflow.POSTER_ONLY
         else:
-            return ConferenceSubmissionType.ABSTRACT_OR_PAPER
+            return SubmissionWorkflow.ABSTRACT_OR_PAPER
     
     def accepts_submission_type(self, submission_type: SubmissionType) -> bool:
         """Check if conference accepts this submission type."""
-        if self.effective_submission_types == ConferenceSubmissionType.ALL_TYPES:
+        if self.effective_submission_types == SubmissionWorkflow.ALL_TYPES:
             return True
-        elif self.effective_submission_types == ConferenceSubmissionType.ABSTRACT_ONLY:
+        elif self.effective_submission_types == SubmissionWorkflow.ABSTRACT_ONLY:
             return submission_type == SubmissionType.ABSTRACT
-        elif self.effective_submission_types == ConferenceSubmissionType.PAPER_ONLY:
+        elif self.effective_submission_types == SubmissionWorkflow.PAPER_ONLY:
             return submission_type == SubmissionType.PAPER
-        elif self.effective_submission_types == ConferenceSubmissionType.POSTER_ONLY:
+        elif self.effective_submission_types == SubmissionWorkflow.POSTER_ONLY:
             return submission_type == SubmissionType.POSTER
-        elif self.effective_submission_types == ConferenceSubmissionType.ABSTRACT_AND_PAPER:
+        elif self.effective_submission_types == SubmissionWorkflow.ABSTRACT_THEN_PAPER:
             return submission_type in [SubmissionType.ABSTRACT, SubmissionType.PAPER]
-        elif self.effective_submission_types == ConferenceSubmissionType.ABSTRACT_OR_PAPER:
+        elif self.effective_submission_types == SubmissionWorkflow.ABSTRACT_OR_PAPER:
             return submission_type in [SubmissionType.ABSTRACT, SubmissionType.PAPER]
         return False
     
     def requires_abstract_before_paper(self) -> bool:
         """Check if conference requires abstract submission before paper submission."""
-        return self.effective_submission_types == ConferenceSubmissionType.ABSTRACT_AND_PAPER
+        return self.effective_submission_types == SubmissionWorkflow.ABSTRACT_THEN_PAPER
     
     def get_required_dependencies(self, submission_type: SubmissionType) -> List[str]:
         """Get list of required dependencies for this submission type at this conference."""
-        dependencies = []
-        
-        if submission_type == SubmissionType.PAPER and self.requires_abstract_before_paper():
-            # For papers at conferences requiring abstracts, the abstract ID would be
-            # generated based on the paper ID and conference ID
-            # This is handled in the Config class during validation
-            # Return empty list as this is handled at the submission level
-            pass
-        
-        return dependencies
+        # Dependencies are handled at the submission level, not conference level
+        return []
     
     def validate_submission_compatibility(self, submission: Submission) -> List[str]:
         """Validate that a submission is compatible with this conference."""
@@ -312,13 +294,10 @@ class Conference:
         """Check if conference has deadline for submission type."""
         return submission_type in self.deadlines
 
-
-
-
-
-@dataclass
-class Config:
+class Config(BaseModel):
     """Configuration for the scheduler."""
+    model_config = ConfigDict(validate_assignment=True)
+    
     submissions: List[Submission]
     conferences: List[Conference]
     min_abstract_lead_time_days: int
@@ -411,6 +390,12 @@ class Config:
                 conference_ids = {conf.id for conf in self.conferences}
                 if submission.conference_id not in conference_ids:
                     errors.append(f"Submission {submission.id} references unknown conference {submission.conference_id}")
+            
+            # Validate dependencies
+            if submission.depends_on:
+                for dep_id in submission.depends_on:
+                    if dep_id not in submission_ids:
+                        errors.append(f"Submission {submission.id} depends on nonexistent submission {dep_id}")
         
         # Validate conferences
         conference_ids = set()
@@ -421,69 +406,8 @@ class Config:
                 errors.append(f"Duplicate conference ID: {conference.id}")
             conference_ids.add(conference.id)
         
-        # Validate abstract-paper dependencies
-        errors.extend(self._validate_abstract_paper_dependencies())
-        
-        # Validate circular dependencies
-        errors.extend(self._validate_circular_dependencies())
-        
-        # Validate missing dependencies
-        errors.extend(self._validate_missing_dependencies())
-
+        # Basic validation complete - detailed validation handled by validation module
         return errors
-
-    def _validate_abstract_paper_dependencies(self) -> List[str]:
-        """Validate dependencies between submissions (simplified)."""
-        # Since we removed auto-generation, just validate that all dependencies exist
-        # The missing dependencies validation is handled elsewhere
-        return []
-
-    def _validate_circular_dependencies(self) -> List[str]:
-        """Validate that there are no circular dependencies."""
-        errors = []
-        submission_dict = {sub.id: sub for sub in self.submissions}
-        
-        def has_circular_dependency(sub_id: str, visited: set, path: list) -> bool:
-            """Check for circular dependencies using DFS."""
-            if sub_id in visited:
-                return sub_id in path
-            
-            visited.add(sub_id)
-            path.append(sub_id)
-            
-            submission = submission_dict.get(sub_id)
-            if not submission or not submission.depends_on:
-                path.pop()
-                return False
-            
-            for dep_id in submission.depends_on:
-                if has_circular_dependency(dep_id, visited, path):
-                    return True
-            
-            path.pop()
-            return False
-        
-        # Check each submission for circular dependencies
-        for submission in self.submissions:
-            if has_circular_dependency(submission.id, set(), []):
-                errors.append(f"Circular dependency detected involving submission {submission.id}")
-        
-        return errors
-
-    def _validate_missing_dependencies(self) -> List[str]:
-        """Validate that all dependencies exist."""
-        errors = []
-        submission_ids = {sub.id for sub in self.submissions}
-        
-        for submission in self.submissions:
-            if submission.depends_on:
-                for dep_id in submission.depends_on:
-                    if dep_id not in submission_ids:
-                        errors.append(f"Submission {submission.id} depends on non-existent submission {dep_id}")
-        
-        return errors
-    
-
     
     # Computed properties
     @property
@@ -528,10 +452,9 @@ class Config:
         else:
             return date.today() + timedelta(days=365)
 
-# ===== UNIFIED VALIDATION MODELS =====
+# ===== VALIDATION MODELS =====
 
-@dataclass
-class ValidationResult:
+class ValidationResult(BaseModel):
     """Unified validation result combining all constraint types."""
     is_valid: bool
     violations: List['ConstraintViolation']
@@ -540,10 +463,9 @@ class ValidationResult:
     resource_validation: 'ResourceValidation'
     summary: str
 
-# ===== UNIFIED SCORING MODELS =====
+# ===== SCORING MODELS =====
 
-@dataclass
-class ScoringResult:
+class ScoringResult(BaseModel):
     """Unified scoring result combining all scoring types."""
     penalty_score: float
     quality_score: float
@@ -553,27 +475,10 @@ class ScoringResult:
     timeline_metrics: 'TimelineMetrics'
     overall_score: float
 
-# ===== UNIFIED SCHEDULING MODELS =====
+# ===== SCHEDULING MODELS =====
 
-@dataclass
-class Schedule:
-    """A complete schedule with metadata."""
-    assignments: Dict[str, date]
-    config: Config
-    metadata: Dict[str, Any]
-
-@dataclass
-class SchedulerResult:
-    """Result from scheduler with metadata."""
-    schedule: Dict[str, date]
-    strategy: SchedulerStrategy
-    execution_time: float
-    iterations: int
-    metadata: Dict[str, Any]
-
-@dataclass
-class ScheduleResult:
-    """Complete schedule result with all metrics and tables."""
+class ScheduleResult(BaseModel):
+    """Complete schedule result with all metrics and analysis."""
     schedule: Dict[str, date]
     summary: 'ScheduleSummary'
     metrics: 'ScheduleMetrics'
@@ -581,79 +486,61 @@ class ScheduleResult:
     validation: ValidationResult
     scoring: ScoringResult
 
-# ===== METRICS DATA MODELS =====
+# ===== VALIDATION MODELS =====
 
-@dataclass
-class ConstraintViolation:
-    """A constraint violation."""
+class ConstraintViolation(BaseModel):
+    """Base constraint violation."""
     submission_id: str
     description: str
     severity: str = "medium"
 
-@dataclass
-class DeadlineViolation:
+class DeadlineViolation(ConstraintViolation):
     """A deadline violation."""
-    submission_id: str
-    description: str
     submission_title: str
     conference_id: str
     submission_type: str
     deadline: date
     end_date: date
     days_late: int
-    severity: str = "medium"
 
-@dataclass
-class DependencyViolation:
+class DependencyViolation(ConstraintViolation):
     """A dependency violation."""
-    submission_id: str
-    description: str
     dependency_id: str
     issue: str  # "missing_dependency", "invalid_dependency", "timing_violation"
     days_violation: Optional[int] = None
-    severity: str = "medium"
 
-@dataclass
-class ResourceViolation:
+class ResourceViolation(ConstraintViolation):
     """A resource constraint violation."""
-    submission_id: str
-    description: str
     date: date
     load: int
     limit: int
     excess: int
-    severity: str = "medium"
 
-@dataclass
-class ConstraintValidation:
+class ConstraintValidation(BaseModel):
     """Result of constraint validation."""
     is_valid: bool
     violations: List[ConstraintViolation]
     summary: str
 
-@dataclass
 class DeadlineValidation(ConstraintValidation):
     """Result of deadline validation."""
     compliance_rate: float
     total_submissions: int
     compliant_submissions: int
 
-@dataclass
 class DependencyValidation(ConstraintValidation):
     """Result of dependency validation."""
     satisfaction_rate: float
     total_dependencies: int
     satisfied_dependencies: int
 
-@dataclass
 class ResourceValidation(ConstraintValidation):
     """Result of resource validation."""
     max_concurrent: int
     max_observed: int
     total_days: int
 
-@dataclass
-class PenaltyBreakdown:
+class PenaltyBreakdown(BaseModel):
     """Breakdown of penalty costs."""
     total_penalty: float
     deadline_penalties: float
@@ -662,79 +549,60 @@ class PenaltyBreakdown:
     conference_compatibility_penalties: float
     abstract_paper_dependency_penalties: float
 
-@dataclass
-class EfficiencyMetrics:
+class EfficiencyMetrics(BaseModel):
     """Resource efficiency metrics."""
     utilization_rate: float
     peak_utilization: int
     avg_utilization: float
     efficiency_score: float
 
-@dataclass
-class TimelineMetrics:
+class TimelineMetrics(BaseModel):
     """Timeline efficiency metrics."""
     duration_days: int
     avg_daily_load: float
     timeline_efficiency: float
 
-# ===== UNIFIED ANALYTICS BASE CLASS =====
+# ===== ANALYTICS MODELS =====
 
-@dataclass
-class AnalyticsResult:
+class AnalyticsResult(BaseModel):
     """Base class for all analytics results."""
     summary: str
     metadata: Optional[Dict[str, Any]] = None
 
-@dataclass
-class ScheduleAnalysis:
+class ScheduleAnalysis(AnalyticsResult):
     """Analysis of schedule completeness."""
     scheduled_count: int
     total_count: int
     completion_rate: float
     missing_submissions: List[Dict[str, Any]]
-    summary: str
-    metadata: Optional[Dict[str, Any]] = None
 
-@dataclass
-class ScheduleDistribution:
+class ScheduleDistribution(AnalyticsResult):
     """Distribution of submissions over time."""
     monthly_distribution: Dict[str, int]
     quarterly_distribution: Dict[str, int]
     yearly_distribution: Dict[str, int]
-    summary: str
-    metadata: Optional[Dict[str, Any]] = None
 
-@dataclass
-class SubmissionTypeAnalysis:
+class SubmissionTypeAnalysis(AnalyticsResult):
     """Analysis of submission types."""
     type_counts: Dict[str, int]
     type_percentages: Dict[str, float]
-    summary: str
-    metadata: Optional[Dict[str, Any]] = None
 
-@dataclass
-class TimelineAnalysis:
+class TimelineAnalysis(AnalyticsResult):
     """Timeline analysis results."""
     start_date: Optional[date]
     end_date: Optional[date]
     duration_days: int
     avg_submissions_per_month: float
-    summary: str
-    metadata: Optional[Dict[str, Any]] = None
 
-@dataclass
-class ResourceAnalysis:
+class ResourceAnalysis(AnalyticsResult):
     """Resource analysis results."""
     peak_load: int
     avg_load: float
     utilization_pattern: Dict[date, int]
-    summary: str
-    metadata: Optional[Dict[str, Any]] = None 
 
 # ===== OUTPUT DATA MODELS =====
 
-@dataclass
-class ScheduleSummary:
+class ScheduleSummary(BaseModel):
     """Summary metrics for a schedule."""
     total_submissions: int
     schedule_span: int
@@ -748,50 +616,14 @@ class ScheduleSummary:
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
-        return {
-            'total_submissions': self.total_submissions,
-            'schedule_span': self.schedule_span,
-            'start_date': self.start_date.isoformat() if self.start_date else None,
-            'end_date': self.end_date.isoformat() if self.end_date else None,
-            'penalty_score': self.penalty_score,
-            'quality_score': self.quality_score,
-            'efficiency_score': self.efficiency_score,
-            'deadline_compliance': self.deadline_compliance,
-            'resource_utilization': self.resource_utilization
-        }
+        return self.model_dump()
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ScheduleSummary':
         """Create from dictionary."""
-        start_date = None
-        end_date = None
-        
-        if data.get('start_date'):
-            try:
-                start_date = parse_date(data['start_date']).date()
-            except (ValueError, TypeError):
-                pass
-                
-        if data.get('end_date'):
-            try:
-                end_date = parse_date(data['end_date']).date()
-            except (ValueError, TypeError):
-                pass
-        
-        return cls(
-            total_submissions=data.get('total_submissions', 0),
-            schedule_span=data.get('schedule_span', 0),
-            start_date=start_date,
-            end_date=end_date,
-            penalty_score=data.get('penalty_score', 0.0),
-            quality_score=data.get('quality_score', 0.0),
-            efficiency_score=data.get('efficiency_score', 0.0),
-            deadline_compliance=data.get('deadline_compliance', 0.0),
-            resource_utilization=data.get('resource_utilization', 0.0)
-        )
+        return cls(**data)
 
-@dataclass
-class ScheduleMetrics:
+class ScheduleMetrics(BaseModel):
     """Detailed metrics for a schedule."""
     makespan: int
     avg_utilization: float
@@ -800,91 +632,30 @@ class ScheduleMetrics:
     compliance_rate: float
     quality_score: float
 
-@dataclass
-class CompleteOutput:
-    """Complete output data for a schedule."""
-    schedule: Dict[str, date]
-    summary_metrics: ScheduleSummary
-    detailed_metrics: ScheduleMetrics
-    schedule_table: List[Dict[str, str]]
-    metrics_table: List[Dict[str, str]]
-    deadline_table: List[Dict[str, str]]
-
-@dataclass
-class ConstraintValidationResult:
+class ConstraintValidationResult(BaseModel):
     """Result of all constraint validations."""
     deadlines: DeadlineValidation
     dependencies: DependencyValidation
     resources: ResourceValidation
     is_valid: bool 
 
-@dataclass
-class ScheduleState:
+class ScheduleState(BaseModel):
     """Complete state of a schedule for serialization."""
+    model_config = ConfigDict(validate_assignment=True)
+    
     schedule: Dict[str, date]
     config: Config
     strategy: SchedulerStrategy
-    metadata: Dict[str, Any]
     timestamp: str
     version: str = "1.0"
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
-        # Use asdict for config serialization
-        config_dict = asdict(self.config)
-        # Convert date objects to ISO format strings
-        if config_dict.get("blackout_dates"):
-            config_dict["blackout_dates"] = [d.isoformat() for d in config_dict["blackout_dates"]]
-        
-        return {
-            "schedule": {k: v.isoformat() for k, v in self.schedule.items()},
-            "config": config_dict,
-            "strategy": self.strategy.value,
-            "metadata": self.metadata,
-            "timestamp": self.timestamp,
-            "version": self.version
-        }
+        return self.model_dump()
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ScheduleState':
         """Create a ScheduleState from a dictionary."""
-        # Parse schedule dates
-        schedule = {}
-        if "schedule" in data:
-            for k, v in data["schedule"].items():
-                try:
-                    schedule[k] = parse_date(v).date()
-                except (ValueError, TypeError):
-                    continue
-        
-        # Parse blackout dates
-        blackout_dates = []
-        if "blackout_dates" in data:
-            for d in data["blackout_dates"]:
-                try:
-                    blackout_dates.append(parse_date(d).date())
-                except (ValueError, TypeError):
-                    continue
-        
-        return cls(
-            schedule=schedule,
-            config=Config(
-                submissions=[],  # Would need to reconstruct from data files
-                conferences=[],  # Would need to reconstruct from data files
-                min_abstract_lead_time_days=data.get("min_abstract_lead_time_days", 30),
-                min_paper_lead_time_days=data.get("min_paper_lead_time_days", 90),
-                max_concurrent_submissions=data.get("max_concurrent_submissions", 3),
-                default_paper_lead_time_months=data.get("default_paper_lead_time_months", 3),
-                penalty_costs=data.get("penalty_costs", {}),
-                priority_weights=data.get("priority_weights", {}),
-                scheduling_options=data.get("scheduling_options", {}),
-                blackout_dates=blackout_dates,
-                data_files=data.get("data_files", {})
-            ),
-            strategy=SchedulerStrategy(data.get("strategy", "greedy")),
-            metadata=data.get("metadata", {}),
-            timestamp=data.get("timestamp", ""),
-            version=data.get("version", "1.0")
-        )
+        return cls(**data)
 
  

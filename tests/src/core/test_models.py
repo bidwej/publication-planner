@@ -4,7 +4,7 @@ from datetime import date
 from typing import Dict, List, Any, Optional
 
 from src.core.models import (
-    Config, Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence, ConferenceSubmissionType,
+    Config, Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence, SubmissionWorkflow,
     ValidationResult, ScoringResult, ScheduleResult, ScheduleSummary, ScheduleMetrics,
     PenaltyBreakdown, EfficiencyMetrics, TimelineMetrics, DeadlineValidation, DependencyValidation, ResourceValidation
 )
@@ -367,7 +367,7 @@ class TestConfig:
                 SubmissionType.ABSTRACT: date(2024, 3, 1),
                 SubmissionType.PAPER: date(2024, 6, 1)
             },
-            submission_types=ConferenceSubmissionType.ABSTRACT_AND_PAPER
+            submission_types=SubmissionWorkflow.ABSTRACT_THEN_PAPER
         )
         
         # Paper with explicit abstract dependency (new architecture)
@@ -410,7 +410,7 @@ class TestConfig:
                 SubmissionType.ABSTRACT: date(2024, 3, 1),
                 SubmissionType.PAPER: date(2024, 6, 1)
             },
-            submission_types=ConferenceSubmissionType.ABSTRACT_AND_PAPER
+            submission_types=SubmissionWorkflow.ABSTRACT_THEN_PAPER
         )
         
         # Paper without abstract
@@ -548,7 +548,7 @@ class TestConfig:
                 SubmissionType.ABSTRACT: date(2024, 3, 1),
                 SubmissionType.PAPER: date(2024, 6, 1)
             },
-            submission_types=ConferenceSubmissionType.ABSTRACT_AND_PAPER
+            submission_types=SubmissionWorkflow.ABSTRACT_THEN_PAPER
         )
         
         existing_abstract = Submission(

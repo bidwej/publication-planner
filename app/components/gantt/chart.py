@@ -8,9 +8,9 @@ from plotly.graph_objs import Figure
 from typing import Dict, Any, Optional
 from datetime import date
 
-from app.components.gantt.timeline import get_timeline_range, add_background_elements
+from app.components.gantt.timeline import get_timeline_range
 from app.components.gantt.activity import add_activity_bars, add_dependency_arrows
-from app.components.gantt.layout import configure_gantt_layout
+from app.components.gantt.layout import configure_gantt_layout, add_background_elements
 from src.core.models import ScheduleState
 
 

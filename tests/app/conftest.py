@@ -3,6 +3,7 @@
 import pytest
 import json
 from unittest.mock import Mock
+from datetime import date
 from typing import Dict, List, Any, Optional
 
 
@@ -53,6 +54,18 @@ def mock_storage():
     mock_storage.save_schedule = Mock()
     mock_storage.save_config = Mock()
     return mock_storage
+
+
+@pytest.fixture
+def sample_timeline_range():
+    """Fixture to provide sample timeline range for testing."""
+    return {
+        'min_date': date(2024, 4, 1),
+        'max_date': date(2024, 8, 1),
+        'timeline_start': date(2024, 4, 1),
+        'span_days': 120,
+        'max_concurrency': 4
+    }
 
 
 @pytest.fixture

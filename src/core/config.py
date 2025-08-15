@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 from dateutil.parser import parse as parse_date
 
 from src.core.models import (
-    Conference, ConferenceRecurrence, ConferenceType, ConferenceSubmissionType, Config, Submission, 
+    Conference, ConferenceRecurrence, ConferenceType, Config, Submission, 
     SubmissionType, SubmissionWorkflow
 )
 from src.core.constants import SCHEDULING_CONSTANTS, PENALTY_CONSTANTS
@@ -45,7 +45,7 @@ def _map_conference_data(json_data: Dict) -> Dict:
         "conf_type": ConferenceType(json_data.get("conference_type", "MEDICAL")),
         "recurrence": ConferenceRecurrence(json_data.get("recurrence", "annual")),
         "deadlines": _build_deadlines_dict(json_data),
-        "submission_types": ConferenceSubmissionType(json_data.get("submission_types")) if json_data.get("submission_types") else None
+        "submission_types": SubmissionWorkflow(json_data.get("submission_types")) if json_data.get("submission_types") else None
     }
 
 

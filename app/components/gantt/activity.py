@@ -60,88 +60,28 @@ def add_dependency_arrows(fig: Figure, schedule: Dict[str, date], config: Config
                                             start_date, activity_rows[submission_id])
 
 
-def _add_activity_bar(fig: Figure, submission: Submission, start_date: date, 
-                     end_date: date, row: int) -> None:
-    """Add an activity bar for a submission."""
-    # Get colors based on submission type
-    color = _get_submission_color(submission)
+def _add_activity_bar(fig: Figure, submission: Submission, start_date: date, end_date: date, row: int) -> None:
+    """Add a single activity bar to the chart."""
+    # Get colors for this submission
+    fill_color = _get_submission_color(submission)
     border_color = _get_border_color(submission)
     
-    # Add the bar as a shape
+    # Add the bar shape
     fig.add_shape(
         type="rect",
-        x0=start_date,
-        x1=end_date,
-        y0=row - 0.4,
-        y1=row + 0.4,
-        fillcolor=color,
+        x0=start_date, y0=row - 0.4,
+        x1=end_date, y1=row + 0.4,
+        fillcolor=fill_color,
         line=dict(color=border_color, width=2),
-        opacity=0.8
+        opacity=0.8,
+        layer="below"
     )
     
-    # Add type icon with proper positioning
-    _add_type_icon(fig, submission, start_date, end_date, row)
+    # Add type label with proper positioning
+    _add_type_label(fig, submission, start_date, end_date, row)
     
     # Add author label in main lower left corner (simple text)
     _add_author_label(fig, submission, start_date, row)
-
-
-def _add_author_label(fig: Figure, submission: Submission, start_date: date, row: int) -> None:
-    """Add author label (Author: PCCP or Author: ED) in bottom left corner inside the bar."""
-    # Get author for label
-    author_text = f"Author: {submission.author.upper()}" if submission.author else "Author: Unknown"
-    
-    # Add author label annotation in bottom left corner inside the bar
-    fig.add_annotation(
-        text=author_text,
-        x=start_date,
-        y=row - 0.2,  # Inside the bar, above the bottom border
-        xref="x", yref="y",
-        xanchor='left', yanchor='top',
-        font={'size': 8, 'color': '#2c3e50', 'weight': 'bold'},
-        showarrow=False
-    )
-
-
-def _add_type_icon(fig: Figure, submission: Submission, start_date: date, end_date: date, row: int) -> None:
-    """Add type label with positioning: ALL types in top left."""
-    # Determine descriptive text based on submission type and author
-    if submission.kind.value == "paper":
-        if submission.author == "pccp":
-            type_text = "Paper: Engineering"
-        elif submission.author == "ed":
-            type_text = "Paper: Medical"
-        else:
-            type_text = "Paper"
-    elif submission.kind.value == "abstract":
-        if submission.author == "pccp":
-            type_text = "Abstract: Engineering"
-        elif submission.author == "ed":
-            type_text = "Abstract: Medical"
-        else:
-            type_text = "Abstract"
-    elif submission.kind.value == "poster":
-        type_text = "Poster"
-    else:
-        type_text = "Document"
-    
-    # Check if bar is too narrow for full text and truncate if needed
-    type_text = _truncate_text_for_bar_width(type_text, start_date, end_date)
-    
-    # ALL types go in TOP LEFT
-    x_pos = start_date
-    x_anchor = 'left'
-    
-    # Add type label annotation - positioned safely within the bar area
-    fig.add_annotation(
-        text=type_text,
-        x=x_pos,
-        y=row + 0.2,  # Positioned to be clearly visible inside the bar
-        xref="x", yref="y",
-        xanchor=x_anchor, yanchor='bottom',
-        font={'size': 8, 'color': '#2c3e50', 'weight': 'bold'},  # Same style as author labels
-        showarrow=False
-    )
 
 
 def _add_bar_label(fig: Figure, submission: Submission, start_date: date, 
@@ -168,6 +108,50 @@ def _add_bar_label(fig: Figure, submission: Submission, start_date: date,
     )
 
 
+def _add_author_label(fig: Figure, submission: Submission, start_date: date, row: int) -> None:
+    """Add author label (PCCP or ED) in bottom left corner inside the bar."""
+    # Get author for label - just the author code, not "Author: "
+    author_text = submission.author.upper() if submission.author else "Unknown"
+    
+    # Add author label annotation in bottom left corner inside the bar
+    fig.add_annotation(
+        text=author_text,
+        x=start_date,
+        y=row - 0.2,  # Inside the bar, above the bottom border
+        xref="x", yref="y",
+        xanchor='left', yanchor='top',
+        font={'size': 8, 'color': '#2c3e50', 'weight': 'bold'},
+        showarrow=False
+    )
+
+
+def _add_type_label(fig: Figure, submission: Submission, start_date: date, end_date: date, row: int) -> None:
+    """Add type label (Abstract, Paper, Poster) in top left corner."""
+    # Determine descriptive text based on submission type ONLY (no author info)
+    if submission.kind.value == "paper":
+        type_text = "Paper"
+    elif submission.kind.value == "abstract":
+        type_text = "Abstract"
+    elif submission.kind.value == "poster":
+        type_text = "Poster"
+    else:
+        type_text = "Document"
+    
+    # Check if bar is too narrow for full text and truncate if needed
+    type_text = _truncate_text_for_bar_width(type_text, start_date, end_date)
+    
+    # Add type label annotation in top left corner
+    fig.add_annotation(
+        text=type_text,
+        x=start_date,
+        y=row + 0.2,  # Positioned to be clearly visible inside the bar
+        xref="x", yref="y",
+        xanchor='left', yanchor='bottom',
+        font={'size': 8, 'color': '#2c3e50', 'weight': 'bold'},
+        showarrow=False
+    )
+
+
 def _add_dependency_arrow(fig: Figure, from_date: date, from_row: int, 
                          to_date: date, to_row: int) -> None:
     """Add a dependency arrow between two submissions."""
@@ -190,8 +174,8 @@ def _add_dependency_arrow(fig: Figure, from_date: date, from_row: int,
 
 def _get_submission_color(submission: Submission) -> str:
     """Get color for submission based on type and author."""
-    # Determine base color based on author (engineering vs medical)
-    is_engineering = submission.author == "pccp"
+    # Determine base color based on engineering vs medical
+    is_engineering = submission.is_engineering
     
     if submission.kind.value == "paper":
         # Engineering papers are blue, Medical papers are purple
@@ -209,12 +193,12 @@ def _get_submission_color(submission: Submission) -> str:
 
 def _get_border_color(submission: Submission) -> str:
     """Get border color for submission."""
-    # Determine base color based on author (engineering vs medical)
-    is_engineering = submission.author == "pccp"
+    # Determine base color based on engineering vs medical
+    is_engineering = submission.is_engineering
     
     if submission.kind.value == "paper":
         # Engineering papers have darker blue borders, Medical papers have darker purple
-        return "#2980b9" if is_engineering else "#8e44ad"
+        return "#2980b9" if is_engineering else "#e8d5f0"
     elif submission.kind.value == "abstract":
         # Medium border colors for abstracts
         return "#5dade2" if is_engineering else "#a569bd"

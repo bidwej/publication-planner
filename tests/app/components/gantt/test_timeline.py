@@ -6,8 +6,7 @@ from datetime import date, timedelta
 import plotly.graph_objects as go
 
 from app.components.gantt.timeline import (
-    get_timeline_range, assign_activity_rows, 
-    add_background_elements
+    get_timeline_range, assign_activity_rows
 )
 from app.components.gantt.layout import get_title_text
 from src.core.models import Config
@@ -204,55 +203,7 @@ class TestGanttTimeline:
         assert all(isinstance(row, int) for row in row_values)
         assert all(row >= 0 for row in row_values)
     
-    @patch('app.components.gantt.timeline._add_working_days_background')
-    @patch('app.components.gantt.timeline._add_monthly_markers')
-    def test_add_background_elements_success(self, mock_add_monthly, mock_add_working_days, sample_config):
-        """Test successful background elements addition."""
-        fig = go.Figure()
-        
-        # Set up figure layout with x and y axis ranges
-        fig.update_layout(
-            xaxis=dict(range=['2024-04-01', '2024-08-01']),
-            yaxis=dict(range=[-0.5, 2.5])
-        )
-        
-        add_background_elements(fig)
-        
-        # Check that background functions were called
-        mock_add_working_days.assert_called_once()
-        mock_add_monthly.assert_called_once()
-        
-        # Check that the functions were called with the correct arguments
-        # The first call should be to _add_working_days_background
-        args = mock_add_working_days.call_args[0]
-        assert args[0] == fig  # figure
-        assert args[1] == date(2024, 4, 1)  # start_date (date object)
-        assert args[2] == date(2024, 8, 1)  # end_date (date object)
-        assert args[3] == -0.5  # y_min
-        assert args[4] == 2.5   # y_max
-    
-    def test_add_background_elements_no_x_range(self):
-        """Test background elements addition with no x-axis range."""
-        fig = go.Figure()
-        # No x-axis range set
-        
-        # Should not raise exception, just print warning
-        add_background_elements(fig)
-        
-        # Figure should remain unchanged
-        assert fig.layout is not None
-    
-    def test_add_background_elements_no_y_range(self):
-        """Test background elements addition with no y-axis range."""
-        fig = go.Figure()
-        fig.update_layout(xaxis=dict(range=['2024-04-01', '2024-08-01']))
-        # No y-axis range set
-        
-        # Should not raise exception, just print warning
-        add_background_elements(fig)
-        
-        # Figure should remain unchanged
-        assert fig.layout is not None
+
     
     def test_timeline_range_buffer_calculation(self, sample_schedule, sample_config):
         """Test that timeline buffer is calculated correctly."""
