@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 from plotly.graph_objs import Figure
 from typing import Dict, Any, Optional
 from datetime import date
+from pathlib import Path
 
 from app.components.gantt.timeline import get_timeline_range
 from app.components.gantt.activity import add_activity_bars, add_dependency_arrows
@@ -42,7 +43,114 @@ def create_gantt_chart(schedule_state: Optional[ScheduleState]) -> Figure:
         return _create_error_chart(str(e))
 
 
+def generate_gantt_png(schedule: Dict[str, date], config: Any, filename: str, 
+                       output_dir: Optional[str] = None) -> Optional[str]:
+    """
+    Generate a PNG file from a Gantt chart.
+    
+    Parameters
+    ----------
+    schedule : Dict[str, date]
+        The schedule to visualize
+    config : Any
+        Configuration object
+    filename : str
+        Output filename
+    output_dir : Optional[str]
+        Output directory (defaults to current directory)
+        
+    Returns
+    -------
+    Optional[str]
+        Path to generated PNG file, or None if failed
+    """
+    try:
+        # Create ScheduleState for compatibility
+        from src.core.models import ScheduleState, SchedulerStrategy
+        from datetime import datetime
+        
+        schedule_state = ScheduleState(
+            schedule=schedule,
+            config=config,
+            strategy=SchedulerStrategy.GREEDY,
+            timestamp=datetime.now().isoformat()
+        )
+        
+        # Create the chart
+        fig = create_gantt_chart(schedule_state)
+        
+        # Determine output path
+        if output_dir:
+            output_path = Path(output_dir) / filename
+        else:
+            output_path = Path(filename)
+        
+        # Ensure output directory exists
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Save as PNG using headless server (as per user preferences)
+        fig.write_image(str(output_path), engine="kaleido")
+        
+        return str(output_path)
+        
+    except Exception as e:
+        print(f"Error generating PNG: {e}")
+        return None
 
+
+def generate_gantt_html(schedule: Dict[str, date], config: Any, filename: str,
+                       output_dir: Optional[str] = None) -> Optional[str]:
+    """
+    Generate an HTML file from a Gantt chart.
+    
+    Parameters
+    ----------
+    schedule : Dict[str, date]
+        The schedule to visualize
+    config : Any
+        Configuration object
+    filename : str
+        Output filename
+    output_dir : Optional[str]
+        Output directory (defaults to current directory)
+        
+    Returns
+    -------
+    Optional[str]
+        Path to generated HTML file, or None if failed
+    """
+    try:
+        # Create ScheduleState for compatibility
+        from src.core.models import ScheduleState, SchedulerStrategy
+        from datetime import datetime
+        
+        schedule_state = ScheduleState(
+            schedule=schedule,
+            config=config,
+            strategy=SchedulerStrategy.GREEDY,
+            timestamp=datetime.now().isoformat()
+        )
+        
+        # Create the chart
+        fig = create_gantt_chart(schedule_state)
+        
+        # Determine output path
+        if output_dir:
+            output_path = Path(output_dir) / filename
+        else:
+            output_path = Path(filename)
+        
+        # Ensure output directory exists
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Save as HTML
+        fig.write_html(str(output_path))
+        
+        return str(output_path)
+        
+    except Exception as e:
+        print(f"Error generating HTML: {e}")
+        return None
 
 
 def _create_empty_chart() -> Figure:

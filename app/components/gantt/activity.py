@@ -64,18 +64,30 @@ def _add_activity_bar(fig: Figure, submission: Submission, start_date: date, end
     """Add a single activity bar to the chart."""
     # Get colors for this submission
     fill_color = _get_submission_color(submission)
-    border_color = _get_border_color(submission)
     
-    # Add the bar shape
-    fig.add_shape(
-        type="rect",
-        x0=start_date, y0=row - 0.4,
-        x1=end_date, y1=row + 0.4,
-        fillcolor=fill_color,
-        line=dict(color=border_color, width=2),
-        opacity=0.8,
-        layer="below"
-    )
+    # Handle different submission types with appropriate styling
+    if submission.kind.value == "poster":
+        # Posters: transparent fill with pattern
+        fig.add_shape(
+            type="rect",
+            x0=start_date, y0=row - 0.4,
+            x1=end_date, y1=row + 0.4,
+            fillcolor="rgba(255, 255, 255, 0.1)",  # Very transparent white
+            line=dict(color=fill_color, width=1, dash="dot"),
+            opacity=0.6,
+            layer="below"
+        )
+    else:
+        # Papers and abstracts: solid fill, no border
+        fig.add_shape(
+            type="rect",
+            x0=start_date, y0=row - 0.4,
+            x1=end_date, y1=row + 0.4,
+            fillcolor=fill_color,
+            line=dict(width=0),  # No border
+            opacity=0.8,
+            layer="below"
+        )
     
     # Add type label with proper positioning
     _add_type_label(fig, submission, start_date, end_date, row)
@@ -173,41 +185,25 @@ def _add_dependency_arrow(fig: Figure, from_date: date, from_row: int,
 
 
 def _get_submission_color(submission: Submission) -> str:
-    """Get color for submission based on type and author."""
-    # Determine base color based on engineering vs medical
+    """Get color for submission based on engineering field and submission type."""
+    # Base color determined by engineering field (blue vs purple)
     is_engineering = submission.engineering
     
     if submission.kind.value == "paper":
-        # Engineering papers are blue, Medical papers are purple
+        # Full color for papers
         return "#3498db" if is_engineering else "#9b59b6"
     elif submission.kind.value == "abstract":
-        # Lighter shades for abstracts
+        # Lighter version of same color family
         return "#85c1e9" if is_engineering else "#bb8fce"
     elif submission.kind.value == "poster":
-        # Very light shades for posters
-        return "#d6eaf8" if is_engineering else "#e8d5f0"
+        # Same color family but will be used with transparent fill and pattern
+        return "#3498db" if is_engineering else "#9b59b6"
     else:
         # Fallback for any other types
         return "#95a5a6"
 
 
-def _get_border_color(submission: Submission) -> str:
-    """Get border color for submission."""
-    # Determine base color based on engineering vs medical
-    is_engineering = submission.engineering
-    
-    if submission.kind.value == "paper":
-        # Engineering papers have darker blue borders, Medical papers have darker purple
-        return "#2980b9" if is_engineering else "#e8d5f0"
-    elif submission.kind.value == "abstract":
-        # Medium border colors for abstracts
-        return "#5dade2" if is_engineering else "#a569bd"
-    elif submission.kind.value == "poster":
-        # Light border colors for posters
-        return "#85c1e9" if is_engineering else "#bb8fce"
-    else:
-        # Fallback for any other types
-        return "#7f8c8d"
+
 
 
 def _get_display_title(submission: Submission, max_length: int = 20) -> str:

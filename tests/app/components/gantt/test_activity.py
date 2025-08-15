@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 from app.components.gantt.activity import (
     add_activity_bars, add_dependency_arrows,
     _add_bar_label, _add_dependency_arrow, _get_submission_color,
-    _get_border_color, _get_display_title
+    _get_display_title
 )
 from src.core.models import Config, Submission, SubmissionType
 
@@ -44,47 +44,26 @@ class TestGanttActivity:
         """Test submission color selection."""
         # Test engineering paper (MOD - pccp author)
         engineering_submission = Submission(
-            id="test1", title="Test", kind=SubmissionType.PAPER, author="pccp"
+            id="test1", title="Test", kind=SubmissionType.PAPER, author="pccp", engineering=True
         )
         color = _get_submission_color(engineering_submission)
         assert color == "#3498db"  # Blue for engineering paper (MOD)
         
         # Test medical paper (ED - ed author)
         medical_submission = Submission(
-            id="test2", title="Test", kind=SubmissionType.PAPER, author="ed"
+            id="test2", title="Test", kind=SubmissionType.PAPER, author="ed", engineering=False
         )
         color = _get_submission_color(medical_submission)
         assert color == "#9b59b6"  # Purple for medical paper (ED)
         
         # Test abstract
         abstract_submission = Submission(
-            id="test3", title="Test", kind=SubmissionType.ABSTRACT, author="pccp"
+            id="test3", title="Test", kind=SubmissionType.ABSTRACT, author="pccp", engineering=True
         )
         color = _get_submission_color(abstract_submission)
         assert color == "#85c1e9"  # Light blue for engineering abstract
     
-    def test_get_border_color(self):
-        """Test border color selection."""
-        # Test engineering paper (MOD - pccp author)
-        engineering_submission = Submission(
-            id="test1", title="Test", kind=SubmissionType.PAPER, author="pccp"
-        )
-        border_color = _get_border_color(engineering_submission)
-        assert border_color == "#2980b9"  # Darker blue for engineering paper (MOD)
-        
-        # Test medical paper (ED - ed author)
-        medical_submission = Submission(
-            id="test2", title="Test", kind=SubmissionType.PAPER, author="ed"
-        )
-        border_color = _get_border_color(medical_submission)
-        assert border_color == "#8e44ad"  # Darker purple for medical paper (ED)
-        
-        # Test abstract
-        abstract_submission = Submission(
-            id="test3", title="Test", kind=SubmissionType.ABSTRACT, author="pccp"
-        )
-        border_color = _get_border_color(abstract_submission)
-        assert border_color == "#5dade2"  # Medium blue for engineering abstract border
+
     
     def test_get_display_title(self):
         """Test display title generation."""

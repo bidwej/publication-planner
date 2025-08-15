@@ -63,7 +63,7 @@ def run_timeline() -> int:
             return 1
         
         # Set up arguments for timeline mode
-        sys.argv = ['main.py', '--mode', 'timeline', '--port', '8051']
+        sys.argv = ['main.py', '--port', '8051']
         
         logger.info("[CHART] Starting timeline mode on port 8051")
         logger.info("[WEB] Timeline will be available at: http://127.0.0.1:8051")
@@ -118,10 +118,20 @@ def _create_standardized_config(timeline_range: Optional[str]) -> Dict:
 def _generate_chart_with_timeline_range(schedule: Dict[str, date], config, filename: str, timeline_config: Dict) -> str:
     """Generate a chart with standardized timeline range."""
     try:
-        from app.components.charts.gantt_chart import create_gantt_chart
+        from app.components.gantt.chart import create_gantt_chart
         
         # Create the chart with the forced timeline range
-        fig = create_gantt_chart(schedule, config, timeline_config)
+        from src.core.models import ScheduleState, SchedulerStrategy
+        from datetime import datetime
+        
+        schedule_state = ScheduleState(
+            schedule=schedule,
+            config=config,
+            strategy=SchedulerStrategy.GREEDY,
+            timestamp=datetime.now().isoformat()
+        )
+        
+        fig = create_gantt_chart(schedule_state)
         
         # Save as PNG
         fig.write_image(
@@ -196,7 +206,7 @@ def generate_dashboard_charts(timeline_range: Optional[str] = None) -> Dict[str,
                         )
                     else:
                         # Use default behavior
-                        from app.components.charts.gantt_chart import generate_gantt_png
+                        from app.components.gantt.chart import generate_gantt_png
                         output_path = generate_gantt_png(schedule, config, filename)
                     
                     if output_path:
@@ -253,7 +263,7 @@ def generate_timeline_chart(timeline_range: Optional[str] = None) -> bool:
                 )
             else:
                 # Use default behavior
-                from app.components.charts.gantt_chart import generate_gantt_png
+                from app.components.gantt.chart import generate_gantt_png
                 output_path = generate_gantt_png(schedule, config, filename)
             
             if output_path:
