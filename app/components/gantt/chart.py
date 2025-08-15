@@ -8,8 +8,9 @@ from plotly.graph_objs import Figure
 from typing import Dict, Any, Optional
 from datetime import date
 
-from app.components.gantt.timeline import get_chart_dimensions, get_title_text, add_background_elements
+from app.components.gantt.timeline import get_chart_dimensions, add_background_elements
 from app.components.gantt.activity import add_activity_bars, add_dependency_arrows
+from app.components.gantt.layout import configure_gantt_layout
 from src.core.models import ScheduleState
 
 
@@ -26,7 +27,7 @@ def create_gantt_chart(schedule_state: ScheduleState) -> Figure:
         fig = go.Figure()
         
         # Configure chart layout and styling
-        _configure_chart_layout(fig, chart_dimensions)
+        configure_gantt_layout(fig, chart_dimensions)
         
         # Add background elements (can now read chart dimensions from figure)
         add_background_elements(fig)
@@ -41,35 +42,7 @@ def create_gantt_chart(schedule_state: ScheduleState) -> Figure:
         return _create_error_chart(str(e))
 
 
-def _configure_chart_layout(fig: Figure, chart_dimensions: Dict[str, Any]) -> None:
-    """Configure the overall chart layout and styling."""
-    title_text = get_title_text(chart_dimensions)
-    max_concurrency = chart_dimensions['max_concurrency']
-    
-    fig.update_layout(
-        title={
-            'text': title_text,
-            'x': 0.5, 'xanchor': 'center',
-            'font': {'size': 18, 'color': '#2c3e50'}
-        },
-        height=400 + max_concurrency * 30,
-        margin=dict(l=80, r=80, t=100, b=80),
-        plot_bgcolor='white',
-        paper_bgcolor='white',
-        xaxis={
-            'type': 'date',
-            'range': [chart_dimensions['min_date'], chart_dimensions['max_date']],
-            'title': 'Timeline',
-            'showgrid': True, 'gridcolor': '#ecf0f1'
-        },
-        yaxis={
-            'title': 'Activities',
-            'range': [-0.5, max_concurrency + 0.5],
-            'tickmode': 'linear', 'dtick': 1,
-            'showgrid': True, 'gridcolor': '#ecf0f1'
-        },
-        showlegend=False
-    )
+
 
 
 def _create_empty_chart() -> Figure:

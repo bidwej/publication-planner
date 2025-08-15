@@ -52,15 +52,7 @@ def get_chart_dimensions(schedule: Optional[Dict[str, date]], config: Config) ->
     }
 
 
-def get_title_text(chart_dimensions: Dict[str, Any]) -> str:
-    """Generate title text for the chart."""
-    min_date = chart_dimensions['min_date']
-    max_date = chart_dimensions['max_date']
-    
-    if min_date.year == max_date.year:
-        return f"Paper Submission Timeline: {min_date.strftime('%b %Y')} - {max_date.strftime('%b %Y')}"
-    else:
-        return f"Paper Submission Timeline: {min_date.strftime('%b %Y')} - {max_date.strftime('%b %Y')}"
+
 
 
 def get_concurrency_map(schedule: Optional[Dict[str, date]], config: Config) -> Dict[str, int]:
@@ -123,20 +115,32 @@ def add_background_elements(fig: go.Figure) -> None:
         print("Warning: No x-axis range found in figure layout")
         return
     
-    start_date_str = x_range.range[0]
-    end_date_str = x_range.range[1]
+    start_date_val = x_range.range[0]
+    end_date_val = x_range.range[1]
     
-    # Check if we actually have string dates
-    if not isinstance(start_date_str, str) or not isinstance(end_date_str, str):
-        print(f"Warning: Expected string dates, got: {type(start_date_str)}, {type(end_date_str)}")
+    # Handle both string dates and date objects
+    if isinstance(start_date_val, str):
+        try:
+            start_date = date.fromisoformat(start_date_val)
+        except ValueError:
+            print(f"Warning: Invalid date format in x-axis range: {start_date_val}")
+            return
+    elif isinstance(start_date_val, date):
+        start_date = start_date_val
+    else:
+        print(f"Warning: Unexpected date type in x-axis range: {type(start_date_val)}")
         return
     
-    # Convert string dates to date objects
-    try:
-        start_date = date.fromisoformat(start_date_str)
-        end_date = date.fromisoformat(end_date_str)
-    except ValueError:
-        print(f"Warning: Invalid date format in x-axis range: {start_date_str}, {end_date_str}")
+    if isinstance(end_date_val, str):
+        try:
+            end_date = date.fromisoformat(end_date_val)
+        except ValueError:
+            print(f"Warning: Invalid date format in x-axis range: {end_date_val}")
+            return
+    elif isinstance(end_date_val, date):
+        end_date = end_date_val
+    else:
+        print(f"Warning: Unexpected date type in x-axis range: {type(end_date_val)}")
         return
     
     # Get y-axis range for full chart coverage

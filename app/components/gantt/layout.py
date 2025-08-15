@@ -7,11 +7,22 @@ import plotly.graph_objects as go
 from plotly.graph_objs import Figure
 from typing import Dict, Any
 
-from app.components.gantt.timeline import get_title_text
+
+
+
+def get_title_text(chart_dimensions: Dict[str, Any]) -> str:
+    """Generate title text for the chart."""
+    min_date = chart_dimensions['min_date']
+    max_date = chart_dimensions['max_date']
+    
+    if min_date.year == max_date.year:
+        return f"Paper Submission Timeline: {min_date.strftime('%b %Y')} - {max_date.strftime('%b %Y')}"
+    else:
+        return f"Paper Submission Timeline: {min_date.strftime('%b %Y')} - {max_date.strftime('%b %Y')}"
 
 
 def configure_gantt_layout(fig: Figure, chart_dimensions: Dict[str, Any]) -> None:
-    """Configure the chart layout."""
+    """Configure the chart layout with proper styling and dimensions."""
     title_text = get_title_text(chart_dimensions)
     max_concurrency = chart_dimensions['max_concurrency']
     
@@ -39,3 +50,6 @@ def configure_gantt_layout(fig: Figure, chart_dimensions: Dict[str, Any]) -> Non
         },
         showlegend=False
     )
+
+
+

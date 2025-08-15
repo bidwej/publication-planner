@@ -55,6 +55,7 @@ def add_dependency_arrows(fig: Figure, schedule: Dict[str, date], config: Config
                         dep_duration = max(dep_submission.get_duration_days(config), 7)
                         dep_end_date = schedule[dep_id] + timedelta(days=dep_duration)
                         
+                        # Draw arrow from end of dependency to start of dependent submission
                         _add_dependency_arrow(fig, dep_end_date, concurrency_map[dep_id], 
                                             start_date, concurrency_map[submission_id])
 
@@ -167,9 +168,10 @@ def _add_bar_label(fig: Figure, submission: Submission, start_date: date,
 def _add_dependency_arrow(fig: Figure, from_date: date, from_row: int, 
                          to_date: date, to_row: int) -> None:
     """Add a dependency arrow between two submissions."""
-    # Calculate arrow position
+    # Calculate arrow position - connect from end of source bar to start of target bar
+    # Use row positions but offset slightly for better visual connection
     arrow_x = [from_date, to_date]
-    arrow_y = [from_row, to_row]
+    arrow_y = [from_row + 0.3, to_row - 0.3]  # Offset to connect bars properly
     
     # Add arrow as a line with arrowhead
     fig.add_trace(go.Scatter(

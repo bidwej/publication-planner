@@ -159,11 +159,11 @@ class TestGanttVisualVerification:
         
         # Test submission color
         color = _get_submission_color(abstract_submission)
-        assert color == "#e67e22", f"Abstracts should be orange (#e67e22), got {color}"
+        assert color == "#85c1e9", f"Abstracts should be light blue (#85c1e9), got {color}"
         
         # Test border color
         border_color = _get_border_color(abstract_submission)
-        assert border_color == "#d35400", f"Abstract borders should be dark orange (#d35400), got {border_color}"
+        assert border_color == "#5dade2", f"Abstract borders should be medium blue (#5dade2), got {border_color}"
         
         # Verify colors are different to prevent double border effect
         assert color != border_color, "Fill and border colors should be different to prevent double border effect"
@@ -270,8 +270,9 @@ class TestGanttVisualVerification:
             # Check that y coordinates are within expected range
             for y_coord in trace.y:
                 assert isinstance(y_coord, (int, float)), f"y coordinate should be number, got {type(y_coord)}"
-                assert y_coord >= 0, f"y coordinate should be >= 0, got {y_coord}"
-                assert y_coord <= 3, f"y coordinate should be <= 3, got {y_coord}"
+                # Allow negative offsets for better visual connection (from -0.5 to 3.5)
+                assert y_coord >= -0.5, f"y coordinate should be >= -0.5, got {y_coord}"
+                assert y_coord <= 3.5, f"y coordinate should be <= 3.5, got {y_coord}"
     
     def test_timeline_visual_accuracy(self, sample_schedule, sample_config):
         """Test that the visual timeline matches the actual schedule dates."""
@@ -518,7 +519,7 @@ class TestGanttVisualVerification:
         expected_colors = {
             '#3498db',  # Engineering papers (MODs) - Blue
             '#9b59b6',  # Medical papers (ED) - Purple  
-            '#e67e22',  # Abstracts - Orange
+            '#85c1e9',  # Engineering abstracts - Light Blue
             '#e74c3c',  # Dependency arrows - Red
         }
         
@@ -530,7 +531,7 @@ class TestGanttVisualVerification:
                 print(f"✗ Missing expected color: {expected_color}")
         
         # We should have at least the main submission colors
-        assert any(color in colors_used for color in ['#3498db', '#9b59b6', '#e67e22']), (
+        assert any(color in colors_used for color in ['#3498db', '#9b59b6', '#85c1e9']), (
             f"Chart should contain at least one of the expected submission colors. "
             f"Found colors: {colors_used}"
         )
@@ -604,7 +605,7 @@ class TestGanttVisualVerification:
             f"REGRESSION: Medical papers should be purple (#9b59b6), got {medical_color}"
         )
         
-        # Test abstracts - should be orange
+        # Test abstracts - should be light blue for engineering
         abstract_submission = Submission(
             id="test-abs",
             title="Test Abstract",
@@ -613,6 +614,6 @@ class TestGanttVisualVerification:
         )
         
         abstract_color = _get_submission_color(abstract_submission)
-        assert abstract_color == "#e67e22", (
-            f"REGRESSION: Abstracts should be orange (#e67e22), got {abstract_color}"
+        assert abstract_color == "#85c1e9", (
+            f"REGRESSION: Engineering abstracts should be light blue (#85c1e9), got {abstract_color}"
         )

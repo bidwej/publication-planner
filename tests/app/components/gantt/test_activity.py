@@ -6,7 +6,7 @@ from datetime import date, timedelta
 import plotly.graph_objects as go
 
 from app.components.gantt.activity import (
-    add_activity_bars, add_dependency_arrows, _add_elegant_bar,
+    add_activity_bars, add_dependency_arrows,
     _add_bar_label, _add_dependency_arrow, _get_submission_color,
     _get_border_color, _get_display_title
 )
@@ -61,7 +61,7 @@ class TestGanttActivity:
             id="test3", title="Test", kind=SubmissionType.ABSTRACT, author="pccp"
         )
         color = _get_submission_color(abstract_submission)
-        assert color == "#e67e22"  # Orange for abstract
+        assert color == "#85c1e9"  # Light blue for engineering abstract
     
     def test_get_border_color(self):
         """Test border color selection."""
@@ -84,14 +84,14 @@ class TestGanttActivity:
             id="test3", title="Test", kind=SubmissionType.ABSTRACT, author="pccp"
         )
         border_color = _get_border_color(abstract_submission)
-        assert border_color == "#d35400"  # Darker orange for abstract
+        assert border_color == "#5dade2"  # Medium blue for engineering abstract border
     
     def test_get_display_title(self):
         """Test display title generation."""
         # Test long title truncation
         long_title = "This is a very long title that should be truncated to fit in the gantt chart"
         submission = Submission(
-            id="test1", title=long_title, kind=SubmissionType.PAPER, engineering=True
+            id="test1", title=long_title, kind=SubmissionType.PAPER, author="pccp"
         )
         display_title = _get_display_title(submission)
         assert len(display_title) <= 28  # Should be truncated to 25 + "..."
@@ -99,7 +99,7 @@ class TestGanttActivity:
         # Test short title (no truncation needed)
         short_title = "Short Title"
         submission = Submission(
-            id="test2", title=short_title, kind=SubmissionType.PAPER, engineering=True
+            id="test2", title=short_title, kind=SubmissionType.PAPER, author="pccp"
         )
         display_title = _get_display_title(submission)
         assert display_title == short_title

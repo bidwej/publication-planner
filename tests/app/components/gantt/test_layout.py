@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch
 from plotly.graph_objs import Figure, Layout
 
 from app.components.gantt.layout import configure_gantt_layout
-from app.components.gantt.timeline import get_title_text
+
 
 
 class TestGanttLayout:
