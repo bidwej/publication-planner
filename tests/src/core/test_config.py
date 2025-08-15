@@ -4,7 +4,7 @@ import tempfile
 from pathlib import Path
 import json
 from datetime import date
-from dataclasses import asdict, replace
+
 from typing import Dict, List, Any, Optional
 from unittest.mock import patch
 
@@ -541,7 +541,7 @@ class TestDataclassesSerialization:
     
     def test_config_asdict_serialization(self, config) -> None:
         """Test that config can be serialized to dict."""
-        config_dict = asdict(config)
+        config_dict = config.model_dump()
         assert isinstance(config_dict, dict)
         assert 'submissions' in config_dict
         assert 'conferences' in config_dict
@@ -552,7 +552,7 @@ class TestDataclassesSerialization:
     def test_config_replace_functionality(self, config) -> None:
         """Test that config can be modified using replace."""
         original_lead_time = config.min_abstract_lead_time_days
-        modified_config = replace(config, min_abstract_lead_time_days=original_lead_time + 10)
+        modified_config = config.model_copy(update={'min_abstract_lead_time_days': original_lead_time + 10})
         
         assert modified_config.min_abstract_lead_time_days == original_lead_time + 10
         assert modified_config.min_paper_lead_time_days == config.min_paper_lead_time_days
@@ -560,12 +560,11 @@ class TestDataclassesSerialization:
     
     def test_config_replace_multiple_fields(self, config) -> None:
         """Test replacing multiple fields in config."""
-        modified_config = replace(
-            config,
-            min_abstract_lead_time_days=45,
-            min_paper_lead_time_days=90,
-            max_concurrent_submissions=5
-        )
+        modified_config = config.model_copy(update={
+            'min_abstract_lead_time_days': 45,
+            'min_paper_lead_time_days': 90,
+            'max_concurrent_submissions': 5
+        })
         
         assert modified_config.min_abstract_lead_time_days == 45
         assert modified_config.min_paper_lead_time_days == 90
@@ -574,7 +573,7 @@ class TestDataclassesSerialization:
     def test_submission_asdict_serialization(self, config) -> None:
         """Test that submissions can be serialized."""
         for submission in config.submissions:
-            submission_dict = asdict(submission)
+            submission_dict = submission.model_dump()
             assert isinstance(submission_dict, dict)
             assert 'id' in submission_dict
             assert 'title' in submission_dict
@@ -584,7 +583,7 @@ class TestDataclassesSerialization:
     def test_conference_asdict_serialization(self, config) -> None:
         """Test that conferences can be serialized."""
         for conference in config.conferences:
-            conference_dict = asdict(conference)
+            conference_dict = conference.model_dump()
             assert isinstance(conference_dict, dict)
             assert 'id' in conference_dict
             assert 'name' in conference_dict
@@ -606,10 +605,9 @@ class TestDataclassesSerialization:
     def test_config_validation_after_replace(self, config) -> None:
         """Test that config validation works after replace."""
         # Create a modified config
-        modified_config = replace(
-            config,
-            min_abstract_lead_time_days=config.min_abstract_lead_time_days + 5
-        )
+        modified_config = config.model_copy(update={
+            'min_abstract_lead_time_days': config.min_abstract_lead_time_days + 5
+        })
         
         # Should still be valid
         validation_errors: List[str] = modified_config.validate()

@@ -13,36 +13,20 @@ from src.core.models import Config, Submission, ResourceValidation
 class TestResourcesValidation:
     """Test cases for resources validation functions."""
     
-    def test_validate_resources_constraints_empty_schedule(self) -> None:
+    def test_validate_resources_constraints_empty_schedule(self, empty_config) -> None:
         """Test resources validation with empty schedule."""
-        # Create empty config with required parameters
-        config: Config = Config(
-            submissions={},
-            conferences={},
-            min_abstract_lead_time_days=30,
-            min_paper_lead_time_days=90,
-            max_concurrent_submissions=3
-        )
         schedule: Dict[str, date] = {}
         
-        result: Any = validate_resources_constraints(schedule, config)
+        result: Any = validate_resources_constraints(schedule, empty_config)
         assert isinstance(result, ResourceValidation)
         assert result.is_valid == True
         assert result.max_observed == 0
     
-    def test_calculate_daily_load_empty_schedule(self) -> None:
+    def test_calculate_daily_load_empty_schedule(self, empty_config) -> None:
         """Test daily load calculation with empty schedule."""
-        # Create empty config with required parameters
-        config: Config = Config(
-            submissions={},
-            conferences={},
-            min_abstract_lead_time_days=30,
-            min_paper_lead_time_days=90,
-            max_concurrent_submissions=3
-        )
         schedule: Dict[str, date] = {}
         
-        result: Any = _calculate_daily_load(schedule, config)
+        result: Any = _calculate_daily_load(schedule, empty_config)
         assert isinstance(result, dict)
         assert len(result) == 0
     

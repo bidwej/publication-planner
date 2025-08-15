@@ -50,7 +50,6 @@ def create_timeline_app():
                 schedule=schedule,
                 config=config,
                 strategy=SchedulerStrategy.GREEDY,
-                metadata={'source': 'web_app'},
                 timestamp=datetime.now().isoformat()
             )
             
@@ -66,7 +65,6 @@ def create_timeline_app():
                 schedule={},
                 config=Config.create_default(),
                 strategy=SchedulerStrategy.GREEDY,
-                metadata={'error': str(e)},
                 timestamp=datetime.now().isoformat()
             )
             return create_gantt_chart(empty_state)

@@ -175,7 +175,7 @@ def _add_dependency_arrow(fig: Figure, from_date: date, from_row: int,
 def _get_submission_color(submission: Submission) -> str:
     """Get color for submission based on type and author."""
     # Determine base color based on engineering vs medical
-    is_engineering = submission.is_engineering
+    is_engineering = submission.engineering
     
     if submission.kind.value == "paper":
         # Engineering papers are blue, Medical papers are purple
@@ -194,7 +194,7 @@ def _get_submission_color(submission: Submission) -> str:
 def _get_border_color(submission: Submission) -> str:
     """Get border color for submission."""
     # Determine base color based on engineering vs medical
-    is_engineering = submission.is_engineering
+    is_engineering = submission.engineering
     
     if submission.kind.value == "paper":
         # Engineering papers have darker blue borders, Medical papers have darker purple
