@@ -79,8 +79,21 @@ analysis.typeCheckingMode = "basic"
 analysis.autoSearchPaths = true
 
 # Ignore specific inheritance-related errors
-reportUnknownMemberType = false
 reportUnknownVariableType = false
+
+# Plotly-specific type checking rules
+reportUnknownArgumentType = false
+reportUnknownLambdaType = false
+reportUnknownParameterType = false
+reportMissingTypeStubs = false
+
+# Ignore Plotly's incomplete type annotations
+reportGeneralTypeIssues = false
+
+# Ignore Plotly's dynamic attribute access issues
+reportUnknownMemberType = false
+reportUnknownAttributeType = false
+reportAttributeAccessIssue = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -117,7 +117,7 @@ class TestMetricsChart:
     
     def test_create_metrics_chart_none_result(self, sample_config):
         """Test metrics chart creation with None validation result."""
-        fig = create_metrics_chart(None, sample_config)  # type: ignore
+        fig = create_metrics_chart(None, sample_config)
         
         assert isinstance(fig, go.Figure)
         assert fig.layout is not None
@@ -211,7 +211,7 @@ class TestMetricsChart:
     
     def test_create_score_comparison_chart_none_data(self):
         """Test score comparison chart creation with None data."""
-        fig = create_score_comparison_chart(None)  # type: ignore
+        fig = create_score_comparison_chart(None)
         
         assert isinstance(fig, go.Figure)
         assert fig.layout is not None

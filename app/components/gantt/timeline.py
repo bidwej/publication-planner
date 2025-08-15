@@ -79,22 +79,22 @@ def get_concurrency_map(schedule: Dict[str, date]) -> Dict[str, int]:
 def add_background_elements(fig: go.Figure) -> None:
     """Add background elements to the chart."""
     # Get chart dimensions from the figure (layout is now configured)
-    x_range = fig.layout.xaxis.range  # type: ignore
-    if not x_range:
+    x_range = getattr(fig.layout, 'xaxis', None)
+    if not x_range or not hasattr(x_range, 'range') or not x_range.range:
         print("Warning: No x-axis range found in figure layout")
         return
     
-    start_date = x_range[0]
-    end_date = x_range[1]
+    start_date = x_range.range[0]
+    end_date = x_range.range[1]
     
     # Get y-axis range for full chart coverage
-    y_range = fig.layout.yaxis.range  # type: ignore
-    if not y_range:
+    y_range = getattr(fig.layout, 'yaxis', None)
+    if not y_range or not hasattr(y_range, 'range') or not y_range.range:
         print("Warning: No y-axis range found in figure layout")
         return
     
-    y_min = y_range[0]
-    y_max = y_range[1]
+    y_min = y_range.range[0]
+    y_max = y_range.range[1]
     
     # Add working days background
     _add_working_days_background(fig, start_date, end_date, y_min, y_max)

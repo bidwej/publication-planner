@@ -3,10 +3,10 @@ Performance metrics chart component.
 """
 
 import plotly.graph_objects as go
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from src.core.models import Config
 
-def create_metrics_chart(validation_result: Dict[str, Any], config: Config) -> go.Figure:
+def create_metrics_chart(validation_result: Optional[Dict[str, Any]], config: Config) -> go.Figure:
     """Create performance metrics chart."""
     if not validation_result:
         return _create_empty_metrics()
@@ -47,7 +47,7 @@ def create_metrics_chart(validation_result: Dict[str, Any], config: Config) -> g
     
     return fig
 
-def create_score_comparison_chart(scores_data: List[Dict[str, Any]]) -> go.Figure:
+def create_score_comparison_chart(scores_data: Optional[List[Dict[str, Any]]]) -> go.Figure:
     """Create comparison chart for multiple strategies."""
     if not scores_data:
         return _create_empty_metrics()
@@ -90,7 +90,7 @@ def create_score_comparison_chart(scores_data: List[Dict[str, Any]]) -> go.Figur
     
     return fig
 
-def create_timeline_metrics_chart(schedule: Dict[str, Any], config: Config) -> go.Figure:
+def create_timeline_metrics_chart(schedule: Optional[Dict[str, Any]], config: Config) -> go.Figure:
     """Create timeline-based metrics visualization."""
     if not schedule:
         return _create_empty_metrics()
@@ -119,7 +119,7 @@ def create_timeline_metrics_chart(schedule: Dict[str, Any], config: Config) -> g
     
     return fig
 
-def _calculate_timeline_metrics(schedule: Dict[str, Any], config: Config) -> Dict[str, Any]:
+def _calculate_timeline_metrics(schedule: Optional[Dict[str, Any]], config: Config) -> Dict[str, Any]:
     """Calculate timeline-based metrics."""
     from datetime import timedelta
     
