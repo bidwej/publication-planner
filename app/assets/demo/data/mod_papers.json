@@ -1,0 +1,30 @@
+[
+  {
+    "id": "mod_1",
+    "title": "Computer Vision (CV) endoscopy - Phase 1",
+    "draft_window_months": 2,
+    "candidate_conferences": ["ICML_DEMO"],
+    "submission_workflow": "abstract_then_paper",
+    "depends_on": [],
+    "lead_time_from_parents": 0,
+    "free_slack_months": 1,
+    "penalty_cost_per_month": 1500.0,
+    "engineering_ready_date": "2025-01-15",
+    "author": "ed",
+    "priority": "high"
+  },
+  {
+    "id": "mod_2",
+    "title": "Middle Turbinate/Inferior Turbinate - Core Analysis",
+    "draft_window_months": 2,
+    "candidate_conferences": ["MICCAI_DEMO"],
+    "submission_workflow": "abstract_then_paper",
+    "depends_on": [],
+    "lead_time_from_parents": 0,
+    "free_slack_months": 1,
+    "penalty_cost_per_month": 1500.0,
+    "engineering_ready_date": "2025-01-15",
+    "author": "ed",
+    "priority": "high"
+  }
+]

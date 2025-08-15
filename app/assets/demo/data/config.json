@@ -1,0 +1,51 @@
+{
+  "min_abstract_lead_time_days": 7,
+  "min_paper_lead_time_days": 30,
+  "max_concurrent_submissions": 2,
+  "default_paper_lead_time_months": 1,
+  "priority_weights": {
+    "engineering_paper": 2.0,
+    "medical_paper": 1.5,
+    "mod": 1.8,
+    "abstract": 0.8,
+    "poster": 0.6
+  },
+  "penalty_costs": {
+    "default_mod_penalty_per_day": 1500.0,
+    "default_paper_penalty_per_day": 800.0,
+    "default_monthly_slip_penalty": 1500.0,
+    "default_full_year_deferral_penalty": 8000.0,
+    "missed_abstract_penalty": 5000.0,
+    "resource_violation_penalty": 300.0,
+    "concurrency_violation_penalty": 1000.0
+  },
+  "scheduling_options": {
+    "enable_early_abstract_scheduling": true,
+    "abstract_advance_days": 30,
+    "enable_blackout_periods": true,
+    "conference_response_time_days": 60,
+    "enable_priority_weighting": true,
+    "enable_dependency_tracking": true,
+    "enable_concurrency_control": true,
+    "enable_working_days_only": true,
+    "strict_concurrency_enforcement": true,
+    "enable_resource_balancing": true
+  },
+  "blackout_dates": [
+    "2025-01-01",
+    "2025-01-20",
+    "2025-02-15"
+  ],
+  "data_files": {
+    "conferences": "conferences.json",
+    "mods": "mod_papers.json",
+    "papers": "ed_papers.json",
+    "blackouts": "blackout.json"
+  },
+  "demo_mode": true,
+  "test_scenarios": [
+    "concurrency_limit_testing",
+    "dependency_chain_testing", 
+    "resource_conflict_testing"
+  ]
+}

@@ -1,0 +1,23 @@
+[
+  {
+    "date": "2025-01-01",
+    "description": "New Year's Day",
+    "type": "holiday",
+    "duration_days": 1,
+    "affects_teams": ["ed", "pccp"]
+  },
+  {
+    "date": "2025-01-20",
+    "description": "MLK Day",
+    "type": "holiday",
+    "duration_days": 1,
+    "affects_teams": ["ed", "pccp"]
+  },
+  {
+    "date": "2025-02-15",
+    "description": "President's Day",
+    "type": "holiday",
+    "duration_days": 1,
+    "affects_teams": ["ed", "pccp"]
+  }
+]
