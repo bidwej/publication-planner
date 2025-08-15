@@ -13,8 +13,8 @@ from src.validation.resources import validate_resources_constraints
 from src.core.models import Submission
 
 
-def get_chart_dimensions(schedule: Optional[Dict[str, date]], config: Config) -> Dict[str, Any]:
-    """Calculate chart dimensions and display settings."""
+def get_timeline_range(schedule: Optional[Dict[str, date]], config: Config) -> Dict[str, Any]:
+    """Get timeline range and chart display settings."""
     if not schedule:
         # Default chart dimensions if no schedule
         default_start = date.today()
@@ -55,8 +55,8 @@ def get_chart_dimensions(schedule: Optional[Dict[str, date]], config: Config) ->
 
 
 
-def get_concurrency_map(schedule: Optional[Dict[str, date]], config: Config) -> Dict[str, int]:
-    """Get concurrency map treating dependent tasks as single units for better readability."""
+def assign_activity_rows(schedule: Optional[Dict[str, date]], config: Config) -> Dict[str, int]:
+    """Assign each activity to a specific row for visual layout."""
     if not schedule:
         return {}
     

@@ -6,7 +6,7 @@ from datetime import date, timedelta
 import plotly.graph_objects as go
 
 from app.components.gantt.timeline import (
-    get_chart_dimensions, get_concurrency_map, 
+    get_timeline_range, assign_activity_rows, 
     add_background_elements
 )
 from app.components.gantt.layout import get_title_text
@@ -21,7 +21,7 @@ class TestGanttTimeline:
     
     def test_get_timeline_range_with_schedule(self, sample_schedule, sample_config):
         """Test timeline range calculation with valid schedule."""
-        result = get_chart_dimensions(sample_schedule, sample_config)
+        result = get_timeline_range(sample_schedule, sample_config)
         
         assert isinstance(result, dict)
         assert 'min_date' in result
@@ -48,7 +48,7 @@ class TestGanttTimeline:
     def test_get_timeline_range_empty_schedule(self, sample_config):
         """Test timeline range calculation with empty schedule."""
         empty_schedule = {}
-        result = get_chart_dimensions(empty_schedule, sample_config)
+        result = get_timeline_range(empty_schedule, sample_config)
         
         assert isinstance(result, dict)
         assert 'min_date' in result
@@ -66,7 +66,7 @@ class TestGanttTimeline:
     
     def test_get_timeline_range_none_schedule(self, sample_config):
         """Test timeline range calculation with None schedule."""
-        result = get_chart_dimensions(None, sample_config)
+        result = get_timeline_range(None, sample_config)
         
         assert isinstance(result, dict)
         assert 'min_date' in result
@@ -85,7 +85,7 @@ class TestGanttTimeline:
     def test_get_timeline_range_single_date(self, sample_config):
         """Test timeline range calculation with single date."""
         single_schedule = {"paper1": date(2024, 6, 15)}
-        result = get_chart_dimensions(single_schedule, sample_config)
+        result = get_timeline_range(single_schedule, sample_config)
         
         assert isinstance(result, dict)
         assert result['min_date'] == date(2024, 5, 16)  # 6/15 - 30 days buffer
@@ -141,9 +141,9 @@ class TestGanttTimeline:
         assert "Dec 2024" in title
         assert "Jan 2025" in title
     
-    def test_get_concurrency_map_with_schedule(self, sample_schedule, sample_config):
-        """Test concurrency map generation with actual schedule data."""
-        result = get_concurrency_map(sample_schedule, sample_config)
+    def test_assign_activity_rows_with_schedule(self, sample_schedule, sample_config):
+        """Test activity row assignment with actual schedule data."""
+        result = assign_activity_rows(sample_schedule, sample_config)
         
         # Should have entries for all submissions
         assert len(result) == len(sample_schedule)
@@ -163,36 +163,36 @@ class TestGanttTimeline:
         assert unique_rows > 0, "Should use at least one row"
 
 
-    def test_get_concurrency_map_empty_schedule(self, sample_config):
-        """Test concurrency map generation with empty schedule."""
+    def test_assign_activity_rows_empty_schedule(self, sample_config):
+        """Test activity row assignment with empty schedule."""
         empty_schedule = {}
-        result = get_concurrency_map(empty_schedule, sample_config)
+        result = assign_activity_rows(empty_schedule, sample_config)
         assert result == {}
 
 
-    def test_get_concurrency_map_none_schedule(self, sample_config):
-        """Test concurrency map generation with None schedule."""
-        result = get_concurrency_map(None, sample_config)
+    def test_assign_activity_rows_none_schedule(self, sample_config):
+        """Test activity row assignment with None schedule."""
+        result = assign_activity_rows(None, sample_config)
         assert result == {}
 
 
-    def test_get_concurrency_map_single_submission(self, sample_config):
-        """Test concurrency map generation with single submission."""
+    def test_assign_activity_rows_single_submission(self, sample_config):
+        """Test activity row assignment with single submission."""
         single_schedule = {"mod1-wrk": date(2024, 1, 1)}
-        result = get_concurrency_map(single_schedule, sample_config)
+        result = assign_activity_rows(single_schedule, sample_config)
         
         assert len(result) == 1
         assert result["mod1-wrk"] == 0  # Should be on row 0
 
 
-    def test_get_concurrency_map_duplicate_dates(self, sample_config):
-        """Test concurrency map generation with submissions on same date."""
+    def test_assign_activity_rows_duplicate_dates(self, sample_config):
+        """Test activity row assignment with submissions on same date."""
         duplicate_schedule = {
             "mod1-wrk": date(2024, 1, 1),
             "paper1-pap": date(2024, 1, 1),
             "mod2-wrk": date(2024, 1, 1)
         }
-        result = get_concurrency_map(duplicate_schedule, sample_config)
+        result = assign_activity_rows(duplicate_schedule, sample_config)
         
         # All submissions should be mapped
         assert len(result) == 3
@@ -256,7 +256,7 @@ class TestGanttTimeline:
     
     def test_timeline_range_buffer_calculation(self, sample_schedule, sample_config):
         """Test that timeline buffer is calculated correctly."""
-        result = get_chart_dimensions(sample_schedule, sample_config)
+        result = get_timeline_range(sample_schedule, sample_config)
         
         # Buffer should be 30 days
         buffer_days = 30
@@ -273,7 +273,7 @@ class TestGanttTimeline:
     
     def test_timeline_span_calculation(self, sample_schedule, sample_config):
         """Test that timeline span is calculated correctly."""
-        result = get_chart_dimensions(sample_schedule, sample_config)
+        result = get_timeline_range(sample_schedule, sample_config)
         
         # Span should be the difference between max and min dates
         expected_span = (result['max_date'] - result['min_date']).days
@@ -289,7 +289,7 @@ class TestGanttTimeline:
         mock_result.max_observed = 5
         mock_validate.return_value = mock_result
         
-        result = get_chart_dimensions(sample_schedule, sample_config)
+        result = get_timeline_range(sample_schedule, sample_config)
         
         assert result['max_concurrency'] == 5
         mock_validate.assert_called_once_with(sample_schedule, sample_config)

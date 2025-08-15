@@ -10,7 +10,7 @@ from datetime import date
 
 from app.components.gantt.chart import create_gantt_chart
 from app.components.gantt.activity import add_activity_bars, add_dependency_arrows, _get_submission_color, _get_border_color
-from app.components.gantt.timeline import get_chart_dimensions
+from app.components.gantt.timeline import get_timeline_range
 from app.components.gantt.layout import configure_gantt_layout
 from tests.common.headless_browser import capture_web_page_screenshot
 from src.core.models import Submission, SubmissionType
@@ -277,7 +277,7 @@ class TestGanttVisualVerification:
     def test_timeline_visual_accuracy(self, sample_schedule, sample_config):
         """Test that the visual timeline matches the actual schedule dates."""
         # Get timeline range
-        timeline_range = get_chart_dimensions(sample_schedule, sample_config)
+        timeline_range = get_timeline_range(sample_schedule, sample_config)
         
         # Check that timeline dates match schedule dates
         earliest_schedule_date = min(sample_schedule.values())

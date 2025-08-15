@@ -8,20 +8,20 @@ from plotly.graph_objs import Figure
 from typing import Dict, Any, Optional
 from datetime import date
 
-from app.components.gantt.timeline import get_chart_dimensions, add_background_elements
+from app.components.gantt.timeline import get_timeline_range, add_background_elements
 from app.components.gantt.activity import add_activity_bars, add_dependency_arrows
 from app.components.gantt.layout import configure_gantt_layout
 from src.core.models import ScheduleState
 
 
-def create_gantt_chart(schedule_state: ScheduleState) -> Figure:
+def create_gantt_chart(schedule_state: Optional[ScheduleState]) -> Figure:
     """Create a gantt chart from schedule state."""
     if not schedule_state or not hasattr(schedule_state, 'schedule') or not schedule_state.schedule:
         return _create_empty_chart()
     
     try:
         # Get chart dimensions
-        chart_dimensions = get_chart_dimensions(schedule_state.schedule, schedule_state.config)
+        chart_dimensions = get_timeline_range(schedule_state.schedule, schedule_state.config)
         
         # Create figure
         fig = go.Figure()

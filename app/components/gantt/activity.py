@@ -9,7 +9,7 @@ from datetime import date, timedelta
 from typing import Dict, Optional
 
 from src.core.models import Config, Submission
-from app.components.gantt.timeline import get_concurrency_map
+from app.components.gantt.timeline import assign_activity_rows
 
 
 def add_activity_bars(fig: Figure, schedule: Dict[str, date], config: Config) -> None:
@@ -17,8 +17,8 @@ def add_activity_bars(fig: Figure, schedule: Dict[str, date], config: Config) ->
     if not schedule:
         return
     
-    # Get concurrency map for proper row positioning
-    concurrency_map = get_concurrency_map(schedule, config)
+    # Get activity row assignments for proper positioning
+    activity_rows = assign_activity_rows(schedule, config)
     
     # Add bars for each submission
     for submission_id, start_date in schedule.items():
@@ -29,10 +29,10 @@ def add_activity_bars(fig: Figure, schedule: Dict[str, date], config: Config) ->
             end_date = start_date + timedelta(days=duration_days)
             
             # Add the bar
-            _add_activity_bar(fig, submission, start_date, end_date, concurrency_map[submission_id])
+            _add_activity_bar(fig, submission, start_date, end_date, activity_rows[submission_id])
             
             # Add label
-            _add_bar_label(fig, submission, start_date, end_date, concurrency_map[submission_id])
+            _add_bar_label(fig, submission, start_date, end_date, activity_rows[submission_id])
 
 
 def add_dependency_arrows(fig: Figure, schedule: Dict[str, date], config: Config) -> None:
@@ -40,8 +40,8 @@ def add_dependency_arrows(fig: Figure, schedule: Dict[str, date], config: Config
     if not schedule:
         return
     
-    # Get concurrency map for proper row positioning
-    concurrency_map = get_concurrency_map(schedule, config)
+    # Get activity row assignments for proper positioning
+    activity_rows = assign_activity_rows(schedule, config)
     
     # Add arrows for each submission
     for submission_id, start_date in schedule.items():
@@ -56,8 +56,8 @@ def add_dependency_arrows(fig: Figure, schedule: Dict[str, date], config: Config
                         dep_end_date = schedule[dep_id] + timedelta(days=dep_duration)
                         
                         # Draw arrow from end of dependency to start of dependent submission
-                        _add_dependency_arrow(fig, dep_end_date, concurrency_map[dep_id], 
-                                            start_date, concurrency_map[submission_id])
+                        _add_dependency_arrow(fig, dep_end_date, activity_rows[dep_id], 
+                                            start_date, activity_rows[submission_id])
 
 
 def _add_activity_bar(fig: Figure, submission: Submission, start_date: date, 
@@ -124,6 +124,9 @@ def _add_type_icon(fig: Figure, submission: Submission, start_date: date, end_da
         type_text = "Poster"
     else:
         type_text = "Document"
+    
+    # Check if bar is too narrow for full text and truncate if needed
+    type_text = _truncate_text_for_bar_width(type_text, start_date, end_date)
     
     # ALL types go in TOP LEFT
     x_pos = start_date
@@ -232,3 +235,11 @@ def _get_display_title(submission: Submission, max_length: int = 20) -> str:
     # Truncate and add ellipsis
     truncated = title[:max_length-3]
     return (truncated + "...") if truncated else title[:max_length-3] + "..."
+
+
+def _truncate_text_for_bar_width(text: str, start_date: date, end_date: date, min_width_days: int = 14) -> str:
+    """Truncate text if bar is too narrow to display it properly."""
+    bar_width_days = (end_date - start_date).days
+    if bar_width_days < min_width_days and len(text) > 8:
+        return text[:5] + "..."
+    return text
