@@ -1,11 +1,13 @@
-"""Tests for the formatters dates module."""
+"""Test date formatting utilities."""
 
+import pytest
 from datetime import date, datetime, timedelta
-from typing import Dict, List, Any, Optional
-
-from src.analytics.formatters.dates import (
-    format_date_display, format_relative_time, format_duration_days,
-    format_month_year
+from src.core.dates import (
+    format_date_display,
+    format_date_compact,
+    format_month_year,
+    format_relative_time,
+    format_duration_days
 )
 
 

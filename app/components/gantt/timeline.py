@@ -4,12 +4,13 @@ Handles timeline range, date calculations, timeline-specific styling, and backgr
 """
 
 from datetime import date, timedelta
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import plotly.graph_objects as go
 from plotly.graph_objs import Figure
 
 from src.core.models import Config
 from src.validation.resources import validate_resources_constraints
+from src.core.models import Submission
 
 
 def get_chart_dimensions(schedule: Optional[Dict[str, date]], config: Config) -> Dict[str, Any]:
@@ -62,17 +63,54 @@ def get_title_text(chart_dimensions: Dict[str, Any]) -> str:
         return f"Paper Submission Timeline: {min_date.strftime('%b %Y')} - {max_date.strftime('%b %Y')}"
 
 
-def get_concurrency_map(schedule: Optional[Dict[str, date]]) -> Dict[str, int]:
-    """Get concurrency map for proper row positioning."""
+def get_concurrency_map(schedule: Optional[Dict[str, date]], config: Config) -> Dict[str, int]:
+    """Get concurrency map treating dependent tasks as single units for better readability."""
     if not schedule:
         return {}
     
-    # Sort by start date for consistent row assignment
-    sorted_items = sorted(schedule.items(), key=lambda x: x[1])
-    concurrency_map = {}
+    # Get submission objects to calculate durations
+    submissions = {sub.id: sub for sub in config.submissions}
     
-    for row, (submission_id, _) in enumerate(sorted_items):
-        concurrency_map[submission_id] = row
+    # Group submissions by their dependency chains (treat dependent tasks as one unit)
+    dependency_groups = _group_by_dependencies(schedule, submissions)
+    
+    # Calculate time intervals for each dependency group (not individual submissions)
+    group_intervals = []
+    for group_id, group_submissions in dependency_groups.items():
+        # Find the earliest start and latest end for the entire group
+        group_start = min(schedule[sub_id] for sub_id in group_submissions)
+        group_end = max(
+            schedule[sub_id] + timedelta(days=submissions[sub_id].get_duration_days(config)) 
+            for sub_id in group_submissions
+        )
+        group_intervals.append((group_id, group_start, group_end, group_submissions))
+    
+    # Sort by start date
+    group_intervals.sort(key=lambda x: x[1])
+    
+    # Assign rows based on actual overlaps between dependency groups
+    concurrency_map = {}
+    used_rows = []  # Track which rows are occupied and until when
+    
+    for group_id, start_date, end_date, group_submissions in group_intervals:
+        # Find the first available row
+        row = 0
+        while row < len(used_rows):
+            if used_rows[row] <= start_date:
+                # This row is free
+                break
+            row += 1
+        
+        # If no free row found, create a new one
+        if row >= len(used_rows):
+            used_rows.append(end_date)
+        else:
+            # Update the row's end time
+            used_rows[row] = end_date
+        
+        # Assign all submissions in this group to the same row
+        for submission_id in group_submissions:
+            concurrency_map[submission_id] = row
     
     return concurrency_map
 
@@ -85,8 +123,21 @@ def add_background_elements(fig: go.Figure) -> None:
         print("Warning: No x-axis range found in figure layout")
         return
     
-    start_date = x_range.range[0]
-    end_date = x_range.range[1]
+    start_date_str = x_range.range[0]
+    end_date_str = x_range.range[1]
+    
+    # Check if we actually have string dates
+    if not isinstance(start_date_str, str) or not isinstance(end_date_str, str):
+        print(f"Warning: Expected string dates, got: {type(start_date_str)}, {type(end_date_str)}")
+        return
+    
+    # Convert string dates to date objects
+    try:
+        start_date = date.fromisoformat(start_date_str)
+        end_date = date.fromisoformat(end_date_str)
+    except ValueError:
+        print(f"Warning: Invalid date format in x-axis range: {start_date_str}, {end_date_str}")
+        return
     
     # Get y-axis range for full chart coverage
     y_range = getattr(fig.layout, 'yaxis', None)
@@ -102,6 +153,50 @@ def add_background_elements(fig: go.Figure) -> None:
     
     # Add monthly markers
     _add_monthly_markers(fig, start_date, end_date, y_min, y_max)
+
+
+def _group_by_dependencies(schedule: Dict[str, date], submissions: Dict[str, Submission]) -> Dict[str, List[str]]:
+    """Group submissions by their dependency relationships."""
+    groups = {}
+    processed = set()
+    
+    for submission_id in schedule.keys():
+        if submission_id in processed:
+            continue
+            
+        # Start a new group
+        group_id = f"group_{len(groups)}"
+        group_submissions = []
+        
+        # Find all submissions in this dependency chain
+        _collect_dependency_chain(submission_id, schedule, submissions, group_submissions, processed)
+        
+        groups[group_id] = group_submissions
+    
+    return groups
+
+
+def _collect_dependency_chain(submission_id: str, schedule: Dict[str, date], 
+                            submissions: Dict[str, Submission], group: List[str], processed: set):
+    """Recursively collect all submissions in a dependency chain."""
+    if submission_id in processed or submission_id not in schedule:
+        return
+    
+    processed.add(submission_id)
+    group.append(submission_id)
+    
+    submission = submissions.get(submission_id)
+    if submission and submission.depends_on:
+        # Add dependencies first (they come before this submission)
+        for dep_id in submission.depends_on:
+            if dep_id in schedule:
+                _collect_dependency_chain(dep_id, schedule, submissions, group, processed)
+    
+    # Find submissions that depend on this one
+    for other_id, other_submission in submissions.items():
+        if (other_id in schedule and other_submission.depends_on and 
+            submission_id in other_submission.depends_on):
+            _collect_dependency_chain(other_id, schedule, submissions, group, processed)
 
 
 def _add_working_days_background(fig: go.Figure, start_date: date, end_date: date, y_min: float, y_max: float) -> None:

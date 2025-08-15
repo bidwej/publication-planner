@@ -119,6 +119,7 @@ def create_timeline_metrics_chart(schedule: Optional[Dict[str, Any]], config: Co
     
     return fig
 
+
 def _calculate_timeline_metrics(schedule: Optional[Dict[str, Any]], config: Config) -> Dict[str, Any]:
     """Calculate timeline-based metrics."""
     from datetime import timedelta

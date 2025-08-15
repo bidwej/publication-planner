@@ -25,8 +25,9 @@ class TestGanttActivity:
         # Check that shapes were added (one for each submission)
         assert len(fig.layout.shapes) == len(sample_schedule)
         
-        # Check that annotations were added (one for each submission)
-        assert len(fig.layout.annotations) == len(sample_schedule)
+        # Check that annotations were added (3 per submission: type, author, title)
+        expected_annotations = len(sample_schedule) * 3
+        assert len(fig.layout.annotations) == expected_annotations
     
     def test_add_activity_bars_empty_schedule(self, sample_config):
         """Test activity bar addition with empty schedule."""

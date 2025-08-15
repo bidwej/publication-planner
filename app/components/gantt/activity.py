@@ -12,67 +12,56 @@ from src.core.models import Config, Submission
 from app.components.gantt.timeline import get_concurrency_map
 
 
-def add_activity_bars(fig: Figure, schedule: Optional[Dict[str, date]], config: Config) -> None:
-    """Add activity bars to the gantt chart using proper row positioning."""
+def add_activity_bars(fig: Figure, schedule: Dict[str, date], config: Config) -> None:
+    """Add activity bars to the gantt chart."""
     if not schedule:
         return
     
-    concurrency_map = get_concurrency_map(schedule)
+    # Get concurrency map for proper row positioning
+    concurrency_map = get_concurrency_map(schedule, config)
     
+    # Add bars for each submission
     for submission_id, start_date in schedule.items():
         submission = config.submissions_dict.get(submission_id)
-        if not submission:
-            continue
-        
-        # Get row position from concurrency map
-        row = concurrency_map.get(submission_id, 0)
-        
-        # Calculate duration and end date
-        duration_days = max(submission.get_duration_days(config), 7)
-        end_date = start_date + timedelta(days=duration_days)
-        
-        # Add the bar
-        _add_elegant_bar(fig, submission, start_date, end_date, row)
-        
-        # Add label
-        _add_bar_label(fig, submission, start_date, end_date, row)
+        if submission:
+            # Calculate duration and end date
+            duration_days = max(submission.get_duration_days(config), 7)
+            end_date = start_date + timedelta(days=duration_days)
+            
+            # Add the bar
+            _add_activity_bar(fig, submission, start_date, end_date, concurrency_map[submission_id])
+            
+            # Add label
+            _add_bar_label(fig, submission, start_date, end_date, concurrency_map[submission_id])
 
 
-def add_dependency_arrows(fig: Figure, schedule: Optional[Dict[str, date]], config: Config) -> None:
-    """Add dependency arrows between activities using proper row positioning."""
+def add_dependency_arrows(fig: Figure, schedule: Dict[str, date], config: Config) -> None:
+    """Add dependency arrows between activities."""
     if not schedule:
         return
     
-    concurrency_map = get_concurrency_map(schedule)
+    # Get concurrency map for proper row positioning
+    concurrency_map = get_concurrency_map(schedule, config)
     
+    # Add arrows for each submission
     for submission_id, start_date in schedule.items():
         submission = config.submissions_dict.get(submission_id)
-        if not submission or not submission.depends_on:
-            continue
-        
-        for dep_id in submission.depends_on:
-            dep_start = schedule.get(dep_id)
-            if not dep_start:
-                continue
-            
-            # Calculate positions for arrow
-            dep_submission = config.submissions_dict.get(dep_id)
-            if not dep_submission:
-                continue
-            
-            dep_duration = max(dep_submission.get_duration_days(config), 7)
-            dep_end = dep_start + timedelta(days=dep_duration)
-            
-            # Get row positions from concurrency map
-            from_row = concurrency_map.get(dep_id, 0)
-            to_row = concurrency_map.get(submission_id, 0)
-            
-            _add_dependency_arrow(fig, dep_end, from_row, start_date, to_row)
+        if submission and submission.depends_on:
+            for dep_id in submission.depends_on:
+                if dep_id in schedule:
+                    # Calculate end date of dependency
+                    dep_submission = config.submissions_dict.get(dep_id)
+                    if dep_submission:
+                        dep_duration = max(dep_submission.get_duration_days(config), 7)
+                        dep_end_date = schedule[dep_id] + timedelta(days=dep_duration)
+                        
+                        _add_dependency_arrow(fig, dep_end_date, concurrency_map[dep_id], 
+                                            start_date, concurrency_map[submission_id])
 
 
-def _add_elegant_bar(fig: Figure, submission: Submission, start_date: date, 
+def _add_activity_bar(fig: Figure, submission: Submission, start_date: date, 
                      end_date: date, row: int) -> None:
-    """Add an elegant bar for a submission."""
+    """Add an activity bar for a submission."""
     # Get colors based on submission type
     color = _get_submission_color(submission)
     border_color = _get_border_color(submission)
@@ -89,8 +78,8 @@ def _add_elegant_bar(fig: Figure, submission: Submission, start_date: date,
         opacity=0.8
     )
     
-    # Add type icon in upper left corner (darker background)
-    _add_type_icon(fig, submission, start_date, row)
+    # Add type icon with proper positioning
+    _add_type_icon(fig, submission, start_date, end_date, row)
     
     # Add author label in main lower left corner (simple text)
     _add_author_label(fig, submission, start_date, row)
@@ -117,31 +106,47 @@ def _add_author_label(fig: Figure, submission: Submission, start_date: date, row
     )
 
 
-def _add_type_icon(fig: Figure, submission: Submission, start_date: date, row: int) -> None:
-    """Add type icon (Paper/Abstract) in upper left corner with darker background."""
-    # Determine icon based on submission type
+def _add_type_icon(fig: Figure, submission: Submission, start_date: date, end_date: date, row: int) -> None:
+    """Add type label with positioning: abstracts in top left, papers in top right."""
+    # Determine descriptive text based on submission type and author
     if submission.kind.value == "paper":
-        icon = "📄"  # Paper icon
+        if submission.author == "pccp":
+            type_text = "Paper: Engineering"
+        elif submission.author == "ed":
+            type_text = "Paper: Medical"
+        else:
+            type_text = "Paper"
     elif submission.kind.value == "abstract":
-        icon = "📝"  # Abstract icon
+        if submission.author == "pccp":
+            type_text = "Abstract: Engineering"
+        elif submission.author == "ed":
+            type_text = "Abstract: Medical"
+        else:
+            type_text = "Abstract"
     elif submission.kind.value == "poster":
-        icon = "🖼️"  # Poster icon
+        type_text = "Poster"
     else:
-        icon = "📋"  # Generic document icon
+        type_text = "Document"
     
-    # Add icon annotation in upper left corner of bar
+    # Position abstracts in top left, papers in top right
+    if submission.kind.value == "abstract":
+        # Abstract: TOP LEFT
+        x_pos = start_date
+        x_anchor = 'left'
+    else:
+        # Paper/Poster: TOP RIGHT  
+        x_pos = end_date
+        x_anchor = 'right'
+    
+    # Add type label annotation
     fig.add_annotation(
-        text=icon,
-        x=start_date,
-        y=row + 0.3,  # Upper part of bar
+        text=type_text,
+        x=x_pos,
+        y=row + 0.2,  # Inside the bar, below the top border
         xref="x", yref="y",
-        xanchor='left', yanchor='bottom',
-        font={'size': 12},
-        showarrow=False,
-        bgcolor='rgba(0, 0, 0, 0.7)',  # Darker background
-        bordercolor='rgba(0, 0, 0, 0.9)',
-        borderwidth=1,
-        borderpad=4
+        xanchor=x_anchor, yanchor='bottom',
+        font={'size': 8, 'color': '#1a1a1a', 'weight': 'bold'},  # Much darker text for visibility
+        showarrow=False
     )
 
 
@@ -191,13 +196,13 @@ def _add_dependency_arrow(fig: Figure, from_date: date, from_row: int,
 def _get_submission_color(submission: Submission) -> str:
     """Get elegant color for submission based on type and author."""
     if submission.kind.value == "paper":
-        # MODs (pccp) are engineering papers (blue), ED papers (ed) are medical papers (orange)
+        # MODs (pccp) are engineering papers (blue), ED papers (ed) are medical papers (purple)
         if hasattr(submission, 'author') and submission.author == "pccp":
             return "#3498db"  # Blue for MODs (engineering)
         else:
-            return "#e67e22"  # Orange for ED papers (medical)
+            return "#9b59b6"  # Purple for ED papers (medical)
     elif submission.kind.value == "abstract":
-        return "#27ae60"  # Green for abstracts
+        return "#e67e22"  # Orange for abstracts
     elif submission.kind.value == "poster":
         return "#f39c12"  # Yellow for posters
     else:
@@ -208,13 +213,13 @@ def _get_submission_color(submission: Submission) -> str:
 def _get_border_color(submission: Submission) -> str:
     """Get border color for submission."""
     if submission.kind.value == "paper":
-        # MODs (pccp) have darker blue borders, ED papers have darker orange
+        # MODs (pccp) have darker blue borders, ED papers have darker purple
         if hasattr(submission, 'author') and submission.author == "pccp":
             return "#2980b9"  # Darker blue for MODs
         else:
-            return "#d35400"  # Darker orange for ED papers
+            return "#8e44ad"  # Darker purple for ED papers
     elif submission.kind.value == "abstract":
-        return "#229954"  # Darker green for abstracts
+        return "#d35400"  # Darker orange for abstracts
     elif submission.kind.value == "poster":
         return "#e67e22"  # Darker yellow for posters
     else:

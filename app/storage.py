@@ -16,10 +16,6 @@ class ScheduleStorage:
     
     def __init__(self):
         """Initialize storage with SQLite database in user's home directory."""
-        self._init_storage()
-    
-    def _init_storage(self):
-        """Initialize SQLite storage."""
         try:
             # Create data directory in user's home folder (client-side equivalent)
             data_dir = Path.home() / ".paper_planner"

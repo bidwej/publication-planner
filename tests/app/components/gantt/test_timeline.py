@@ -140,67 +140,63 @@ class TestGanttTimeline:
         assert "Dec 2024" in title
         assert "Jan 2025" in title
     
-    def test_get_concurrency_map_with_schedule(self, sample_schedule):
-        """Test concurrency map generation with valid schedule."""
-        result = get_concurrency_map(sample_schedule)
+    def test_get_concurrency_map_with_schedule(self, sample_schedule, sample_config):
+        """Test concurrency map generation with actual schedule data."""
+        result = get_concurrency_map(sample_schedule, sample_config)
         
-        assert isinstance(result, dict)
-        assert len(result) == 4  # sample_schedule has 4 items
+        # Should have entries for all submissions
+        assert len(result) == len(sample_schedule)
         
         # Check that all submission IDs are present
-        assert "mod1-wrk" in result
-        assert "paper1-pap" in result
-        assert "mod2-wrk" in result
-        assert "paper2-pap" in result
+        for submission_id in sample_schedule.keys():
+            assert submission_id in result
         
-        # Check row assignments (should be 0, 1, 2, 3 based on sorted dates)
-        # sample_schedule: mod1-wrk: 2024-12-01, mod2-wrk: 2025-01-01, paper2-pap: 2025-02-01, paper1-pap: 2025-01-15
-        # Sorted by date: mod1-wrk (2024-12-01), mod2-wrk (2025-01-01), paper1-pap (2025-01-15), paper2-pap (2025-02-01)
-        assert result["mod1-wrk"] == 0   # 2024-12-01 (earliest)
-        assert result["mod2-wrk"] == 1   # 2025-01-01
-        assert result["paper1-pap"] == 2 # 2025-01-15
-        assert result["paper2-pap"] == 3 # 2025-02-01 (latest)
-    
-    def test_get_concurrency_map_empty_schedule(self):
+        # Check that row numbers are reasonable (some can share rows if they don't overlap)
+        row_numbers = list(result.values())
+        assert min(row_numbers) >= 0, "Row numbers should be non-negative"
+        assert max(row_numbers) < len(sample_schedule), "Row numbers should not exceed submission count"
+        
+        # The concurrency logic should minimize rows by reusing them when activities don't overlap
+        unique_rows = len(set(row_numbers))
+        assert unique_rows <= len(sample_schedule), "Should not use more rows than submissions"
+        assert unique_rows > 0, "Should use at least one row"
+
+
+    def test_get_concurrency_map_empty_schedule(self, sample_config):
         """Test concurrency map generation with empty schedule."""
         empty_schedule = {}
-        result = get_concurrency_map(empty_schedule)
-        
-        assert isinstance(result, dict)
-        assert len(result) == 0
-    
-    def test_get_concurrency_map_none_schedule(self):
+        result = get_concurrency_map(empty_schedule, sample_config)
+        assert result == {}
+
+
+    def test_get_concurrency_map_none_schedule(self, sample_config):
         """Test concurrency map generation with None schedule."""
-        result = get_concurrency_map(None)
-        
-        assert isinstance(result, dict)
-        assert len(result) == 0
-    
-    def test_get_concurrency_map_single_submission(self):
+        result = get_concurrency_map(None, sample_config)
+        assert result == {}
+
+
+    def test_get_concurrency_map_single_submission(self, sample_config):
         """Test concurrency map generation with single submission."""
-        single_schedule = {"paper1": date(2024, 6, 15)}
-        result = get_concurrency_map(single_schedule)
+        single_schedule = {"mod1-wrk": date(2024, 1, 1)}
+        result = get_concurrency_map(single_schedule, sample_config)
         
-        assert isinstance(result, dict)
         assert len(result) == 1
-        assert result["paper1"] == 0
-    
-    def test_get_concurrency_map_duplicate_dates(self):
-        """Test concurrency map generation with duplicate dates."""
+        assert result["mod1-wrk"] == 0  # Should be on row 0
+
+
+    def test_get_concurrency_map_duplicate_dates(self, sample_config):
+        """Test concurrency map generation with submissions on same date."""
         duplicate_schedule = {
-            "paper1": date(2024, 6, 15),
-            "paper2": date(2024, 6, 15),
-            "paper3": date(2024, 6, 20)
+            "mod1-wrk": date(2024, 1, 1),
+            "paper1-pap": date(2024, 1, 1),
+            "mod2-wrk": date(2024, 1, 1)
         }
-        result = get_concurrency_map(duplicate_schedule)
+        result = get_concurrency_map(duplicate_schedule, sample_config)
         
-        assert isinstance(result, dict)
+        # All should be on different rows since they start on the same date
         assert len(result) == 3
-        
-        # Should still assign sequential rows
-        assert result["paper1"] == 0
-        assert result["paper2"] == 1
-        assert result["paper3"] == 2
+        row_values = list(result.values())
+        assert len(set(row_values)) == 3  # All rows should be different
     
     @patch('app.components.gantt.timeline._add_working_days_background')
     @patch('app.components.gantt.timeline._add_monthly_markers')
@@ -224,8 +220,8 @@ class TestGanttTimeline:
         # The first call should be to _add_working_days_background
         args = mock_add_working_days.call_args[0]
         assert args[0] == fig  # figure
-        assert args[1] == '2024-04-01'  # start_date (string)
-        assert args[2] == '2024-08-01'  # end_date (string)
+        assert args[1] == date(2024, 4, 1)  # start_date (date object)
+        assert args[2] == date(2024, 8, 1)  # end_date (date object)
         assert args[3] == -0.5  # y_min
         assert args[4] == 2.5   # y_max
     

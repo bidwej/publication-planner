@@ -74,37 +74,6 @@ def create_timeline_app():
     return app
 
 
-def _create_timeline_layout():
-    """Create a minimal timeline layout with just the chart."""
-    return html.Div([
-        # Simple generate button
-        html.Div([
-            html.Button([
-                html.I(className="fas fa-play"),
-                " Generate Timeline"
-            ], id="generate-btn", className="btn btn-primary", style={'margin': '10px'})
-        ], style={'textAlign': 'center'}),
-        
-        # Timeline Chart
-        dcc.Graph(
-            id='timeline-chart',
-            style={'height': '90vh', 'width': '100%'},
-            config={
-                'displayModeBar': True,
-                'displaylogo': False,
-                'modeBarButtonsToRemove': ['pan2d', 'lasso2d', 'select2d'],
-                'toImageButtonOptions': {
-                    'format': 'png',
-                    'filename': 'schedule_timeline',
-                    'height': 600,
-                    'width': 1200,
-                    'scale': 2
-                }
-            }
-        )
-    ], style={'height': '100vh', 'width': '100%', 'margin': 0, 'padding': 0})
-
-
 def main():
     """Main entry point that creates the timeline app."""
     parser = argparse.ArgumentParser(description='Paper Planner Web Application')
@@ -140,6 +109,37 @@ def main():
     except Exception as e:
         print(f"[ERROR] Unexpected error starting server: {e}")
         sys.exit(1)
+
+
+def _create_timeline_layout():
+    """Create a minimal timeline layout with just the chart."""
+    return html.Div([
+        # Simple generate button
+        html.Div([
+            html.Button([
+                html.I(className="fas fa-play"),
+                " Generate Timeline"
+            ], id="generate-btn", className="btn btn-primary", style={'margin': '10px'})
+        ], style={'textAlign': 'center'}),
+        
+        # Timeline Chart
+        dcc.Graph(
+            id='timeline-chart',
+            style={'height': '90vh', 'width': '100%'},
+            config={
+                'displayModeBar': True,
+                'displaylogo': False,
+                'modeBarButtonsToRemove': ['pan2d', 'lasso2d', 'select2d'],
+                'toImageButtonOptions': {
+                    'format': 'png',
+                    'filename': 'schedule_timeline',
+                    'height': 600,
+                    'width': 1200,
+                    'scale': 2
+                }
+            }
+        )
+    ], style={'height': '100vh', 'width': '100%', 'margin': 0, 'padding': 0})
 
 
 if __name__ == "__main__":
