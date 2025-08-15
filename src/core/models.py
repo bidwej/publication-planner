@@ -59,7 +59,6 @@ class Submission:
     draft_window_months: int = 3
     lead_time_from_parents: int = 0
     penalty_cost_per_day: Optional[float] = None
-    engineering: bool = False
     earliest_start_date: Optional[date] = None
     candidate_conferences: Optional[List[str]] = None  # Suggested conferences
     candidate_kinds: Optional[List[SubmissionType]] = None  # Preferred submission types at conferences (in priority order)
@@ -97,10 +96,6 @@ class Submission:
     
 
     
-    def get_author(self) -> str:
-        """Get the author of this submission."""
-        return self.author or "unknown"
-    
     def get_priority_score(self, config: 'Config') -> float:
         """Calculate priority score based on config weights."""
         if not config.priority_weights:
@@ -117,7 +112,7 @@ class Submission:
         base_weight = config.priority_weights.get(type_key, 1.0)
         
         # Engineering bonus
-        if self.engineering:
+        if self.author == "pccp":  # PCCP authors are engineering
             engineering_bonus = config.priority_weights.get("engineering_paper", 2.0)
             base_weight *= engineering_bonus
         

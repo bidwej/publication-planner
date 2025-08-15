@@ -86,28 +86,24 @@ def _add_activity_bar(fig: Figure, submission: Submission, start_date: date,
 
 
 def _add_author_label(fig: Figure, submission: Submission, start_date: date, row: int) -> None:
-    """Add author label (Author: PCCP or Author: ED) in main lower left corner of bar."""
+    """Add author label (Author: PCCP or Author: ED) in bottom left corner inside the bar."""
     # Get author for label
     author_text = f"Author: {submission.author.upper()}" if submission.author else "Author: Unknown"
     
-    # Add author label annotation in main lower left corner of bar
+    # Add author label annotation in bottom left corner inside the bar
     fig.add_annotation(
         text=author_text,
         x=start_date,
-        y=row - 0.3,  # Lower part of bar
+        y=row - 0.2,  # Inside the bar, above the bottom border
         xref="x", yref="y",
         xanchor='left', yanchor='top',
         font={'size': 8, 'color': '#2c3e50', 'weight': 'bold'},
-        showarrow=False,
-        bgcolor='rgba(255, 255, 255, 0.9)',  # Light background
-        bordercolor='rgba(0, 0, 0, 0.2)',
-        borderwidth=1,
-        borderpad=4
+        showarrow=False
     )
 
 
 def _add_type_icon(fig: Figure, submission: Submission, start_date: date, end_date: date, row: int) -> None:
-    """Add type label with positioning: abstracts in top left, papers in top right."""
+    """Add type label with positioning: ALL types in top left."""
     # Determine descriptive text based on submission type and author
     if submission.kind.value == "paper":
         if submission.author == "pccp":
@@ -128,24 +124,18 @@ def _add_type_icon(fig: Figure, submission: Submission, start_date: date, end_da
     else:
         type_text = "Document"
     
-    # Position abstracts in top left, papers in top right
-    if submission.kind.value == "abstract":
-        # Abstract: TOP LEFT
-        x_pos = start_date
-        x_anchor = 'left'
-    else:
-        # Paper/Poster: TOP RIGHT  
-        x_pos = end_date
-        x_anchor = 'right'
+    # ALL types go in TOP LEFT
+    x_pos = start_date
+    x_anchor = 'left'
     
-    # Add type label annotation
+    # Add type label annotation - positioned safely within the bar area
     fig.add_annotation(
         text=type_text,
         x=x_pos,
-        y=row + 0.2,  # Inside the bar, below the top border
+        y=row + 0.2,  # Positioned to be clearly visible inside the bar
         xref="x", yref="y",
         xanchor=x_anchor, yanchor='bottom',
-        font={'size': 8, 'color': '#1a1a1a', 'weight': 'bold'},  # Much darker text for visibility
+        font={'size': 8, 'color': '#2c3e50', 'weight': 'bold'},  # Same style as author labels
         showarrow=False
     )
 
@@ -194,37 +184,41 @@ def _add_dependency_arrow(fig: Figure, from_date: date, from_row: int,
 
 
 def _get_submission_color(submission: Submission) -> str:
-    """Get elegant color for submission based on type and author."""
+    """Get color for submission based on type and author."""
+    # Determine base color based on author (engineering vs medical)
+    is_engineering = submission.author == "pccp"
+    
     if submission.kind.value == "paper":
-        # MODs (pccp) are engineering papers (blue), ED papers (ed) are medical papers (purple)
-        if hasattr(submission, 'author') and submission.author == "pccp":
-            return "#3498db"  # Blue for MODs (engineering)
-        else:
-            return "#9b59b6"  # Purple for ED papers (medical)
+        # Engineering papers are blue, Medical papers are purple
+        return "#3498db" if is_engineering else "#9b59b6"
     elif submission.kind.value == "abstract":
-        return "#e67e22"  # Orange for abstracts
+        # Lighter shades for abstracts
+        return "#85c1e9" if is_engineering else "#bb8fce"
     elif submission.kind.value == "poster":
-        return "#f39c12"  # Yellow for posters
+        # Very light shades for posters
+        return "#d6eaf8" if is_engineering else "#e8d5f0"
     else:
         # Fallback for any other types
-        return "#95a5a6"  # Gray fallback
+        return "#95a5a6"
 
 
 def _get_border_color(submission: Submission) -> str:
     """Get border color for submission."""
+    # Determine base color based on author (engineering vs medical)
+    is_engineering = submission.author == "pccp"
+    
     if submission.kind.value == "paper":
-        # MODs (pccp) have darker blue borders, ED papers have darker purple
-        if hasattr(submission, 'author') and submission.author == "pccp":
-            return "#2980b9"  # Darker blue for MODs
-        else:
-            return "#8e44ad"  # Darker purple for ED papers
+        # Engineering papers have darker blue borders, Medical papers have darker purple
+        return "#2980b9" if is_engineering else "#8e44ad"
     elif submission.kind.value == "abstract":
-        return "#d35400"  # Darker orange for abstracts
+        # Medium border colors for abstracts
+        return "#5dade2" if is_engineering else "#a569bd"
     elif submission.kind.value == "poster":
-        return "#e67e22"  # Darker yellow for posters
+        # Light border colors for posters
+        return "#85c1e9" if is_engineering else "#bb8fce"
     else:
         # Fallback for any other types
-        return "#7f8c8d"  # Darker gray fallback
+        return "#7f8c8d"
 
 
 def _get_display_title(submission: Submission, max_length: int = 20) -> str:
