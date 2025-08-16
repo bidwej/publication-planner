@@ -4,7 +4,6 @@ import pytest
 import asyncio
 import os
 from pathlib import Path
-from unittest.mock import Mock, patch
 import plotly.graph_objects as go
 from datetime import date
 

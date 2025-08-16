@@ -6,7 +6,7 @@ import os
 import requests
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, Mock, patch
+
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
 # Add project root to path for imports
@@ -81,12 +81,16 @@ class TestValidationFunctions:
         
         assert check_port_availability(available_port) is True
     
-    @patch('requests.get')
-    def test_validate_network_connectivity_success(self, mock_get: Mock) -> None:
+    def test_validate_network_connectivity_success(self, monkeypatch) -> None:
         """Test network connectivity validation with successful connection."""
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_get.return_value = mock_response
+        # Create a simple mock response object
+        mock_response = type('MockResponse', (), {'status_code': 200})()
+        
+        # Create a simple mock get function
+        def mock_get(*args, **kwargs):
+            return mock_response
+        
+        monkeypatch.setattr('requests.get', mock_get)
         
         result: Any = validate_network_connectivity("http://example.com")
         assert result is True
@@ -127,44 +131,61 @@ class TestValidationFunctions:
 class TestServerManagement:
     """Test server management functionality."""
     
-    @patch('requests.get')
-    def test_is_server_running_success(self, mock_get: Mock) -> None:
+    def test_is_server_running_success(self, monkeypatch) -> None:
         """Test is_server_running when server is running."""
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_get.return_value = mock_response
+        # Create a simple mock response object
+        mock_response = type('MockResponse', (), {'status_code': 200})()
+        
+        # Create a simple mock get function that tracks calls
+        call_args = []
+        def mock_get(*args, **kwargs):
+            call_args.append((args, kwargs))
+            return mock_response
+        
+        monkeypatch.setattr('requests.get', mock_get)
         
         result: Any = is_server_running("http://localhost:8080")
         assert result is True
-        mock_get.assert_called_once_with("http://localhost:8080", timeout=1)
+        assert len(call_args) == 1
+        assert call_args[0][0] == ("http://localhost:8080",)
+        assert call_args[0][1] == {"timeout": 1}
     
-    @patch('requests.get')
-    def test_is_server_running_failure(self, mock_get: Mock) -> None:
+    def test_is_server_running_failure(self, monkeypatch) -> None:
         """Test is_server_running when server is not running."""
-        mock_get.side_effect = requests.exceptions.ConnectionError("Connection refused")
+        def mock_get(*args, **kwargs):
+            raise requests.exceptions.ConnectionError("Connection refused")
+        
+        monkeypatch.setattr('requests.get', mock_get)
         
         result: Any = is_server_running("http://localhost:8080")
         assert result is False
     
-    @patch('subprocess.Popen')
-    @patch('tests.common.headless_browser.is_server_running')
-    def test_start_web_server_success(self, mock_is_running: Mock, mock_popen: Mock, temp_dir: Path) -> None:
+    def test_start_web_server_success(self, monkeypatch, temp_dir: Path) -> None:
         """Test successful web server startup."""
         # Create a test script
         script_path = temp_dir / "test_server.py"
         script_path.write_text("print('Server started')")
         
-        # Mock subprocess
-        mock_process = Mock()
-        mock_popen.return_value = mock_process
+        # Create a simple mock process object
+        mock_process = type('MockProcess', (), {})()
         
-        # Mock server running check
-        mock_is_running.return_value = True
+        # Create a simple mock popen function
+        popen_calls = []
+        def mock_popen(*args, **kwargs):
+            popen_calls.append((args, kwargs))
+            return mock_process
+        
+        # Create a simple mock is_running function
+        def mock_is_running(*args, **kwargs):
+            return True
+        
+        monkeypatch.setattr('subprocess.Popen', mock_popen)
+        monkeypatch.setattr('tests.common.headless_browser.is_server_running', mock_is_running)
         
         result: Any = start_web_server(str(script_path), 8080)
         
         assert result == mock_process
-        mock_popen.assert_called_once()
+        assert len(popen_calls) == 1
     
     def test_start_web_server_nonexistent_script(self) -> None:
         """Test web server startup with non-existent script."""

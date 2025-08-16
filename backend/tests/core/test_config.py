@@ -6,7 +6,7 @@ import json
 from datetime import date
 
 from typing import Dict, List, Any, Optional
-from unittest.mock import patch
+
 
 from core.config import (
     load_config, find_mod_by_number, find_paper_by_base_and_conference,
@@ -301,17 +301,20 @@ class TestConfigIntegration:
         assert config.min_paper_lead_time_days > 0
         assert config.max_concurrent_submissions > 0
     
-    def test_config_loading_integration(self) -> None:
+    def test_config_loading_integration(self, monkeypatch) -> None:
         """Test config loading integration with default config."""
-        with patch('core.config.load_config') as mock_load:
-            # Mock load_config to return default config
-            mock_config = Config.create_default()
-            mock_load.return_value = mock_config
-            
-            # Test that config loading works
-            config = load_config('config.json')
-            assert config is not None
-            assert isinstance(config, Config)
+        # Mock load_config to return default config
+        mock_config = Config.create_default()
+        
+        def mock_load(*args, **kwargs):
+            return mock_config
+        
+        monkeypatch.setattr('core.config.load_config', mock_load)
+        
+        # Test that config loading works
+        config = load_config('config.json')
+        assert config is not None
+        assert isinstance(config, Config)
     
     def test_config_with_default_values(self) -> None:
         """Test config with default values."""
@@ -441,16 +444,29 @@ class TestConfigIntegration:
                 conference = next((c for c in config.conferences if c.id == submission.conference_id), None)
                 assert conference is not None, f"Conference {submission.conference_id} not found for submission {submission.id}"
     
-    def test_config_serialization_integration(self) -> None:
+    def test_config_serialization_integration(self, monkeypatch) -> None:
         """Test config serialization and deserialization integration."""
         # Create a test config
         config = Config.create_default()
         
         # Test serialization
         from core.config import save_config
-        with patch('builtins.open', create=True) as mock_open:
-            save_config(config, 'test_config.json')
-            mock_open.assert_called()
+        
+        # Mock the open function
+        mock_open_calls = []
+        def mock_open(*args, **kwargs):
+            mock_open_calls.append(args)
+            # Create a proper mock file object that supports context manager
+            mock_file = Mock()
+            mock_file.__enter__ = Mock(return_value=mock_file)
+            mock_file.__exit__ = Mock(return_value=None)
+            mock_file.write = Mock()
+            return mock_file
+        
+        monkeypatch.setattr('builtins.open', mock_open)
+        
+        save_config(config, 'test_config.json')
+        assert len(mock_open_calls) > 0
     
     def test_config_with_edge_cases(self) -> None:
         """Test config with edge cases and boundary conditions."""

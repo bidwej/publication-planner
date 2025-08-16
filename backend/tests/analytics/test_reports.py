@@ -3,7 +3,7 @@
 import pytest
 from datetime import date
 from typing import Dict, List, Any, Optional
-from unittest.mock import MagicMock
+
 
 from reports import (
     generate_schedule_report,
@@ -239,8 +239,8 @@ class TestReports:
             "violations": []
         }
         
-        penalty_breakdown = MagicMock()
-        penalty_breakdown.total_penalty = 0.0
+        # Create a simple object with the required attribute
+        penalty_breakdown = type('PenaltyBreakdown', (), {'total_penalty': 0.0})()
         
         score: float = calculate_overall_score(
             deadline_validation,
@@ -273,8 +273,8 @@ class TestReports:
             "violations": []
         }
         
-        penalty_breakdown = MagicMock()
-        penalty_breakdown.total_penalty = 1000.0
+        # Create a simple object with the required attribute
+        penalty_breakdown = type('PenaltyBreakdown', (), {'total_penalty': 1000.0})()
         
         score: float = calculate_overall_score(
             deadline_validation,
@@ -370,8 +370,8 @@ class TestReports:
             "violations": []
         }
         
-        penalty_breakdown = MagicMock()
-        penalty_breakdown.total_penalty = 0.0
+        # Create a simple object with the required attribute
+        penalty_breakdown = type('PenaltyBreakdown', (), {'total_penalty': 0.0})()
         
         score: float = calculate_overall_score(
             deadline_validation,

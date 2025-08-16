@@ -2,7 +2,7 @@
 
 import pytest
 from datetime import date, timedelta
-from unittest.mock import patch
+
 from pathlib import Path
 from typing import Dict, Any
 
@@ -86,15 +86,19 @@ class TestOptimalSchedulerEdgeCases:
         # Should handle impossible deadline gracefully
         assert isinstance(schedule, dict)
     
-    def test_milp_zero_duration_edge_case(self, test_data_config: Config) -> None:
+    def test_milp_zero_duration_edge_case(self, test_data_config: Config, monkeypatch) -> None:
         """Test MILP with zero duration submissions."""
         # Mock zero duration
-        with patch('src.core.models.Submission.get_duration_days', return_value=0):
-            scheduler: Any = OptimalScheduler(test_data_config)
-            schedule = scheduler.schedule()
-            
-            # Should handle zero duration gracefully
-            assert isinstance(schedule, dict)
+        def mock_get_duration_days(*args, **kwargs):
+            return 0
+        
+        monkeypatch.setattr('src.core.models.Submission.get_duration_days', mock_get_duration_days)
+        
+        scheduler: Any = OptimalScheduler(test_data_config)
+        schedule = scheduler.schedule()
+        
+        # Should handle zero duration gracefully
+        assert isinstance(schedule, dict)
     
     def test_milp_max_concurrent_zero_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with max_concurrent_submissions = 0."""
@@ -143,15 +147,19 @@ class TestOptimalSchedulerEdgeCases:
         # Should fallback to greedy for large problems
         assert isinstance(schedule, dict)
     
-    def test_milp_very_long_duration_edge_case(self, test_data_config: Config) -> None:
+    def test_milp_very_long_duration_edge_case(self, test_data_config: Config, monkeypatch) -> None:
         """Test MILP with very long duration submissions."""
         # Mock very long duration
-        with patch('src.core.models.Submission.get_duration_days', return_value=365):
-            scheduler: Any = OptimalScheduler(test_data_config)
-            schedule = scheduler.schedule()
-            
-            # Should handle very long duration gracefully
-            assert isinstance(schedule, dict)
+        def mock_get_duration_days(*args, **kwargs):
+            return 365
+        
+        monkeypatch.setattr('src.core.models.Submission.get_duration_days', mock_get_duration_days)
+        
+        scheduler: Any = OptimalScheduler(test_data_config)
+        schedule = scheduler.schedule()
+        
+        # Should handle very long duration gracefully
+        assert isinstance(schedule, dict)
     
     def test_milp_no_conferences_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with no conferences defined."""
@@ -184,16 +192,23 @@ class TestOptimalSchedulerEdgeCases:
         
         assert isinstance(schedule, dict)
     
-    def test_milp_solver_timeout_edge_case(self, test_data_config: Config) -> None:
+    def test_milp_solver_timeout_edge_case(self, test_data_config: Config, monkeypatch) -> None:
         """Test MILP when solver times out."""
         # Mock solver to timeout
-        with patch('pulp.PULP_CBC_CMD') as mock_solver:
-            mock_solver.return_value.solve.return_value = 1  # Timeout status
-            scheduler: Any = OptimalScheduler(test_data_config)
-            schedule = scheduler.schedule()
-            
-            # Should handle timeout gracefully
-            assert isinstance(schedule, dict)
+        mock_solver = type('MockSolver', (), {
+            'solve': lambda: 1  # Timeout status
+        })()
+        
+        def mock_pulp_cbc_cmd(*args, **kwargs):
+            return mock_solver
+        
+        monkeypatch.setattr('pulp.PULP_CBC_CMD', mock_pulp_cbc_cmd)
+        
+        scheduler: Any = OptimalScheduler(test_data_config)
+        schedule = scheduler.schedule()
+        
+        # Should handle timeout gracefully
+        assert isinstance(schedule, dict)
     
     def test_milp_infeasible_constraints_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with infeasible constraints."""
@@ -286,15 +301,19 @@ class TestOptimalSchedulerEdgeCases:
         # Should handle missing dependency gracefully
         assert isinstance(schedule, dict)
     
-    def test_milp_negative_duration_edge_case(self, test_data_config: Config) -> None:
+    def test_milp_negative_duration_edge_case(self, test_data_config: Config, monkeypatch) -> None:
         """Test MILP with negative duration (should never happen but test anyway)."""
         # Mock negative duration
-        with patch('src.core.models.Submission.get_duration_days', return_value=-1):
-            scheduler: Any = OptimalScheduler(test_data_config)
-            schedule = scheduler.schedule()
-            
-            # Should handle negative duration gracefully
-            assert isinstance(schedule, dict)
+        def mock_get_duration_days(*args, **kwargs):
+            return -1
+        
+        monkeypatch.setattr('src.core.models.Submission.get_duration_days', mock_get_duration_days)
+        
+        scheduler: Any = OptimalScheduler(test_data_config)
+        schedule = scheduler.schedule()
+        
+        # Should handle negative duration gracefully
+        assert isinstance(schedule, dict)
     
     def test_milp_empty_dependency_list_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with empty dependency list vs None."""

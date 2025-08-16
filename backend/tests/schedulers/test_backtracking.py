@@ -2,7 +2,6 @@
 
 import pytest
 from datetime import date, timedelta
-from unittest.mock import Mock, patch
 from core.models import SubmissionType, ConferenceRecurrence, ConferenceType, Submission, Config
 from schedulers.backtracking import BacktrackingGreedyScheduler
 from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config

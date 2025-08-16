@@ -2,7 +2,7 @@
 
 import pytest
 from datetime import date, timedelta
-from unittest.mock import patch, MagicMock
+
 
 from core.config import load_config
 from core.models import SchedulerStrategy
@@ -198,23 +198,27 @@ class TestOptimalScheduler:
     
     def test_schedule_extraction(self, scheduler) -> None:
         """Test that schedules can be extracted from MILP solutions."""
-        # Mock a solution
-        mock_solution = MagicMock()
-        mock_solution.variables.return_value = {
-            "start_test_submission": MagicMock(value=lambda: 5)
-        }
+        # Create a simple mock solution object
+        mock_variable = type('MockVariable', (), {'value': lambda: 5})()
+        mock_solution = type('MockSolution', (), {
+            'variables': lambda: {"start_test_submission": mock_variable}
+        })()
         
         schedule = scheduler._extract_schedule_from_solution(mock_solution)
         assert isinstance(schedule, dict)
     
-    def test_pure_optimal_behavior(self, scheduler) -> None:
+    def test_pure_optimal_behavior(self, scheduler, monkeypatch) -> None:
         """Test that the scheduler returns empty schedule when MILP fails."""
         # Mock MILP to fail
-        with patch.object(scheduler, '_setup_milp_model', return_value=None):
-            schedule = scheduler.schedule()
-            # Should return empty schedule (pure optimal behavior)
-            assert isinstance(schedule, dict)
-            assert len(schedule) == 0  # Empty schedule when MILP fails
+        def mock_setup_milp_model(*args, **kwargs):
+            return None
+        
+        monkeypatch.setattr(scheduler, '_setup_milp_model', mock_setup_milp_model)
+        
+        schedule = scheduler.schedule()
+        # Should return empty schedule (pure optimal behavior)
+        assert isinstance(schedule, dict)
+        assert len(schedule) == 0  # Empty schedule when MILP fails
     
     def test_optimization_objectives(self, config) -> None:
         """Test different optimization objectives."""
