@@ -49,7 +49,7 @@ class EfficiencyConstants:
     randomness_factor: float = 0.1  # For stochastic algorithms
     lookahead_bonus_increment: float = 0.5  # For lookahead algorithms
     max_algorithm_iterations: int = 1000  # Safety limit for greedy algorithms
-    milp_timeout_seconds: int = 10  # MILP solver timeout in seconds
+    milp_timeout_seconds: int = 60  # MILP solver timeout in seconds (increased from 10)
 
 @dataclass
 class QualityConstants:

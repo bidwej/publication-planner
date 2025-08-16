@@ -6,7 +6,10 @@ from pathlib import Path
 from dataclasses import replace
 from datetime import date
 from core.config import load_config
-from core.models import Config, SchedulerStrategy, ValidationResult, ScoringResult, ScheduleResult, ScheduleSummary, ScheduleMetrics
+from core.models import (
+    Config, SchedulerStrategy, ValidationResult, ScoringResult, ScheduleResult, 
+    ScheduleSummary, ScheduleMetrics, DeadlineValidation, DependencyValidation, ResourceValidation
+)
 from core.constants import QUALITY_CONSTANTS
 from core.dates import calculate_schedule_duration
 from scoring.quality import calculate_quality_score
@@ -214,13 +217,50 @@ class Planner:
         dependency_analysis = analyze_dependency_graph(self.config)
         
         # Create unified validation result
+        # Extract validation data from the structured result
+        constraints = validation_data.get("constraints", {})
+        
+        # Create proper validation objects
+        deadline_validation = DeadlineValidation(
+            is_valid=constraints.get("deadlines", {}).get("is_valid", True),
+            violations=constraints.get("deadlines", {}).get("violations", []),
+            summary="Deadline validation",
+            compliance_rate=constraints.get("deadlines", {}).get("compliance_rate", 100.0),
+            total_submissions=constraints.get("deadlines", {}).get("total_submissions", 0),
+            compliant_submissions=constraints.get("deadlines", {}).get("compliant_submissions", 0)
+        )
+        
+        dependency_validation = DependencyValidation(
+            is_valid=constraints.get("dependencies", {}).get("is_valid", True),
+            violations=constraints.get("dependencies", {}).get("violations", []),
+            summary="Dependency validation",
+            satisfaction_rate=constraints.get("dependencies", {}).get("satisfaction_rate", 100.0),
+            total_dependencies=constraints.get("dependencies", {}).get("total_dependencies", 0),
+            satisfied_dependencies=constraints.get("dependencies", {}).get("satisfied_dependencies", 0)
+        )
+        
+        resource_validation = ResourceValidation(
+            is_valid=constraints.get("resources", {}).get("is_valid", True),
+            violations=constraints.get("resources", {}).get("violations", []),
+            summary="Resource validation",
+            max_concurrent=constraints.get("resources", {}).get("max_observed", 1),
+            max_observed=constraints.get("resources", {}).get("max_observed", 1),
+            total_days=constraints.get("resources", {}).get("total_days", 0)
+        )
+        
+        # Collect all violations
+        all_violations = []
+        for constraint_type in ["deadlines", "dependencies", "resources"]:
+            if constraint_type in constraints:
+                all_violations.extend(constraints[constraint_type].get("violations", []))
+        
         validation_result = ValidationResult(
-            is_valid=validation_data["summary"]["is_feasible"],
-            violations=validation_data.get("constraints", {}).get("violations", []),
-            deadline_validation=validation_data.get("deadlines", {}),
-            dependency_validation=validation_data.get("dependencies", {}),
-            resource_validation=validation_data.get("resources", {}),
-            summary=validation_data["summary"].get("summary", "")
+            is_valid=validation_data["summary"]["overall_valid"],
+            violations=all_violations,
+            deadline_validation=deadline_validation,
+            dependency_validation=dependency_validation,
+            resource_validation=resource_validation,
+            summary=validation_data["summary"].get("summary", "Schedule validation completed")
         )
         
         # Get scoring results

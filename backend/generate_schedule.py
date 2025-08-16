@@ -6,28 +6,27 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+# Add src to Python path for CLI execution
+sys.path.insert(0, str(Path(__file__).parent / "src"))
+
 # Import backend components
-from src.core.config import load_config
-from src.core.constants import SCHEDULING_CONSTANTS
-from src.schedulers.base import Scheduler
-from src.schedulers.greedy import GreedyScheduler
-from src.schedulers.stochastic import StochasticScheduler
-from src.schedulers.lookahead import LookaheadScheduler
-from src.schedulers.backtracking import BacktrackingScheduler
-from src.schedulers.random import RandomScheduler
-from src.schedulers.heuristic import HeuristicScheduler
-from src.schedulers.optimal import OptimalScheduler
+from core.config import load_config
+from core.constants import SCHEDULING_CONSTANTS
+from core.models import SchedulerStrategy
+from planner import Planner
+from console import print_schedule_summary, print_deadline_status, print_utilization_summary
+from reports import generate_schedule_report
 
 # Constants from backend
 DEFAULT_CONFIG_PATH = "data/config.json"
 AVAILABLE_STRATEGIES = {
-    "greedy": GreedyScheduler,
-    "stochastic": StochasticScheduler,
-    "lookahead": LookaheadScheduler,
-    "backtracking": BacktrackingScheduler,
-    "random": RandomScheduler,
-    "heuristic": HeuristicScheduler,
-    "optimal": OptimalScheduler
+    "greedy": SchedulerStrategy.GREEDY,
+    "stochastic": SchedulerStrategy.STOCHASTIC,
+    "lookahead": SchedulerStrategy.LOOKAHEAD,
+    "backtracking": SchedulerStrategy.BACKTRACKING,
+    "random": SchedulerStrategy.RANDOM,
+    "heuristic": SchedulerStrategy.HEURISTIC,
+    "optimal": SchedulerStrategy.OPTIMAL
 }
 
 
@@ -97,68 +96,170 @@ def list_available_strategies() -> None:
         print(f"  - {strategy}")
 
 
-def load_configuration(config_path: str, quiet: bool = False) -> Optional[object]:
-    """Load configuration using backend infrastructure."""
-    if not quiet:
-        print(f"Loading configuration from: {config_path}")
-    
-    try:
-        config = load_config(config_path)
-        if not quiet:
-            print(f"Loaded {len(config.submissions)} submissions and {len(config.conferences)} conferences")
-        return config
-    except Exception as e:
-        print(f"Error loading configuration: {e}")
-        return None
-
-
-def create_scheduler(strategy: str, config: object) -> Optional[Scheduler]:
-    """Create scheduler instance using backend factory."""
-    try:
-        scheduler_class = AVAILABLE_STRATEGIES[strategy]
-        return scheduler_class(config)
-    except Exception as e:
-        print(f"Error creating {strategy} scheduler: {e}")
-        return None
-
-
-def handle_strategy_mode(strategy: str, config_path: str, quiet: bool) -> int:
+def handle_strategy_mode(strategy: str, config_path: str, output_path: Optional[str], quiet: bool) -> int:
     """Handle single strategy execution mode."""
     if not quiet:
         print(f"Using {strategy} scheduling strategy...")
     
-    # Load configuration
-    config = load_configuration(config_path, quiet)
-    if not config:
+    try:
+        # Create planner with configuration
+        planner = Planner(config_path)
+        
+        # Get the strategy enum
+        strategy_enum = AVAILABLE_STRATEGIES[strategy]
+        
+        # Generate schedule
+        if not quiet:
+            print(f"Generating schedule using {strategy} strategy...")
+        
+        schedule = planner.schedule(strategy_enum)
+        
+        if not schedule:
+            print("Error: No schedule was generated")
+            return 1
+        
+        # Get comprehensive metrics
+        metrics = planner.get_schedule_metrics(schedule)
+        
+        # Display results
+        if not quiet:
+            print(f"\nSchedule generated successfully!")
+            print(f"Total submissions: {metrics['total_submissions']}")
+            print(f"Duration: {metrics['duration_days']} days")
+            print(f"Quality score: {metrics['quality_score']:.2f}")
+            print(f"Efficiency score: {metrics['efficiency_score']:.2f}")
+            print(f"Penalty score: {metrics['penalty_score']:.2f}")
+            
+            # Print detailed console output
+            print_schedule_summary(schedule, planner.config)
+            print_deadline_status(schedule, planner.config)
+            print_utilization_summary(schedule, planner.config)
+        
+        # Save output if requested
+        if output_path:
+            if not quiet:
+                print(f"\nSaving schedule to: {output_path}")
+            
+            # Generate comprehensive report
+            report = planner.get_comprehensive_result(schedule, strategy_enum)
+            
+            # Save as JSON
+            output_file = Path(output_path)
+            if output_file.suffix.lower() == '.json':
+                import json
+                with open(output_file, 'w') as f:
+                    json.dump(report.model_dump(), f, indent=2, default=str)
+            else:
+                # Generate text report
+                generate_schedule_report(report, output_file)
+            
+            if not quiet:
+                print(f"Schedule saved to: {output_path}")
+        
+        return 0
+        
+    except Exception as e:
+        print(f"Error generating schedule: {e}")
         return 1
-    
-    # Create scheduler
-    scheduler = create_scheduler(strategy, config)
-    if not scheduler:
-        return 1
-    
-    # TODO: Execute scheduling and save results
-    if not quiet:
-        print(f"Successfully created {strategy} scheduler")
-    
-    return 0
 
 
-def handle_compare_mode(config_path: str, quiet: bool) -> int:
+def handle_compare_mode(config_path: str, output_path: Optional[str], quiet: bool) -> int:
     """Handle strategy comparison mode."""
     if not quiet:
         print("Comparing multiple scheduling strategies...")
     
-    # Load configuration
-    config = load_configuration(config_path, quiet)
-    if not config:
+    try:
+        # Create planner with configuration
+        planner = Planner(config_path)
+        
+        results = {}
+        
+        # Run each strategy
+        for strategy_name, strategy_enum in AVAILABLE_STRATEGIES.items():
+            if not quiet:
+                print(f"\nTesting {strategy_name} strategy...")
+            
+            try:
+                schedule = planner.schedule(strategy_enum)
+                if schedule:
+                    metrics = planner.get_schedule_metrics(schedule)
+                    results[strategy_name] = {
+                        'schedule': schedule,
+                        'metrics': metrics,
+                        'success': True
+                    }
+                else:
+                    results[strategy_name] = {'success': False, 'error': 'No schedule generated'}
+            except Exception as e:
+                results[strategy_name] = {'success': False, 'error': str(e)}
+        
+        # Display comparison
+        if not quiet:
+            print("\n=== Strategy Comparison Results ===")
+            for strategy_name, result in results.items():
+                if result['success']:
+                    metrics = result['metrics']
+                    print(f"\n{strategy_name.upper()}:")
+                    print(f"  Submissions: {metrics['total_submissions']}")
+                    print(f"  Duration: {metrics['duration_days']} days")
+                    print(f"  Quality: {metrics['quality_score']:.2f}")
+                    print(f"  Efficiency: {metrics['efficiency_score']:.2f}")
+                    print(f"  Penalty: {metrics['penalty_score']:.2f}")
+                else:
+                    print(f"\n{strategy_name.upper()}: FAILED - {result['error']}")
+        
+        # Save comparison results if requested
+        if output_path:
+            if not quiet:
+                print(f"\nSaving comparison results to: {output_path}")
+            
+            # Save as JSON
+            output_file = Path(output_path)
+            if output_file.suffix.lower() == '.json':
+                import json
+                # Convert results to serializable format
+                serializable_results = {}
+                for strategy_name, result in results.items():
+                    if result['success']:
+                        serializable_results[strategy_name] = {
+                            'success': True,
+                            'total_submissions': result['metrics']['total_submissions'],
+                            'duration_days': result['metrics']['duration_days'],
+                            'quality_score': result['metrics']['quality_score'],
+                            'efficiency_score': result['metrics']['efficiency_score'],
+                            'penalty_score': result['metrics']['penalty_score']
+                        }
+                    else:
+                        serializable_results[strategy_name] = result
+                
+                with open(output_file, 'w') as f:
+                    json.dump(serializable_results, f, indent=2, default=str)
+            else:
+                # Generate text comparison report
+                with open(output_file, 'w') as f:
+                    f.write("Strategy Comparison Results\n")
+                    f.write("=" * 50 + "\n\n")
+                    for strategy_name, result in results.items():
+                        f.write(f"{strategy_name.upper()}:\n")
+                        if result['success']:
+                            metrics = result['metrics']
+                            f.write(f"  Submissions: {metrics['total_submissions']}\n")
+                            f.write(f"  Duration: {metrics['duration_days']} days\n")
+                            f.write(f"  Quality: {metrics['quality_score']:.2f}\n")
+                            f.write(f"  Efficiency: {metrics['efficiency_score']:.2f}\n")
+                            f.write(f"  Penalty: {metrics['penalty_score']:.2f}\n")
+                        else:
+                            f.write(f"  FAILED: {result['error']}\n")
+                        f.write("\n")
+            
+            if not quiet:
+                print(f"Comparison results saved to: {output_path}")
+        
+        return 0
+        
+    except Exception as e:
+        print(f"Error comparing strategies: {e}")
         return 1
-    
-    # TODO: Run multiple strategies and compare results
-    if not quiet:
-        print("Strategy comparison not yet implemented")
-    
-    return 0
 
 
 def execute_scheduling_workflow(args: argparse.Namespace) -> int:
@@ -176,9 +277,9 @@ def execute_scheduling_workflow(args: argparse.Namespace) -> int:
     
     # Execute main logic
     if args.compare:
-        return handle_compare_mode(args.config, args.quiet)
+        return handle_compare_mode(args.config, args.output, args.quiet)
     elif args.strategy:
-        return handle_strategy_mode(args.strategy, args.config, args.quiet)
+        return handle_strategy_mode(args.strategy, args.config, args.output, args.quiet)
     else:
         # No valid arguments provided
         return 1

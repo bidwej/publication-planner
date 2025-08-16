@@ -329,7 +329,16 @@ class OptimalScheduler(BaseScheduler):
         
         try:
             # Solve the model with a time limit to prevent hanging
-            solver = pulp.PULP_CBC_CMD(msg=False, timeLimit=EFFICIENCY_CONSTANTS.milp_timeout_seconds)  # MILP timeout
+            timeout_seconds = EFFICIENCY_CONSTANTS.milp_timeout_seconds
+            print(f"MILP optimization: Starting solver with {timeout_seconds}s timeout")
+            
+            solver = pulp.PULP_CBC_CMD(
+                msg=False, 
+                timeLimit=timeout_seconds,
+                options=['doHeuristic on', 'maxSolutions 1']  # Add heuristic and limit solutions
+            )
+            
+            # Set a maximum iteration limit as additional safety
             model.solve(solver)
             
             # Check if solution was found

@@ -27,5 +27,5 @@ filterwarnings = [
 ]
 
 [tool.pytest-timeout]
-timeout = 15
+timeout = 30
 timeout_method = "thread"

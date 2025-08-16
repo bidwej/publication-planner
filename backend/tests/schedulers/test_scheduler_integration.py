@@ -182,7 +182,7 @@ class TestSchedulerIntegration:
                 ["python", "generate_schedule.py", "--help"],
                 capture_output=True,
                 text=True,
-                cwd=Path(__file__).parent.parent.parent.parent,
+                cwd=Path(__file__).parent.parent.parent,
                 timeout=10
             )
             
@@ -202,7 +202,7 @@ class TestSchedulerIntegration:
                 ["python", "generate_schedule.py", "--list-strategies"],
                 capture_output=True,
                 text=True,
-                cwd=Path(__file__).parent.parent.parent.parent,
+                cwd=Path(__file__).parent.parent.parent,
                 timeout=10
             )
             
