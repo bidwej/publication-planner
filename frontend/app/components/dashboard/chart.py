@@ -4,12 +4,21 @@ Contains ONLY Plotly figure generation functions.
 """
 
 from datetime import datetime
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Any
 import plotly.graph_objects as go
 from plotly.graph_objs import Figure
 
 from app.components.gantt.chart import create_gantt_chart
-from core.models import Config, Submission
+
+# Try to import backend modules, but provide fallbacks if they're not available
+try:
+    from core.models import Config, Submission
+    BACKEND_AVAILABLE = True
+except ImportError:
+    # When running the app directly, backend modules may not be available
+    BACKEND_AVAILABLE = False
+    Config = Any  # type: ignore
+    Submission = Any  # type: ignore
 
 
 def create_dashboard_chart(chart_type: str = 'timeline', config: Optional[Config] = None) -> Figure:

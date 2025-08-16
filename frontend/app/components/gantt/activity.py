@@ -6,10 +6,9 @@ Handles a single activity bar with its styling and positioning.
 import plotly.graph_objects as go
 from plotly.graph_objs import Figure
 from datetime import date, timedelta
-from typing import Dict, Optional
+from typing import Dict, Optional, Any, Union
 
-import sys
-sys.path.append('../backend/src')
+# Direct imports - these will work when PYTHONPATH includes backend/src
 from core.models import Config, Submission
 from app.components.gantt.timeline import assign_activity_rows
 

@@ -5,6 +5,7 @@ from pathlib import Path
 import json
 from datetime import date
 
+
 from typing import Dict, List, Any, Optional
 
 
@@ -456,11 +457,12 @@ class TestConfigIntegration:
         mock_open_calls = []
         def mock_open(*args, **kwargs):
             mock_open_calls.append(args)
-            # Create a proper mock file object that supports context manager
-            mock_file = Mock()
-            mock_file.__enter__ = Mock(return_value=mock_file)
-            mock_file.__exit__ = Mock(return_value=None)
-            mock_file.write = Mock()
+            # Create a simple file object that supports context manager
+            mock_file = type('MockFile', (), {
+                '__enter__': lambda self: self,
+                '__exit__': lambda self, *args: None,
+                'write': lambda self, *args: None
+            })()
             return mock_file
         
         monkeypatch.setattr('builtins.open', mock_open)

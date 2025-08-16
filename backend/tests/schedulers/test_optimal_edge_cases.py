@@ -92,7 +92,7 @@ class TestOptimalSchedulerEdgeCases:
         def mock_get_duration_days(*args, **kwargs):
             return 0
         
-        monkeypatch.setattr('src.core.models.Submission.get_duration_days', mock_get_duration_days)
+        monkeypatch.setattr('core.models.Submission.get_duration_days', mock_get_duration_days)
         
         scheduler: Any = OptimalScheduler(test_data_config)
         schedule = scheduler.schedule()
@@ -153,7 +153,7 @@ class TestOptimalSchedulerEdgeCases:
         def mock_get_duration_days(*args, **kwargs):
             return 365
         
-        monkeypatch.setattr('src.core.models.Submission.get_duration_days', mock_get_duration_days)
+        monkeypatch.setattr('core.models.Submission.get_duration_days', mock_get_duration_days)
         
         scheduler: Any = OptimalScheduler(test_data_config)
         schedule = scheduler.schedule()
@@ -307,7 +307,7 @@ class TestOptimalSchedulerEdgeCases:
         def mock_get_duration_days(*args, **kwargs):
             return -1
         
-        monkeypatch.setattr('src.core.models.Submission.get_duration_days', mock_get_duration_days)
+        monkeypatch.setattr('core.models.Submission.get_duration_days', mock_get_duration_days)
         
         scheduler: Any = OptimalScheduler(test_data_config)
         schedule = scheduler.schedule()
