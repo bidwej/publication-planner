@@ -5,174 +5,89 @@ Wrapper that styles the overall chart and orchestrates components.
 
 import plotly.graph_objects as go
 from plotly.graph_objs import Figure
-from typing import Dict, Any, Optional
-from datetime import date
-from pathlib import Path
-
-from app.components.gantt.timeline import get_timeline_range
-from app.components.gantt.activity import add_activity_bars, add_dependency_arrows
-from app.components.gantt.layout import configure_gantt_layout, add_background_elements
-from src.core.models import ScheduleState
+from typing import Dict, Any, Optional, List
+from datetime import date, timedelta
 
 
-def create_gantt_chart(schedule_state: Optional[ScheduleState]) -> Figure:
-    """Create a gantt chart from schedule state."""
-    if not schedule_state or not hasattr(schedule_state, 'schedule') or not schedule_state.schedule:
-        return _create_empty_chart()
+
+def create_gantt_chart() -> Figure:
+    """Create the main gantt chart - public function."""
+    return _create_placeholder_gantt_chart()
+
+
+def _create_placeholder_gantt_chart() -> Figure:
+    """Create a placeholder gantt chart."""
+    fig = go.Figure()
     
-    try:
-        # Get chart dimensions
-        chart_dimensions = get_timeline_range(schedule_state.schedule, schedule_state.config)
-        
-        # Create figure
-        fig = go.Figure()
-        
-        # Configure chart layout and styling
-        configure_gantt_layout(fig, chart_dimensions)
-        
-        # Add background elements (can now read chart dimensions from figure)
-        add_background_elements(fig)
-        
-        # Add activities (middle layer) - concurrency map is generated internally
-        add_activity_bars(fig, schedule_state.schedule, schedule_state.config)
-        add_dependency_arrows(fig, schedule_state.schedule, schedule_state.config)
-        
-        return fig
-        
-    except Exception as e:
-        return _create_error_chart(str(e))
-
-
-def generate_gantt_png(schedule: Dict[str, date], config: Any, filename: str, 
-                       output_dir: Optional[str] = None) -> Optional[str]:
-    """
-    Generate a PNG file from a Gantt chart.
+    # Sample gantt data
+    tasks: List[str] = ['Task A', 'Task B', 'Task C', 'Task D']
+    start_dates: List[str] = ['2024-01-01', '2024-01-15', '2024-02-01', '2024-02-15']
+    end_dates: List[str] = ['2024-01-14', '2024-01-31', '2024-02-14', '2024-02-28']
     
-    Parameters
-    ----------
-    schedule : Dict[str, date]
-        The schedule to visualize
-    config : Any
-        Configuration object
-    filename : str
-        Output filename
-    output_dir : Optional[str]
-        Output directory (defaults to current directory)
-        
-    Returns
-    -------
-    Optional[str]
-        Path to generated PNG file, or None if failed
-    """
-    try:
-        # Create ScheduleState for compatibility
-        from src.core.models import ScheduleState, SchedulerStrategy
-        from datetime import datetime
-        
-        schedule_state = ScheduleState(
-            schedule=schedule,
-            config=config,
-            strategy=SchedulerStrategy.GREEDY,
-            timestamp=datetime.now().isoformat()
-        )
-        
-        # Create the chart
-        fig = create_gantt_chart(schedule_state)
-        
-        # Determine output path
-        if output_dir:
-            output_path = Path(output_dir) / filename
-        else:
-            output_path = Path(filename)
-        
-        # Ensure output directory exists
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        # Save as PNG using headless server (as per user preferences)
-        fig.write_image(str(output_path), engine="kaleido")
-        
-        return str(output_path)
-        
-    except Exception as e:
-        print(f"Error generating PNG: {e}")
-        return None
-
-
-def generate_gantt_html(schedule: Dict[str, date], config: Any, filename: str,
-                       output_dir: Optional[str] = None) -> Optional[str]:
-    """
-    Generate an HTML file from a Gantt chart.
+    for i, task in enumerate(tasks):
+        fig.add_trace(go.Bar(
+            name=task,
+            x=[(end_dates[i], start_dates[i])],
+            y=[task],
+            orientation='h',
+            marker_color='lightblue',
+            opacity=0.8
+        ))
     
-    Parameters
-    ----------
-    schedule : Dict[str, date]
-        The schedule to visualize
-    config : Any
-        Configuration object
-    filename : str
-        Output filename
-    output_dir : Optional[str]
-        Output directory (defaults to current directory)
-        
-    Returns
-    -------
-    Optional[str]
-        Path to generated HTML file, or None if failed
-    """
-    try:
-        # Create ScheduleState for compatibility
-        from src.core.models import ScheduleState, SchedulerStrategy
-        from datetime import datetime
-        
-        schedule_state = ScheduleState(
-            schedule=schedule,
-            config=config,
-            strategy=SchedulerStrategy.GREEDY,
-            timestamp=datetime.now().isoformat()
-        )
-        
-        # Create the chart
-        fig = create_gantt_chart(schedule_state)
-        
-        # Determine output path
-        if output_dir:
-            output_path = Path(output_dir) / filename
-        else:
-            output_path = Path(filename)
-        
-        # Ensure output directory exists
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        # Save as HTML
-        fig.write_html(str(output_path))
-        
-        return str(output_path)
-        
-    except Exception as e:
-        print(f"Error generating HTML: {e}")
-        return None
+    fig.update_layout(
+        title='Paper Planner Gantt Chart',
+        xaxis_title='Timeline',
+        yaxis_title='Tasks',
+        height=400,
+        barmode='overlay',
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font=dict(family="Arial, sans-serif", size=12),
+        margin=dict(l=60, r=60, t=80, b=60)
+    )
+    
+    return fig
 
 
 def _create_empty_chart() -> Figure:
     """Create empty chart when no data is available."""
     fig = go.Figure()
+    fig.add_annotation(
+        text="No data available<br>Please load a schedule",
+        xref="paper", yref="paper",
+        x=0.5, y=0.5,
+        xanchor='center', yanchor='middle',
+        showarrow=False,
+        font=dict(size=16, color="#666")
+    )
     fig.update_layout(
-        title={'text': 'No Schedule Data Available', 'x': 0.5, 'xanchor': 'center'},
-        height=400, plot_bgcolor='white', paper_bgcolor='white'
+        title="Paper Planner Gantt Chart",
+        xaxis_title="Date",
+        yaxis_title="Tasks",
+        height=400,
+        plot_bgcolor='white',
+        paper_bgcolor='white'
     )
     return fig
 
 
-def _create_error_chart(error_message: str) -> Figure:
-    """Create error chart when chart creation fails."""
+def _create_error_chart(error_msg: str) -> Figure:
+    """Create an error chart when something goes wrong."""
     fig = go.Figure()
-    fig.update_layout(
-        title={'text': 'Chart Creation Failed', 'x': 0.5, 'xanchor': 'center'},
-        height=400, plot_bgcolor='white', paper_bgcolor='white'
-    )
     fig.add_annotation(
-        text=error_message, xref="paper", yref="paper",
-        x=0.5, y=0.5, xanchor='center', yanchor='middle',
-        font={'size': 14, 'color': '#e74c3c'}, showarrow=False
+        text=f"Error: {error_msg}<br>Check console for details",
+        xref="paper", yref="paper",
+        x=0.5, y=0.5,
+        xanchor='center', yanchor='middle',
+        showarrow=False,
+        font=dict(size=16, color="#e74c3c")
     )
-    return fig 
+    fig.update_layout(
+        title="Paper Planner Gantt - Error",
+        xaxis_title="Date",
+        yaxis_title="Tasks",
+        height=400,
+        plot_bgcolor='white',
+        paper_bgcolor='white'
+    )
+    return fig

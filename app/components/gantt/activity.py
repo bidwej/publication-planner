@@ -9,7 +9,7 @@ from datetime import date, timedelta
 from typing import Dict, Optional
 
 from src.core.models import Config, Submission
-from app.components.gantt.timeline import assign_activity_rows
+from app.components.gantt.timeline import _assign_activity_rows
 
 
 def add_activity_bars(fig: Figure, schedule: Dict[str, date], config: Config) -> None:
@@ -18,7 +18,7 @@ def add_activity_bars(fig: Figure, schedule: Dict[str, date], config: Config) ->
         return
     
     # Get activity row assignments for proper positioning
-    activity_rows = assign_activity_rows(schedule, config)
+    activity_rows = _assign_activity_rows(schedule, config)
     
     # Add bars for each submission
     for submission_id, start_date in schedule.items():
@@ -33,31 +33,20 @@ def add_activity_bars(fig: Figure, schedule: Dict[str, date], config: Config) ->
             
             # Add label
             _add_bar_label(fig, submission, start_date, end_date, activity_rows[submission_id])
-
-
-def add_dependency_arrows(fig: Figure, schedule: Dict[str, date], config: Config) -> None:
-    """Add dependency arrows between activities."""
-    if not schedule:
-        return
-    
-    # Get activity row assignments for proper positioning
-    activity_rows = assign_activity_rows(schedule, config)
-    
-    # Add arrows for each submission
-    for submission_id, start_date in schedule.items():
-        submission = config.submissions_dict.get(submission_id)
-        if submission and submission.depends_on:
-            for dep_id in submission.depends_on:
-                if dep_id in schedule:
-                    # Calculate end date of dependency
-                    dep_submission = config.submissions_dict.get(dep_id)
-                    if dep_submission:
-                        dep_duration = max(dep_submission.get_duration_days(config), 7)
-                        dep_end_date = schedule[dep_id] + timedelta(days=dep_duration)
-                        
-                        # Draw arrow from end of dependency to start of dependent submission
-                        _add_dependency_arrow(fig, dep_end_date, activity_rows[dep_id], 
-                                            start_date, activity_rows[submission_id])
+            
+            # Add dependency arrows
+            if submission.depends_on:
+                for dep_id in submission.depends_on:
+                    if dep_id in schedule:
+                        # Calculate end date of dependency
+                        dep_submission = config.submissions_dict.get(dep_id)
+                        if dep_submission:
+                            dep_duration = max(dep_submission.get_duration_days(config), 7)
+                            dep_end_date = schedule[dep_id] + timedelta(days=dep_duration)
+                            
+                            # Draw arrow from end of dependency to start of dependent submission
+                            _add_dependency_arrow(fig, dep_end_date, activity_rows[dep_id], 
+                                                start_date, activity_rows[submission_id])
 
 
 def _add_activity_bar(fig: Figure, submission: Submission, start_date: date, end_date: date, row: int) -> None:
@@ -197,13 +186,10 @@ def _get_submission_color(submission: Submission) -> str:
         return "#85c1e9" if is_engineering else "#bb8fce"
     elif submission.kind.value == "poster":
         # Same color family but will be used with transparent fill and pattern
-        return "#3498db" if is_engineering else "#9b59b6"
+        return "#3498db" if is_engineering else "#bb8fce"
     else:
         # Fallback for any other types
         return "#95a5a6"
-
-
-
 
 
 def _get_display_title(submission: Submission, max_length: int = 20) -> str:

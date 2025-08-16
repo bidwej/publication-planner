@@ -1,167 +1,106 @@
 """
-Chart layout configuration and background styling for Gantt charts.
-Handles chart dimensions, axes, margins, title configuration, and background elements.
+Gantt layout components for Paper Planner.
 """
 
-from datetime import date, timedelta
-import plotly.graph_objects as go
-from plotly.graph_objs import Figure
+from dash import html, dcc, Input, Output, callback, State, callback_context
 from typing import Dict, Any
+from datetime import datetime
+from app.components.gantt.chart import (
+    create_gantt_chart,
+    _create_error_chart
+)
+from app.components.export_controls.export_controls import create_export_controls, export_chart
+from app.storage import save_state, load_state
 
 
+def create_gantt_layout() -> html.Div:
+    """Create the gantt-only layout with minimal UI."""
+    return html.Div([
+        _create_gantt_header(),
+        _create_gantt_graph(),
+        create_export_controls('gantt-chart', 'gantt_chart'),
+        html.Div(id="gantt-storage-status", className="storage-status")
+    ], className="gantt-container")
 
 
-def get_title_text(chart_dimensions: Dict[str, Any]) -> str:
-    """Generate title text for the chart."""
-    min_date = chart_dimensions['min_date']
-    max_date = chart_dimensions['max_date']
-    
-    if min_date.year == max_date.year:
-        return f"Paper Submission Timeline: {min_date.strftime('%b %Y')} - {max_date.strftime('%b %Y')}"
-    else:
-        return f"Paper Submission Timeline: {min_date.strftime('%b %Y')} - {max_date.strftime('%b %Y')}"
+def _create_gantt_header() -> html.H1:
+    """Create the gantt chart header."""
+    return html.H1("📚 Paper Planner - Gantt", className="gantt-header")
 
 
-def configure_gantt_layout(fig: Figure, chart_dimensions: Dict[str, Any]) -> None:
-    """Configure the chart layout with proper styling and dimensions."""
-    title_text = get_title_text(chart_dimensions)
-    max_concurrency = chart_dimensions['max_concurrency']
-    
-    fig.update_layout(
-        title={
-            'text': title_text,
-            'x': 0.5, 'xanchor': 'center',
-            'font': {'size': 18, 'color': '#2c3e50'}
-        },
-        height=400 + max_concurrency * 30,
-        margin=dict(l=80, r=80, t=100, b=80),
-        plot_bgcolor='white',
-        paper_bgcolor='white',
-        xaxis={
-            'type': 'date',
-            'range': [chart_dimensions['min_date'], chart_dimensions['max_date']],
-            'title': 'Timeline',
-            'showgrid': True, 'gridcolor': '#ecf0f1'
-        },
-        yaxis={
-            'title': 'Activities',
-            'range': [-0.5, max_concurrency + 0.5],
-            'tickmode': 'linear', 'dtick': 1,
-            'showgrid': True, 'gridcolor': '#ecf0f1'
-        },
-        showlegend=False
+def _create_gantt_graph() -> dcc.Graph:
+    """Create the gantt chart graph component."""
+    return dcc.Graph(
+        id='gantt-chart',
+        className="gantt-chart",
+        config={
+            'displayModeBar': True,
+            'displaylogo': False,
+            'modeBarButtonsToRemove': ['pan2d', 'lasso2d', 'select2d'],
+            'toImageButtonOptions': {
+                'format': 'png',
+                'filename': 'paper_planner_gantt',
+                'height': 800,
+                'width': 1400,
+                'scale': 2
+            }
+        }
     )
 
 
-def add_background_elements(fig: Figure) -> None:
-    """Add background elements to the chart."""
-    # Get chart dimensions from the figure (layout is now configured)
-    x_range = getattr(fig.layout, 'xaxis', None)
-    if not x_range or not hasattr(x_range, 'range') or not x_range.range:
-        print("Warning: No x-axis range found in figure layout")
-        return
-    
-    start_date_val = x_range.range[0]
-    end_date_val = x_range.range[1]
-    
-    # Handle both string dates and date objects
-    if isinstance(start_date_val, str):
-        try:
-            start_date = date.fromisoformat(start_date_val)
-        except ValueError:
-            print(f"Warning: Invalid date format in x-axis range: {start_date_val}")
-            return
-    elif isinstance(start_date_val, date):
-        start_date = start_date_val
-    else:
-        print(f"Warning: Unexpected date type in x-axis range: {type(start_date_val)}")
-        return
-    
-    if isinstance(end_date_val, str):
-        try:
-            end_date = date.fromisoformat(end_date_val)
-        except ValueError:
-            print(f"Warning: Invalid date format in x-axis range: {end_date_val}")
-            return
-    elif isinstance(end_date_val, date):
-        end_date = end_date_val
-    else:
-        print(f"Warning: Unexpected date type in x-axis range: {type(end_date_val)}")
-        return
-    
-    # Get y-axis range for full chart coverage
-    y_range = getattr(fig.layout, 'yaxis', None)
-    if not y_range or not hasattr(y_range, 'range') or not y_range.range:
-        print("Warning: No y-axis range found in figure layout")
-        return
-    
-    y_min = y_range.range[0]
-    y_max = y_range.range[1]
-    
-    # Add working days background
-    _add_working_days_background(fig, start_date, end_date, y_min, y_max)
-    
-    # Add monthly markers
-    _add_monthly_markers(fig, start_date, end_date, y_min, y_max)
 
 
-def _add_working_days_background(fig: Figure, start_date: date, end_date: date, y_min: float, y_max: float) -> None:
-    """Add alternating working days background."""
-    current_date = start_date
-    week_count = 0
+
+# Dash Callbacks
+@callback(
+    Output('gantt-chart', 'figure'),
+    Input('gantt-chart', 'id'),
+    prevent_initial_call=False
+)
+def update_gantt_chart(chart_id):
+    """Update gantt chart."""
+    try:
+        return create_gantt_chart()
+    except Exception as e:
+        return _create_error_chart(str(e))
+
+
+@callback(
+    Output('export-gantt-chart-status', 'children'),
+    Input('export-gantt-chart-png-btn', 'n_clicks'),
+    Input('export-gantt-chart-html-btn', 'n_clicks'),
+    State('gantt-chart', 'figure'),
+    prevent_initial_call=True
+)
+def handle_gantt_export(n_clicks_png, n_clicks_html, figure):
+    """Handle gantt chart export."""
+    ctx = callback_context
+    if not ctx.triggered:
+        return ""
     
-    while current_date <= end_date:
-        # Alternate weeks for visual clarity
-        if week_count % 2 == 0:
-            # Add light background for even weeks
-            week_end = min(current_date + timedelta(days=6), end_date)
-            
-            fig.add_shape(
-                type="rect",
-                x0=current_date,
-                x1=week_end,
-                y0=y_min - 0.5,  # Cover full chart height
-                y1=y_max + 0.5,
-                fillcolor='rgba(236, 240, 241, 0.3)',
-                line=dict(width=0),
-                layer='below'
-            )
-        
-        current_date += timedelta(days=7)
-        week_count += 1
+    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    return export_chart(button_id, figure, 'gantt_chart')
 
 
-def _add_monthly_markers(fig: Figure, start_date: date, end_date: date, y_min: float, y_max: float) -> None:
-    """Add monthly marker lines and labels for timeline orientation."""
-    # Add monthly markers
-    current_date = start_date.replace(day=1)
-    while current_date <= end_date:
-        if current_date >= start_date:
-            fig.add_shape(
-                type="line",
-                x0=current_date,
-                x1=current_date,
-                y0=y_min - 0.5,  # Cover full chart height
-                y1=y_max + 0.5,
-                line=dict(color='rgba(189, 195, 199, 0.5)', width=1, dash='dot'),
-                layer='below'
-            )
-            
-            # Add month label
-            fig.add_annotation(
-                text=current_date.strftime('%b %Y'),
-                x=current_date,
-                y=y_max + 1,  # Position above the chart
-                xanchor='center',
-                yanchor='bottom',
-                font={'size': 10, 'color': '#7f8c8d'},
-                bgcolor='rgba(255, 255, 255, 0.8)',
-                bordercolor='rgba(0, 0, 0, 0.1)',
-                borderwidth=1
-            )
-        
-        # Move to next month
-        if current_date.month == 12:
-            current_date = current_date.replace(year=current_date.year + 1, month=1)
-        else:
-            current_date = current_date.replace(month=current_date.month + 1)
+@callback(
+    Output('gantt-storage-status', 'children'),
+    Input('gantt-chart', 'figure'),
+    prevent_initial_call=False
+)
+def save_gantt_state(figure):
+    """Save gantt chart state to storage."""
+    try:
+        state = {
+            'chart_data': figure,
+            'timestamp': datetime.now().isoformat()
+        }
+        save_state('gantt', state)
+        return "✅ Gantt state saved"
+    except Exception as e:
+        return f"❌ Error saving state: {e}"
+
+
+
+
+
+

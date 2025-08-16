@@ -9,16 +9,16 @@ from app.main import main, create_timeline_app
 class TestMain:
     """Test cases for main app functionality."""
     
-    @patch('app.main.create_timeline_app')
-    def test_main_timeline_mode(self, mock_create_timeline: Mock) -> None:
-        """Test main function in timeline mode."""
+    @patch('app.components.dashboard.layout.create_gantt_layout')
+    def test_main_gantt_mode(self, mock_create_gantt: Mock) -> None:
+        """Test main function in gantt mode."""
         mock_app: Mock = Mock()
-        mock_create_timeline.return_value = mock_app
+        mock_create_gantt.return_value = mock_app
         
         with patch('sys.argv', ['main.py', '--port', '8051']):
             main()
         
-        mock_create_timeline.assert_called_once()
+        mock_create_gantt.assert_called_once()
         mock_app.run.assert_called_once()
     
     @patch('app.main.dash.Dash')

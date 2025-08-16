@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 
 from src.core.models import ScheduleState
+from datetime import datetime
 
 
 class ScheduleStorage:
@@ -198,3 +199,92 @@ class StorageManager:
         except Exception as e:
             print("Error deleting schedule: %s", e)
             return False
+
+
+# Component state storage using SQLite (consistent with schedule storage)
+def save_state(component_name: str, state_data: Dict[str, Any]) -> bool:
+    """Save component state to SQLite storage.
+    
+    Args:
+        component_name: Name of the component (e.g., 'dashboard', 'gantt', 'metrics')
+        state_data: State data to save
+    
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        data_dir = Path.home() / ".paper_planner"
+        data_dir.mkdir(exist_ok=True)
+        
+        db_path = data_dir / "component_states.db"
+        
+        with sqlite3.connect(str(db_path)) as conn:
+            # Create component states table if it doesn't exist
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS component_states (
+                    component_name TEXT,
+                    state_key TEXT,
+                    state_value TEXT,
+                    timestamp TEXT,
+                    PRIMARY KEY (component_name, state_key)
+                )
+            """)
+            
+            # Save each state key-value pair
+            timestamp = datetime.now().isoformat()
+            for key, value in state_data.items():
+                if key != 'timestamp':  # Don't save timestamp as a state key
+                    conn.execute("""
+                        INSERT OR REPLACE INTO component_states 
+                        (component_name, state_key, state_value, timestamp)
+                        VALUES (?, ?, ?, ?)
+                    """, (component_name, key, json.dumps(value), timestamp))
+            
+            conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error saving {component_name} state: {e}")
+        return False
+
+
+def load_state(component_name: str) -> Dict[str, Any]:
+    """Load component state from SQLite storage.
+    
+    Args:
+        component_name: Name of the component (e.g., 'dashboard', 'gantt', 'metrics')
+    
+    Returns:
+        State data dictionary, or empty dict if not found
+    """
+    try:
+        data_dir = Path.home() / ".paper_planner"
+        db_path = data_dir / "component_states.db"
+        
+        if not db_path.exists():
+            return {}
+        
+        with sqlite3.connect(str(db_path)) as conn:
+            cursor = conn.execute("""
+                SELECT state_key, state_value, timestamp 
+                FROM component_states 
+                WHERE component_name = ?
+                ORDER BY timestamp DESC
+            """, (component_name,))
+            
+            state_data = {}
+            latest_timestamp = None
+            for row in cursor.fetchall():
+                key, value, timestamp = row
+                latest_timestamp = timestamp
+                try:
+                    state_data[key] = json.loads(value)
+                except json.JSONDecodeError:
+                    state_data[key] = value  # Fallback to raw value
+            
+            if state_data and latest_timestamp:
+                state_data['timestamp'] = latest_timestamp
+            
+            return state_data
+    except Exception as e:
+        print(f"Error loading {component_name} state: {e}")
+        return {}

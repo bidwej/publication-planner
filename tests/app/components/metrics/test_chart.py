@@ -70,27 +70,32 @@ class TestMetricsChart:
             "quality": 88.0
         }
     
-    def test_generate_metrics_chart_success(self, sample_config, sample_schedule, sample_analysis):
+    def test_create_metrics_chart_success(self, sample_config, sample_schedule, sample_analysis):
         """Test successful metrics chart generation."""
+        # Mock the dependencies
         with patch('app.components.metrics.chart.load_config', return_value=sample_config), \
              patch('app.components.metrics.chart.GreedyScheduler') as mock_scheduler, \
-             patch('app.components.metrics.chart.analyze_schedule', return_value=sample_analysis), \
-             patch('app.components.metrics.chart._create_metrics_figure') as mock_create_figure:
+             patch('app.components.metrics.chart.ScheduleAnalysis') as mock_analysis:
             
-            # Mock scheduler
+            # Set up mocks
             mock_scheduler_instance = Mock()
-            mock_scheduler_instance.schedule.return_value = sample_schedule
             mock_scheduler.return_value = mock_scheduler_instance
+            mock_scheduler_instance.schedule.return_value = sample_schedule
             
-            # Mock figure creation
-            mock_figure = Mock()
-            mock_create_figure.return_value = mock_figure
+            mock_analysis_instance = Mock()
+            mock_analysis.return_value = mock_analysis_instance
+            mock_analysis_instance.analyze.return_value = sample_analysis
             
-            # Test
+            # Call the function
             result = generate_metrics_chart()
             
-            assert result == mock_figure
-            mock_scheduler_instance.schedule.assert_called_once()
+            # Verify result
+            assert result is not None
+            assert isinstance(result, go.Figure)
+            assert result.layout.title.text == "Paper Planner Metrics Dashboard"
+            
+            # Verify subplots were added
+            assert len(result.data) > 0
     
     def test_generate_metrics_chart_no_schedule(self, sample_config):
         """Test metrics chart generation when no schedule is generated."""

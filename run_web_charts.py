@@ -62,10 +62,9 @@ def run_timeline() -> int:
             logger.error("[TIP] Check that all dependencies are installed")
             return 1
         
-        # Set up arguments for timeline mode
+        # Set up arguments for gantt mode
         sys.argv = ['main.py', '--port', '8051']
-        
-        logger.info("[CHART] Starting timeline mode on port 8051")
+        logger.info("[CHART] Starting gantt mode on port 8051")
         logger.info("[WEB] Timeline will be available at: http://127.0.0.1:8051")
         logger.info("[REFRESH] Press Ctrl+C to stop the server")
         logger.info("-" * 50)
@@ -119,6 +118,7 @@ def _generate_chart_with_timeline_range(schedule: Dict[str, date], config, filen
     """Generate a chart with standardized timeline range."""
     try:
         from app.components.gantt.chart import create_gantt_chart
+        from app.exporters import export_chart_png
         
         # Create the chart with the forced timeline range
         from src.core.models import ScheduleState, SchedulerStrategy
@@ -133,17 +133,16 @@ def _generate_chart_with_timeline_range(schedule: Dict[str, date], config, filen
         
         fig = create_gantt_chart(schedule_state)
         
-        # Save as PNG
-        fig.write_image(
-            filename, 
-            width=1200, 
-            height=600, 
-            scale=2,
-            format='png'
-        )
+        # Save as PNG using the new exporters module
+        output_path = export_chart_png(fig, filename)
         
-        print("✅ Gantt chart saved as %s", filename)
-        return filename
+        if output_path:
+            print(f"✅ Gantt chart saved as {filename}")
+            return output_path
+        else:
+            print(f"❌ Failed to save Gantt chart as {filename}")
+            return ""
+            
     except Exception as e:
         print(f"❌ Error generating PNG: {e}")
         return ""
@@ -205,9 +204,21 @@ def generate_dashboard_charts(timeline_range: Optional[str] = None) -> Dict[str,
                             timeline_config
                         )
                     else:
-                        # Use default behavior
-                        from app.components.gantt.chart import generate_gantt_png
-                        output_path = generate_gantt_png(schedule, config, filename)
+                        # Use default behavior with new exporters module
+                        from app.components.gantt.chart import create_gantt_chart
+                        from app.exporters import export_chart_png
+                        from src.core.models import ScheduleState, SchedulerStrategy
+                        from datetime import datetime
+                        
+                        schedule_state = ScheduleState(
+                            schedule=schedule,
+                            config=config,
+                            strategy=SchedulerStrategy.GREEDY,
+                            timestamp=datetime.now().isoformat()
+                        )
+                        
+                        fig = create_gantt_chart(schedule_state)
+                        output_path = export_chart_png(fig, filename)
                     
                     if output_path:
                         print(f"[OK] {scheduler_name} chart saved as {filename}")
@@ -262,9 +273,21 @@ def generate_timeline_chart(timeline_range: Optional[str] = None) -> bool:
                     timeline_config
                 )
             else:
-                # Use default behavior
-                from app.components.gantt.chart import generate_gantt_png
-                output_path = generate_gantt_png(schedule, config, filename)
+                # Use default behavior with new exporters module
+                from app.components.gantt.chart import create_gantt_chart
+                from app.exporters import export_chart_png
+                from src.core.models import ScheduleState, SchedulerStrategy
+                from datetime import datetime
+                
+                schedule_state = ScheduleState(
+                    schedule=schedule,
+                    config=config,
+                    strategy=SchedulerStrategy.GREEDY,
+                    timestamp=datetime.now().isoformat()
+                )
+                
+                fig = create_gantt_chart(schedule_state)
+                output_path = export_chart_png(fig, filename)
             
             if output_path:
                 print(f"[OK] Timeline chart saved as {filename}")
@@ -283,12 +306,8 @@ def generate_timeline_chart(timeline_range: Optional[str] = None) -> bool:
 def main() -> None:
     """Main entry point with mode and chart generation options."""
     parser = argparse.ArgumentParser(description="Paper Planner Web Charts Runner")
-    parser.add_argument(
-        '--mode',
-        choices=['dashboard', 'timeline'],
-        default='dashboard',
-        help='Mode to run: dashboard or timeline (default: dashboard)'
-    )
+    parser.add_argument('--mode', type=str, choices=['dashboard', 'gantt'], default='dashboard',
+                       help='Mode to run: dashboard or gantt (default: dashboard)')
     parser.add_argument(
         '--generate',
         action='store_true',
