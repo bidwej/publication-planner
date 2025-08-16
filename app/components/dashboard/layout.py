@@ -3,146 +3,168 @@ Dashboard layout components for Paper Planner.
 """
 
 from dash import html, dcc, Input, Output, callback, State, callback_context
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from datetime import datetime
+from plotly.graph_objs import Figure
 from app.components.dashboard.chart import (
     create_dashboard_chart,
     _create_error_chart
 )
-from app.components.export_controls.export_controls import create_export_controls, export_chart
-from app.storage import save_state, load_state
+from app.components.exporters.controls import create_export_controls
+from app.storage import get_state_manager
+from src.core.models import Config
 
 
-def create_dashboard_layout() -> html.Div:
-    """Create the dashboard layout with dynamic chart."""
+def create_dashboard_layout(config: Optional[Config] = None) -> html.Div:
+    """Create the dashboard layout with dynamic chart.
+    
+    Args:
+        config: Configuration object containing submissions, conferences, etc.
+    
+    Returns:
+        Dashboard layout as html.Div
+    """
+    # Create initial chart with real data
+    initial_figure = create_dashboard_chart('timeline', config)
+    
+    # Store component state using clean state manager
+    if config:
+        get_state_manager().save_component_state('dashboard', config, 'timeline')
+    
     return html.Div([
         _create_header(),
         _create_info_panels(),
-        _create_dashboard_graph(),
+        dcc.Graph(
+            id='dashboard-chart',
+            figure=initial_figure,
+            className="dashboard-chart",
+            config={
+                'displayModeBar': True,
+                'displaylogo': False,
+                'modeBarButtonsToRemove': ['pan2d', 'lasso2d', 'select2d'],
+                'toImageButtonOptions': {
+                    'format': 'png',
+                    'filename': 'dashboard_chart',
+                    'height': 800,
+                    'width': 1200,
+                    'scale': 2
+                }
+            }
+        ),
+        _create_controls(),
         create_export_controls('dashboard-chart', 'dashboard_chart'),
-        _create_data_controls(),
-        html.Div(id="dashboard-storage-status", className="storage-status")
-    ], className="dashboard-container")
+        html.Div(id="dashboard-storage-status", className="storage-status"),
+        # Store refresh timestamp for debugging
+        html.Div(id="dashboard-last-refresh", style={"display": "none"})
+    ], className="dashboard-layout")
 
 
 def _create_header() -> html.Div:
-    """Create the dashboard header."""
+    """Create dashboard header."""
     return html.Div([
-        html.H1("📚 Paper Planner - Dashboard", className="dashboard-title"),
-        html.P("Real Paper Planner data with concurrency, dependencies, and scheduling logic",
-               className="dashboard-subtitle")
+        html.H1("Paper Planner Dashboard", className="dashboard-title"),
+        html.P("Interactive visualization of your paper submission schedule", className="dashboard-subtitle")
     ], className="dashboard-header")
 
 
 def _create_info_panels() -> html.Div:
-    """Create the info panels section."""
-    return html.Div([
-        _create_what_it_shows_panel(),
-        _create_data_sources_panel()
-    ], className="info-panels-container")
-
-
-def _create_what_it_shows_panel() -> html.Div:
-    """Create the 'What This Shows' info panel."""
-    return html.Div([
-        html.H3("🔧 What This Shows:", className="panel-title blue"),
-        html.Ul([
-            html.Li("Real mods (engineering work items) from your data"),
-            html.Li("Real papers with actual dependencies"),
-            html.Li("Conference deadlines and abstract→paper workflows"),
-            html.Li("Concurrency constraints (max 2 concurrent per author)"),
-            html.Li("Resource allocation between Engineering and ED teams")
-        ])
-    ], className="info-panel blue-panel")
-
-
-def _create_data_sources_panel() -> html.Div:
-    """Create the data sources info panel."""
-    return html.Div([
-        html.H3("📊 Demo Data Sources:", className="panel-title green"),
-        html.Ul([
-            html.Li("Mods: app/assets/demo/data/mod_papers.json"),
-            html.Li("Papers: app/assets/demo/data/ed_papers.json"),
-            html.Li("Conferences: app/assets/demo/data/conferences.json"),
-            html.Li("Config: app/assets/demo/data/config.json")
-        ])
-    ], className="info-panel green-panel")
-
-
-def _create_dashboard_graph() -> dcc.Graph:
-    """Create the dashboard chart component."""
-    return dcc.Graph(
-        id='dashboard-chart',
-        className="dashboard-chart",
-        config={
-            'displayModeBar': True,
-            'displaylogo': False,
-            'modeBarButtonsToRemove': ['pan2d', 'lasso2d', 'select2d'],
-            'toImageButtonOptions': {
-                'format': 'png',
-                'filename': 'paper_planner_dashboard',
-                'height': 800,
-                'width': 1400,
-                'scale': 2
-            }
-        }
-    )
-
-
-
-
-
-def _create_data_controls() -> html.Div:
-    """Create data control inputs."""
+    """Create information panels."""
     return html.Div([
         html.Div([
-            html.Label("Data Source:", className="control-label"),
-            dcc.Dropdown(
-                id='data-source-dropdown',
-                options=[
-                    {'label': 'Demo Data', 'value': 'demo'},
-                    {'label': 'Custom Config', 'value': 'custom'}
-                ],
-                value='demo',
-                className="control-dropdown"
-            )
-        ], className="control-group"),
-        
+            html.H3("📊 Overview", className="panel-title"),
+            html.P("Track your paper submissions, deadlines, and progress", className="panel-description")
+        ], className="info-panel"),
+        html.Div([
+            html.H3("🔄 Updates", className="panel-title"),
+            html.P("Real-time data from your configuration", className="panel-description")
+        ], className="info-panel")
+    ], className="info-panels")
+
+
+def _create_controls() -> html.Div:
+    """Create dashboard controls."""
+    return html.Div([
         html.Div([
             html.Label("Chart Type:", className="control-label"),
             dcc.Dropdown(
                 id='chart-type-dropdown',
                 options=[
-                    {'label': 'Schedule Timeline', 'value': 'timeline'},
-                    {'label': 'Schedule Gantt', 'value': 'gantt'},
-                    {'label': 'Team Utilization', 'value': 'resources'},
-                    {'label': 'Project Dependencies', 'value': 'dependencies'}
+                    {'label': 'Timeline View', 'value': 'timeline'},
+                    {'label': 'Gantt Chart', 'value': 'gantt'},
+                    {'label': 'Resource Usage', 'value': 'resources'},
+                    {'label': 'Dependencies', 'value': 'dependencies'}
                 ],
                 value='timeline',
                 className="control-dropdown"
             )
         ], className="control-group"),
-        
-        html.Button("Refresh Chart", id="refresh-chart-btn", className="refresh-btn")
-    ], className="data-controls")
+        html.Div([
+            html.Button(
+                'Refresh Chart',
+                id='refresh-chart-btn',
+                className="control-button"
+            )
+        ], className="control-group")
+    ], className="dashboard-controls")
 
 
 # Dash Callbacks
+# IMPORTANT: prevent_initial_call=True prevents infinite loops
+# The initial chart is created in create_dashboard_layout() with real data
+# Callbacks only run on user interaction (refresh button, chart type change)
 @callback(
     Output('dashboard-chart', 'figure'),
     Input('refresh-chart-btn', 'n_clicks'),
-    Input('data-source-dropdown', 'value'),
     Input('chart-type-dropdown', 'value'),
-    prevent_initial_call=False
+    prevent_initial_call=True
 )
-def update_dashboard_chart(n_clicks, data_source, chart_type):
-    """Update dashboard chart based on user inputs."""
+def update_dashboard_chart(n_clicks: Optional[int], chart_type: str) -> Figure:
+    """Update dashboard chart based on user inputs.
+    
+    Args:
+        n_clicks: Number of times refresh button was clicked
+        chart_type: Selected chart type
+        
+    Returns:
+        Updated chart figure as Plotly Figure
+    """
     try:
-        return create_dashboard_chart(chart_type, data_source)
+        # Update component state
+        get_state_manager().update_component_refresh_time('dashboard')
+        
+        # For now, always use sample data since we're not loading custom configs in callbacks
+        # In a full implementation, you'd want to load the custom config here
+        config = None
+        
+        # Create chart with sample data
+        figure = create_dashboard_chart(chart_type, config)
+        
+        return figure
+        
     except Exception as e:
-        return _create_error_chart(f"Error: {e}")
+        print(f"Error updating dashboard chart: {e}")
+        return _create_error_chart(f"Error updating chart: {str(e)}")
 
 
+@callback(
+    Output('dashboard-storage-status', 'children'),
+    Input('dashboard-chart', 'figure'),
+    prevent_initial_call=True
+)
+def update_storage_status(figure: Figure) -> str:
+    """Update storage status display."""
+    try:
+        stored_state = get_state_manager().load_component_state('dashboard')
+        if stored_state and 'config_data' in stored_state:
+            config_summary = stored_state['config_data']
+            return f"✅ Config loaded: {config_summary.get('submission_count', 0)} submissions, {config_summary.get('conference_count', 0)} conferences"
+        else:
+            return "⚠️ No config in storage - using sample data"
+    except Exception as e:
+        return f"❌ Storage error: {str(e)}"
+
+
+# Export callback
 @callback(
     Output('export-dashboard-chart-status', 'children'),
     Input('export-dashboard-chart-png-btn', 'n_clicks'),
@@ -150,53 +172,30 @@ def update_dashboard_chart(n_clicks, data_source, chart_type):
     State('dashboard-chart', 'figure'),
     prevent_initial_call=True
 )
-def handle_dashboard_export(n_clicks_png, n_clicks_html, figure):
+def handle_dashboard_export(n_clicks_png: Optional[int], n_clicks_html: Optional[int], figure: Figure) -> str:
     """Handle dashboard chart export."""
     ctx = callback_context
     if not ctx.triggered:
         return ""
     
     button_id = ctx.triggered[0]['prop_id'].split('.')[0]
-    return export_chart(button_id, figure, 'dashboard_chart')
-
-
-@callback(
-    Output('data-source-dropdown', 'value'),
-    Output('chart-type-dropdown', 'value'),
-    Input('dashboard-chart', 'id'),
-    prevent_initial_call=False
-)
-def load_dashboard_state(chart_id):
-    """Load saved dashboard state from storage."""
+    
     try:
-        state = load_state('dashboard')
-        return state.get('data_source', 'demo'), state.get('chart_type', 'timeline')
+        if 'png' in button_id:
+            from app.components.exporters.controls import export_chart_png
+            result = export_chart_png(figure, "dashboard_chart.png")
+            if result:
+                return f"✅ PNG exported to: {result}"
+            else:
+                return "❌ PNG export failed"
+        elif 'html' in button_id:
+            from app.components.exporters.controls import export_chart_html
+            result = export_chart_html(figure, "dashboard_chart.html")
+            if result:
+                return f"✅ HTML exported to: {result}"
+            else:
+                return "❌ HTML export failed"
     except Exception as e:
-        print(f"❌ Error loading dashboard state: {e}")
-        return 'demo', 'timeline'
-
-
-@callback(
-    Output('dashboard-storage-status', 'children'),
-    Input('data-source-dropdown', 'value'),
-    Input('chart-type-dropdown', 'value'),
-    prevent_initial_call=True
-)
-def save_dashboard_state(data_source, chart_type):
-    """Save dashboard state to storage."""
-    try:
-        state = {
-            'data_source': data_source,
-            'chart_type': chart_type,
-            'timestamp': datetime.now().isoformat()
-        }
-        save_state('dashboard', state)
-        return f"✅ State saved: {data_source} / {chart_type}"
-    except Exception as e:
-        return f"❌ Error saving state: {e}"
-
-
-
-
-
-
+        return f"❌ Export error: {e}"
+    
+    return ""

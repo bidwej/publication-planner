@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
-from src.core.models import ScheduleState
+from src.core.models import ScheduleState, Config
 from datetime import datetime
 
 
@@ -288,3 +288,97 @@ def load_state(component_name: str) -> Dict[str, Any]:
     except Exception as e:
         print(f"Error loading {component_name} state: {e}")
         return {}
+
+
+class StateManager:
+    """Clean state manager for components."""
+    
+    def __init__(self):
+        """Initialize state manager."""
+        pass
+    
+    def save_component_state(self, component_name: str, config: Optional[Config] = None, 
+                           chart_type: str = 'timeline', custom_settings: Optional[Dict[str, Any]] = None) -> bool:
+        """Save component state with proper separation of concerns.
+        
+        Args:
+            component_name: Name of the component
+            config: Configuration object (optional)
+            chart_type: Current chart type
+            custom_settings: Any custom component settings
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            state_data = {
+                'chart_type': chart_type,
+                'last_refresh': datetime.now().isoformat(),
+                'custom_settings': custom_settings or {}
+            }
+            
+            # Only store essential config data, not the entire object
+            if config:
+                state_data['config_data'] = {
+                    'submission_count': len(config.submissions),
+                    'conference_count': len(config.conferences),
+                    'min_abstract_lead_time_days': config.min_abstract_lead_time_days,
+                    'min_paper_lead_time_days': config.min_paper_lead_time_days,
+                    'max_concurrent_submissions': config.max_concurrent_submissions
+                }
+            
+            return save_state(component_name, state_data)
+        except Exception as e:
+            print(f"Error saving component state: {e}")
+            return False
+    
+    def load_component_state(self, component_name: str) -> Dict[str, Any]:
+        """Load component state.
+        
+        Args:
+            component_name: Name of the component
+            
+        Returns:
+            Component state data
+        """
+        return load_state(component_name)
+    
+    def get_component_config_summary(self, component_name: str) -> Optional[Dict[str, Any]]:
+        """Get a summary of stored config data for a component.
+        
+        Args:
+            component_name: Name of the component
+            
+        Returns:
+            Config summary or None if not found
+        """
+        state = self.load_component_state(component_name)
+        return state.get('config_data')
+    
+    def update_component_refresh_time(self, component_name: str) -> bool:
+        """Update the last refresh time for a component.
+        
+        Args:
+            component_name: Name of the component
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            current_state = self.load_component_state(component_name)
+            current_state['last_refresh'] = datetime.now().isoformat()
+            return save_state(component_name, current_state)
+        except Exception as e:
+            print(f"Error updating refresh time: {e}")
+            return False
+
+
+# Global state manager instance - lazy loaded to avoid import-time issues
+_state_manager_instance = None
+
+def get_state_manager():
+    """Get the global state manager instance, creating it if needed."""
+    global _state_manager_instance
+    if _state_manager_instance is None:
+        _state_manager_instance = StateManager()
+    return _state_manager_instance

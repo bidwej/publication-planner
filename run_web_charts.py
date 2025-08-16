@@ -118,7 +118,7 @@ def _generate_chart_with_timeline_range(schedule: Dict[str, date], config, filen
     """Generate a chart with standardized timeline range."""
     try:
         from app.components.gantt.chart import create_gantt_chart
-        from app.exporters import export_chart_png
+        from app.components.export_controls.export_controls import export_chart_png
         
         # Create the chart with the forced timeline range
         from src.core.models import ScheduleState, SchedulerStrategy
@@ -206,7 +206,7 @@ def generate_dashboard_charts(timeline_range: Optional[str] = None) -> Dict[str,
                     else:
                         # Use default behavior with new exporters module
                         from app.components.gantt.chart import create_gantt_chart
-                        from app.exporters import export_chart_png
+                        from app.components.export_controls.export_controls import export_chart_png
                         from src.core.models import ScheduleState, SchedulerStrategy
                         from datetime import datetime
                         
@@ -273,10 +273,10 @@ def generate_timeline_chart(timeline_range: Optional[str] = None) -> bool:
                     timeline_config
                 )
             else:
-                # Use default behavior with new exporters module
-                from app.components.gantt.chart import create_gantt_chart
-                from app.exporters import export_chart_png
-                from src.core.models import ScheduleState, SchedulerStrategy
+                                        # Use default behavior with new exporters module
+                        from app.components.gantt.chart import create_gantt_chart
+                        from app.components.export_controls.export_controls import export_chart_png
+                        from src.core.models import ScheduleState, SchedulerStrategy
                 from datetime import datetime
                 
                 schedule_state = ScheduleState(

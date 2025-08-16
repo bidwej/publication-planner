@@ -4,7 +4,8 @@
       "**/.pytest_cache": true,
       "**/__pycache__": true,
       "**/third_party/*": true,
-      "**/.venv/*": true
+      "**/.venv/*": true,
+      "**/__init__.py": true
     },
     "files.watcherExclude": {
       "**/__pycache__/**": true,

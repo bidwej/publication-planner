@@ -1,6 +1,10 @@
-/* Paper Planner Web Application Styles */
+/* ==========================================================================
+   Paper Planner Web Application Styles
+   ========================================================================== */
 
-/* Reset and base styles */
+/* ==========================================================================
+   RESET & BASE STYLES
+   ========================================================================== */
 * {
     margin: 0;
     padding: 0;
@@ -14,14 +18,44 @@ body {
     line-height: 1.6;
 }
 
-/* App wrapper */
+/* ==========================================================================
+   LAYOUT & CONTAINERS
+   ========================================================================== */
 .app-wrapper {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
 }
 
-/* Header styles */
+.app-container {
+    display: flex;
+    flex: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+    gap: 2rem;
+}
+
+.app-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+/* Component-specific containers */
+.dashboard-container,
+.gantt-container,
+.metrics-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* ==========================================================================
+   HEADER & NAVIGATION
+   ========================================================================== */
 .app-header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
@@ -95,17 +129,9 @@ body {
     align-items: center;
 }
 
-/* Main container */
-.app-container {
-    display: flex;
-    flex: 1;
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 2rem;
-    gap: 2rem;
-}
-
-/* Sidebar styles */
+/* ==========================================================================
+   SIDEBAR
+   ========================================================================== */
 .app-sidebar {
     width: 320px;
     background: white;
@@ -157,25 +183,9 @@ body {
     gap: 0.5rem;
 }
 
-/* Main content */
-.app-main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
-}
-
-/* Component-specific containers */
-.dashboard-container,
-.gantt-container,
-.metrics-container {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 20px;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-/* Dashboard styles */
+/* ==========================================================================
+   DASHBOARD COMPONENTS
+   ========================================================================== */
 .dashboard-header {
     text-align: center;
     margin-bottom: 30px;
@@ -245,17 +255,9 @@ body {
     color: #555;
 }
 
-/* Chart styles */
-.dashboard-chart,
-.gantt-chart,
-.metrics-chart {
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    margin-bottom: 20px;
-}
-
-/* Gantt styles */
+/* ==========================================================================
+   GANTT COMPONENTS
+   ========================================================================== */
 .gantt-header {
     color: #2c3e50;
     font-size: 2.5rem;
@@ -264,7 +266,9 @@ body {
     font-weight: 300;
 }
 
-/* Metrics styles */
+/* ==========================================================================
+   METRICS COMPONENTS
+   ========================================================================== */
 .metrics-header {
     color: #2c3e50;
     font-size: 2.5rem;
@@ -280,30 +284,56 @@ body {
     margin-bottom: 30px;
 }
 
-/* Export Controls */
-.chart-export-btn {
-    background-color: #3498db;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    margin: 0 10px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.3s;
+.metrics-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
 }
 
-.chart-export-btn:hover {
-    background-color: #2980b9;
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
 }
 
-.export-status {
-    margin-top: 15px;
-    padding: 10px;
-    border-radius: 5px;
-    font-weight: 500;
+.metric-card {
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 1rem;
+    text-align: center;
+    border-left: 4px solid #667eea;
 }
 
+.metric-card h5 {
+    font-size: 0.8rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.metric-card p {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333;
+    margin: 0;
+}
+
+/* ==========================================================================
+   CHARTS & VISUALIZATIONS
+   ========================================================================== */
+.dashboard-chart,
+.gantt-chart,
+.metrics-chart {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+/* ==========================================================================
+   CONTROLS & FORMS
+   ========================================================================== */
 /* Data Controls */
 .data-controls {
     background: #f8f9fa;
@@ -332,51 +362,59 @@ body {
     min-width: 150px;
 }
 
-.refresh-btn {
-    background-color: #28a745;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.3s;
-    align-self: end;
+/* Form Controls */
+.form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #333;
 }
 
-.refresh-btn:hover {
-    background-color: #218838;
+.form-input,
+.form-textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    transition: border-color 0.3s;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-    .dashboard-container,
-    .gantt-container,
-    .metrics-container {
-        padding: 10px;
-    }
-    
-    .info-panels-container {
-        flex-direction: column;
-    }
-    
-    .data-controls {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .control-group {
-        min-width: auto;
-    }
-    
-    .dashboard-title,
-    .gantt-header,
-    .metrics-header {
-        font-size: 2rem;
-    }
+.form-input:focus,
+.form-textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
 }
 
-/* Button styles */
+.form-textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+/* Dropdown and Slider Styles */
+.strategy-dropdown,
+.table-filter {
+    width: 100%;
+}
+
+.config-slider {
+    margin-top: 0.5rem;
+}
+
+.options-checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* ==========================================================================
+   BUTTONS
+   ========================================================================== */
 .btn {
     padding: 0.75rem 1.5rem;
     border: none;
@@ -449,57 +487,42 @@ body {
     justify-content: center;
 }
 
-/* Form controls */
-.form-label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-    color: #333;
+/* Export Controls */
+.chart-export-btn {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    margin: 0 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
 }
 
-.form-input,
-.form-textarea {
-    width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 0.9rem;
-    transition: border-color 0.3s;
+.chart-export-btn:hover {
+    background-color: #2980b9;
 }
 
-.form-input:focus,
-.form-textarea:focus {
-    outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+.refresh-btn {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+    align-self: end;
 }
 
-.form-textarea {
-    resize: vertical;
-    min-height: 80px;
+.refresh-btn:hover {
+    background-color: #218838;
 }
 
-.form-group {
-    margin-bottom: 1rem;
-}
-
-/* Dropdown and slider styles */
-.strategy-dropdown,
-.table-filter {
-    width: 100%;
-}
-
-.config-slider {
-    margin-top: 0.5rem;
-}
-
-.options-checklist {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-/* Status indicators */
+/* ==========================================================================
+   STATUS & INDICATORS
+   ========================================================================== */
 .status-list {
     display: flex;
     flex-direction: column;
@@ -535,43 +558,16 @@ body {
     color: #666;
 }
 
-/* Metrics */
-.metrics-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
+.export-status {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 5px;
+    font-weight: 500;
 }
 
-.metrics-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 1rem;
-}
-
-.metric-card {
-    background: #f8f9fa;
-    border-radius: 6px;
-    padding: 1rem;
-    text-align: center;
-    border-left: 4px solid #667eea;
-}
-
-.metric-card h5 {
-    font-size: 0.8rem;
-    color: #666;
-    margin-bottom: 0.5rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.metric-card p {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #333;
-    margin: 0;
-}
-
-/* Modal styles */
+/* ==========================================================================
+   MODALS & OVERLAYS
+   ========================================================================== */
 .modal {
     display: none;
     position: fixed;
@@ -674,7 +670,9 @@ body {
     border-top: 1px solid #eee;
 }
 
-/* Schedule details */
+/* ==========================================================================
+   SCHEDULE & DATA DISPLAY
+   ========================================================================== */
 .schedule-details-section {
     margin: 1rem 0;
     padding: 1rem;
@@ -708,7 +706,7 @@ body {
     color: #666;
 }
 
-/* Export options */
+/* Export Options */
 .export-options {
     display: flex;
     flex-direction: column;
@@ -721,7 +719,63 @@ body {
     gap: 0.5rem;
 }
 
-/* Responsive design */
+/* ==========================================================================
+   MESSAGES & NOTIFICATIONS
+   ========================================================================== */
+.message {
+    padding: 1rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+}
+
+.message.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.message.warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+/* ==========================================================================
+   LOADING & ANIMATIONS
+   ========================================================================== */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   RESPONSIVE DESIGN
+   ========================================================================== */
 @media (max-width: 1200px) {
     .charts-row {
         grid-template-columns: 1fr;
@@ -764,59 +818,36 @@ body {
     .metrics-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+    
+    .dashboard-container,
+    .gantt-container,
+    .metrics-container {
+        padding: 10px;
+    }
+    
+    .info-panels-container {
+        flex-direction: column;
+    }
+    
+    .data-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .control-group {
+        min-width: auto;
+    }
+    
+    .dashboard-title,
+    .gantt-header,
+    .metrics-header {
+        font-size: 2rem;
+    }
 }
 
-/* Loading states */
-.loading {
-    opacity: 0.6;
-    pointer-events: none;
-}
-
-.loading::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 20px;
-    height: 20px;
-    margin: -10px 0 0 -10px;
-    border: 2px solid #f3f3f3;
-    border-top: 2px solid #667eea;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-/* Success/error messages */
-.message {
-    padding: 1rem;
-    border-radius: 6px;
-    margin-bottom: 1rem;
-}
-
-.message.success {
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
-}
-
-.message.error {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-}
-
-.message.warning {
-    background-color: #fff3cd;
-    color: #856404;
-    border: 1px solid #ffeaa7;
-}
-
-/* Print styles */
+/* ==========================================================================
+   PRINT STYLES
+   ========================================================================== */
 @media print {
     .app-sidebar,
     .header-actions,
