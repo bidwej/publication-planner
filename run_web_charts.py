@@ -33,7 +33,7 @@ def run_dashboard() -> int:
         from app.main import main
         
         # Set up arguments for dashboard mode
-        sys.argv = ['main.py', '--mode', 'dashboard']
+        sys.argv = ['main.py', '--port', '8050']
         
         # Run the main function
         main()
