@@ -97,7 +97,7 @@ reportAttributeAccessIssue = false
 
 [tool.pytest.ini_options]
 testpaths = ["backend/tests", "frontend/tests"]
-pythonpath = [".", "backend/src", "frontend/app"]
+pythonpath = [".", "backend/src", "frontend/app", "backend/tests", "backend/tests/src"]
 addopts = "-v --tb=short --import-mode=importlib"
 filterwarnings = [
     "ignore::DeprecationWarning",

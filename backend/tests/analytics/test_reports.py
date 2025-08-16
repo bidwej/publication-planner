@@ -5,7 +5,7 @@ from datetime import date
 from typing import Dict, List, Any, Optional
 from unittest.mock import MagicMock
 
-from analytics.reports import (
+from reports import (
     generate_schedule_report,
     calculate_overall_score
 )

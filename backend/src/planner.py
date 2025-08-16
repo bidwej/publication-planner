@@ -66,7 +66,7 @@ class Planner:
     
     def _validate_config(self) -> None:
         """Validate the loaded configuration."""
-        validation_errors = self.config.validate()
+        validation_errors = self.config.validate_config()
         if validation_errors:
             error_msg = "Configuration validation failed:\n" + "\n".join(f"  - {error}" for error in validation_errors)
             raise ValueError(error_msg)
@@ -89,7 +89,7 @@ class Planner:
         updated_config = replace(self.config, **kwargs)
         
         # Validate the updated configuration
-        validation_errors = updated_config.validate()
+        validation_errors = updated_config.validate_config()
         if validation_errors:
             error_msg = "Updated configuration validation failed:\n" + "\n".join(f"  - {error}" for error in validation_errors)
             raise ValueError(error_msg)

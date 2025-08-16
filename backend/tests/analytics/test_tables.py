@@ -3,7 +3,7 @@
 from datetime import date
 from typing import Dict, List, Any, Optional
 
-from analytics.tables import (
+from tables import (
     generate_simple_monthly_table, 
     generate_schedule_summary_table, 
     generate_deadline_table,

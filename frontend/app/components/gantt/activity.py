@@ -8,8 +8,8 @@ from plotly.graph_objs import Figure
 from datetime import date, timedelta
 from typing import Dict, Optional
 
-from src.core.models import Config, Submission
-from app.components.gantt.timeline import _assign_activity_rows
+from core.models import Config, Submission
+from app.components.gantt.timeline import assign_activity_rows
 
 
 def add_activity_bars(fig: Figure, schedule: Dict[str, date], config: Config) -> None:
@@ -18,7 +18,7 @@ def add_activity_bars(fig: Figure, schedule: Dict[str, date], config: Config) ->
         return
     
     # Get activity row assignments for proper positioning
-    activity_rows = _assign_activity_rows(schedule, config)
+    activity_rows = assign_activity_rows(schedule, config)
     
     # Add bars for each submission
     for submission_id, start_date in schedule.items():

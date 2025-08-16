@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
-from src.core.models import ScheduleState, Config
+from core.models import ScheduleState, Config
 from datetime import datetime
 
 
@@ -46,7 +46,7 @@ class ScheduleStorage:
             return False
             
         try:
-            schedule_data = schedule_state.to_dict()
+            schedule_data = schedule_state.model_dump()
             json_data = json.dumps(schedule_data)
             
             with sqlite3.connect(str(self.db_path)) as conn:
@@ -83,7 +83,7 @@ class ScheduleStorage:
                 
                 if row:
                     data = json.loads(row[0])
-                    return ScheduleState.from_dict(data)
+                    return ScheduleState.model_validate(data)
                 return None
         except Exception as e:
             print("Error loading schedule: %s", e)
@@ -134,9 +134,10 @@ class ScheduleStorage:
     def export_schedule(self, schedule_state: ScheduleState, filename: str) -> str:
         """Export schedule as downloadable JSON string."""
         try:
-            schedule_data = schedule_state.to_dict()
-            schedule_data['filename'] = filename
-            return json.dumps(schedule_data, indent=2)
+            # Add filename to the exported data
+            export_data = schedule_state.model_dump()
+            export_data['filename'] = filename
+            return json.dumps(export_data, indent=2)
         except Exception as e:
             print("Error exporting schedule: %s", e)
             return ""
@@ -145,7 +146,7 @@ class ScheduleStorage:
         """Import schedule from JSON string."""
         try:
             data = json.loads(json_data)
-            return ScheduleState.from_dict(data)
+            return ScheduleState.model_validate(data)
         except Exception as e:
             print("Error importing schedule: %s", e)
             return None
@@ -158,28 +159,19 @@ class StorageManager:
         """Initialize storage manager."""
         self.storage = ScheduleStorage()
     
-    def save_schedule(self, schedule_data: Dict[str, Any], filename: str) -> str:
-        """Save schedule data."""
+    def save_schedule(self, schedule_state: ScheduleState, filename: str) -> str:
+        """Save schedule data directly."""
         try:
-            # Convert dict to ScheduleState if needed
-            if isinstance(schedule_data, dict):
-                schedule_state = ScheduleState.from_dict(schedule_data)
-            else:
-                schedule_state = schedule_data
-            
             success = self.storage.save_schedule(schedule_state, filename)
             return filename if success else ""
         except Exception as e:
             print("Error saving schedule: %s", e)
             return ""
     
-    def load_schedule(self, filename: str) -> Optional[Dict[str, Any]]:
-        """Load schedule data."""
+    def load_schedule(self, filename: str) -> Optional[ScheduleState]:
+        """Load schedule data directly as ScheduleState."""
         try:
-            schedule_state = self.storage.load_schedule(filename)
-            if schedule_state:
-                return schedule_state.to_dict()
-            return None
+            return self.storage.load_schedule(filename)
         except Exception as e:
             print("Error loading schedule: %s", e)
             return None

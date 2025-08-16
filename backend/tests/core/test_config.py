@@ -610,7 +610,7 @@ class TestDataclassesSerialization:
         })
         
         # Should still be valid
-        validation_errors: List[str] = modified_config.validate()
+        validation_errors: List[str] = modified_config.validate_config()
         assert len(validation_errors) == 0
 
 

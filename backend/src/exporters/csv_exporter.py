@@ -10,7 +10,7 @@ from collections import defaultdict
 
 from core.models import Config, ScheduleSummary, ScheduleMetrics, SubmissionType
 from core.dates import calculate_schedule_duration
-from analytics.tables import (
+from tables import (
     generate_schedule_table, generate_metrics_table, generate_deadline_table,
     generate_violations_table, generate_penalties_table
 )

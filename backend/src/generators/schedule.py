@@ -11,8 +11,8 @@ from core.constants import SCHEDULING_CONSTANTS
 from validation.deadline import validate_deadline_constraints
 from validation.resources import validate_resources_constraints
 from core.models import Config, ScheduleSummary, ScheduleMetrics, SubmissionType
-from analytics.tables import save_schedule_json, save_table_csv, save_metrics_json
-from analytics.exporters.csv_exporter import CSVExporter
+from tables import save_schedule_json, save_table_csv, save_metrics_json
+from exporters.csv_exporter import CSVExporter
 from core.dates import calculate_schedule_duration
 from scoring.efficiency import calculate_efficiency_score
 from scoring.penalties import calculate_penalty_score

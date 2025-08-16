@@ -47,7 +47,7 @@ def analyze_schedule_completeness(schedule: Dict[str, date], config: Config) -> 
     
     total_submissions = len(config.submissions)
     scheduled_count = len(schedule)
-    completion_rate = (scheduled_count / total_submissions * QUALITY_CONSTANTS.percentage_multiplier) if total_submissions > 0 else ANALYTICS_CONSTANTS.default_completion_rate
+    completion_rate = min((scheduled_count / total_submissions * QUALITY_CONSTANTS.percentage_multiplier), 100.0) if total_submissions > 0 else ANALYTICS_CONSTANTS.default_completion_rate
     
     # Find missing submissions
     scheduled_ids = set(schedule.keys())

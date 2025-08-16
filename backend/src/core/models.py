@@ -8,7 +8,7 @@ from dateutil.parser import parse as parse_date
 
 from pydantic import BaseModel, Field, ConfigDict
 
-from core.constants import SCHEDULING_CONSTANTS, PENALTY_CONSTANTS, EFFICIENCY_CONSTANTS
+from .constants import SCHEDULING_CONSTANTS, PENALTY_CONSTANTS, EFFICIENCY_CONSTANTS
 
 class SubmissionType(str, Enum):
     """Types of submissions."""
@@ -61,7 +61,7 @@ class Submission(BaseModel):
     free_slack_months: Optional[int] = None  # Buffer time in months
     penalty_cost_per_month: Optional[float] = None  # Monthly penalty cost for delays
     
-    def validate(self) -> List[str]:
+    def validate_submission(self) -> List[str]:
         """Validate submission and return list of errors."""
         errors = []
         if not self.id:
@@ -272,7 +272,7 @@ class Conference(BaseModel):
         
         return errors
     
-    def validate(self) -> List[str]:
+    def validate_conference(self) -> List[str]:
         """Validate conference and return list of errors."""
         errors = []
         if not self.id:
@@ -360,7 +360,7 @@ class Config(BaseModel):
             }
         )
     
-    def validate(self) -> List[str]:
+    def validate_config(self) -> List[str]:
         """Validate configuration and return list of errors."""
         errors = []
         
@@ -376,15 +376,17 @@ class Config(BaseModel):
         if self.max_concurrent_submissions < 1:
             errors.append("Max concurrent submissions must be at least 1")
         
-        # Validate submissions
+        # Validate submissions - first pass: build submission IDs and validate basic submission data
         submission_ids = set()
         for submission in self.submissions:
-            submission_errors = submission.validate()
+            submission_errors = submission.validate_submission()
             errors.extend([f"Submission {submission.id}: {error}" for error in submission_errors])
             if submission.id in submission_ids:
                 errors.append(f"Duplicate submission ID: {submission.id}")
             submission_ids.add(submission.id)
-            
+        
+        # Second pass: validate cross-references (conferences and dependencies)
+        for submission in self.submissions:
             # Validate conference reference
             if submission.conference_id:
                 conference_ids = {conf.id for conf in self.conferences}
@@ -400,7 +402,7 @@ class Config(BaseModel):
         # Validate conferences
         conference_ids = set()
         for conference in self.conferences:
-            conference_errors = conference.validate()
+            conference_errors = conference.validate_conference()
             errors.extend([f"Conference {conference.id}: {error}" for error in conference_errors])
             if conference.id in conference_ids:
                 errors.append(f"Duplicate conference ID: {conference.id}")
@@ -614,14 +616,7 @@ class ScheduleSummary(BaseModel):
     deadline_compliance: float
     resource_utilization: float
     
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary."""
-        return self.model_dump()
-    
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ScheduleSummary':
-        """Create from dictionary."""
-        return cls(**data)
+
 
 class ScheduleMetrics(BaseModel):
     """Detailed metrics for a schedule."""
@@ -649,13 +644,6 @@ class ScheduleState(BaseModel):
     timestamp: str
     version: str = "1.0"
     
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for JSON serialization."""
-        return self.model_dump()
-    
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ScheduleState':
-        """Create a ScheduleState from a dictionary."""
-        return cls(**data)
+
 
  

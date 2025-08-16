@@ -1,7 +1,7 @@
 """Tests for analytics functions."""
 
 from datetime import date
-from analytics.analytics import analyze_schedule_completeness, analyze_schedule_distribution, analyze_submission_types, analyze_timeline, analyze_resources
+from analytics import analyze_schedule_completeness, analyze_schedule_distribution, analyze_submission_types, analyze_timeline, analyze_resources
 from typing import Dict, List, Any, Optional
 
 

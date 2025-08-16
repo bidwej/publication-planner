@@ -18,7 +18,7 @@ class TestCLIIntegration:
                 ["python", "generate_schedule.py", "--help"],
                 capture_output=True,
                 text=True,
-                cwd=Path(__file__).parent.parent.parent,
+                cwd=Path(__file__).parent.parent,
                 timeout=10
             )
             
@@ -40,7 +40,7 @@ class TestCLIIntegration:
                 ["python", "generate_schedule.py", "--list-strategies"],
                 capture_output=True,
                 text=True,
-                cwd=Path(__file__).parent.parent.parent,
+                cwd=Path(__file__).parent.parent,
                 timeout=10
             )
             
@@ -60,7 +60,7 @@ class TestCLIIntegration:
                 ["python", "generate_schedule.py"],
                 capture_output=True,
                 text=True,
-                cwd=Path(__file__).parent.parent.parent,
+                cwd=Path(__file__).parent.parent,
                 timeout=10
             )
             
@@ -79,7 +79,7 @@ class TestCLIIntegration:
                 ["python", "generate_schedule.py", "--strategy", "invalid_strategy"],
                 capture_output=True,
                 text=True,
-                cwd=Path(__file__).parent.parent.parent,
+                cwd=Path(__file__).parent.parent,
                 timeout=10
             )
             
@@ -98,7 +98,7 @@ class TestCLIIntegration:
                 ["python", "generate_schedule.py", "--strategy", "greedy", "--compare"],
                 capture_output=True,
                 text=True,
-                cwd=Path(__file__).parent.parent.parent,
+                cwd=Path(__file__).parent.parent,
                 timeout=10
             )
             
@@ -117,7 +117,7 @@ class TestCLIIntegration:
                 ["python", "generate_schedule.py", "--strategy", "greedy"],
                 capture_output=True,
                 text=True,
-                cwd=Path(__file__).parent.parent.parent,
+                cwd=Path(__file__).parent.parent,
                 timeout=10
             )
             
@@ -138,7 +138,7 @@ class TestCLIIntegration:
                 ["python", "generate_schedule.py", "--compare"],
                 capture_output=True,
                 text=True,
-                cwd=Path(__file__).parent.parent.parent,
+                cwd=Path(__file__).parent.parent,
                 timeout=10
             )
             
@@ -159,7 +159,7 @@ class TestCLIIntegration:
                 ["python", "generate_schedule.py", "--strategy", "greedy", "--quiet"],
                 capture_output=True,
                 text=True,
-                cwd=Path(__file__).parent.parent.parent,
+                cwd=Path(__file__).parent.parent,
                 timeout=10
             )
             
@@ -180,7 +180,7 @@ class TestCLIIntegration:
                 ["python", "generate_schedule.py", "--compare", "--output", "test_output.json"],
                 capture_output=True,
                 text=True,
-                cwd=Path(__file__).parent.parent.parent,
+                cwd=Path(__file__).parent.parent,
                 timeout=10
             )
             
@@ -202,7 +202,7 @@ class TestCLIIntegration:
                 ["python", "generate_schedule.py", "--strategy", "greedy", "--config", "non_existent_config.json"],
                 capture_output=True,
                 text=True,
-                cwd=Path(__file__).parent.parent.parent.parent,
+                cwd=Path(__file__).parent.parent.parent,
                 timeout=10
             )
             
@@ -222,7 +222,7 @@ class TestCLIIntegration:
                 ["python", "generate_schedule.py", "--help"],
                 capture_output=True,
                 text=True,
-                cwd=Path(__file__).parent.parent.parent,
+                cwd=Path(__file__).parent.parent,
                 timeout=10
             )
             

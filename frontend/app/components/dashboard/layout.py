@@ -13,7 +13,7 @@ from app.components.dashboard.chart import (
 )
 from app.components.exporters.controls import create_export_controls, export_chart_png, export_chart_html
 from app.storage import get_state_manager
-from src.core.models import Config
+from core.models import Config
 
 
 def create_dashboard_layout(config: Optional[Config] = None) -> html.Div:
@@ -140,7 +140,6 @@ def update_dashboard_chart(n_clicks: Optional[int], chart_type: str) -> Figure:
         
         if stored_state and 'config_data' in stored_state:
             # Reconstruct config from stored state
-            from src.core.models import Config
             config_data = stored_state['config_data']
             config = Config(
                 submissions=[],  # We'll need to store actual submission data
@@ -196,14 +195,12 @@ def handle_dashboard_export(n_clicks_png: Optional[int], n_clicks_html: Optional
     
     try:
         if 'png' in button_id:
-            from app.components.exporters.controls import export_chart_png
             result = export_chart_png(figure, "dashboard_chart.png")
             if result:
                 return f"✅ PNG exported to: {result}"
             else:
                 return "❌ PNG export failed"
         elif 'html' in button_id:
-            from app.components.exporters.controls import export_chart_html
             result = export_chart_html(figure, "dashboard_chart.html")
             if result:
                 return f"✅ HTML exported to: {result}"

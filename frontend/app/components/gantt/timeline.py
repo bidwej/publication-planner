@@ -8,9 +8,9 @@ from typing import Dict, Any, Optional, List
 import plotly.graph_objects as go
 from plotly.graph_objs import Figure
 
-from src.core.models import Config
-from src.validation.resources import validate_resources_constraints
-from src.core.models import Submission
+from core.models import Config
+from validation.resources import validate_resources_constraints
+from core.models import Submission
 
 
 def assign_activity_rows(schedule: Optional[Dict[str, date]], config: Config) -> Dict[str, int]:

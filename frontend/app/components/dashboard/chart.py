@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 from plotly.graph_objs import Figure
 
 from app.components.gantt.chart import create_gantt_chart
-from src.core.models import Config, Submission
+from core.models import Config, Submission
 
 
 def create_dashboard_chart(chart_type: str = 'timeline', config: Optional[Config] = None) -> Figure:

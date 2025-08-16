@@ -6,7 +6,7 @@ from datetime import date, timedelta
 from typing import Dict
 
 from core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
-from analytics import CSVExporter
+from exporters.csv_exporter import CSVExporter
 
 
 @pytest.fixture
@@ -374,7 +374,7 @@ class TestCSVExporter:
 
 def test_export_schedule_to_csv_convenience_function(sample_config, sample_schedule, temp_output_dir):
     """Test the convenience function for exporting schedule to CSV."""
-    from analytics.exporters.csv_exporter import export_schedule_to_csv
+    from exporters.csv_exporter import export_schedule_to_csv
     
     filepath = export_schedule_to_csv(sample_schedule, sample_config, str(temp_output_dir), "convenience_test.csv")
     
@@ -385,7 +385,7 @@ def test_export_schedule_to_csv_convenience_function(sample_config, sample_sched
 
 def test_export_all_csv_formats_convenience_function(sample_config, sample_schedule, temp_output_dir):
     """Test the convenience function for exporting all CSV formats."""
-    from analytics.exporters.csv_exporter import export_all_csv_formats
+    from exporters.csv_exporter import export_all_csv_formats
     
     saved_files = export_all_csv_formats(sample_schedule, sample_config, str(temp_output_dir))
     

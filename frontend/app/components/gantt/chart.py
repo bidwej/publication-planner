@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 from plotly.graph_objs import Figure
 from typing import Dict, Any, Optional, List
 from datetime import date, timedelta
-from src.core.models import Config
+from core.models import Config
 
 
 

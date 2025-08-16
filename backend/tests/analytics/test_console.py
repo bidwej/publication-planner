@@ -5,7 +5,7 @@ from datetime import date
 from typing import Dict, List, Any, Optional
 from unittest.mock import patch
 
-from analytics.console import (
+from console import (
     print_schedule_summary,
     print_deadline_status,
     print_utilization_summary,

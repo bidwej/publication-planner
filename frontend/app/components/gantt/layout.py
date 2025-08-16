@@ -12,7 +12,7 @@ from app.components.gantt.chart import (
 )
 from app.components.exporters.controls import create_export_controls
 from app.storage import get_state_manager
-from src.core.models import Config
+from core.models import Config
 
 
 def create_gantt_layout(config: Optional[Config] = None) -> html.Div:
