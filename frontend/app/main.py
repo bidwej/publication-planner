@@ -8,7 +8,7 @@ from dash import Dash, html, dcc, Input, Output, callback, page_container
 from app.components.dashboard.layout import create_dashboard_layout
 from app.components.gantt.layout import create_gantt_layout
 from app.components.metrics.layout import create_metrics_layout
-from core.config import load_config
+from ...backend.src.core.config import load_config
 
 # Global constant for data path
 DEFAULT_DATA_PATH = "app/assets/demo/data/config.json"

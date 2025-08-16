@@ -8,6 +8,8 @@ from typing import Dict, Any, Optional, List
 import plotly.graph_objects as go
 from plotly.graph_objs import Figure
 
+import sys
+sys.path.append('../backend/src')
 from core.models import Config
 from validation.resources import validate_resources_constraints
 from core.models import Submission

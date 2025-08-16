@@ -10,8 +10,10 @@ from app.components.gantt.chart import (
     create_gantt_chart,
     _create_error_chart
 )
-from app.components.exporters.controls import create_export_controls
+from app.components.exporters.controls import create_export_controls, export_chart_png, export_chart_html
 from app.storage import get_state_manager
+import sys
+sys.path.append('../backend/src')
 from core.models import Config
 
 
@@ -27,9 +29,22 @@ def create_gantt_layout(config: Optional[Config] = None) -> html.Div:
     # Create initial chart with real data
     initial_figure = create_gantt_chart()
     
+    # Create a demo schedule if we have config data but no schedule
+    demo_schedule = None
+    if config and config.submissions:
+        from datetime import date, timedelta
+        # Create a simple demo schedule starting from today
+        demo_schedule = {}
+        current_date = date.today()
+        
+        for i, submission in enumerate(config.submissions):
+            # Space submissions out by 2 weeks each
+            start_date = current_date + timedelta(weeks=i * 2)
+            demo_schedule[submission.id] = start_date
+    
     # Store component state using clean state manager
     if config:
-        get_state_manager().save_component_state('gantt', config, 'gantt')
+        get_state_manager().save_component_state('gantt', config, 'gantt', schedule=demo_schedule)
     
     return html.Div([
         _create_gantt_header(),

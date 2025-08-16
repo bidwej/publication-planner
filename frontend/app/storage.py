@@ -290,7 +290,8 @@ class StateManager:
         pass
     
     def save_component_state(self, component_name: str, config: Optional[Config] = None, 
-                           chart_type: str = 'timeline', custom_settings: Optional[Dict[str, Any]] = None) -> bool:
+                           chart_type: str = 'timeline', custom_settings: Optional[Dict[str, Any]] = None,
+                           schedule: Optional[Dict[str, Any]] = None) -> bool:
         """Save component state with proper separation of concerns.
         
         Args:
@@ -298,6 +299,7 @@ class StateManager:
             config: Configuration object (optional)
             chart_type: Current chart type
             custom_settings: Any custom component settings
+            schedule: Schedule data for timeline display (optional)
             
         Returns:
             True if successful, False otherwise
@@ -309,14 +311,16 @@ class StateManager:
                 'custom_settings': custom_settings or {}
             }
             
-            # Only store essential config data, not the entire object
+            # Store essential config data
             if config:
                 state_data['config_data'] = {
                     'submission_count': len(config.submissions),
                     'conference_count': len(config.conferences),
                     'min_abstract_lead_time_days': config.min_abstract_lead_time_days,
                     'min_paper_lead_time_days': config.min_paper_lead_time_days,
-                    'max_concurrent_submissions': config.max_concurrent_submissions
+                    'max_concurrent_submissions': config.max_concurrent_submissions,
+                    'config': config,  # Store the full config for timeline
+                    'schedule': schedule  # Store the schedule data for timeline
                 }
             
             return save_state(component_name, state_data)

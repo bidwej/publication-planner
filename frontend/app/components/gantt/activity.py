@@ -8,6 +8,8 @@ from plotly.graph_objs import Figure
 from datetime import date, timedelta
 from typing import Dict, Optional
 
+import sys
+sys.path.append('../backend/src')
 from core.models import Config, Submission
 from app.components.gantt.timeline import assign_activity_rows
 

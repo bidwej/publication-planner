@@ -7,8 +7,9 @@ import plotly.graph_objects as go
 from plotly.graph_objs import Figure
 from typing import Dict, Any, Optional, List
 from datetime import date, timedelta
+import sys
+sys.path.append('../backend/src')
 from core.models import Config
-
 
 
 def create_gantt_chart() -> Figure:
@@ -32,42 +33,54 @@ def create_gantt_chart() -> Figure:
 
 def _create_real_gantt_chart(config_data: Dict[str, Any]) -> Figure:
     """Create a gantt chart with real data from stored state."""
+    from app.components.gantt.activity import add_activity_bars
+    from app.components.gantt.timeline import add_background_elements
+    
     fig = go.Figure()
     
-    # Use stored config data
-    submission_count = config_data.get('submission_count', 0)
-    conference_count = config_data.get('conference_count', 0)
+    # Extract schedule and config from stored data
+    schedule = config_data.get('schedule', {})
+    config = config_data.get('config')
     
-    # Create a simple representation based on stored data
-    fig.add_trace(go.Bar(
-        name=f'Submissions ({submission_count})',
-        x=[submission_count],
-        y=['Submissions'],
-        orientation='h',
-        marker_color='lightblue',
-        opacity=0.8
-    ))
-    
-    fig.add_trace(go.Bar(
-        name=f'Conferences ({conference_count})',
-        x=[conference_count],
-        y=['Conferences'],
-        orientation='h',
-        marker_color='lightgreen',
-        opacity=0.8
-    ))
-    
-    fig.update_layout(
-        title=f'Paper Planner Gantt Chart - Real Data ({submission_count} submissions, {conference_count} conferences)',
-        xaxis_title='Count',
-        yaxis_title='Categories',
-        height=400,
-        barmode='group',
-        plot_bgcolor='white',
-        paper_bgcolor='white',
-        font=dict(family="Arial, sans-serif", size=12),
-        margin=dict(l=60, r=60, t=80, b=60)
-    )
+    if schedule and config:
+        # Create a proper timeline chart
+        # Set up the chart layout for timeline display
+        fig.update_layout(
+            title='Paper Planner Timeline',
+            xaxis_title='Timeline',
+            yaxis_title='Activities',
+            height=600,
+            plot_bgcolor='white',
+            paper_bgcolor='white',
+            font=dict(family="Arial, sans-serif", size=12),
+            margin=dict(l=60, r=60, t=80, b=60),
+            xaxis=dict(
+                type='date',
+                showgrid=True,
+                gridcolor='lightgray',
+                tickformat='%Y-%m-%d'
+            ),
+            yaxis=dict(
+                showgrid=True,
+                gridcolor='lightgray',
+                showticklabels=True
+            )
+        )
+        
+        # Add the actual activity bars using the schedule data
+        add_activity_bars(fig, schedule, config)
+        
+        # Add background elements (grid, etc.)
+        add_background_elements(fig)
+        
+        # Set y-axis range based on number of activities
+        if schedule:
+            num_activities = len(schedule)
+            fig.update_layout(yaxis=dict(range=[-0.5, num_activities - 0.5]))
+            
+    else:
+        # No schedule or config data available, show empty chart
+        return _create_empty_chart()
     
     return fig
 
