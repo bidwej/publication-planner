@@ -36,6 +36,7 @@ wheels/
 # ─── Other artifacts ──────────────────────────────────
 *.pyc
 .env
+test_output*
 reports/*
 **/*.png
 gantt_review.html

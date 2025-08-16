@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "paper-planner-frontend"
+version = "0.1.0"
+description = "Frontend for paper planning and scheduling tool"
+requires-python = ">=3.8"
+dependencies = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "plotly>=5.0.0",
+    "dash>=2.0.0",
+    "pandas>=1.5.0",
+    "numpy>=1.21.0",
+    "python-dateutil>=2.8.0"
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["app", "../backend/src"]
+addopts = "-v --tb=short --import-mode=importlib"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning"
+]
+
+[tool.pytest-timeout]
+timeout = 15
+timeout_method = "thread"

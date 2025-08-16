@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "paper-planner"
+name = "paper-planner-backend"
 version = "0.1.0"
-description = "A paper planning and scheduling tool"
+description = "Backend for paper planning and scheduling tool"
 requires-python = ">=3.8"
 dependencies = [
     "pytest>=7.0.0",
@@ -63,12 +63,12 @@ reportMissingModuleSource = false
 reportMissingImports = false
 
 # your existing venv and Python version settings
-venvPath = "."
+venvPath = ".."
 venv = ".venv"
 pythonVersion = "3.12"
 
-# Configure source paths for both backend and frontend
-analysis.extraPaths = ["backend/src", "frontend/app"]
+# Configure source paths for backend
+analysis.extraPaths = ["src"]
 
 # have Pyright/Pylance use library code for types
 analysis.useLibraryCodeForTypes = true
@@ -96,8 +96,8 @@ reportUnknownAttributeType = false
 reportAttributeAccessIssue = false
 
 [tool.pytest.ini_options]
-testpaths = ["backend/tests", "frontend/tests"]
-pythonpath = [".", "backend/src", "frontend/app"]
+testpaths = ["tests"]
+pythonpath = ["src"]
 addopts = "-v --tb=short --import-mode=importlib"
 filterwarnings = [
     "ignore::DeprecationWarning",

@@ -12,14 +12,15 @@
       "**/.pytest_cache/**": true
     },
     "python.analysis.extraPaths": [
-      "./src",
-      "./app"
+      "./backend/src",
+      "./frontend"
     ],
     "python.defaultInterpreterPath": "./.venv/Scripts/python.exe",
     "python.terminal.activateEnvironment": true,
     "markdown-preview-enhanced.enableScriptExecution": true,
     "python.testing.pytestArgs": [
-      "tests"
+      "backend/tests",
+      "frontend/tests"
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
