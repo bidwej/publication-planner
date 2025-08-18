@@ -6,7 +6,7 @@ Tests for submission validation module.
 
 import pytest
 from datetime import date, timedelta
-from validation.submission import validate_submission_constraints
+from src.validation.submission import validate_submission_constraints
 from core.models import Config, Submission
 
 

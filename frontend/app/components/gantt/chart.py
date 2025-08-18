@@ -55,16 +55,29 @@ def create_gantt_chart() -> Figure:
 
 
 def _create_real_gantt_chart(config_data: Dict[str, Any]) -> Figure:
-    """Create a gantt chart with real data from stored state."""
+    """Create a gantt chart with real data from stored state or database."""
     fig = go.Figure()
     
-    schedule = config_data.get('schedule', {})
-    config = config_data.get('config')
+    # Try to get data from database first
+    try:
+        from app.database import get_schedule_data
+        schedule_data = get_schedule_data()
+        if schedule_data:
+            schedule = schedule_data.get('schedule', {})
+            config = schedule_data.get('config', {})
+        else:
+            # Fall back to stored state
+            schedule = config_data.get('schedule', {})
+            config = config_data.get('config', {})
+    except ImportError:
+        # Fall back to stored state
+        schedule = config_data.get('schedule', {})
+        config = config_data.get('config', {})
     
     if schedule and config:
         # Create a proper timeline chart
         fig.update_layout(
-            title='Paper Planner Timeline',
+            title='Paper Planner Timeline - Database Data',
             xaxis_title='Timeline',
             yaxis_title='Activities',
             height=600,
@@ -201,6 +214,9 @@ def _add_enhanced_activity_bars(fig: Figure, schedule: Dict[str, Any], config: A
         annotation_position="top right"
     )
 
+
+# Note: Schedule loading is handled by backend, not frontend
+# Frontend only manages component state and UI
 
 def _create_placeholder_gantt_chart() -> Figure:
     """Create a realistic demo gantt chart showing proper submission structure."""

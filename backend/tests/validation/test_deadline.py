@@ -7,7 +7,7 @@ from typing import Dict, List, Any
 
 import pytest
 
-from validation.deadline import validate_deadline_constraints, validate_deadline_compliance
+from src.validation.deadline import validate_deadline_constraints, validate_deadline_compliance
 from core.models import Config, Submission, DeadlineValidation
 
 

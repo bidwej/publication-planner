@@ -131,7 +131,7 @@ def _validate_conference_submission_compatibility(schedule: Dict[str, date], con
             continue
         
         # Check if conference accepts any of the candidate submission types
-        if sub.candidate_kinds is not None:
+        if hasattr(sub, 'candidate_kinds') and sub.candidate_kinds is not None:
             # Check if any candidate type is accepted
             any_accepted = any(conf.accepts_submission_type(ctype) for ctype in sub.candidate_kinds)
             if not any_accepted:
@@ -235,42 +235,42 @@ def _validate_venue_compatibility(submissions: Dict[str, Submission],
     """Validate venue compatibility with proper work item handling."""
     for sub_id, submission in submissions.items():
         if submission.kind == SubmissionType.ABSTRACT:
-            # Abstracts are work items, validate against candidate conferences
-            if submission.candidate_conferences:
-                # If candidate_kinds is None, skip validation (open to any opportunity)
-                if submission.candidate_kinds is not None:
-                    # Use first candidate type for validation
-                    submission_type_to_check = submission.candidate_kinds[0]
-                    for conf_id in submission.candidate_conferences:
+            # Abstracts are work items, validate against preferred conferences
+            if hasattr(submission, 'preferred_conferences') and submission.preferred_conferences:
+                # If preferred_kinds is None, skip validation (open to any opportunity)
+                if hasattr(submission, 'preferred_kinds') and submission.preferred_kinds is not None:
+                    # Use first preferred type for validation
+                    submission_type_to_check = submission.preferred_kinds[0]
+                    for conf_id in submission.preferred_conferences:
                         if conf_id in conferences:
                             conf = conferences[conf_id]
                             if not conf.accepts_submission_type(submission_type_to_check):
                                 raise ValueError(f"Submission {sub_id} ({submission_type_to_check.value}) not compatible with conference {conf_id}")
-            # Work items without candidate conferences are valid
+            # Work items without preferred conferences are valid
         elif submission.kind == SubmissionType.PAPER:
-            # Papers should have conference_id or candidate_conferences
+            # Papers should have conference_id or preferred_conferences
             if submission.conference_id:
                 if submission.conference_id not in conferences:
                     raise ValueError(f"Submission {sub_id} references unknown conference {submission.conference_id}")
                 conf = conferences[submission.conference_id]
-                # If candidate_kinds is None, skip validation (open to any opportunity)
-                if submission.candidate_kinds is not None:
-                    # Use first candidate type for validation
-                    submission_type_to_check = submission.candidate_kinds[0]
+                # If preferred_kinds is None, skip validation (open to any opportunity)
+                if hasattr(submission, 'preferred_kinds') and submission.preferred_kinds is not None:
+                    # Use first preferred type for validation
+                    submission_type_to_check = submission.preferred_kinds[0]
                     if not conf.accepts_submission_type(submission_type_to_check):
                         raise ValueError(f"Submission {sub_id} ({submission_type_to_check.value}) not compatible with conference {submission.conference_id}")
-            elif submission.candidate_conferences:
-                # Validate against candidate conferences
-                # If candidate_kinds is None, skip validation (open to any opportunity)
-                if submission.candidate_kinds is not None:
-                    # Use first candidate type for validation
-                    submission_type_to_check = submission.candidate_kinds[0]
-                    for conf_id in submission.candidate_conferences:
+            elif hasattr(submission, 'preferred_conferences') and submission.preferred_conferences:
+                # Validate against preferred conferences
+                # If preferred_kinds is None, skip validation (open to any opportunity)
+                if hasattr(submission, 'preferred_kinds') and submission.preferred_kinds is not None:
+                    # Use first preferred type for validation
+                    submission_type_to_check = submission.preferred_kinds[0]
+                    for conf_id in submission.preferred_conferences:
                         if conf_id in conferences:
                             conf = conferences[conf_id]
                             if not conf.accepts_submission_type(submission_type_to_check):
                                 raise ValueError(f"Submission {sub_id} ({submission_type_to_check.value}) not compatible with conference {conf_id}")
             else:
-                # Empty candidate_conferences means the submission can be assigned to any appropriate conference
+                # Empty preferred_conferences means the submission can be assigned to any appropriate conference
                 # This is valid - the scheduler will assign the best available conference
                 pass

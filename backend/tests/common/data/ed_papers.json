@@ -3,12 +3,6 @@
     "id": "J1",
     "title": "Computer Vision (CV) endoscopy review",
     "draft_window_months": 2,
-    "candidate_conferences": [
-      "ICML",
-      "MIDL",
-      "CVPR",
-      "NeurIPS"
-    ],
     "submission_workflow": "abstract_then_paper",
     "depends_on": [
       "mod_1"
@@ -17,17 +11,18 @@
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
     "engineering_ready_date": null,
-    "author": "ed"
+    "author": "ed",
+    "preferred_conferences": [
+      "ICML",
+      "MIDL",
+      "CVPR",
+      "NeurIPS"
+    ]
   },
   {
     "id": "J2",
     "title": "Middle Turbinate/Inferior Turbinate (MT/IT)",
     "draft_window_months": 3,
-    "candidate_conferences": [
-      "MICCAI",
-      "ARS",
-      "IFAR"
-    ],
     "submission_workflow": "abstract_then_paper",
     "depends_on": [
       "mod_2"
@@ -36,18 +31,19 @@
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
     "engineering_ready_date": null,
-    "author": "ed"
+    "author": "ed",
+    "preferred_conferences": [
+      "MICCAI",
+      "ARS",
+      "IFAR"
+    ]
   },
   {
     "id": "J3",
     "title": "Nasal Septal Deviation (NSD)",
     "lead_time_from_parents": 3,
     "draft_window_months": 3,
-    "candidate_conferences": [
-      "MICCAI",
-      "ARS",
-      "IFAR"
-    ],
+    "submission_workflow": "abstract_then_paper",
     "depends_on": [
       "mod_3",
       "J2"
@@ -55,18 +51,19 @@
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
     "engineering_ready_date": null,
-    "author": "ed"
+    "author": "ed",
+    "preferred_conferences": [
+      "MICCAI",
+      "ARS",
+      "IFAR"
+    ]
   },
   {
     "id": "J4",
     "title": "Eustachian Tube (ET)",
     "lead_time_from_parents": 3,
     "draft_window_months": 3,
-    "candidate_conferences": [
-      "MICCAI",
-      "ARS",
-      "IFAR"
-    ],
+    "submission_workflow": "abstract_then_paper",
     "depends_on": [
       "mod_4",
       "J3"
@@ -74,17 +71,18 @@
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
     "engineering_ready_date": null,
-    "author": "ed"
+    "author": "ed",
+    "preferred_conferences": [
+      "MICCAI",
+      "ARS",
+      "IFAR"
+    ]
   },
   {
     "id": "J5",
     "title": "Middle Turbinate (MT ???/???)",
     "draft_window_months": 2,
-    "candidate_conferences": [
-      "MICCAI",
-      "ARS",
-      "IFAR"
-    ],
+    "submission_workflow": "abstract_then_paper",
     "depends_on": [
       "mod_5"
     ],
@@ -92,18 +90,19 @@
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
     "engineering_ready_date": null,
-    "author": "ed"
+    "author": "ed",
+    "preferred_conferences": [
+      "MICCAI",
+      "ARS",
+      "IFAR"
+    ]
   },
   {
     "id": "J6",
     "title": "Eustachian Tube (ET inflamed vs ETDQ)",
     "lead_time_from_parents": 2,
     "draft_window_months": 2,
-    "candidate_conferences": [
-      "MICCAI",
-      "ARS",
-      "IFAR"
-    ],
+    "submission_workflow": "abstract_then_paper",
     "depends_on": [
       "mod_6",
       "J5"
@@ -111,17 +110,17 @@
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
     "engineering_ready_date": null,
-    "author": "ed"
+    "author": "ed",
+    "preferred_conferences": [
+      "MICCAI",
+      "ARS",
+      "IFAR"
+    ]
   },
   {
     "id": "J7",
     "title": "Mucus",
     "draft_window_months": 2,
-    "candidate_conferences": [
-      "ARS",
-      "IFAR",
-      "AMIA Annual Symposium"
-    ],
     "depends_on": [
       "mod_7"
     ],
@@ -129,18 +128,19 @@
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
     "engineering_ready_date": null,
-    "author": "ed"
+    "author": "ed",
+    "submission_workflow": "abstract_then_paper",
+    "preferred_conferences": [
+      "ARS",
+      "IFAR",
+      "AMIA Annual Symposium"
+    ]
   },
   {
     "id": "J8",
     "title": "Mucus Biology",
     "lead_time_from_parents": 2,
     "draft_window_months": 2,
-    "candidate_conferences": [
-      "ARS",
-      "IFAR",
-      "AMIA Annual Symposium"
-    ],
     "depends_on": [
       "mod_8",
       "J7"
@@ -148,18 +148,19 @@
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
     "engineering_ready_date": null,
-    "author": "ed"
+    "author": "ed",
+    "submission_workflow": "abstract_then_paper",
+    "preferred_conferences": [
+      "ARS",
+      "IFAR",
+      "AMIA Annual Symposium"
+    ]
   },
   {
     "id": "J9",
     "title": "Color",
     "lead_time_from_parents": 1,
     "draft_window_months": 1,
-    "candidate_conferences": [
-      "CVPR",
-      "MIDL",
-      "NeurIPS"
-    ],
     "depends_on": [
       "mod_9",
       "J8"
@@ -167,17 +168,19 @@
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
     "engineering_ready_date": null,
-    "author": "ed"
+    "author": "ed",
+    "submission_workflow": "abstract_then_paper",
+    "preferred_conferences": [
+      "CVPR",
+      "MIDL",
+      "NeurIPS"
+    ]
   },
   {
     "id": "J10",
     "title": "Localization (NC Mapping)",
     "lead_time_from_parents": 3,
     "draft_window_months": 3,
-    "candidate_conferences": [
-      "MICCAI",
-      "CVPR"
-    ],
     "depends_on": [
       "mod_10",
       "J9"
@@ -185,17 +188,17 @@
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
     "engineering_ready_date": null,
-    "author": "ed"
+    "author": "ed",
+    "submission_workflow": "abstract_then_paper",
+    "preferred_conferences": [
+      "MICCAI",
+      "CVPR"
+    ]
   },
   {
     "id": "J11",
     "title": "Polyps",
     "draft_window_months": 3,
-    "candidate_conferences": [
-      "MICCAI",
-      "ARS",
-      "IFAR"
-    ],
     "depends_on": [
       "mod_11"
     ],
@@ -203,18 +206,19 @@
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
     "engineering_ready_date": null,
-    "author": "ed"
+    "author": "ed",
+    "submission_workflow": "abstract_then_paper",
+    "preferred_conferences": [
+      "MICCAI",
+      "ARS",
+      "IFAR"
+    ]
   },
   {
     "id": "J12",
     "title": "Nasal Polyps (NP) vs PCMT",
     "lead_time_from_parents": 1,
     "draft_window_months": 2,
-    "candidate_conferences": [
-      "MICCAI",
-      "ARS",
-      "IFAR"
-    ],
     "depends_on": [
       "mod_11",
       "J11"
@@ -222,18 +226,19 @@
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
     "engineering_ready_date": null,
-    "author": "ed"
+    "author": "ed",
+    "submission_workflow": "abstract_then_paper",
+    "preferred_conferences": [
+      "MICCAI",
+      "ARS",
+      "IFAR"
+    ]
   },
   {
     "id": "J13",
     "title": "Polyp color",
     "lead_time_from_parents": 1,
     "draft_window_months": 1,
-    "candidate_conferences": [
-      "MICCAI",
-      "ARS",
-      "IFAR"
-    ],
     "depends_on": [
       "mod_11",
       "J12"
@@ -241,16 +246,18 @@
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
     "engineering_ready_date": null,
-    "author": "ed"
+    "author": "ed",
+    "submission_workflow": "abstract_then_paper",
+    "preferred_conferences": [
+      "MICCAI",
+      "ARS",
+      "IFAR"
+    ]
   },
   {
     "id": "J14",
     "title": "???? detection (vs MD)",
     "draft_window_months": 3,
-    "candidate_conferences": [
-      "AMIA Annual Symposium",
-      "MICCAI"
-    ],
     "depends_on": [
       "mod_12"
     ],
@@ -258,18 +265,18 @@
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
     "engineering_ready_date": null,
-    "author": "ed"
+    "author": "ed",
+    "submission_workflow": "abstract_then_paper",
+    "preferred_conferences": [
+      "AMIA Annual Symposium",
+      "MICCAI"
+    ]
   },
   {
     "id": "J15",
     "title": "NE AI CDS vs ENT panel",
     "lead_time_from_parents": 3,
     "draft_window_months": 3,
-    "candidate_conferences": [
-      "AMIA Annual Symposium",
-      "ARS",
-      "IFAR"
-    ],
     "depends_on": [
       "mod_13",
       "J14"
@@ -277,18 +284,19 @@
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
     "engineering_ready_date": null,
-    "author": "ed"
+    "author": "ed",
+    "submission_workflow": "abstract_then_paper",
+    "preferred_conferences": [
+      "AMIA Annual Symposium",
+      "ARS",
+      "IFAR"
+    ]
   },
   {
     "id": "J16",
     "title": "NE AI CDS vs PCP panel",
     "lead_time_from_parents": 3,
     "draft_window_months": 3,
-    "candidate_conferences": [
-      "AMIA Annual Symposium",
-      "ARS",
-      "IFAR"
-    ],
     "depends_on": [
       "mod_14",
       "J15"
@@ -296,17 +304,19 @@
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
     "engineering_ready_date": null,
-    "author": "ed"
+    "author": "ed",
+    "submission_workflow": "abstract_then_paper",
+    "preferred_conferences": [
+      "AMIA Annual Symposium",
+      "ARS",
+      "IFAR"
+    ]
   },
   {
     "id": "J17",
     "title": "Gaze tracking vs AI",
     "lead_time_from_parents": 2,
     "draft_window_months": 2,
-    "candidate_conferences": [
-      "CVPR",
-      "AMIA Annual Symposium"
-    ],
     "depends_on": [
       "mod_15",
       "J16"
@@ -314,16 +324,17 @@
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
     "engineering_ready_date": null,
-    "author": "ed"
+    "author": "ed",
+    "submission_workflow": "abstract_then_paper",
+    "preferred_conferences": [
+      "CVPR",
+      "AMIA Annual Symposium"
+    ]
   },
   {
     "id": "J18",
     "title": "Mucus AI vs culture",
     "draft_window_months": 2,
-    "candidate_conferences": [
-      "IFAR",
-      "ARS"
-    ],
     "depends_on": [
       "mod_16"
     ],
@@ -331,16 +342,17 @@
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
     "engineering_ready_date": null,
-    "author": "ed"
+    "author": "ed",
+    "submission_workflow": "abstract_then_paper",
+    "preferred_conferences": [
+      "IFAR",
+      "ARS"
+    ]
   },
   {
     "id": "J19",
     "title": "CT max vs NE Maxillary Mucosa (MM)",
     "draft_window_months": 3,
-    "candidate_conferences": [
-      "RSNA",
-      "SPIE Medical Imaging"
-    ],
     "depends_on": [
       "mod_17"
     ],
@@ -348,17 +360,18 @@
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
     "engineering_ready_date": null,
-    "author": "ed"
+    "author": "ed",
+    "submission_workflow": "abstract_then_paper",
+    "preferred_conferences": [
+      "RSNA",
+      "SPIE Medical Imaging"
+    ]
   },
   {
     "id": "J20",
     "title": "CT eth vs NE Middle Turbinate (MT)",
     "lead_time_from_parents": 2,
     "draft_window_months": 3,
-    "candidate_conferences": [
-      "RSNA",
-      "SPIE Medical Imaging"
-    ],
     "depends_on": [
       "mod_17",
       "J19"
@@ -366,6 +379,11 @@
     "free_slack_months": 1,
     "penalty_cost_per_month": 1000.0,
     "engineering_ready_date": null,
-    "author": "ed"
+    "author": "ed",
+    "submission_workflow": "abstract_then_paper",
+    "preferred_conferences": [
+      "RSNA",
+      "SPIE Medical Imaging"
+    ]
   }
 ]

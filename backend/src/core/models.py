@@ -51,9 +51,10 @@ class Submission(BaseModel):
     lead_time_from_parents: int = 0
     penalty_cost_per_day: Optional[float] = None
     earliest_start_date: Optional[date] = None
-    candidate_conferences: Optional[List[str]] = None  # Suggested conferences
-    candidate_kinds: Optional[List[SubmissionType]] = None  # Preferred submission types at conferences (in priority order)
-    submission_workflow: Optional[SubmissionWorkflow] = None  # How this submission should be handled
+    preferred_conferences: Optional[List[str]] = None  # Suggested conferences
+    preferred_kinds: Optional[List[SubmissionType]] = None  # Preferred submission types at conferences (in priority order)
+    preferred_workflow: Optional[SubmissionWorkflow] = None  # User's preferred workflow (suggestion, not requirement)
+    submission_workflow: Optional[SubmissionWorkflow] = None  # How this submission should be handled (system-determined)
     engineering: bool = False  # Whether this is an engineering submission
     
     # Additional fields for unified schema (both mods and papers now have these)
@@ -69,10 +70,10 @@ class Submission(BaseModel):
         if not self.title:
             errors.append("Missing title")
         # Conference ID is optional for work items (mods)
-        # Papers can have conference_id or candidate_conferences  
+        # Papers can have conference_id or preferred_conferences  
         # None means "not specified", empty list means "open to any conference"
-        if self.kind == SubmissionType.PAPER and not self.conference_id and self.candidate_conferences is None:
-            errors.append("Papers must have either conference_id or candidate_conferences")
+        if self.kind == SubmissionType.PAPER and not self.conference_id and self.preferred_conferences is None:
+            errors.append("Papers must have either conference_id or preferred_conferences")
         if self.draft_window_months < 0:
             errors.append("Draft window months cannot be negative")
         if self.lead_time_from_parents < 0:
@@ -255,8 +256,8 @@ class Conference(BaseModel):
         """Validate that a submission is compatible with this conference."""
         errors = []
         
-        # Check if conference accepts any of the candidate submission types
-        candidate_types = submission.candidate_kinds if submission.candidate_kinds else [submission.kind]
+        # Check if conference accepts any of the preferred submission types
+        candidate_types = submission.preferred_kinds if submission.preferred_kinds else [submission.kind]
         
         # Find first compatible type
         compatible_type = None

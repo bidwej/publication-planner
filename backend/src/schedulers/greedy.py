@@ -44,7 +44,7 @@ class GreedyScheduler(BaseScheduler):
         """Find the earliest valid start date for a submission with comprehensive constraint validation."""
         
         # If submission doesn't have a conference assigned, try to assign one
-        if submission.conference_id is None and hasattr(submission, 'candidate_conferences') and submission.candidate_conferences:
+        if submission.conference_id is None and hasattr(submission, 'preferred_conferences') and submission.preferred_conferences:
             self._assign_best_conference(submission)
         
         # For work items (no conference), start with earliest start date if available

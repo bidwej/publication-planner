@@ -3,11 +3,17 @@
   "min_paper_lead_time_days": 60,
   "max_concurrent_submissions": 2,
   "default_paper_lead_time_months": 3,
+  "work_item_duration_days": 14,
+  "conference_response_time_days": 90,
+  "max_backtrack_days": 30,
+  "randomness_factor": 0.1,
+  "lookahead_bonus_increment": 0.5,
   "priority_weights": {
     "engineering_paper": 1.0,
     "medical_paper": 1.0,
     "mod": 1.5,
-    "abstract": 0.5
+    "abstract": 0.5,
+    "poster": 0.6
   },
   "penalty_costs": {
     "default_mod_penalty_per_day": 1000.0,
@@ -15,7 +21,8 @@
     "default_monthly_slip_penalty": 1000.0,
     "default_full_year_deferral_penalty": 5000.0,
     "missed_abstract_penalty": 3000.0,
-    "resource_violation_penalty": 200.0
+    "resource_violation_penalty": 200.0,
+    "concurrency_violation_penalty": 1000.0
   },
   "scheduling_options": {
     "enable_early_abstract_scheduling": true,
@@ -25,9 +32,10 @@
     "enable_priority_weighting": true,
     "enable_dependency_tracking": true,
     "enable_concurrency_control": true,
-    "enable_working_days_only": true
+    "enable_working_days_only": true,
+    "strict_concurrency_enforcement": true,
+    "enable_resource_balancing": true
   },
-  "blackout_dates": [],
   "data_files": {
     "conferences": "conferences.json",
     "mods": "mod_papers.json",

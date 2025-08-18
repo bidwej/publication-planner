@@ -11,7 +11,7 @@ from app.components.dashboard.chart import (
     create_dashboard_chart,
     _create_error_chart
 )
-from app.components.exporters.controls import create_export_controls, export_chart_png, export_chart_html
+from app.components.exporter.controls import create_export_controls, export_chart_png, export_chart_html
 from app.storage import get_state_manager
 from core.models import Config
 

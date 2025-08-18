@@ -1,0 +1,27 @@
+"""
+Database session management for Paper Planner.
+"""
+
+from sqlmodel import create_engine, Session
+from pathlib import Path
+
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Database path from environment variable
+DATABASE_PATH = os.getenv("DATABASE_PATH", "../schedules.db")
+
+# Create engine
+engine = create_engine(f"sqlite:///{DATABASE_PATH}", echo=False)
+
+def get_session():
+    """Get a database session."""
+    return Session(engine)
+
+def create_tables():
+    """Create all database tables."""
+    from .sqlmodels import SQLModel
+    SQLModel.metadata.create_all(engine)

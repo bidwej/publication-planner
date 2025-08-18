@@ -6,7 +6,7 @@ Tests for schedule validation module.
 
 import pytest
 from datetime import date
-from validation.schedule import validate_schedule_constraints
+from src.validation.schedule import validate_schedule_constraints
 from core.models import Config, Submission
 
 

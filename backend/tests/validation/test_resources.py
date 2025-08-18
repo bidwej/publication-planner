@@ -6,7 +6,7 @@ Tests for resources validation module.
 
 import pytest
 from datetime import date
-from validation.resources import validate_resources_constraints, _calculate_daily_load
+from src.validation.resources import validate_resources_constraints, _calculate_daily_load
 from core.models import Config, Submission, ResourceValidation
 
 

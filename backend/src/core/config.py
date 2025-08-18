@@ -7,11 +7,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from dateutil.parser import parse as parse_date
 
-from core.models import (
+from .models import (
     Conference, ConferenceRecurrence, ConferenceType, Config, Submission, 
     SubmissionType, SubmissionWorkflow
 )
-from core.constants import SCHEDULING_CONSTANTS, PENALTY_CONSTANTS
+from .constants import SCHEDULING_CONSTANTS, PENALTY_CONSTANTS
 
 # Regex patterns for robust ID matching
 MOD_ID_PATTERN = re.compile(r'^mod_(\d+)$')
@@ -49,10 +49,19 @@ def _map_conference_data(json_data: Dict) -> Dict:
     }
 
 
-def _parse_candidate_kinds(json_data: Dict) -> Optional[List[SubmissionType]]:
-    """Parse candidate_kinds from JSON."""
-    if json_data.get("candidate_kinds"):
-        return [SubmissionType(t) for t in json_data["candidate_kinds"]]
+def _parse_preferred_kinds(json_data: Dict) -> Optional[List[SubmissionType]]:
+    """Parse preferred_kinds from JSON."""
+    if json_data.get("preferred_kinds"):
+        return [SubmissionType(t) for t in json_data["preferred_kinds"]]
+    else:
+        return None
+
+
+def _parse_preferred_workflow(json_data: Dict) -> Optional[SubmissionWorkflow]:
+    """Parse preferred workflow from JSON data."""
+    workflow = json_data.get('preferred_workflow')
+    if workflow:
+        return SubmissionWorkflow(workflow)
     else:
         return None
 
@@ -93,8 +102,8 @@ def _map_paper_data(json_data: Dict) -> Dict:
         "depends_on": depends_on if depends_on else None,
         "draft_window_months": json_data.get("draft_window_months", 3),
         "lead_time_from_parents": json_data.get("lead_time_from_parents", 0),
-        "candidate_conferences": json_data.get("candidate_conferences", []),
-        "candidate_kinds": _parse_candidate_kinds(json_data),  # Preferred submission types
+        "preferred_conferences": json_data.get("preferred_conferences", []),
+        "preferred_kinds": _parse_preferred_kinds(json_data),  # Preferred submission types
         "submission_workflow": _parse_submission_workflow(json_data),  # How this submission should be handled
         # Unified schema fields
         "engineering_ready_date": parse_date(json_data["engineering_ready_date"]).date() if json_data.get("engineering_ready_date") else None,
@@ -118,8 +127,8 @@ def _map_mod_data(json_data: Dict) -> Dict:
         "kind": SubmissionType.PAPER,  # Mods are papers (PCCP research papers)
         "author": author,  # Explicit author field
         "conference_id": None,  # No pre-assigned conference
-        "candidate_conferences": json_data.get("candidate_conferences", []),  # Map candidate conferences
-        "candidate_kinds": _parse_candidate_kinds(json_data),  # Preferred submission types
+        "preferred_conferences": json_data.get("preferred_conferences", []),  # Map preferred conferences
+        "preferred_kinds": _parse_preferred_kinds(json_data),  # Preferred submission types
         "submission_workflow": _parse_submission_workflow(json_data),  # How this submission should be handled
         "depends_on": json_data.get("depends_on", []),
         "draft_window_months": json_data.get("draft_window_months", 2),  # Use actual draft window
@@ -335,8 +344,8 @@ def _load_submissions_with_abstracts(
     for submission_data in all_submissions:
         # Validate candidate conferences exist
         valid_candidates = []
-        if hasattr(submission_data, 'candidate_conferences') and submission_data.candidate_conferences:
-            for conf_name in submission_data.candidate_conferences:
+        if hasattr(submission_data, 'preferred_conferences') and submission_data.preferred_conferences:
+            for conf_name in submission_data.preferred_conferences:
                 if conf_name in conference_names:
                     valid_candidates.append(conf_name)
                 else:
@@ -345,7 +354,7 @@ def _load_submissions_with_abstracts(
         # Determine submission type and properties
         if hasattr(submission_data, 'kind'):
             # Already a Submission object (from mods), just validate conferences
-            submission_data.candidate_conferences = valid_candidates
+            submission_data.preferred_conferences = valid_candidates
             submissions.append(submission_data)
         else:
             # Paper object - create Submission
@@ -360,7 +369,7 @@ def _load_submissions_with_abstracts(
                 penalty_cost_per_day=penalty_costs.get("default_paper_penalty_per_day", 0.0),
                 engineering=submission_data.engineering,
                 earliest_start_date=submission_data.earliest_start_date,
-                candidate_conferences=valid_candidates  # Only valid conferences
+                preferred_conferences=valid_candidates  # Only valid conferences
             )
             submissions.append(paper_submission)
     

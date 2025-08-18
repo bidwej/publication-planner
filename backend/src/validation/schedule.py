@@ -5,9 +5,9 @@ from datetime import date, timedelta
 
 from core.models import Config, Submission, SubmissionType, ConstraintValidationResult
 from core.constants import QUALITY_CONSTANTS
-from validation.deadline import validate_deadline_constraints
-from validation.resources import validate_resources_constraints
-from validation.venue import validate_venue_constraints
+from .deadline import validate_deadline_constraints
+from .resources import validate_resources_constraints
+from .venue import validate_venue_constraints
 from core.dates import calculate_schedule_duration
 
 

@@ -213,7 +213,7 @@ class BaseScheduler(ABC):
             submission = self.submissions[submission_id]
             
             # IMPORTANT: Try to assign conference BEFORE validation if not assigned
-            if submission.conference_id is None and hasattr(submission, 'candidate_conferences') and submission.candidate_conferences:
+            if submission.conference_id is None and hasattr(submission, 'preferred_conferences') and submission.preferred_conferences:
                 self._assign_best_conference(submission)
             
             # Check deadline constraint
@@ -286,23 +286,24 @@ class BaseScheduler(ABC):
         """Assign the best available conference to a submission."""
         candidate_conferences = []
         
-        if hasattr(submission, 'candidate_conferences') and submission.candidate_conferences:
-            # Use specific candidate conferences
-            candidate_conferences = submission.candidate_conferences
+        if hasattr(submission, 'preferred_conferences') and submission.preferred_conferences:
+            # Use specific preferred conferences
+            candidate_conferences = submission.preferred_conferences
         else:
-            # None or empty candidate_conferences means try all appropriate conferences
-            # If candidate_kinds is None, try all conferences that accept any submission type
-            if submission.candidate_kinds is None:
+            # None or empty preferred_conferences means try all appropriate conferences
+            # If preferred_kinds is None OR preferred_workflow is ALL_TYPES, try all conferences that accept any submission type
+            if (submission.preferred_kinds is None or 
+                (submission.preferred_workflow and submission.preferred_workflow.value == "all_types")):
                 # Open to any opportunity - find conferences that accept any submission type
                 for conf in self.conferences.values():
                     # Accept conference if it has any deadline (abstract, paper, poster)
                     if conf.deadlines:
                         candidate_conferences.append(conf.name)
             else:
-                # Use specific candidate_kinds
+                # Use specific preferred_kinds
                 for conf in self.conferences.values():
-                    # Check if any candidate_kinds are accepted by this conference
-                    candidate_types = submission.candidate_kinds if submission.candidate_kinds else [submission.kind]
+                    # Check if any preferred_kinds are accepted by this conference
+                    candidate_types = submission.preferred_kinds if submission.preferred_kinds else [submission.kind]
                     if any(ctype in conf.deadlines for ctype in candidate_types):
                         candidate_conferences.append(conf.name)
         
@@ -320,9 +321,12 @@ class BaseScheduler(ABC):
                     
             if conf:
                 # Determine what submission type to use
-                if submission.candidate_kinds is not None:
-                    # Use specified candidate_kinds in priority order
-                    submission_types_to_try = submission.candidate_kinds
+                if submission.preferred_kinds is not None:
+                    # Use specified preferred_kinds in priority order
+                    submission_types_to_try = submission.preferred_kinds
+                elif submission.preferred_workflow and submission.preferred_workflow.value == "all_types":
+                    # ALL_TYPES workflow - try all available submission types in order of preference
+                    submission_types_to_try = [SubmissionType.POSTER, SubmissionType.ABSTRACT, SubmissionType.PAPER]
                 else:
                     # Open to any opportunity - try in order of preference: poster, abstract, paper
                     submission_types_to_try = [SubmissionType.POSTER, SubmissionType.ABSTRACT, SubmissionType.PAPER]
@@ -344,13 +348,13 @@ class BaseScheduler(ABC):
                                     # This preserves the business requirement that abstracts come before papers
                                     if SubmissionType.ABSTRACT in conf.deadlines:
                                         submission.conference_id = conf.id
-                                        submission.candidate_kinds = [SubmissionType.ABSTRACT]  # Submit as abstract first
+                                        submission.preferred_kinds = [SubmissionType.ABSTRACT]  # Submit as abstract first
                                         return
                                 else:
                                     submission.conference_id = conf.id
-                                    # Update candidate_kinds to reflect the chosen type
-                                    if submission.candidate_kinds is None:
-                                        submission.candidate_kinds = [submission_type_to_check]
+                                    # Update preferred_kinds to reflect the chosen type
+                                    if submission.preferred_kinds is None:
+                                        submission.preferred_kinds = [submission_type_to_check]
                                     return
     
     def _check_conference_compatibility_for_type(self, conference: 'Conference', submission_type: SubmissionType) -> bool:
@@ -368,8 +372,8 @@ class BaseScheduler(ABC):
         """Check if a submission is compatible with a conference based on the compatibility matrix."""
         from core.models import ConferenceType
         
-        # Check if conference accepts any of the candidate submission types
-        candidate_types = submission.candidate_kinds if submission.candidate_kinds else [submission.kind]
+        # Check if conference accepts any of the preferred submission types
+        candidate_types = submission.preferred_kinds if submission.preferred_kinds else [submission.kind]
         
         # Try each candidate type in priority order
         for submission_type in candidate_types:

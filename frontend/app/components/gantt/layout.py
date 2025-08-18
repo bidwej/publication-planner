@@ -10,7 +10,7 @@ from app.components.gantt.chart import (
     create_gantt_chart,
     _create_error_chart
 )
-from app.components.exporters.controls import create_export_controls, export_chart_png, export_chart_html
+from app.components.exporter.controls import create_export_controls, export_chart_png, export_chart_html
 from app.storage import get_state_manager
 import sys
 sys.path.append('../backend/src')
@@ -32,7 +32,7 @@ def create_gantt_layout(config: Optional[Config] = None) -> html.Div:
     # Create a demo schedule if we have config data but no schedule
     demo_schedule = None
     if config and config.submissions:
-        from datetime import date, timedelta
+        from datetime import date, timedelta, datetime
         # Create a simple demo schedule starting from today
         demo_schedule = {}
         current_date = date.today()
@@ -45,6 +45,9 @@ def create_gantt_layout(config: Optional[Config] = None) -> html.Div:
     # Store component state using clean state manager
     if config:
         get_state_manager().save_component_state('gantt', config, 'gantt', schedule=demo_schedule)
+        
+        # Note: Schedule saving functionality will be added later
+        # For now, just store component state
     
     return html.Div([
         _create_gantt_header(),
@@ -93,6 +96,8 @@ def _create_gantt_controls() -> html.Div:
             )
         ], className="control-group")
     ], className="gantt-controls")
+
+
 
 
 # Dash Callbacks

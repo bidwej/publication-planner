@@ -8,7 +8,13 @@ from dash import Dash, html, dcc, Input, Output, callback, page_container
 from app.components.dashboard.layout import create_dashboard_layout
 from app.components.gantt.layout import create_gantt_layout
 from app.components.metrics.layout import create_metrics_layout
-from ...backend.src.core.config import load_config
+# Note: Config loading will be handled by backend API calls
+# For now, we'll create a placeholder config
+def load_config(data_path: str):
+    """Placeholder config loader - will be replaced with backend API calls."""
+    print(f"⚠️  Config loading from {data_path} is deprecated")
+    print("   Frontend will load data from backend API instead")
+    return None
 
 # Global constant for data path
 DEFAULT_DATA_PATH = "app/assets/demo/data/config.json"

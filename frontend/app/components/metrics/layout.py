@@ -10,7 +10,7 @@ from app.components.metrics.chart import (
     create_metrics_chart,
     _create_error_chart
 )
-from app.components.exporters.controls import create_export_controls
+from app.components.exporter.controls import create_export_controls
 from app.storage import get_state_manager
 from core.models import Config
 
@@ -142,14 +142,14 @@ def handle_metrics_export(n_clicks_png: Optional[int], n_clicks_html: Optional[i
     
     try:
         if 'png' in button_id:
-            from app.components.exporters.controls import export_chart_png
+            from app.components.exporter.controls import export_chart_png
             result = export_chart_png(figure, "metrics_chart.png")
             if result:
                 return f"✅ PNG exported to: {result}"
             else:
                 return "❌ PNG export failed"
         elif 'html' in button_id:
-            from app.components.exporters.controls import export_chart_html
+            from app.components.exporter.controls import export_chart_html
             result = export_chart_html(figure, "metrics_chart.html")
             if result:
                 return f"✅ HTML exported to: {result}"

@@ -52,32 +52,72 @@ def _create_schedule_timeline_chart(config: Optional[Config] = None) -> Figure:
     """
     fig = go.Figure()
     
-    if config and config.submissions:
-        # Use real data from config
-        submission_names = []
-        for submission in config.submissions:
-            title = submission.title
-            if len(title) > 30:
-                submission_names.append(title[:30] + "...")
-            else:
-                submission_names.append(title)
-        
-        submission_counts = [1] * len(config.submissions)  # Each submission counts as 1
-        
-        fig.add_trace(go.Scatter(
-            x=submission_names,
-            y=submission_counts,
-            mode='lines+markers',
-            name='Real Submissions',
-            marker=dict(size=12, color='blue')
-        ))
-        
-        title = f'Paper Planner Schedule Timeline - Real Data ({len(config.submissions)} submissions)'
-    else:
+    # Try to get data from database first
+    try:
+        from app.database import get_schedule_data
+        schedule_data = get_schedule_data()
+        if schedule_data and schedule_data.get('schedule'):
+            # Use real data from database
+            schedule = schedule_data['schedule']
+            submission_names = list(schedule.keys())
+            submission_counts = [1] * len(schedule)
+            
+            fig.add_trace(go.Scatter(
+                x=submission_names,
+                y=submission_counts,
+                mode='lines+markers',
+                name='Database Submissions',
+                marker=dict(size=12, color='green')
+            ))
+            
+            title = f'Paper Planner Schedule Timeline - Database Data ({len(schedule)} submissions)'
+        elif config and config.submissions:
+            # Use real data from config
+            submission_names = []
+            for submission in config.submissions:
+                title = submission.title
+                if len(title) > 30:
+                    submission_names.append(title[:30] + "...")
+                else:
+                    submission_names.append(title)
+            
+            submission_counts = [1] * len(config.submissions)  # Each submission counts as 1
+            
+            fig.add_trace(go.Scatter(
+                x=submission_names,
+                y=submission_counts,
+                mode='lines+markers',
+                name='Real Submissions',
+                marker=dict(size=12, color='blue')
+            ))
+            
+            title = f'Paper Planner Schedule Timeline - Real Data ({len(config.submissions)} submissions)'
+        else:
+            # Fallback to realistic demo data
+            months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+            # Realistic submission counts showing the actual scheduling patterns
+            # Jan: mod_1 starts, Feb: mod_2 starts, Mar: abstracts start, Apr-May: papers start
+            submission_counts = [1, 2, 4, 5, 6, 7]
+            
+            fig.add_trace(go.Scatter(
+                x=months,
+                y=submission_counts,
+                mode='lines+markers',
+                name='Demo Schedule',
+                marker=dict(size=12, color='blue'),
+                line=dict(width=3)
+            ))
+            
+            # Add annotations for key milestones
+            fig.add_annotation(x=0, y=1, text="mod_1 starts", showarrow=True, arrowhead=2)
+            fig.add_annotation(x=1, y=2, text="mod_2 starts", showarrow=True, arrowhead=2)
+            fig.add_annotation(x=2, y=4, text="Abstracts start", showarrow=True, arrowhead=2)
+            fig.add_annotation(x=3, y=5, text="Papers start", showarrow=True, arrowhead=2)
+            
+            title = 'Paper Planner Schedule Timeline - Realistic Demo'
+    except ImportError:
         # Fallback to realistic demo data
         months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
-        # Realistic submission counts showing the actual scheduling patterns
-        # Jan: mod_1 starts, Feb: mod_2 starts, Mar: abstracts start, Apr-May: papers start
         submission_counts = [1, 2, 4, 5, 6, 7]
         
         fig.add_trace(go.Scatter(
@@ -88,12 +128,6 @@ def _create_schedule_timeline_chart(config: Optional[Config] = None) -> Figure:
             marker=dict(size=12, color='blue'),
             line=dict(width=3)
         ))
-        
-        # Add annotations for key milestones
-        fig.add_annotation(x=0, y=1, text="mod_1 starts", showarrow=True, arrowhead=2)
-        fig.add_annotation(x=1, y=2, text="mod_2 starts", showarrow=True, arrowhead=2)
-        fig.add_annotation(x=2, y=4, text="Abstracts start", showarrow=True, arrowhead=2)
-        fig.add_annotation(x=3, y=5, text="Papers start", showarrow=True, arrowhead=2)
         
         title = 'Paper Planner Schedule Timeline - Realistic Demo'
     

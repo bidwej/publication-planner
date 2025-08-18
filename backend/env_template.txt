@@ -1,0 +1,9 @@
+# Backend Environment Configuration
+# Copy this file to .env and update values as needed
+
+# Database path - SQLite database in project root
+DATABASE_PATH=../schedules.db
+
+# Backend configuration
+DEBUG=true
+LOG_LEVEL=INFO
