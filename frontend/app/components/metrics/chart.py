@@ -21,9 +21,9 @@ def create_metrics_chart() -> Figure:
         horizontal_spacing=0.1
     )
     
-    # Left side: Current metrics (bar chart)
-    metrics = ['Efficiency', 'Timeline', 'Resources', 'Quality', 'Collaboration']
-    scores = [85, 92, 78, 88, 91]
+    # Left side: Current metrics (bar chart) - realistic scheduling metrics
+    metrics = ['Deadline Compliance', 'Dependency Satisfaction', 'Resource Utilization', 'Conference Match', 'Overall Score']
+    scores = [92, 88, 85, 90, 89]  # Realistic scores for a well-planned schedule
     colors = ['#2E86AB', '#A23B72', '#F18F01', '#C73E1D', '#592E83']
     
     fig.add_trace(
@@ -38,17 +38,18 @@ def create_metrics_chart() -> Figure:
         row=1, col=1
     )
     
-    # Right side: Performance trends over time (line chart)
+    # Right side: Performance trends over time (line chart) - realistic scheduling trends
     months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
-    efficiency_trend = [75, 78, 80, 82, 85, 85]
-    timeline_trend = [88, 90, 89, 91, 92, 92]
-    resources_trend = [70, 72, 75, 76, 78, 78]
+    # Shows how schedule quality improves as more submissions are scheduled
+    deadline_compliance = [85, 87, 89, 91, 92, 92]
+    dependency_satisfaction = [80, 82, 85, 87, 88, 88]
+    resource_utilization = [75, 78, 80, 82, 85, 85]
     
     fig.add_trace(
         go.Scatter(
             x=months,
-            y=efficiency_trend,
-            name='Efficiency',
+            y=deadline_compliance,
+            name='Deadline Compliance',
             mode='lines+markers',
             line=dict(color='#2E86AB', width=3),
             marker=dict(size=8)
@@ -59,8 +60,8 @@ def create_metrics_chart() -> Figure:
     fig.add_trace(
         go.Scatter(
             x=months,
-            y=timeline_trend,
-            name='Timeline',
+            y=dependency_satisfaction,
+            name='Dependency Satisfaction',
             mode='lines+markers',
             line=dict(color='#A23B72', width=3),
             marker=dict(size=8)
@@ -71,8 +72,8 @@ def create_metrics_chart() -> Figure:
     fig.add_trace(
         go.Scatter(
             x=months,
-            y=resources_trend,
-            name='Resources',
+            y=resource_utilization,
+            name='Resource Utilization',
             mode='lines+markers',
             line=dict(color='#F18F01', width=3),
             marker=dict(size=8)

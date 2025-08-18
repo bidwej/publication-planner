@@ -506,6 +506,246 @@ total_penalty = penalty_breakdown.total_penalty
 penalty = days_late * penalty_per_day  # DON'T DO THIS
 ```
 
+## Backend Runner
+
+The `run_backend.py` script provides a comprehensive interface to run various backend operations for the Paper Planner system.
+
+### Overview
+
+This script offers six main operations:
+- **Schedule Generation**: Create schedules using different strategies
+- **Analysis**: Analyze existing schedules and generate reports
+- **Validation**: Validate configuration and constraints
+- **Monitoring**: Track schedule progress and detect deviations
+- **Export**: Export schedule data in various formats
+- **Console**: Interactive console interface
+
+### Quick Start
+
+```bash
+# Show help
+python run_backend.py --help
+
+# List available operations
+python run_backend.py --help
+```
+
+### Operations
+
+#### 1. Schedule Generation
+
+Generate schedules using different scheduling strategies.
+
+```bash
+# Generate schedule with greedy strategy
+python run_backend.py schedule --strategy greedy --config data/config.json
+
+# Compare multiple strategies
+python run_backend.py schedule --compare --config data/config.json
+
+# Save schedule to file
+python run_backend.py schedule --strategy optimal --config data/config.json --output my_schedule.json
+```
+
+**Available Strategies:**
+- `greedy`: Fast, simple scheduling
+- `stochastic`: Randomized greedy approach
+- `lookahead`: Considers future implications
+- `backtracking`: Backtracking search
+- `random`: Random scheduling
+- `heuristic`: Heuristic-based approach
+- `optimal`: MILP optimization (may timeout)
+
+#### 2. Analysis
+
+Analyze existing schedules and generate comprehensive reports.
+
+```bash
+# Analyze configuration and schedule
+python run_backend.py analyze --config data/config.json
+
+# Save analysis to file
+python run_backend.py analyze --config data/config.json --output analysis_report.json
+
+# Analyze specific schedule file
+python run_backend.py analyze --config data/config.json --schedule schedule.json
+```
+
+**Analysis Output:**
+- Schedule completeness metrics
+- Time distribution analysis
+- Missing submissions identification
+
+#### 3. Validation
+
+Validate configuration and schedule constraints.
+
+```bash
+# Validate configuration only
+python run_backend.py validate --config data/config.json
+
+# Validate with verbose output
+python run_backend.py validate --config data/config.json --verbose
+
+# Validate specific schedule
+python run_backend.py validate --config data/config.json --schedule schedule.json
+```
+
+**Validation Checks:**
+- Configuration file integrity
+- Constraint satisfaction
+- Deadline compliance
+- Resource utilization
+- Dependency satisfaction
+
+#### 4. Monitoring
+
+Monitor schedule progress and detect deviations.
+
+```bash
+# Basic monitoring
+python run_backend.py monitor --config data/config.json
+
+# Track progress with detailed metrics
+python run_backend.py monitor --config data/config.json --track-progress
+
+# Monitor specific schedule
+python run_backend.py monitor --config data/config.json --schedule schedule.json
+```
+
+**Monitoring Features:**
+- Progress tracking
+- Deviation detection
+- Completion statistics
+- On-time performance metrics
+
+#### 5. Export
+
+Export schedule data in various formats.
+
+```bash
+# Export to CSV
+python run_backend.py export --format csv --output exports/ --config data/config.json
+
+# Export to JSON
+python run_backend.py export --format json --output exports/ --config data/config.json
+
+# Export specific schedule
+python run_backend.py export --format csv --output exports/ --config data/config.json --schedule schedule.json
+```
+
+**Export Formats:**
+- **CSV**: Simple table format with submission ID and start date
+- **JSON**: Structured data format
+
+#### 6. Console
+
+Interactive console interface for schedule operations.
+
+```bash
+# Show available functions
+python run_backend.py console --config data/config.json
+
+# Interactive mode (future feature)
+python run_backend.py console --config data/config.json --interactive
+```
+
+### Common Options
+
+All operations support these common options:
+
+- `--config CONFIG`: Configuration file path (default: `data/config.json`)
+- `--schedule SCHEDULE`: Schedule file path for operations that need it
+- `--output OUTPUT`: Output file/directory path
+- `--verbose`: Enable verbose output with error details
+
+### Examples
+
+#### Complete Workflow
+
+```bash
+# 1. Validate configuration
+python run_backend.py validate --config data/config.json
+
+# 2. Generate schedule
+python run_backend.py schedule --strategy greedy --config data/config.json --output schedule.json
+
+# 3. Analyze schedule
+python run_backend.py analyze --config data/config.json --schedule schedule.json --output analysis.json
+
+# 4. Monitor progress
+python run_backend.py monitor --config data/config.json --schedule schedule.json --track-progress
+
+# 5. Export data
+python run_backend.py export --format csv --output exports/ --config data/config.json --schedule schedule.json
+```
+
+#### Strategy Comparison
+
+```bash
+# Compare all strategies
+python run_backend.py schedule --compare --config data/config.json
+
+# Compare specific strategies
+python run_backend.py schedule --strategy greedy --config data/config.json
+python run_backend.py schedule --strategy optimal --config data/config.json
+```
+
+### Configuration
+
+The backend requires a valid configuration file (`data/config.json`) that includes:
+- Conference definitions
+- Submission data
+- Scheduling parameters
+- Constraint definitions
+
+### Error Handling
+
+- **Configuration Errors**: Invalid config files will cause operations to fail
+- **Schedule Generation Errors**: Some strategies may fail to generate valid schedules
+- **Export Errors**: Format-specific issues will be reported
+- **Verbose Mode**: Use `--verbose` for detailed error information
+
+### Dependencies
+
+The backend runner requires:
+- Python 3.8+
+- All backend dependencies (see `requirements.txt`)
+- Valid configuration and data files
+
+### Troubleshooting
+
+#### Common Issues
+
+1. **Import Errors**: Ensure backend environment is properly set up
+2. **Configuration Errors**: Check config file syntax and data file paths
+3. **Schedule Generation Failures**: Try different strategies or check constraints
+4. **Export Failures**: Verify output directory permissions
+
+#### Debug Mode
+
+Use `--verbose` flag for detailed error information:
+
+```bash
+python run_backend.py schedule --strategy greedy --config data/config.json --verbose
+```
+
+### Integration
+
+The backend runner integrates with:
+- **Frontend**: Provides data for Dash interfaces
+- **Existing Tools**: Compatible with `generate_schedule.py`
+- **Monitoring**: Progress tracking and rescheduling
+- **Analytics**: Comprehensive schedule analysis
+
+### Future Enhancements
+
+- Interactive console mode
+- Real-time monitoring
+- Advanced export formats
+- Batch processing capabilities
+- API endpoints for web integration
+
 ## Scheduling Algorithms
 
 The scheduler architecture has been completely refactored to provide a clear separation between different scheduling approaches with comprehensive validation and constraint satisfaction. The new architecture uses a shared base class with specialized schedulers for different optimization strategies.

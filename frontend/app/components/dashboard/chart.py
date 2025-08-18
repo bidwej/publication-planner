@@ -74,15 +74,28 @@ def _create_schedule_timeline_chart(config: Optional[Config] = None) -> Figure:
         
         title = f'Paper Planner Schedule Timeline - Real Data ({len(config.submissions)} submissions)'
     else:
-        # Fallback to sample data
+        # Fallback to realistic demo data
+        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+        # Realistic submission counts showing the actual scheduling patterns
+        # Jan: mod_1 starts, Feb: mod_2 starts, Mar: abstracts start, Apr-May: papers start
+        submission_counts = [1, 2, 4, 5, 6, 7]
+        
         fig.add_trace(go.Scatter(
-            x=['Jan', 'Feb', 'Mar', 'Apr', 'May'],
-            y=[10, 15, 13, 17, 20],
+            x=months,
+            y=submission_counts,
             mode='lines+markers',
-            name='Sample Data',
-            marker=dict(size=12, color='blue')
+            name='Demo Schedule',
+            marker=dict(size=12, color='blue'),
+            line=dict(width=3)
         ))
-        title = 'Paper Planner Schedule Timeline - Sample Data'
+        
+        # Add annotations for key milestones
+        fig.add_annotation(x=0, y=1, text="mod_1 starts", showarrow=True, arrowhead=2)
+        fig.add_annotation(x=1, y=2, text="mod_2 starts", showarrow=True, arrowhead=2)
+        fig.add_annotation(x=2, y=4, text="Abstracts start", showarrow=True, arrowhead=2)
+        fig.add_annotation(x=3, y=5, text="Papers start", showarrow=True, arrowhead=2)
+        
+        title = 'Paper Planner Schedule Timeline - Realistic Demo'
     
     fig.update_layout(
         title=title,
