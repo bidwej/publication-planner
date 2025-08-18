@@ -2,14 +2,21 @@
 
 from __future__ import annotations
 from typing import Dict, List, Optional, Any, Set
-from datetime import date
+from datetime import date, timedelta
 import statistics
 from collections import defaultdict, deque
 from dataclasses import dataclass
 
-from core.models import Config, ResourceAnalysis, ScheduleAnalysis, ScheduleDistribution, SubmissionTypeAnalysis, TimelineAnalysis
+from core.models import Config, ResourceAnalysis, ScheduleAnalysis, ScheduleDistribution, SubmissionTypeAnalysis, TimelineAnalysis, Schedule, ScheduleSummary, ScheduleMetrics
 from validation.resources import _calculate_daily_load
-from core.constants import ANALYTICS_CONSTANTS, QUALITY_CONSTANTS
+from core.constants import ANALYTICS_CONSTANTS, QUALITY_CONSTANTS, SCHEDULING_CONSTANTS
+from validation.deadline import validate_deadline_constraints
+from validation.resources import validate_resources_constraints
+from scoring.efficiency import calculate_efficiency_score
+from scoring.penalties import calculate_penalty_score
+from scoring.quality import calculate_quality_score
+
+from core.models import SubmissionType
 
 
 @dataclass
@@ -34,7 +41,119 @@ class GraphAnalysis:
     summary: str
 
 
-def analyze_schedule_completeness(schedule: Dict[str, date], config: Config) -> ScheduleAnalysis:
+# ============================================================================
+# PUBLIC FUNCTIONS
+# ============================================================================
+
+def generate_schedule_summary(schedule: Schedule, config: Config) -> ScheduleSummary:
+    """Generate a comprehensive schedule summary."""
+    if not schedule:
+        return ScheduleSummary(
+            total_submissions=0,
+            schedule_span=0,
+            start_date=None,
+            end_date=None,
+            penalty_score=0.0,
+            quality_score=0.0,
+            efficiency_score=0.0,
+            deadline_compliance=100.0,
+            resource_utilization=0.0
+        )
+    
+    # Basic schedule metrics using intervals
+    start_date = min(interval.start_date for interval in schedule.intervals.values())
+    end_date = max(interval.end_date for interval in schedule.intervals.values())
+    schedule_span = schedule.calculate_duration_days()
+    
+    # Calculate scores
+    penalty = calculate_penalty_score(schedule, config)
+    quality = calculate_quality_score(schedule, config)
+    efficiency = calculate_efficiency_score(schedule, config)
+    
+    # Calculate compliance
+    deadline_validation = validate_deadline_constraints(schedule, config)
+    resource_validation = validate_resources_constraints(schedule, config)
+    
+    return ScheduleSummary(
+        total_submissions=len(schedule.intervals),
+        schedule_span=schedule_span,
+        start_date=start_date,
+        end_date=end_date,
+        penalty_score=penalty.total_penalty,
+        quality_score=quality,
+        efficiency_score=efficiency,
+        deadline_compliance=deadline_validation.compliance_rate,
+        resource_utilization=resource_validation.max_observed / resource_validation.max_concurrent if resource_validation.max_concurrent > 0 else 0.0
+    )
+
+
+def generate_schedule_metrics(schedule: Schedule, config: Config) -> ScheduleMetrics:
+    """Generate detailed metrics for the schedule."""
+    if not schedule:
+        return ScheduleMetrics(
+            makespan=0,
+            avg_utilization=0.0,
+            peak_utilization=0,
+            total_penalty=0.0,
+            compliance_rate=100.0,
+            quality_score=0.0
+        )
+    
+    # Calculate makespan using intervals
+    start_date = min(interval.start_date for interval in schedule.intervals.values())
+    end_date = max(interval.end_date for interval in schedule.intervals.values())
+    makespan = schedule.calculate_duration_days()
+    
+    # Calculate utilization
+    daily_load = {}
+    sub_map = {s.id: s for s in config.submissions}
+    
+    for sid, interval in schedule.intervals.items():
+        sub = sub_map.get(sid)
+        if not sub:
+            continue
+        
+        # Calculate duration
+        # Fixed time constants
+        days_per_month = SCHEDULING_CONSTANTS.days_per_month
+        
+        if sub.kind == SubmissionType.ABSTRACT:
+            duration_days = 0
+        else:
+            duration_days = sub.draft_window_months * days_per_month if sub.draft_window_months > 0 else config.min_paper_lead_time_days
+        
+        # Add workload for each day
+        for i in range(duration_days + 1):
+            day = interval.start_date + timedelta(days=i)
+            daily_load[day] = daily_load.get(day, 0) + 1
+    
+    # Calculate average utilization
+    avg_utilization = statistics.mean(daily_load.values()) if daily_load else 0.0
+    peak_utilization = max(daily_load.values()) if daily_load else 0
+    
+    # Calculate penalties and compliance
+    penalty = calculate_penalty_score(schedule, config)
+    deadline_validation = validate_deadline_constraints(schedule, config)
+    quality = calculate_quality_score(schedule, config)
+    
+    return ScheduleMetrics(
+        makespan=makespan,
+        avg_utilization=avg_utilization,
+        peak_utilization=peak_utilization,
+        total_penalty=penalty.total_penalty,
+        compliance_rate=deadline_validation.compliance_rate,
+        quality_score=quality
+    )
+
+
+
+
+
+# ============================================================================
+# PRIVATE HELPER FUNCTIONS
+# ============================================================================
+
+def _analyze_schedule_completeness(schedule: Schedule, config: Config) -> ScheduleAnalysis:
     """Analyze how complete the schedule is."""
     if not schedule:
         return ScheduleAnalysis(
@@ -46,11 +165,12 @@ def analyze_schedule_completeness(schedule: Dict[str, date], config: Config) -> 
         )
     
     total_submissions = len(config.submissions)
-    scheduled_count = len(schedule)
+    scheduled_count = len(schedule.intervals)
+    scheduled_ids = set(schedule.intervals.keys())
+    
     completion_rate = min((scheduled_count / total_submissions * QUALITY_CONSTANTS.percentage_multiplier), 100.0) if total_submissions > 0 else ANALYTICS_CONSTANTS.default_completion_rate
     
     # Find missing submissions
-    scheduled_ids = set(schedule.keys())
     all_ids = {sub.id for sub in config.submissions}
     missing_ids = all_ids - scheduled_ids
     
@@ -73,7 +193,8 @@ def analyze_schedule_completeness(schedule: Dict[str, date], config: Config) -> 
         summary=f"Scheduled {scheduled_count}/{total_submissions} submissions ({completion_rate:.1f}% complete)"
     )
 
-def analyze_schedule_distribution(schedule: Dict[str, date], config: Config) -> ScheduleDistribution:
+
+def _analyze_schedule_distribution(schedule: Schedule, config: Config) -> ScheduleDistribution:
     """Analyze the distribution of submissions across time."""
     if not schedule:
         return ScheduleDistribution(
@@ -85,20 +206,23 @@ def analyze_schedule_distribution(schedule: Dict[str, date], config: Config) -> 
     
     # Monthly distribution
     monthly_dist = {}
-    for sid, start_date in schedule.items():
+    for sid, interval in schedule.intervals.items():
+        start_date = interval.start_date
         month_key = f"{start_date.year}-{start_date.month:02d}"
         monthly_dist[month_key] = monthly_dist.get(month_key, 0) + 1
     
     # Quarterly distribution
     quarterly_dist = {}
-    for sid, start_date in schedule.items():
+    for sid, interval in schedule.intervals.items():
+        start_date = interval.start_date
         quarter = (start_date.month - 1) // 3 + 1
         quarter_key = f"{start_date.year}-Q{quarter}"
         quarterly_dist[quarter_key] = quarterly_dist.get(quarter_key, 0) + 1
     
     # Yearly distribution
     yearly_dist = {}
-    for sid, start_date in schedule.items():
+    for sid, interval in schedule.intervals.items():
+        start_date = interval.start_date
         year_key = str(start_date.year)
         yearly_dist[year_key] = yearly_dist.get(year_key, 0) + 1
     
@@ -109,7 +233,8 @@ def analyze_schedule_distribution(schedule: Dict[str, date], config: Config) -> 
         summary=f"Distribution across {len(monthly_dist)} months, {len(quarterly_dist)} quarters, {len(yearly_dist)} years"
     )
 
-def analyze_submission_types(schedule: Dict[str, date], config: Config) -> SubmissionTypeAnalysis:
+
+def _analyze_submission_types(schedule: Schedule, config: Config) -> SubmissionTypeAnalysis:
     """Analyze the distribution of submission types in the schedule."""
     if not schedule:
         return SubmissionTypeAnalysis(
@@ -121,7 +246,7 @@ def analyze_submission_types(schedule: Dict[str, date], config: Config) -> Submi
     type_counts = {}
     sub_map = {s.id: s for s in config.submissions}
     
-    for sid, start_date in schedule.items():
+    for sid, interval in schedule.intervals.items():
         sub = sub_map.get(sid)
         if not sub:
             continue
@@ -142,7 +267,8 @@ def analyze_submission_types(schedule: Dict[str, date], config: Config) -> Submi
         summary=f"Distribution across {len(type_counts)} submission types"
     )
 
-def analyze_timeline(schedule: Dict[str, date], config: Config) -> TimelineAnalysis:
+
+def _analyze_timeline(schedule: Schedule, config: Config) -> TimelineAnalysis:
     """Analyze timeline characteristics of the schedule."""
     if not schedule:
         return TimelineAnalysis(
@@ -153,9 +279,10 @@ def analyze_timeline(schedule: Dict[str, date], config: Config) -> TimelineAnaly
             summary="No submissions to analyze"
         )
     
-    # Calculate timeline metrics
-    timeline_start = min(schedule.values())
-    timeline_end = max(schedule.values())
+    # Calculate timeline metrics from Schedule intervals
+    dates = [interval.start_date for interval in schedule.intervals.values()]
+    timeline_start = min(dates)
+    timeline_end = max(dates)
     duration_days = (timeline_end - timeline_start).days + 1
     
     # Calculate daily load using constraints logic
@@ -173,7 +300,8 @@ def analyze_timeline(schedule: Dict[str, date], config: Config) -> TimelineAnaly
         summary=f"Timeline spans {duration_days} days with peak load of {peak_daily_load} submissions"
     )
 
-def analyze_resources(schedule: Dict[str, date], config: Config) -> ResourceAnalysis:
+
+def _analyze_resources(schedule: Schedule, config: Config) -> ResourceAnalysis:
     """Analyze resource utilization patterns."""
     if not schedule:
         return ResourceAnalysis(
@@ -206,7 +334,44 @@ def analyze_resources(schedule: Dict[str, date], config: Config) -> ResourceAnal
     )
 
 
-# Dependency Graph Analysis Functions
+def _analyze_dependency_graph(config: Config) -> GraphAnalysis:
+    """Analyze dependency graphs for submissions."""
+    nodes = _build_dependency_graph(config)
+    
+    # Detect cycles
+    cycles = _detect_cycles(nodes)
+    
+    # Calculate depths
+    depths = _calculate_depths(nodes)
+    max_depth = max(depths.values()) if depths else 0
+    
+    # Find critical path
+    critical_path = _find_critical_path(nodes)
+    
+    # Find bottlenecks
+    bottlenecks = _find_bottlenecks(nodes)
+    
+    # Find isolated nodes
+    isolated_nodes = _find_isolated_nodes(nodes)
+    
+    # Generate summary
+    summary = f"Graph Analysis: {len(nodes)} nodes, {len(cycles)} cycles, " \
+             f"max depth {max_depth}, {len(bottlenecks)} bottlenecks, " \
+             f"{len(isolated_nodes)} isolated nodes"
+    
+    return GraphAnalysis(
+        nodes=nodes,
+        cycles=cycles,
+        bottlenecks=bottlenecks,
+        critical_path=critical_path,
+        max_depth=max_depth,
+        isolated_nodes=isolated_nodes,
+        summary=summary
+    )
+
+
+
+
 
 def _build_dependency_graph(config: Config) -> Dict[str, GraphNode]:
     """Build the dependency graph from submissions."""
@@ -400,81 +565,50 @@ def _find_isolated_nodes(nodes: Dict[str, GraphNode]) -> List[str]:
     return isolated
 
 
-def analyze_dependency_graph(config: Config) -> GraphAnalysis:
-    """Analyze dependency graphs for submissions."""
-    nodes = _build_dependency_graph(config)
+def _calculate_average_daily_load(schedule, config: Config) -> float:
+    """Calculate average daily load."""
+    if not schedule:
+        return 0.0
     
-    # Detect cycles
-    cycles = _detect_cycles(nodes)
+    # Convert Schedule to Schedule if needed for backward compatibility
+    if not hasattr(schedule, 'intervals'):
+        # Create a minimal Schedule object for backward compatibility
+        from core.models import Schedule, Interval
+        intervals = {}
+        for sid, interval in schedule.intervals.items():
+            intervals[sid] = Interval(start_date=interval.start_date, end_date=interval.end_date)
+        schedule = Schedule(intervals=intervals)
     
-    # Calculate depths
-    depths = _calculate_depths(nodes)
-    max_depth = max(depths.values()) if depths else 0
+    daily_load = _calculate_daily_load(schedule, config)
     
-    # Find critical path
-    critical_path = _find_critical_path(nodes)
+    if not daily_load:
+        return 0.0
     
-    # Find bottlenecks
-    bottlenecks = _find_bottlenecks(nodes)
-    
-    # Find isolated nodes
-    isolated_nodes = _find_isolated_nodes(nodes)
-    
-    # Generate summary
-    summary = f"Graph Analysis: {len(nodes)} nodes, {len(cycles)} cycles, " \
-             f"max depth {max_depth}, {len(bottlenecks)} bottlenecks, " \
-             f"{len(isolated_nodes)} isolated nodes"
-    
-    return GraphAnalysis(
-        nodes=nodes,
-        cycles=cycles,
-        bottlenecks=bottlenecks,
-        critical_path=critical_path,
-        max_depth=max_depth,
-        isolated_nodes=isolated_nodes,
-        summary=summary
-    )
+    total_load = sum(daily_load.values())
+    return total_load / len(daily_load) 
 
 
-def get_dependency_chain(submission_id: str, config: Config) -> List[str]:
-    """Get the complete dependency chain for a submission."""
-    nodes = _build_dependency_graph(config)
-    chain = []
-    visited = set()
+def analyze_schedule_with_scoring(schedule, config: Config) -> Dict[str, Any]:
+    """
+    Analyze complete schedule with comprehensive analytics.
     
-    def dfs(node_id: str) -> None:
-        if node_id in visited:
-            return
-        
-        visited.add(node_id)
-        node = nodes.get(node_id)
-        if node:
-            # Add dependencies first
-            for dep_id in node.dependencies:
-                dfs(dep_id)
-            chain.append(node_id)
+    This function provides a unified interface to all analytics capabilities.
+    """
+    if not schedule:
+        return {
+            "completeness": _analyze_schedule_completeness(schedule, config),
+            "distribution": _analyze_schedule_distribution(schedule, config),
+            "submission_types": _analyze_submission_types(schedule, config),
+            "timeline": _analyze_timeline(schedule, config),
+            "resources": _analyze_resources(schedule, config),
+            "dependency_graph": _analyze_dependency_graph(config)
+        }
     
-    dfs(submission_id)
-    return chain
-
-
-def get_affected_submissions(submission_id: str, config: Config) -> List[str]:
-    """Get all submissions that would be affected if a submission is delayed."""
-    nodes = _build_dependency_graph(config)
-    affected = []
-    visited = set()
-    
-    def dfs(node_id: str) -> None:
-        if node_id in visited:
-            return
-        
-        visited.add(node_id)
-        affected.append(node_id)
-        
-        node = nodes.get(node_id)
-        if node:
-            for dependent_id in node.dependents:
-                dfs(dependent_id)
-    
-    dfs(submission_id)
-    return affected 
+    return {
+        "completeness": _analyze_schedule_completeness(schedule, config),
+        "distribution": _analyze_schedule_distribution(schedule, config),
+        "submission_types": _analyze_submission_types(schedule, config),
+        "timeline": _analyze_timeline(schedule, config),
+        "resources": _analyze_resources(schedule, config),
+        "dependency_graph": _analyze_dependency_graph(config)
+    } 

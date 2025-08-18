@@ -9,16 +9,16 @@ from core.models import Config, EfficiencyMetrics, TimelineMetrics
 from core.constants import (
     EFFICIENCY_CONSTANTS, SCORING_CONSTANTS, REPORT_CONSTANTS, QUALITY_CONSTANTS
 )
-from core.dates import calculate_schedule_duration
 
 
-def calculate_efficiency_score(schedule: Dict[str, date], config: Config) -> float:
+
+def calculate_efficiency_score(schedule: Schedule, config: Config) -> float:
     """
     Calculate efficiency score based on resource utilization and timeline.
     
     Parameters
     ----------
-    schedule : Dict[str, date]
+    schedule : Schedule
         Mapping of submission_id to start_date
     config : Config
         Configuration object
@@ -50,13 +50,13 @@ def calculate_efficiency_score(schedule: Dict[str, date], config: Config) -> flo
     return max(min_score, min(max_score, efficiency_score))
 
 
-def calculate_efficiency_resource(schedule: Dict[str, date], config: Config) -> EfficiencyMetrics:
+def calculate_efficiency_resource(schedule: Schedule, config: Config) -> EfficiencyMetrics:
     """
     Calculate detailed resource efficiency metrics.
     
     Parameters
     ----------
-    schedule : Dict[str, date]
+    schedule : Schedule
         Mapping of submission_id to start_date
     config : Config
         Configuration object
@@ -83,14 +83,14 @@ def calculate_efficiency_resource(schedule: Dict[str, date], config: Config) -> 
     daily_load = defaultdict(int)
     submissions_dict = config.submissions_dict
     
-    for submission_id, start_date in schedule.items():
+    for submission_id, interval in schedule.intervals.items():
         submission = submissions_dict.get(submission_id)
         if not submission:
             continue
             
         duration_days = submission.get_duration_days(config)
         for i in range(duration_days):
-            current_date = start_date + timedelta(days=i)
+            current_date = interval.start_date + timedelta(days=i)
             daily_load[current_date] += 1
     
     if not daily_load:
@@ -126,13 +126,13 @@ def calculate_efficiency_resource(schedule: Dict[str, date], config: Config) -> 
 
 
 
-def calculate_efficiency_timeline(schedule: Dict[str, date], config: Config) -> TimelineMetrics:
+def calculate_efficiency_timeline(schedule: Schedule, config: Config) -> TimelineMetrics:
     """
     Calculate timeline efficiency metrics.
     
     Parameters
     ----------
-    schedule : Dict[str, date]
+    schedule : Schedule
         Mapping of submission_id to start_date
     config : Config
         Configuration object
@@ -176,7 +176,11 @@ def calculate_efficiency_timeline(schedule: Dict[str, date], config: Config) -> 
     
     start_date = min(start_dates)
     end_date = max(end_dates)
-    duration_days = calculate_schedule_duration({str(i): d for i, d in enumerate(start_dates)}) + 1
+            # Create a temporary schedule object to calculate duration
+        from core.models import Schedule, Interval
+        temp_intervals = {str(i): Interval(start_date=d, end_date=d) for i, d in enumerate(start_dates)}
+        temp_schedule = Schedule(intervals=temp_intervals)
+        duration_days = temp_schedule.calculate_duration_days() + 1
     
     # Calculate average daily load
     total_submissions = len(schedule)

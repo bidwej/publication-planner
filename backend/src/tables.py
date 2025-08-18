@@ -5,7 +5,7 @@ from typing import Dict, List, Any
 from datetime import date, timedelta
 import json
 import csv
-from core.models import Config, SubmissionType, ScheduleSummary
+from core.models import Config, SubmissionType, ScheduleSummary, Schedule
 from core.constants import DISPLAY_CONSTANTS, SCHEDULING_CONSTANTS
 from pathlib import Path
 
@@ -37,7 +37,7 @@ def generate_simple_monthly_table(config: Config) -> List[Dict[str, Any]]:
     return table
 
 
-def generate_schedule_summary_table(schedule: Dict[str, date], config: Config) -> List[Dict[str, str]]:
+def generate_schedule_summary_table(schedule: Schedule, config: Config) -> List[Dict[str, str]]:
     """Generate a summary table for the schedule."""
     if not schedule:
         return []
@@ -45,14 +45,14 @@ def generate_schedule_summary_table(schedule: Dict[str, date], config: Config) -
     table = []
     sub_map = {s.id: s for s in config.submissions}
     
-    for sid, start_date in sorted(schedule.items(), key=lambda x: x[1]):
+    for sid, interval in sorted(schedule.intervals.items(), key=lambda x: x[1].start_date):
         sub = sub_map.get(sid)
         if not sub:
             continue
             
         # Calculate end date
         duration = config.min_paper_lead_time_days if sub.kind == SubmissionType.PAPER else 0
-        end_date = start_date + timedelta(days=duration)
+        end_date = interval.start_date + timedelta(days=duration)
         
         # Get conference info
         conf_name = "N/A"
@@ -64,7 +64,7 @@ def generate_schedule_summary_table(schedule: Dict[str, date], config: Config) -
             "Title": sub.title[:DISPLAY_CONSTANTS.max_title_length] + ("" if len(sub.title) > DISPLAY_CONSTANTS.max_title_length else ""),
             "Type": sub.kind.value.title(),
             "Conference": conf_name,
-            "Start Date": start_date.strftime("%Y-%m-%d"),
+            "Start Date": interval.start_date.strftime("%Y-%m-%d"),
             "End Date": end_date.strftime("%Y-%m-%d"),
             "Duration (days)": str(duration),
             "Engineering": "Yes" if sub.engineering else "No"
@@ -73,17 +73,17 @@ def generate_schedule_summary_table(schedule: Dict[str, date], config: Config) -
     return table
 
 
-def generate_schedule_table(schedule: Dict[str, date], config: Config) -> List[Dict[str, str]]:
+def generate_schedule_table(schedule: Schedule, config: Config) -> List[Dict[str, str]]:
     """Generate a table showing the schedule assignments."""
     if not schedule:
         return []
     
     table_data = []
-    for submission_id, start_date in sorted(schedule.items()):
+    for submission_id, interval in sorted(schedule.intervals.items(), key=lambda x: x[1].start_date):
         submission = config.submissions_dict.get(submission_id)
         if submission:
             duration_days = submission.get_duration_days(config)
-            end_date = start_date + timedelta(days=duration_days)
+            end_date = interval.start_date + timedelta(days=duration_days)
             
             # Get conference info
             conference_name = "N/A"
@@ -96,7 +96,7 @@ def generate_schedule_table(schedule: Dict[str, date], config: Config) -> List[D
                 "ID": submission_id,
                 "Title": submission.title[:50] + "..." if len(submission.title) > 50 else submission.title,
                 "Type": submission.kind.value.title(),
-                "Start Date": start_date.strftime("%Y-%m-%d"),
+                "Start Date": interval.start_date.strftime("%Y-%m-%d"),
                 "End Date": end_date.strftime("%Y-%m-%d"),
                 "Duration (days)": str(duration_days),
                 "Conference": conference_name,
@@ -106,21 +106,21 @@ def generate_schedule_table(schedule: Dict[str, date], config: Config) -> List[D
     return table_data
 
 
-def generate_metrics_table(schedule: Dict[str, date], config: Config) -> List[Dict[str, str]]:
+def generate_metrics_table(schedule: Schedule, config: Config) -> List[Dict[str, str]]:
     """Generate a table showing schedule metrics."""
     if not schedule:
         return []
     
-    # Calculate metrics
-    total_submissions = len(schedule)
-    start_dates = list(schedule.values())
+    # Calculate metrics using intervals
+    total_submissions = len(schedule.intervals)
+    start_dates = [interval.start_date for interval in schedule.intervals.values()]
     end_dates = []
     
-    for submission_id, start_date in schedule.items():
+    for submission_id, interval in schedule.intervals.items():
         submission = config.submissions_dict.get(submission_id)
         if submission:
             duration_days = submission.get_duration_days(config)
-            end_date = start_date + timedelta(days=duration_days)
+            end_date = interval.start_date + timedelta(days=duration_days)
             end_dates.append(end_date)
     
     if not end_dates:
@@ -134,7 +134,7 @@ def generate_metrics_table(schedule: Dict[str, date], config: Config) -> List[Di
     deadline_violations = 0
     total_with_deadlines = 0
     
-    for submission_id, start_date in schedule.items():
+    for submission_id, interval in schedule.intervals.items():
         submission = config.submissions_dict.get(submission_id)
         if submission and submission.conference_id:
             conference = config.conferences_dict.get(submission.conference_id)
@@ -142,7 +142,7 @@ def generate_metrics_table(schedule: Dict[str, date], config: Config) -> List[Di
                 total_with_deadlines += 1
                 deadline = conference.deadlines[submission.kind]
                 duration_days = submission.get_duration_days(config)
-                end_date = start_date + timedelta(days=duration_days)
+                end_date = interval.start_date + timedelta(days=duration_days)
                 if end_date > deadline:
                     deadline_violations += 1
     
@@ -161,7 +161,7 @@ def generate_metrics_table(schedule: Dict[str, date], config: Config) -> List[Di
     return table_data
 
 
-def generate_deadline_table(schedule: Dict[str, date], config: Config) -> List[Dict[str, str]]:
+def generate_deadline_table(schedule: Schedule, config: Config) -> List[Dict[str, str]]:
     """Generate a table showing deadline information."""
     if not schedule:
         return []
@@ -258,7 +258,7 @@ def generate_penalties_table(penalty_breakdown: Dict[str, float]) -> List[Dict[s
 # Advanced Formatting Functions
 # ============================================================================
 
-def format_schedule_table(schedule: Dict[str, date], config: Config) -> List[Dict[str, str]]:
+def format_schedule_table(schedule: Schedule, config: Config) -> List[Dict[str, str]]:
     """Format schedule as a table for display with enhanced formatting."""
     if not schedule:
         return []
@@ -368,7 +368,7 @@ def format_metrics_table(metrics: ScheduleSummary) -> List[Dict[str, str]]:
     return rows
 
 
-def format_deadline_table(schedule: Dict[str, date], config: Config) -> List[Dict[str, str]]:
+def format_deadline_table(schedule: Schedule, config: Config) -> List[Dict[str, str]]:
     """Format deadline compliance as a table with enhanced formatting."""
     if not schedule:
         return []
@@ -426,7 +426,7 @@ def format_deadline_table(schedule: Dict[str, date], config: Config) -> List[Dic
 # Web-Specific Table Functions
 # ============================================================================
 
-def create_schedule_table(schedule: Dict[str, date], config: Config) -> List[Dict[str, str]]:
+def create_schedule_table(schedule: Schedule, config: Config) -> List[Dict[str, str]]:
     """Create schedule table data for web display with status tracking."""
     if not schedule:
         return []
@@ -580,7 +580,7 @@ def create_analytics_table(validation_result: Dict[str, Any]) -> List[Dict[str, 
 # File I/O Functions
 # ============================================================================
 
-def save_schedule_json(schedule: Dict[str, date], output_dir: str, filename: str = "schedule.json") -> str:
+def save_schedule_json(schedule: Schedule, output_dir: str, filename: str = "schedule.json") -> str:
     """Save schedule as JSON file."""
     filepath = Path(output_dir) / filename
     with open(filepath, 'w', encoding='utf-8') as f:

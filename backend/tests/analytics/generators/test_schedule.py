@@ -50,7 +50,7 @@ class TestSaveAllOutputs:
 
     def test_save_all_outputs_basic(self, tmp_path: Path, monkeypatch) -> None:
         """Test save all outputs with basic data."""
-        schedule: Dict[str, date] = {"paper1": date(2024, 1, 1)}
+        schedule: Schedule = {"paper1": date(2024, 1, 1)}
         schedule_table: List[Dict[str, str]] = [{"id": "paper1", "date": "2024-01-01"}]
         metrics_table: List[Dict[str, str]] = [{"metric": "score", "value": "0.85"}]
         deadline_table: List[Dict[str, str]] = [{"deadline": "2024-02-01", "status": "met"}]
@@ -89,7 +89,7 @@ class TestSaveAllOutputs:
 
     def test_save_all_outputs_empty_tables(self, tmp_path: Path, monkeypatch) -> None:
         """Test save all outputs with empty tables."""
-        schedule: Dict[str, date] = {"paper1": date(2024, 1, 1)}
+        schedule: Schedule = {"paper1": date(2024, 1, 1)}
         schedule_table: List[Dict[str, str]] = []
         metrics_table: List[Dict[str, str]] = []
         deadline_table: List[Dict[str, str]] = []
@@ -131,7 +131,7 @@ class TestGenerateScheduleSummary:
             'min_abstract_lead_time_days': 30
         })()
         
-        empty_schedule: Dict[str, date] = {}
+        empty_schedule: Schedule = {}
         
         result: ScheduleSummary = generate_schedule_summary(empty_schedule, config)  # type: ignore
         
@@ -193,7 +193,7 @@ class TestGenerateScheduleSummary:
             'conferences': []
         })()
         
-        schedule: Dict[str, date] = {"paper1": date(2024, 1, 1)}
+        schedule: Schedule = {"paper1": date(2024, 1, 1)}
         
         result: ScheduleSummary = generate_schedule_summary(schedule, config)  # type: ignore
         
@@ -219,7 +219,7 @@ class TestGenerateScheduleMetrics:
             'min_abstract_lead_time_days': 30
         })()
         
-        empty_schedule: Dict[str, date] = {}
+        empty_schedule: Schedule = {}
         
         result: ScheduleMetrics = generate_schedule_metrics(empty_schedule, config)  # type: ignore
         
@@ -285,7 +285,7 @@ class TestGenerateScheduleMetrics:
         # Update config submissions with proper mock objects
         config.submissions = [mock_submission1, mock_submission2]
         
-        schedule: Dict[str, date] = {"paper1": date(2024, 1, 1)}
+        schedule: Schedule = {"paper1": date(2024, 1, 1)}
         
         result: ScheduleMetrics = generate_schedule_metrics(schedule, config)  # type: ignore
         

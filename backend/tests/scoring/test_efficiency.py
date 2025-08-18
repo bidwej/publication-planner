@@ -11,7 +11,7 @@ class TestCalculateEfficiencyScore:
     
     def test_empty_schedule(self, config: Any) -> None:
         """Test efficiency calculation with empty schedule."""
-        schedule: Dict[str, date] = {}
+        schedule: Schedule = {}
         score: float = calculate_efficiency_score(schedule, config)
         
         assert isinstance(score, float)
@@ -19,7 +19,7 @@ class TestCalculateEfficiencyScore:
     
     def test_single_submission(self, config: Any) -> None:
         """Test efficiency calculation with single submission."""
-        schedule: Dict[str, date] = {"test-pap": date(2025, 1, 1)}
+        schedule: Schedule = {"test-pap": date(2025, 1, 1)}
         score: float = calculate_efficiency_score(schedule, config)
         
         assert isinstance(score, float)
@@ -27,7 +27,7 @@ class TestCalculateEfficiencyScore:
     
     def test_multiple_submissions(self, config: Any) -> None:
         """Test efficiency calculation with multiple submissions."""
-        schedule: Dict[str, date] = {
+        schedule: Schedule = {
             "test-pap": date(2025, 1, 1),
             "test-mod": date(2025, 1, 15),
             "test-abs": date(2025, 2, 1)
@@ -40,7 +40,7 @@ class TestCalculateEfficiencyScore:
     def test_resource_utilization(self, config: Any) -> None:
         """Test efficiency score for resource utilization."""
         # Create a schedule that uses resources efficiently
-        schedule: Dict[str, date] = {
+        schedule: Schedule = {
             "paper1": date(2025, 1, 1),
             "paper2": date(2025, 3, 1),  # After first paper ends
             "paper3": date(2025, 4, 1)
@@ -53,7 +53,7 @@ class TestCalculateEfficiencyScore:
     def test_time_spacing(self, config: Any) -> None:
         """Test efficiency score for time spacing."""
         # Create a schedule with good time spacing
-        schedule: Dict[str, date] = {
+        schedule: Schedule = {
             "paper1": date(2025, 1, 1),
             "paper2": date(2025, 3, 1),
             "paper3": date(2025, 5, 1)
@@ -66,7 +66,7 @@ class TestCalculateEfficiencyScore:
     def test_concurrent_utilization(self, config: Any) -> None:
         """Test efficiency score for concurrent utilization."""
         # Create a schedule that uses concurrency efficiently
-        schedule: Dict[str, date] = {
+        schedule: Schedule = {
             "paper1": date(2025, 1, 1),
             "paper2": date(2025, 1, 1),  # Same day - uses concurrency
             "paper3": date(2025, 3, 1)  # After first two end

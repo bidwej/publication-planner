@@ -53,7 +53,7 @@ class ScheduleDatabase:
         from .session import engine
         self.engine = engine
     
-    def save_schedule(self, name: str, strategy: str, schedule: Dict[str, date], 
+    def save_schedule(self, name: str, strategy: str, schedule: Schedule, 
                      config: Dict[str, Any]) -> int:
         """Save a schedule to the database."""
         with Session(self.engine) as session:

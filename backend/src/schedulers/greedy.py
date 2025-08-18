@@ -5,25 +5,22 @@ from typing import Dict, List, Optional, Tuple
 from datetime import date, timedelta
 from schedulers.base import BaseScheduler
 from core.dates import is_working_day
-from core.models import SchedulerStrategy, SubmissionType
+from core.models import SchedulerStrategy, SubmissionType, Schedule, Submission
 from core.constants import SCHEDULING_CONSTANTS, EFFICIENCY_CONSTANTS
-from core.models import Submission
 
 
-@BaseScheduler.register_strategy(SchedulerStrategy.GREEDY)
 class GreedyScheduler(BaseScheduler):
     """Greedy scheduler that schedules submissions as early as possible based on priority."""
     
     def schedule(self) -> Schedule:
         """Generate a schedule using greedy algorithm."""
-        from core.models import Schedule, Interval
         
         # Get what we need from base
         topo = self.get_dependency_order()
         start_date, end_date = self.get_scheduling_window()
         
-        # Initialize empty schedule
-        schedule: Dict[str, Tuple[date, date]] = {}
+        # Initialize empty Schedule object
+        schedule = Schedule()
         
         # Schedule each submission in dependency/priority order
         for submission_id in topo:
@@ -36,10 +33,8 @@ class GreedyScheduler(BaseScheduler):
             proposed_start_date = self._find_earliest_valid_start(submission, schedule)
             
             if proposed_start_date:
-                # Create interval (start, end)
-                duration = submission.get_duration_days(self.config)
-                end_date = proposed_start_date + timedelta(days=duration)
-                schedule[submission_id] = (proposed_start_date, end_date)
+                # Add interval to schedule
+                schedule.add_interval(submission_id, proposed_start_date, duration_days=submission.get_duration_days(self.config))
             else:
                 # If we can't schedule this submission, skip it
                 continue
@@ -47,14 +42,9 @@ class GreedyScheduler(BaseScheduler):
         # Print scheduling summary
         self._print_scheduling_summary(schedule)
         
-        # Convert to Schedule object
-        intervals = {}
-        for sub_id, (start, end) in schedule.items():
-            intervals[sub_id] = Interval(start_date=start, end_date=end)
-        
-        return Schedule(intervals=intervals)
+        return schedule
     
-    def _find_earliest_valid_start(self, submission: Submission, schedule: Dict[str, Tuple[date, date]]) -> Optional[date]:
+    def _find_earliest_valid_start(self, submission: Submission, schedule: Schedule) -> Optional[date]:
         """Find the earliest valid start date for a submission with comprehensive constraint validation."""
         
         # If submission doesn't have a conference assigned, try to assign one
@@ -74,8 +64,8 @@ class GreedyScheduler(BaseScheduler):
         if submission.depends_on:
             for dep_id in submission.depends_on:
                 if dep_id in schedule:
-                    dep_start, dep_end = schedule[dep_id]
-                    current_date = max(current_date, dep_end)
+                    dep_interval = schedule.intervals[dep_id]
+                    current_date = max(current_date, dep_interval.end_date)
         
         # Check earliest start date constraint for conference submissions
         if submission.conference_id and submission.earliest_start_date:
@@ -101,8 +91,8 @@ class GreedyScheduler(BaseScheduler):
             
             # Count active submissions on this date
             active_count = 0
-            for scheduled_id, (scheduled_start_date, scheduled_end_date) in schedule.items():
-                if scheduled_start_date <= current_date <= scheduled_end_date:
+            for scheduled_id, interval in schedule.intervals.items():
+                if interval.start_date <= current_date <= interval.end_date:
                     active_count += 1
             
             # Check resource constraint
@@ -223,7 +213,7 @@ class GreedyScheduler(BaseScheduler):
     
 
     
-    def _print_scheduling_summary(self, schedule: Dict[str, Tuple[date, date]]) -> None:
+    def _print_scheduling_summary(self, schedule: Schedule) -> None:
         """Print summary of scheduling results."""
         if len(schedule) != len(self.submissions):
             missing = [sid for sid in self.submissions if sid not in schedule]

@@ -137,7 +137,7 @@ class TestReports:
     
     def test_generate_schedule_report_empty(self, sample_config) -> None:
         """Test generating a report with empty schedule."""
-        empty_schedule: Dict[str, date] = {}
+        empty_schedule: Schedule = {}
         report = generate_schedule_report(empty_schedule, sample_config)
         
         assert isinstance(report, dict)
@@ -148,7 +148,7 @@ class TestReports:
     def test_generate_schedule_report_with_violations(self, sample_config) -> None:
         """Test generating a report with constraint violations."""
         # Create a schedule with late submissions
-        late_schedule: Dict[str, date] = {
+        late_schedule: Schedule = {
             "J1-pap": date(2025, 2, 1),  # After deadline
             "J2-pap": date(2025, 4, 1)   # After deadline
         }
@@ -165,7 +165,7 @@ class TestReports:
     def test_generate_schedule_report_with_dependencies(self, sample_config) -> None:
         """Test generating a report with dependency violations."""
         # Create a schedule where dependencies are violated
-        bad_dependency_schedule: Dict[str, date] = {
+        bad_dependency_schedule: Schedule = {
             "J2-pap": date(2024, 11, 1),  # Child before parent
             "J1-pap": date(2024, 12, 1)   # Parent after child
         }
@@ -185,7 +185,7 @@ class TestReports:
     def test_generate_schedule_report_with_resource_violations(self, sample_config) -> None:
         """Test generating a report with resource violations."""
         # Create a schedule that exceeds concurrency limits
-        overloaded_schedule: Dict[str, date] = {
+        overloaded_schedule: Schedule = {
             "J1-pap": date(2024, 11, 1),
             "J2-pap": date(2024, 11, 1),  # Same day as J1
             "J3-pap": date(2024, 11, 1)   # Same day as J1 and J2
@@ -345,7 +345,7 @@ class TestReports:
     def test_generate_schedule_report_error_handling(self, sample_config) -> None:
         """Test report generation error handling."""
         # Test with invalid schedule data
-        invalid_schedule: Dict[str, date] = {"invalid-id": "not-a-date"}
+        invalid_schedule: Schedule = {"invalid-id": "not-a-date"}
         
         with pytest.raises(Exception):
             generate_schedule_report(invalid_schedule, sample_config)

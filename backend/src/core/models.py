@@ -8,7 +8,11 @@ from dateutil.parser import parse as parse_date
 
 from pydantic import BaseModel, Field, ConfigDict
 
-from .constants import SCHEDULING_CONSTANTS, PENALTY_CONSTANTS, EFFICIENCY_CONSTANTS
+from .constants import SCHEDULING_CONSTANTS, PENALTY_CONSTANTS, EFFICIENCY_CONSTANTS, SCORING_CONSTANTS
+
+# Forward imports to avoid circular dependencies
+# These will be imported locally in methods that need them
+# from validation.schedule import validate_schedule_constraints
 
 class SubmissionType(str, Enum):
     """Types of submissions."""
@@ -84,41 +88,38 @@ class Schedule(BaseModel):
         """Return number of scheduled submissions."""
         return len(self.intervals)
     
-    def calculate_quality_score(self, config: 'Config') -> Dict[str, float]:
-        """Calculate overall schedule quality score from validation results."""
-        from validation.schedule import validate_schedule_constraints
-        from constants import ScoringConstants
-        
-        # Convert to Dict[str, date] for validation functions
-        schedule_dict = {sub_id: interval.start_date for sub_id, interval in self.intervals.items()}
-        
-        validation_result = validate_schedule_constraints(schedule_dict, config)
-        
-        # Extract individual metrics
-        deadline_rate = validation_result.get('deadline_result', {}).get('compliance_rate', 0.0)
-        dependency_rate = validation_result.get('dependency_result', {}).get('satisfaction_rate', 0.0)
-        resource_rate = validation_result.get('resource_result', {}).get('utilization_rate', 0.0)
-        
-        # Calculate weighted overall score
-        weights = [
-            ScoringConstants.quality_deadline_weight,
-            ScoringConstants.quality_dependency_weight, 
-            ScoringConstants.quality_resource_weight
-        ]
-        metrics = [deadline_rate, dependency_rate, resource_rate]
-        
-        overall_score = sum(w * m for w, m in zip(weights, metrics))
-        
-        return {
-            'deadline_compliance': deadline_rate,
-            'dependency_satisfaction': dependency_rate,
-            'resource_utilization': resource_rate,
-            'overall_score': overall_score
-        }
-    
     def __contains__(self, submission_id: str) -> bool:
         """Check if submission is scheduled."""
         return submission_id in self.intervals
+    
+    @property
+    def start_date(self) -> Optional[date]:
+        """Get the earliest start date across all scheduled submissions."""
+        if not self.intervals:
+            return None
+        return min(interval.start_date for interval in self.intervals.values())
+    
+    @property
+    def end_date(self) -> Optional[date]:
+        """Get the latest end date across all scheduled submissions."""
+        if not self.intervals:
+            return None
+        return max(interval.end_date for interval in self.intervals.values())
+    
+    def calculate_duration_days(self) -> int:
+        """
+        Calculate the duration of the schedule in days.
+        
+        Returns
+        -------
+        int
+            Duration in days from earliest to latest start date
+        """
+        if not self.intervals:
+            return 0
+        
+        dates = [interval.start_date for interval in self.intervals.values()]
+        return (max(dates) - min(dates)).days if dates else 0
 
 class Submission(BaseModel):
     """A submission to a conference."""
@@ -147,25 +148,21 @@ class Submission(BaseModel):
     
     def validate_submission(self) -> List[str]:
         """Validate submission and return list of errors."""
-        errors = []
-        if not self.id:
-            errors.append("Missing submission ID")
-        if not self.title:
-            errors.append("Missing title")
-        # Papers need either conference_id or preferred_conferences
-        if self.kind == SubmissionType.PAPER and not self.conference_id and self.preferred_conferences is None:
-            errors.append("Papers must have either conference_id or preferred_conferences")
-        if self.draft_window_months < 0:
-            errors.append("Draft window months cannot be negative")
-        if self.lead_time_from_parents < 0:
-            errors.append("Lead time from parents cannot be negative")
-        if self.penalty_cost_per_day is not None and self.penalty_cost_per_day < 0:
-            errors.append("Penalty cost per day cannot be negative")
-        if self.penalty_cost_per_month is not None and self.penalty_cost_per_month < 0:
-            errors.append("Penalty cost per month cannot be negative")
-        if self.free_slack_months is not None and self.free_slack_months < 0:
-            errors.append("Free slack months cannot be negative")
-        return errors
+        try:
+            from validation.submission import validate_submission_basic
+            return validate_submission_basic(self)
+        except ImportError:
+            # Fallback to basic validation if validation modules not available
+            errors = []
+            if not self.id:
+                errors.append("Missing submission ID")
+            if not self.title:
+                errors.append("Missing title")
+            if self.draft_window_months < 0:
+                errors.append("Draft window months cannot be negative")
+            if self.lead_time_from_parents < 0:
+                errors.append("Lead time from parents cannot be negative")
+            return errors
     
     def get_priority_score(self, config: 'Config') -> float:
         """Calculate priority score based on config weights."""
@@ -208,9 +205,9 @@ class Submission(BaseModel):
                 
         return False
     
-    def are_dependencies_satisfied(self, schedule: Dict[str, date], 
-                                 submissions_dict: Dict[str, 'Submission'], 
-                                 config: 'Config', current_date: date) -> bool:
+    def are_dependencies_satisfied(self, schedule: 'Schedule', 
+                                  submissions_dict: Dict[str, 'Submission'], 
+                                  config: 'Config', current_date: date) -> bool:
         """Check if all dependencies are satisfied for this submission."""
         if not self.depends_on:
             return True
@@ -221,12 +218,12 @@ class Submission(BaseModel):
                 return False
             
             # Check if dependency is scheduled
-            if dep_id not in schedule:
+            if dep_id not in schedule.intervals:
                 return False
+            dep_start = schedule.intervals[dep_id].start_date
             
             # Check if dependency is completed
             dep = submissions_dict[dep_id]
-            dep_start = schedule[dep_id]
             dep_end = dep.get_end_date(dep_start, config)
             
             if current_date < dep_end:
@@ -330,8 +327,6 @@ class Conference(BaseModel):
     
     def is_compatible_with_submission(self, submission: 'Submission') -> bool:
         """Check if a submission is compatible with this conference."""
-        from .models import ConferenceType
-        
         candidate_types = submission.preferred_kinds if submission.preferred_kinds else [submission.kind]
         
         for submission_type in candidate_types:
@@ -367,17 +362,19 @@ class Conference(BaseModel):
     
     def validate_conference(self) -> List[str]:
         """Validate conference and return list of errors."""
-        errors = []
-        if not self.id:
-            errors.append("Missing conference ID")
-        if not self.name:
-            errors.append("Missing conference name")
-        if not self.deadlines:
-            errors.append("No deadlines defined")
-        for submission_type, deadline in self.deadlines.items():
-            if not isinstance(deadline, date):
-                errors.append(f"Invalid deadline format for {submission_type}")
-        return errors
+        try:
+            from validation.venue import validate_conference_basic
+            return validate_conference_basic(self)
+        except ImportError:
+            # Fallback to basic validation if validation modules not available
+            errors = []
+            if not self.id:
+                errors.append("Missing conference ID")
+            if not self.name:
+                errors.append("Missing conference name")
+            if not self.deadlines:
+                errors.append("No deadlines defined")
+            return errors
     
     def get_deadline(self, submission_type: SubmissionType) -> Optional[date]:
         """Get deadline for a specific submission type."""
@@ -407,6 +404,7 @@ class Config(BaseModel):
     scheduling_options: Optional[Dict[str, Any]] = None
     blackout_dates: Optional[List[date]] = None
     data_files: Optional[Dict[str, str]] = None
+    scheduling_start_date: Optional[date] = None  # When scheduling should begin (defaults to today)
     
     @classmethod
     def create_default(cls) -> 'Config':
@@ -452,54 +450,23 @@ class Config(BaseModel):
     
     def validate_config(self) -> List[str]:
         """Validate configuration and return list of errors."""
-        errors = []
-        
-        # Validate basic requirements
-        if not self.submissions:
-            errors.append("No submissions defined")
-        if not self.conferences:
-            errors.append("No conferences defined")
-        if self.min_abstract_lead_time_days < 0:
-            errors.append("Min abstract lead time cannot be negative")
-        if self.min_paper_lead_time_days < 0:
-            errors.append("Min paper lead time cannot be negative")
-        if self.max_concurrent_submissions < 1:
-            errors.append("Max concurrent submissions must be at least 1")
-        
-        # Validate submissions - first pass: build submission IDs and validate basic submission data
-        submission_ids = set()
-        for submission in self.submissions:
-            submission_errors = submission.validate_submission()
-            errors.extend([f"Submission {submission.id}: {error}" for error in submission_errors])
-            if submission.id in submission_ids:
-                errors.append(f"Duplicate submission ID: {submission.id}")
-            submission_ids.add(submission.id)
-        
-        # Second pass: validate cross-references (conferences and dependencies)
-        for submission in self.submissions:
-            # Validate conference reference
-            if submission.conference_id:
-                conference_ids = {conf.id for conf in self.conferences}
-                if submission.conference_id not in conference_ids:
-                    errors.append(f"Submission {submission.id} references unknown conference {submission.conference_id}")
-            
-            # Validate dependencies
-            if submission.depends_on:
-                for dep_id in submission.depends_on:
-                    if dep_id not in submission_ids:
-                        errors.append(f"Submission {submission.id} depends on nonexistent submission {dep_id}")
-        
-        # Validate conferences
-        conference_ids = set()
-        for conference in self.conferences:
-            conference_errors = conference.validate_conference()
-            errors.extend([f"Conference {conference.id}: {error}" for error in conference_errors])
-            if conference.id in conference_ids:
-                errors.append(f"Duplicate conference ID: {conference.id}")
-            conference_ids.add(conference.id)
-        
-        # Basic validation complete - detailed validation handled by validation module
-        return errors
+        try:
+            from validation.config import validate_config_basic
+            return validate_config_basic(self)
+        except ImportError:
+            # Fallback to basic validation if validation modules not available
+            errors = []
+            if not self.submissions:
+                errors.append("No submissions defined")
+            if not self.conferences:
+                errors.append("No conferences defined")
+            if self.min_abstract_lead_time_days < 0:
+                errors.append("Min abstract lead time cannot be negative")
+            if self.min_paper_lead_time_days < 0:
+                errors.append("Min paper lead time cannot be negative")
+            if self.max_concurrent_submissions < 1:
+                errors.append("Max concurrent submissions must be at least 1")
+            return errors
     
     # Computed properties
     @property
@@ -525,6 +492,16 @@ class Config(BaseModel):
                 earliest_dates.append(date.today())
         
         return min(earliest_dates) if earliest_dates else date.today()
+    
+    @property
+    def effective_scheduling_start_date(self) -> date:
+        """Get when scheduling should begin (user preference or earliest submission date)."""
+        # If user explicitly set a scheduling start date, use that
+        if self.scheduling_start_date is not None:
+            return self.scheduling_start_date
+        
+        # Otherwise, use the earliest submission date
+        return self.start_date
     
     @property
     def end_date(self) -> date:
@@ -571,7 +548,7 @@ class ScoringResult(BaseModel):
 
 class ScheduleResult(BaseModel):
     """Complete schedule result with all metrics and analysis."""
-    schedule: Dict[str, date]
+    schedule: 'Schedule'
     summary: 'ScheduleSummary'
     metrics: 'ScheduleMetrics'
     tables: Dict[str, List[Dict[str, str]]]
@@ -717,6 +694,8 @@ class ScheduleMetrics(BaseModel):
     compliance_rate: float
     quality_score: float
 
+
+
 class ConstraintValidationResult(BaseModel):
     """Result of all constraint validations."""
     deadlines: DeadlineValidation
@@ -728,7 +707,7 @@ class ScheduleState(BaseModel):
     """Complete state of a schedule for serialization."""
     model_config = ConfigDict(validate_assignment=True)
     
-    schedule: Dict[str, date]
+    schedule: 'Schedule'
     config: Config
     strategy: SchedulerStrategy
     timestamp: str

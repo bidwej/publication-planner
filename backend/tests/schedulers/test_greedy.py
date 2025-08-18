@@ -24,7 +24,7 @@ class TestGreedyScheduler:
         """Test scheduling with empty config."""
         scheduler: GreedyScheduler = GreedyScheduler(empty_config)
         
-        result: Dict[str, date] = scheduler.schedule()
+        result: Schedule = scheduler.schedule()
         assert isinstance(result, dict)
         assert len(result) == 0
 
@@ -40,7 +40,7 @@ class TestGreedyScheduler:
         config: Config = create_mock_config([submission], [conference])
         
         scheduler: GreedyScheduler = GreedyScheduler(config)
-        result: Dict[str, date] = scheduler.schedule()
+        result: Schedule = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) == 1
@@ -63,7 +63,7 @@ class TestGreedyScheduler:
         config: Config = create_mock_config([submission1, submission2], [conference])
         
         scheduler: GreedyScheduler = GreedyScheduler(config)
-        result: Dict[str, date] = scheduler.schedule()
+        result: Schedule = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) >= 1
@@ -89,7 +89,7 @@ class TestGreedyScheduler:
         config: Config = create_mock_config([submission], [conference])
         
         scheduler: GreedyScheduler = GreedyScheduler(config)
-        result: Dict[str, date] = scheduler.schedule()
+        result: Schedule = scheduler.schedule()
         
         assert isinstance(result, dict)
         if "paper1" in result:
@@ -108,7 +108,7 @@ class TestGreedyScheduler:
         config: Config = create_mock_config([submission], [conference])
         
         scheduler: GreedyScheduler = GreedyScheduler(config)
-        result: Dict[str, date] = scheduler.schedule()
+        result: Schedule = scheduler.schedule()
         
         assert isinstance(result, dict)
         if "paper1" in result:
@@ -132,7 +132,7 @@ class TestGreedyScheduler:
         config: Config = create_mock_config(submissions, [conference], max_concurrent_submissions=2)
         
         scheduler: GreedyScheduler = GreedyScheduler(config)
-        result: Dict[str, date] = scheduler.schedule()
+        result: Schedule = scheduler.schedule()
         
         assert isinstance(result, dict)
         
@@ -175,7 +175,7 @@ class TestGreedyScheduler:
         config.priority_weights = priority_weights
         
         scheduler: GreedyScheduler = GreedyScheduler(config)
-        result: Dict[str, date] = scheduler.schedule()
+        result: Schedule = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) >= 1
@@ -199,7 +199,7 @@ class TestGreedyScheduler:
         config: Config = create_mock_config([submission], [conference])
         
         scheduler: GreedyScheduler = GreedyScheduler(config)
-        result: Dict[str, date] = scheduler.schedule()
+        result: Schedule = scheduler.schedule()
         
         # Should return empty schedule or skip impossible submission
         assert isinstance(result, dict)
@@ -222,7 +222,7 @@ class TestGreedyScheduler:
         config: Config = create_mock_config([abstract, paper], [conference])
         
         scheduler: GreedyScheduler = GreedyScheduler(config)
-        result: Dict[str, date] = scheduler.schedule()
+        result: Schedule = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) >= 1
@@ -249,7 +249,7 @@ class TestGreedyScheduler:
         config: Config = create_mock_config([engineering_paper, medical_paper], [conference])
         
         scheduler: GreedyScheduler = GreedyScheduler(config)
-        result: Dict[str, date] = scheduler.schedule()
+        result: Schedule = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) >= 1
@@ -267,7 +267,7 @@ class TestGreedyScheduler:
         config: Config = create_mock_config([submission], [conference])
         
         scheduler: GreedyScheduler = GreedyScheduler(config)
-        result: Dict[str, date] = scheduler.schedule()
+        result: Schedule = scheduler.schedule()
         
         assert isinstance(result, dict)
         # Should be able to schedule even with conference assignment
@@ -291,7 +291,7 @@ class TestGreedyScheduler:
         config: Config = create_mock_config([submission1, submission2], [conference1, conference2])
         
         scheduler: GreedyScheduler = GreedyScheduler(config)
-        result: Dict[str, date] = scheduler.schedule()
+        result: Schedule = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) >= 1
@@ -318,7 +318,7 @@ class TestGreedyScheduler:
         config: Config = create_mock_config([submission_a, submission_b, submission_c], [conference])
         
         scheduler: GreedyScheduler = GreedyScheduler(config)
-        result: Dict[str, date] = scheduler.schedule()
+        result: Schedule = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) >= 1
@@ -359,7 +359,7 @@ class TestGreedyScheduler:
         config: Config = create_mock_config([submission_a, submission_b, submission_c], [conference])
         
         scheduler: GreedyScheduler = GreedyScheduler(config)
-        result: Dict[str, date] = scheduler.schedule()
+        result: Schedule = scheduler.schedule()
         
         assert isinstance(result, dict)
         assert len(result) >= 1

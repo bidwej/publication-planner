@@ -6,12 +6,11 @@ from datetime import date, timedelta
 import pulp
 import math
 
-from core.models import SchedulerStrategy, SubmissionType
+from core.models import SchedulerStrategy, SubmissionType, Schedule, Interval
 from core.constants import PENALTY_CONSTANTS, SCHEDULING_CONSTANTS, EFFICIENCY_CONSTANTS
 from schedulers.base import BaseScheduler
 
 
-@BaseScheduler.register_strategy(SchedulerStrategy.OPTIMAL)
 class OptimalScheduler(BaseScheduler):
     """Optimal scheduler using MILP optimization to find the best schedule."""
     
@@ -23,7 +22,6 @@ class OptimalScheduler(BaseScheduler):
     
     def schedule(self) -> Schedule:
         """Generate an optimal schedule using MILP optimization."""
-        from core.models import Schedule, Interval
         
         # Get what we need from base
         topo = self.get_dependency_order()
@@ -55,7 +53,7 @@ class OptimalScheduler(BaseScheduler):
         print(f"MILP optimization: Returning empty schedule (use GreedyScheduler for approximate solution)")
         return Schedule(intervals={})
     
-    def _assign_conferences(self, schedule: Dict[str, date]) -> Dict[str, date]:
+    def _assign_conferences(self, schedule: Schedule) -> Schedule:
         """Assign conferences to submissions that don't have them."""
         for sub_id in schedule.keys():
             submission = self.submissions[sub_id]
@@ -452,7 +450,7 @@ class OptimalScheduler(BaseScheduler):
             print(f"Error solving MILP model: {e}")
             return None
     
-    def _extract_schedule_from_solution(self, solution: Optional[Any]) -> Dict[str, date]:
+    def _extract_schedule_from_solution(self, solution: Optional[Any]) -> Schedule:
         """Extract schedule from MILP solution."""
         if solution is None:
             return {}

@@ -12,7 +12,7 @@ class TestCalculateQualityScore:
     
     def test_empty_schedule(self, config) -> None:
         """Test quality calculation with empty schedule."""
-        schedule: Dict[str, date] = {}
+        schedule: Schedule = {}
         score: float = calculate_quality_score(schedule, config)
         
         assert isinstance(score, float)
@@ -20,7 +20,7 @@ class TestCalculateQualityScore:
     
     def test_single_submission(self, config) -> None:
         """Test quality calculation with single submission."""
-        schedule: Dict[str, date] = {"test-pap": date(2025, 1, 1)}
+        schedule: Schedule = {"test-pap": date(2025, 1, 1)}
         score: float = calculate_quality_score(schedule, config)
         
         assert isinstance(score, float)
@@ -28,7 +28,7 @@ class TestCalculateQualityScore:
     
     def test_multiple_submissions(self, config) -> None:
         """Test quality calculation with multiple submissions."""
-        schedule: Dict[str, date] = {
+        schedule: Schedule = {
             "test-pap": date(2025, 1, 1),
             "test-mod": date(2025, 1, 15),
             "test-abs": date(2025, 2, 1)
@@ -41,7 +41,7 @@ class TestCalculateQualityScore:
     def test_diversity_score(self, config) -> None:
         """Test quality score for diverse submissions."""
         # Create a schedule with different types of submissions
-        schedule: Dict[str, date] = {
+        schedule: Schedule = {
             "paper1": date(2025, 1, 1),
             "paper2": date(2025, 2, 1),
             "abstract1": date(2025, 3, 1),
@@ -55,7 +55,7 @@ class TestCalculateQualityScore:
     def test_balance_score(self, config) -> None:
         """Test quality score for balanced schedule."""
         # Create a schedule with good spacing
-        schedule: Dict[str, date] = {
+        schedule: Schedule = {
             "paper1": date(2025, 1, 1),
             "paper2": date(2025, 3, 1),
             "paper3": date(2025, 5, 1),
@@ -68,7 +68,7 @@ class TestCalculateQualityScore:
     
     def test_priority_weighting(self, config) -> None:
         """Test quality score with priority weighting."""
-        schedule: Dict[str, date] = {
+        schedule: Schedule = {
             "high-priority": date(2025, 1, 1),
             "medium-priority": date(2025, 2, 1),
             "low-priority": date(2025, 3, 1)
@@ -84,7 +84,7 @@ class TestQualityFunctions:
     
     def test_calculate_schedule_robustness(self, config) -> None:
         """Test schedule robustness calculation."""
-        schedule: Dict[str, date] = {
+        schedule: Schedule = {
             "test-pap": date(2025, 1, 1),
             "test-mod": date(2025, 1, 15)
         }
@@ -95,7 +95,7 @@ class TestQualityFunctions:
     
     def test_calculate_quality_balance(self, config) -> None:
         """Test quality balance calculation."""
-        schedule: Dict[str, date] = {
+        schedule: Schedule = {
             "test-pap": date(2025, 1, 1),
             "test-mod": date(2025, 1, 15)
         }
@@ -106,25 +106,25 @@ class TestQualityFunctions:
     
     def test_robustness_with_empty_schedule(self, config) -> None:
         """Test robustness calculation with empty schedule."""
-        schedule: Dict[str, date] = {}
+        schedule: Schedule = {}
         robustness = calculate_quality_robustness(schedule, config)
         assert robustness == 0.0
     
     def test_balance_with_empty_schedule(self, config) -> None:
         """Test balance calculation with empty schedule."""
-        schedule: Dict[str, date] = {}
+        schedule: Schedule = {}
         balance = calculate_quality_balance(schedule, config)
         assert balance == 0.0
     
     def test_robustness_with_single_submission(self, config) -> None:
         """Test robustness calculation with single submission."""
-        schedule: Dict[str, date] = {"test-pap": date(2025, 1, 1)}
+        schedule: Schedule = {"test-pap": date(2025, 1, 1)}
         robustness = calculate_quality_robustness(schedule, config)
         assert robustness == 100.0  # Single submission is always robust
     
     def test_balance_with_well_distributed_schedule(self, config) -> None:
         """Test balance calculation with well-distributed schedule."""
-        schedule: Dict[str, date] = {
+        schedule: Schedule = {
             "jan-pap": date(2025, 1, 1),
             "mar-pap": date(2025, 3, 1),
             "jun-pap": date(2025, 6, 1),

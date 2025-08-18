@@ -6,6 +6,7 @@ import sys
 import os
 from pathlib import Path
 from typing import Optional, Dict, Any
+from datetime import date
 
 # Backend operation configuration
 OPERATIONS = {
@@ -64,7 +65,8 @@ def setup_env():
 def run_schedule_operation(args: argparse.Namespace) -> int:
     """Run schedule generation operation."""
     try:
-        from planner import Planner
+        from schedulers.base import BaseScheduler
+from core.config import load_config
         from console import print_schedule_summary, print_deadline_status, print_utilization_summary
         from reports import generate_schedule_report
         
@@ -149,7 +151,7 @@ def run_schedule_operation(args: argparse.Namespace) -> int:
 def run_analyze_operation(args: argparse.Namespace) -> int:
     """Run schedule analysis operation."""
     try:
-        from analytics import analyze_schedule_completeness, analyze_schedule_distribution
+        from analytics import analyze_schedule_with_scoring
         from core.config import load_config
         
         print(f"\n🔍 Analyzing schedule data")
@@ -160,36 +162,54 @@ def run_analyze_operation(args: argparse.Namespace) -> int:
         
         # Load existing schedule if available
         schedule_file = args.schedule or "output/latest_schedule.json"
-        schedule = {}
+        schedule = None
         
         if Path(schedule_file).exists():
             import json
             with open(schedule_file, 'r') as f:
-                schedule = json.load(f)
-            print(f"📅 Loaded schedule with {len(schedule)} submissions")
+                schedule_data = json.load(f)
+                # Convert to Schedule object if it's a dict
+                if isinstance(schedule_data, dict) and 'intervals' in schedule_data:
+                    from core.models import Schedule, Interval
+                    schedule = Schedule()
+                    for sid, interval_data in schedule_data['intervals'].items():
+                        start_date = date.fromisoformat(interval_data['start_date'])
+                        end_date = date.fromisoformat(interval_data['end_date'])
+                        schedule.intervals[sid] = Interval(start_date=start_date, end_date=end_date)
+                elif isinstance(schedule_data, dict):
+                    # Legacy format - convert to Schedule
+                    from core.models import Schedule, Interval
+                    schedule = Schedule()
+                    for sid, start_date_str in schedule_data.items():
+                        start_date = date.fromisoformat(start_date_str) if isinstance(start_date_str, str) else start_date_str
+                        # Assume 1 day duration for legacy format
+                        end_date = start_date
+                        schedule.intervals[sid] = Interval(start_date=start_date, end_date=end_date)
+                else:
+                    schedule = schedule_data
+            print(f"📅 Loaded schedule with {len(schedule.intervals) if schedule else 0} submissions")
         else:
             print("⚠️  No existing schedule found, analyzing configuration only")
         
-        # Run analyses
-        completeness = analyze_schedule_completeness(schedule, config)
-        distribution = analyze_schedule_distribution(schedule, config)
+        # Run comprehensive analysis
+        analysis = analyze_schedule_with_scoring(schedule, config)
         
         print(f"\n📊 Analysis Results:")
-        print(f"  Completeness: {completeness.completion_rate:.1f}% ({completeness.scheduled_count}/{completeness.total_count})")
-        print(f"  Distribution: {distribution.summary}")
+        print(f"  Completeness: {analysis['completeness'].completion_rate:.1f}% ({analysis['completeness'].scheduled_count}/{analysis['completeness'].total_count})")
+        print(f"  Distribution: {analysis['distribution'].summary}")
         
         if args.output:
             analysis_result = {
                 "completeness": {
-                    "scheduled_count": completeness.scheduled_count,
-                    "total_count": completeness.total_count,
-                    "completion_rate": completeness.completion_rate,
-                    "missing_submissions": completeness.missing_submissions
+                    "scheduled_count": analysis['completeness'].scheduled_count,
+                    "total_count": analysis['completeness'].total_count,
+                    "completion_rate": analysis['completeness'].completion_rate,
+                    "missing_submissions": analysis['completeness'].missing_submissions
                 },
                 "distribution": {
-                    "monthly": distribution.monthly_distribution,
-                    "quarterly": distribution.quarterly_distribution,
-                    "yearly": distribution.yearly_distribution
+                    "monthly": analysis['distribution'].monthly_distribution,
+                    "quarterly": analysis['distribution'].quarterly_distribution,
+                    "yearly": analysis['distribution'].yearly_distribution
                 }
             }
             
@@ -211,7 +231,7 @@ def run_validate_operation(args: argparse.Namespace) -> int:
     """Run validation operation."""
     try:
         from core.config import load_config
-        from validation.schedule import validate_schedule_constraints
+        from validation.schedule import validate_schedule
         from validation.deadline import validate_deadline_constraints
         from validation.resources import validate_resources_constraints
         
@@ -241,7 +261,7 @@ def run_validate_operation(args: argparse.Namespace) -> int:
             print(f"\n📅 Validating schedule with {len(schedule)} submissions...")
             
             # Validate all constraints
-            validation_result = validate_schedule_constraints(schedule, config)
+            validation_result = validate_schedule(schedule, config)
             
             all_valid = True
             for constraint_type, result in validation_result["constraints"].items():
@@ -347,7 +367,27 @@ def run_export_operation(args: argparse.Namespace) -> int:
         
         import json
         with open(schedule_file, 'r') as f:
-            schedule = json.load(f)
+            schedule_data = json.load(f)
+        
+        # Convert to Schedule object if needed
+        if isinstance(schedule_data, dict) and 'intervals' in schedule_data:
+            from core.models import Schedule, Interval
+            schedule = Schedule()
+            for sid, interval_data in schedule_data['intervals'].items():
+                start_date = date.fromisoformat(interval_data['start_date'])
+                end_date = date.fromisoformat(interval_data['end_date'])
+                schedule.intervals[sid] = Interval(start_date=start_date, end_date=end_date)
+        elif isinstance(schedule_data, dict):
+            # Legacy format - convert to Schedule
+            from core.models import Schedule, Interval
+            schedule = Schedule()
+            for sid, start_date_str in schedule_data.items():
+                start_date = date.fromisoformat(start_date_str) if isinstance(start_date_str, str) else start_date_str
+                # Assume 1 day duration for legacy format
+                end_date = start_date
+                schedule.intervals[sid] = Interval(start_date=start_date, end_date=end_date)
+        else:
+            schedule = schedule_data
         
         # Export based on format
         if args.format == 'csv':
@@ -355,14 +395,15 @@ def run_export_operation(args: argparse.Namespace) -> int:
             output_dir = Path(args.output)
             output_dir.mkdir(parents=True, exist_ok=True)
             
-            # Simple CSV export
+            # CSV export with intervals
             import csv
             csv_file = output_dir / "schedule.csv"
             with open(csv_file, 'w', newline='') as f:
                 writer = csv.writer(f)
-                writer.writerow(['Submission ID', 'Start Date'])
-                for submission_id, start_date in schedule.items():
-                    writer.writerow([submission_id, start_date])
+                writer.writerow(['Submission ID', 'Start Date', 'End Date', 'Duration (days)'])
+                for submission_id, interval in schedule.intervals.items():
+                    duration = (interval.end_date - interval.start_date).days + 1
+                    writer.writerow([submission_id, interval.start_date, interval.end_date, duration])
             
             print(f"\n📄 CSV export saved to: {csv_file}")
         
@@ -373,7 +414,7 @@ def run_export_operation(args: argparse.Namespace) -> int:
             
             output_file = output_dir / "schedule_export.json"
             with open(output_file, 'w') as f:
-                json.dump(schedule, f, indent=2)
+                json.dump(schedule_data, f, indent=2)
             print(f"\n📄 JSON export saved to: {output_file}")
         
         else:

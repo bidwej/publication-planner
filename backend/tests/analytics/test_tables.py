@@ -67,7 +67,7 @@ class TestGenerateScheduleSummaryTable:
     
     def test_empty_schedule(self, config) -> None:
         """Test summary table generation with empty schedule."""
-        schedule: Dict[str, date] = {}
+        schedule: Schedule = {}
         table = generate_schedule_summary_table(schedule, config)
         
         assert isinstance(table, list)
@@ -76,7 +76,7 @@ class TestGenerateScheduleSummaryTable:
     
     def test_single_submission(self, config) -> None:
         """Test summary table generation with single submission."""
-        schedule: Dict[str, date] = {"test-pap": date(2025, 1, 15)}
+        schedule: Schedule = {"test-pap": date(2025, 1, 15)}
         table = generate_schedule_summary_table(schedule, config)
         
         assert isinstance(table, list)
@@ -84,7 +84,7 @@ class TestGenerateScheduleSummaryTable:
     
     def test_multiple_submissions(self, config) -> None:
         """Test summary table generation with multiple submissions."""
-        schedule: Dict[str, date] = {
+        schedule: Schedule = {
             "paper1": date(2025, 1, 1),
             "paper2": date(2025, 2, 15),
             "paper3": date(2025, 6, 1)
@@ -100,7 +100,7 @@ class TestGenerateDeadlineTable:
     
     def test_empty_schedule(self, config) -> None:
         """Test deadline table generation with empty schedule."""
-        schedule: Dict[str, date] = {}
+        schedule: Schedule = {}
         table = generate_deadline_table(schedule, config)
         
         assert isinstance(table, list)
@@ -109,7 +109,7 @@ class TestGenerateDeadlineTable:
     
     def test_single_submission(self, config) -> None:
         """Test deadline table generation with single submission."""
-        schedule: Dict[str, date] = {"test-pap": date(2025, 1, 15)}
+        schedule: Schedule = {"test-pap": date(2025, 1, 15)}
         table = generate_deadline_table(schedule, config)
         
         assert isinstance(table, list)
@@ -117,7 +117,7 @@ class TestGenerateDeadlineTable:
     
     def test_multiple_submissions(self, config) -> None:
         """Test deadline table generation with multiple submissions."""
-        schedule: Dict[str, date] = {
+        schedule: Schedule = {
             "paper1": date(2025, 1, 1),
             "paper2": date(2025, 2, 15),
             "paper3": date(2025, 6, 1)
@@ -133,7 +133,7 @@ class TestFormatScheduleTable:
     
     def test_empty_schedule(self, config) -> None:
         """Test formatted table generation with empty schedule."""
-        schedule: Dict[str, date] = {}
+        schedule: Schedule = {}
         table = format_schedule_table(schedule, config)
         
         assert isinstance(table, list)
@@ -141,7 +141,7 @@ class TestFormatScheduleTable:
     
     def test_single_submission(self, config) -> None:
         """Test formatted table generation with single submission."""
-        schedule: Dict[str, date] = {"test-pap": date(2025, 1, 15)}
+        schedule: Schedule = {"test-pap": date(2025, 1, 15)}
         table = format_schedule_table(schedule, config)
         
         assert isinstance(table, list)
@@ -149,7 +149,7 @@ class TestFormatScheduleTable:
     
     def test_table_structure(self, config) -> None:
         """Test that formatted table has expected structure."""
-        schedule: Dict[str, date] = {"test-pap": date(2025, 1, 15)}
+        schedule: Schedule = {"test-pap": date(2025, 1, 15)}
         table = format_schedule_table(schedule, config)
         
         if table:
@@ -180,7 +180,7 @@ class TestFormatDeadlineTable:
     
     def test_empty_schedule(self, config) -> None:
         """Test deadline formatting with empty schedule."""
-        schedule: Dict[str, date] = {}
+        schedule: Schedule = {}
         table = format_deadline_table(schedule, config)
         
         assert isinstance(table, list)
@@ -188,7 +188,7 @@ class TestFormatDeadlineTable:
     
     def test_single_submission(self, config) -> None:
         """Test deadline formatting with single submission."""
-        schedule: Dict[str, date] = {"test-pap": date(2025, 1, 15)}
+        schedule: Schedule = {"test-pap": date(2025, 1, 15)}
         table = format_deadline_table(schedule, config)
         
         assert isinstance(table, list)
@@ -200,7 +200,7 @@ class TestCreateScheduleTable:
     
     def test_empty_schedule(self, config) -> None:
         """Test web table creation with empty schedule."""
-        schedule: Dict[str, date] = {}
+        schedule: Schedule = {}
         table = create_schedule_table(schedule, config)
         
         assert isinstance(table, list)
@@ -208,7 +208,7 @@ class TestCreateScheduleTable:
     
     def test_single_submission(self, config) -> None:
         """Test web table creation with single submission."""
-        schedule: Dict[str, date] = {"test-pap": date(2025, 1, 15)}
+        schedule: Schedule = {"test-pap": date(2025, 1, 15)}
         table = create_schedule_table(schedule, config)
         
         assert isinstance(table, list)
@@ -216,7 +216,7 @@ class TestCreateScheduleTable:
     
     def test_table_structure(self, config) -> None:
         """Test that web table has expected structure."""
-        schedule: Dict[str, date] = {"test-pap": date(2025, 1, 15)}
+        schedule: Schedule = {"test-pap": date(2025, 1, 15)}
         table = create_schedule_table(schedule, config)
         
         if table:
@@ -340,7 +340,7 @@ class TestFileIOFunctions:
     
     def test_save_schedule_json(self, tmp_path) -> None:
         """Test saving schedule as JSON."""
-        schedule: Dict[str, date] = {"test-pap": "2025-01-15"}
+        schedule: Schedule = {"test-pap": "2025-01-15"}
         output_dir = str(tmp_path)
         
         filepath = save_schedule_json(schedule, output_dir)
@@ -404,7 +404,7 @@ class TestTableFormats:
     
     def test_summary_format(self, config) -> None:
         """Test summary table format."""
-        schedule: Dict[str, date] = {
+        schedule: Schedule = {
             "paper1": date(2025, 1, 1),
             "paper2": date(2025, 2, 1),
             "paper3": date(2025, 3, 1)
@@ -417,7 +417,7 @@ class TestTableFormats:
     
     def test_table_with_conferences(self, config) -> None:
         """Test table generation with conference information."""
-        schedule: Dict[str, date] = {
+        schedule: Schedule = {
             "conf1-pap": date(2025, 1, 1),
             "conf2-pap": date(2025, 2, 1),
             "conf3-pap": date(2025, 3, 1)
@@ -429,7 +429,7 @@ class TestTableFormats:
     
     def test_table_with_dependencies(self, config) -> None:
         """Test table generation with dependency information."""
-        schedule: Dict[str, date] = {
+        schedule: Schedule = {
             "parent-pap": date(2025, 1, 1),
             "child-pap": date(2025, 2, 1)
         }

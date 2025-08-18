@@ -6,46 +6,45 @@ Tests for schedule validation module.
 
 import pytest
 from datetime import date
-from src.validation.schedule import validate_schedule_constraints
-from core.models import Config, Submission
+from src.validation.schedule import validate_schedule
+from src.core.models import Config, Submission, Schedule
 
 
 class TestScheduleValidation:
     """Test cases for schedule validation functions."""
     
-    def test_validate_schedule_constraints_empty_schedule(self, empty_config) -> None:
+    def test_validate_schedule_empty_schedule(self, empty_config) -> None:
         """Test schedule validation with empty schedule."""
-        schedule: Dict[str, date] = {}
+        from src.core.models import Schedule
+        schedule = Schedule()
         
-        result: Any = validate_schedule_constraints(schedule, empty_config)
+        result: Any = validate_schedule(schedule, empty_config)
         assert "summary" in result
         assert result["summary"]["overall_valid"] == True
         assert "constraints" in result
-        assert "analytics" in result
+        assert "analytics" in result  # analytics field is still present in the current code
     
     def test_schedule_validation_with_submissions(self, sample_config) -> None:
         """Test schedule validation with actual submissions."""
         # Use the sample_config fixture which already has submissions and conferences
         
         # Test with valid schedule (dependencies satisfied and no blackout dates)
-        valid_schedule = {
-            "mod1-wrk": date(2025, 4, 15),   # Work item starts first, no blackout
-            "paper1-pap": date(2025, 5, 15)  # Paper starts after mod1 completes
-        }
+        from src.core.models import Schedule, Interval
+        valid_schedule = Schedule()
+        valid_schedule.add_interval("mod1-wrk", date(2025, 4, 15))   # Work item starts first, no blackout
+        valid_schedule.add_interval("paper1-pap", date(2025, 5, 15))  # Paper starts after mod1 completes
         
-        result = validate_schedule_constraints(valid_schedule, sample_config)
+        result = validate_schedule(valid_schedule, sample_config)
         # The validation might fail due to other constraints, but we can test the structure
         assert "summary" in result
         assert "constraints" in result
-        assert "analytics" in result
         
         # Test with invalid schedule (dependencies violated)
-        invalid_schedule = {
-            "mod1-wrk": date(2025, 5, 15),   # Work item starts later
-            "paper1-pap": date(2025, 4, 15)  # Paper starts before mod1
-        }
+        invalid_schedule = Schedule()
+        invalid_schedule.add_interval("mod1-wrk", date(2025, 5, 15))   # Work item starts later
+        invalid_schedule.add_interval("paper1-pap", date(2025, 4, 15))  # Paper starts before mod1
         
-        invalid_result = validate_schedule_constraints(invalid_schedule, sample_config)
+        invalid_result = validate_schedule(invalid_schedule, sample_config)
         # This should fail due to dependency violation
         assert "summary" in invalid_result
         assert "constraints" in invalid_result
@@ -55,26 +54,25 @@ class TestScheduleValidation:
         # Use the sample_config fixture which already has submissions with dependencies
         
         # Test with valid dependency chain (respecting durations)
-        valid_schedule = {
-            "mod1-wrk": date(2025, 1, 1),   # First
-            "paper1-pap": date(2025, 2, 1), # After mod1 (assuming mod1 takes ~1 month)
-            "mod2-wrk": date(2025, 3, 1),   # After paper1
-            "paper2-pap": date(2025, 4, 1)  # After mod2
-        }
+        from src.core.models import Schedule
+        valid_schedule = Schedule()
+        valid_schedule.add_interval("mod1-wrk", date(2025, 1, 1))   # First
+        valid_schedule.add_interval("paper1-pap", date(2025, 2, 1)) # After mod1 (assuming mod1 takes ~1 month)
+        valid_schedule.add_interval("mod2-wrk", date(2025, 3, 1))   # After paper1
+        valid_schedule.add_interval("paper2-pap", date(2025, 4, 1))  # After mod2
         
-        result = validate_schedule_constraints(valid_schedule, sample_config)
+        result = validate_schedule(valid_schedule, sample_config)
         assert "summary" in result
         assert "constraints" in result
         
         # Test with broken dependency chain
-        invalid_schedule = {
-            "mod1-wrk": date(2025, 3, 1),   # Later
-            "paper1-pap": date(2025, 1, 1), # Before mod1 (violation)
-            "mod2-wrk": date(2025, 2, 1),   # After mod1
-            "paper2-pap": date(2025, 4, 1)  # After both
-        }
+        invalid_schedule = Schedule()
+        invalid_schedule.add_interval("mod1-wrk", date(2025, 3, 1))   # Later
+        invalid_schedule.add_interval("paper1-pap", date(2025, 1, 1)) # Before mod1 (violation)
+        invalid_schedule.add_interval("mod2-wrk", date(2025, 2, 1))   # After mod1
+        invalid_schedule.add_interval("paper2-pap", date(2025, 4, 1))  # After both
         
-        invalid_result = validate_schedule_constraints(invalid_schedule, sample_config)
+        invalid_result = validate_schedule(invalid_schedule, sample_config)
         assert "summary" in invalid_result
         assert "constraints" in invalid_result
     
@@ -91,14 +89,14 @@ class TestScheduleValidation:
         )
         
         # Test with schedule that violates multiple constraints
-        invalid_schedule = {
-            "mod1-wrk": date(2025, 1, 1),    # Valid start
-            "paper1-pap": date(2025, 1, 1),  # Same day as mod1 (resource violation)
-            "mod2-wrk": date(2025, 1, 1),    # Same day as others (resource violation)
-            "paper2-pap": date(2025, 2, 1)   # After others
-        }
+        from src.core.models import Schedule
+        invalid_schedule = Schedule()
+        invalid_schedule.add_interval("mod1-wrk", date(2025, 1, 1))    # Valid start
+        invalid_schedule.add_interval("paper1-pap", date(2025, 1, 1))  # Same day as mod1 (resource violation)
+        invalid_schedule.add_interval("mod2-wrk", date(2025, 1, 1))    # Same day as others (resource violation)
+        invalid_schedule.add_interval("paper2-pap", date(2025, 2, 1))   # After others
         
-        result = validate_schedule_constraints(invalid_schedule, strict_config)
+        result = validate_schedule(invalid_schedule, strict_config)
         assert "summary" in result
         assert "constraints" in result
         

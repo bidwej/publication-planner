@@ -1,14 +1,13 @@
 """Venue validation functions for conference compatibility and policies."""
 
-from typing import Dict, Any
+from typing import Dict, Any, List
 from datetime import date
 
-from core.models import Config, Submission, ConferenceType, Conference
-from core.constants import QUALITY_CONSTANTS
-from core.models import SubmissionType
+from ..core.models import Config, Submission, ConferenceType, Conference, SubmissionWorkflow, Schedule, SubmissionType
+from ..core.constants import QUALITY_CONSTANTS
 
 
-def validate_venue_constraints(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+def validate_venue_constraints(schedule: Schedule, config: Config) -> Dict[str, Any]:
     """Validate all venue-related constraints for the complete schedule."""
     # Run all venue validations
     conference_compat_result = _validate_conference_compatibility(schedule, config)
@@ -49,13 +48,28 @@ def validate_venue_constraints(schedule: Dict[str, date], config: Config) -> Dic
     }
 
 
-def _validate_conference_compatibility(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+def validate_conference(conference: Conference) -> List[str]:
+    """Validate basic conference fields and return list of errors."""
+    errors = []
+    if not conference.id:
+        errors.append("Missing conference ID")
+    if not conference.name:
+        errors.append("Missing conference name")
+    if not conference.deadlines:
+        errors.append("No deadlines defined")
+    for submission_type, deadline in conference.deadlines.items():
+        if not isinstance(deadline, date):
+            errors.append(f"Invalid deadline format for {submission_type}")
+    return errors
+
+
+def _validate_conference_compatibility(schedule: Schedule, config: Config) -> Dict[str, Any]:
     """Validate conference compatibility (medical vs engineering)."""
     violations = []
     total_submissions = 0
     compatible_submissions = 0
     
-    for sid, start_date in schedule.items():
+    for sid, interval in schedule.intervals.items():
         sub = config.submissions_dict.get(sid)
         if not sub or not sub.conference_id:
             continue
@@ -104,18 +118,18 @@ def _validate_conference_compatibility(schedule: Dict[str, date], config: Config
         "violations": violations,
         "compatibility_rate": compatibility_rate,
         "total_submissions": total_submissions,
-        "compatible_submissions": compatible_submissions,
+        "compliant_submissions": compatible_submissions,
         "summary": f"Conference compatibility: {compatible_submissions}/{total_submissions} submissions compatible ({compatibility_rate:.1f}%)"
     }
 
 
-def _validate_conference_submission_compatibility(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+def _validate_conference_submission_compatibility(schedule: Schedule, config: Config) -> Dict[str, Any]:
     """Validate that submissions are compatible with their conference submission types."""
     violations = []
     total_submissions = 0
     compatible_submissions = 0
     
-    for sid, start_date in schedule.items():
+    for sid, interval in schedule.intervals.items():
         sub = config.submissions_dict.get(sid)
         if not sub or not sub.conference_id:
             continue
@@ -158,119 +172,82 @@ def _validate_conference_submission_compatibility(schedule: Dict[str, date], con
         "violations": violations,
         "compatibility_rate": compatibility_rate,
         "total_submissions": total_submissions,
-        "compatible_submissions": compatible_submissions,
+        "compliant_submissions": compatible_submissions,
         "summary": f"Conference submission compatibility: {compatible_submissions}/{total_submissions} submissions compatible ({compatibility_rate:.1f}%)"
     }
 
 
-def _validate_single_conference_policy(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
-    """Validate single conference policy (one paper per conference per cycle)."""
+def _validate_single_conference_policy(schedule: Schedule, config: Config) -> Dict[str, Any]:
+    """Validate single conference policy (no duplicate conferences per submission)."""
     violations = []
-    total_papers = 0
-    compliant_papers = 0
+    total_submissions = 0
+    compliant_submissions = 0
     
-    # Group papers by conference
-    conference_papers = {}
-    
-    for sid, start_date in schedule.items():
+    # Group submissions by conference
+    conference_submissions = {}
+    for sid, interval in schedule.intervals.items():
         sub = config.submissions_dict.get(sid)
-        if not sub or sub.kind != SubmissionType.PAPER or not sub.conference_id:
+        if not sub or not sub.conference_id:
             continue
         
-        total_papers += 1
+        total_submissions += 1
         conf_id = sub.conference_id
         
-        if conf_id not in conference_papers:
-            conference_papers[conf_id] = []
-        
-        conference_papers[conf_id].append({
-            "submission_id": sid,
-            "start_date": start_date,
-            "submission": sub
-        })
+        if conf_id not in conference_submissions:
+            conference_submissions[conf_id] = []
+        conference_submissions[conf_id].append(sid)
     
-    # Check each conference for multiple papers
-    for conf_id, papers in conference_papers.items():
-        if len(papers) > 1:
-            # Multiple papers to same conference - check if they're in different cycles
-            papers.sort(key=lambda x: x["start_date"])
+    # Check for violations
+    for conf_id, submissions in conference_submissions.items():
+        if len(submissions) > 1:
+            # Multiple submissions to same conference - check if this is allowed
+            conf = config.conferences_dict.get(conf_id)
+            if conf and conf.effective_submission_types == SubmissionWorkflow.ABSTRACT_THEN_PAPER:
+                # This conference allows both abstract and paper
+                abstract_count = 0
+                paper_count = 0
+                for sid in submissions:
+                    sub = config.submissions_dict.get(sid)
+                    if sub and sub.kind == SubmissionType.ABSTRACT:
+                        abstract_count += 1
+                    elif sub and sub.kind == SubmissionType.PAPER:
+                        paper_count += 1
+                
+                # Check if we have both abstract and paper (which is allowed)
+                if abstract_count > 0 and paper_count > 0:
+                    # This is allowed for ABSTRACT_THEN_PAPER conferences
+                    compliant_submissions += len(submissions)
+                    continue
             
-            for i in range(len(papers) - 1):
-                current_paper = papers[i]
-                next_paper = papers[i + 1]
-                
-                # Check if papers are in different annual cycles (roughly 12 months apart)
-                days_between = (next_paper["start_date"] - current_paper["start_date"]).days
-                
-                if days_between < 365:  # Less than a year apart
-                    violations.append({
-                        "submission_id": next_paper["submission_id"],
-                        "description": f"Multiple papers to conference {conf_id} within same cycle: {current_paper['submission_id']} and {next_paper['submission_id']}",
-                        "severity": "medium",
-                        "conference_id": conf_id,
-                        "first_paper": current_paper["submission_id"],
-                        "second_paper": next_paper["submission_id"],
-                        "days_between": days_between
-                    })
-                else:
-                    compliant_papers += 1
+            # Multiple submissions to same conference not allowed
+            violations.append({
+                "submission_ids": submissions,
+                "conference_id": conf_id,
+                "description": f"Multiple submissions to same conference {conf_id}",
+                "severity": "medium"
+            })
         else:
-            compliant_papers += 1
+            compliant_submissions += 1
     
-    compliance_rate = (compliant_papers / total_papers * QUALITY_CONSTANTS.percentage_multiplier) if total_papers > 0 else QUALITY_CONSTANTS.perfect_compliance_rate
+    compliance_rate = (compliant_submissions / total_submissions * QUALITY_CONSTANTS.percentage_multiplier) if total_submissions > 0 else QUALITY_CONSTANTS.perfect_compliance_rate
     is_valid = len(violations) == 0
     
     return {
         "is_valid": is_valid,
         "violations": violations,
-        "compliance_rate": compliance_rate,
-        "total_papers": total_papers,
-        "compliant_papers": compliant_papers,
-        "summary": f"Single conference policy: {compliant_papers}/{total_papers} papers compliant ({compliance_rate:.1f}%)"
+        "total_submissions": total_submissions,
+        "compliant_submissions": compliant_submissions,
+        "compliance_rate": compliance_rate
     }
 
 
-def _validate_venue_compatibility(submissions: Dict[str, Submission], 
-                                conferences: Dict[str, Conference]) -> None:
-    """Validate venue compatibility with proper work item handling."""
-    for sub_id, submission in submissions.items():
-        if submission.kind == SubmissionType.ABSTRACT:
-            # Abstracts are work items, validate against preferred conferences
-            if hasattr(submission, 'preferred_conferences') and submission.preferred_conferences:
-                # If preferred_kinds is None, skip validation (open to any opportunity)
-                if hasattr(submission, 'preferred_kinds') and submission.preferred_kinds is not None:
-                    # Use first preferred type for validation
-                    submission_type_to_check = submission.preferred_kinds[0]
-                    for conf_id in submission.preferred_conferences:
-                        if conf_id in conferences:
-                            conf = conferences[conf_id]
-                            if not conf.accepts_submission_type(submission_type_to_check):
-                                raise ValueError(f"Submission {sub_id} ({submission_type_to_check.value}) not compatible with conference {conf_id}")
-            # Work items without preferred conferences are valid
-        elif submission.kind == SubmissionType.PAPER:
-            # Papers should have conference_id or preferred_conferences
-            if submission.conference_id:
-                if submission.conference_id not in conferences:
-                    raise ValueError(f"Submission {sub_id} references unknown conference {submission.conference_id}")
-                conf = conferences[submission.conference_id]
-                # If preferred_kinds is None, skip validation (open to any opportunity)
-                if hasattr(submission, 'preferred_kinds') and submission.preferred_kinds is not None:
-                    # Use first preferred type for validation
-                    submission_type_to_check = submission.preferred_kinds[0]
-                    if not conf.accepts_submission_type(submission_type_to_check):
-                        raise ValueError(f"Submission {sub_id} ({submission_type_to_check.value}) not compatible with conference {submission.conference_id}")
-            elif hasattr(submission, 'preferred_conferences') and submission.preferred_conferences:
-                # Validate against preferred conferences
-                # If preferred_kinds is None, skip validation (open to any opportunity)
-                if hasattr(submission, 'preferred_kinds') and submission.preferred_kinds is not None:
-                    # Use first preferred type for validation
-                    submission_type_to_check = submission.preferred_kinds[0]
-                    for conf_id in submission.preferred_conferences:
-                        if conf_id in conferences:
-                            conf = conferences[conf_id]
-                            if not conf.accepts_submission_type(submission_type_to_check):
-                                raise ValueError(f"Submission {sub_id} ({submission_type_to_check.value}) not compatible with conference {conf_id}")
-            else:
-                # Empty preferred_conferences means the submission can be assigned to any appropriate conference
-                # This is valid - the scheduler will assign the best available conference
-                pass
+def _validate_venue_compatibility(submissions_dict: Dict[str, Submission], conferences_dict: Dict[str, Conference]) -> None:
+    """Validate that all submissions are compatible with their venues."""
+    for submission in submissions_dict.values():
+        if submission.conference_id:
+            conference = conferences_dict.get(submission.conference_id)
+            if not conference:
+                raise ValueError(f"Submission {submission.id} references unknown conference {submission.conference_id}")
+            
+            if not conference.is_compatible_with_submission(submission):
+                raise ValueError(f"Submission {submission.id} is not compatible with conference {submission.conference_id}")

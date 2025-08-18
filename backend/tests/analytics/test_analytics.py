@@ -28,7 +28,7 @@ class TestAnalyzeScheduleCompleteness:
     def test_partial_schedule(self, config) -> None:
         """Test completeness analysis with partial schedule."""
         # Create a partial schedule
-        schedule: Dict[str, date] = {"test-pap": date(2025, 1, 1)}
+        schedule: Schedule = {"test-pap": date(2025, 1, 1)}
         analysis = analyze_schedule_completeness(schedule, config)
         assert analysis.scheduled_count == 1
         assert analysis.total_count > 1
@@ -48,7 +48,7 @@ class TestAnalyzeScheduleDistribution:
     
     def test_single_submission(self, config) -> None:
         """Test distribution analysis with single submission."""
-        schedule: Dict[str, date] = {"test-pap": date(2025, 1, 15)}
+        schedule: Schedule = {"test-pap": date(2025, 1, 15)}
         analysis = analyze_schedule_distribution(schedule, config)
         assert len(analysis.monthly_distribution) == 1
         assert "2025-01" in analysis.monthly_distribution
@@ -56,7 +56,7 @@ class TestAnalyzeScheduleDistribution:
     
     def test_multiple_submissions(self, config) -> None:
         """Test distribution analysis with multiple submissions."""
-        schedule: Dict[str, date] = {
+        schedule: Schedule = {
             "test1": date(2025, 1, 1),
             "test2": date(2025, 1, 15),
             "test3": date(2025, 2, 1)
@@ -78,7 +78,7 @@ class TestAnalyzeSubmissionTypes:
     
     def test_mixed_submissions(self, config) -> None:
         """Test type analysis with mixed submission types."""
-        schedule: Dict[str, date] = {
+        schedule: Schedule = {
             "paper1": date(2025, 1, 1),
             "abstract1": date(2025, 1, 15),
             "paper2": date(2025, 2, 1)
@@ -103,7 +103,7 @@ class TestAnalyzeTimeline:
     
     def test_single_submission(self, config) -> None:
         """Test timeline analysis with single submission."""
-        schedule: Dict[str, date] = {"test-pap": date(2025, 1, 15)}
+        schedule: Schedule = {"test-pap": date(2025, 1, 15)}
         analysis = analyze_timeline(schedule, config)
         assert analysis.start_date == date(2025, 1, 15)
         assert analysis.end_date == date(2025, 1, 15)
@@ -112,7 +112,7 @@ class TestAnalyzeTimeline:
     
     def test_multiple_submissions(self, config) -> None:
         """Test timeline analysis with multiple submissions."""
-        schedule: Dict[str, date] = {
+        schedule: Schedule = {
             "test1": date(2025, 1, 1),
             "test2": date(2025, 1, 15),
             "test3": date(2025, 2, 1)
@@ -136,7 +136,7 @@ class TestAnalyzeResources:
     
     def test_single_submission(self, config) -> None:
         """Test resource analysis with single submission."""
-        schedule: Dict[str, date] = {"test-pap": date(2025, 1, 15)}
+        schedule: Schedule = {"test-pap": date(2025, 1, 15)}
         analysis = analyze_resources(schedule, config)
         assert analysis.peak_load >= 0
         assert analysis.avg_load >= 0.0
@@ -144,7 +144,7 @@ class TestAnalyzeResources:
     
     def test_multiple_submissions(self, config) -> None:
         """Test resource analysis with multiple submissions."""
-        schedule: Dict[str, date] = {
+        schedule: Schedule = {
             "test1": date(2025, 1, 1),
             "test2": date(2025, 1, 15),
             "test3": date(2025, 2, 1)

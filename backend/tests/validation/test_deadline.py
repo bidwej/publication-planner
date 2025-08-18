@@ -24,7 +24,7 @@ class TestDeadlineValidation:
             min_paper_lead_time_days=90,
             max_concurrent_submissions=3
         )
-        schedule: Dict[str, date] = {}
+        schedule: Schedule = {}
         
         result: DeadlineValidation = validate_deadline_constraints(schedule, config)
         assert isinstance(result, DeadlineValidation)
@@ -41,7 +41,7 @@ class TestDeadlineValidation:
             min_paper_lead_time_days=90,
             max_concurrent_submissions=3
         )
-        schedule: Dict[str, date] = {}
+        schedule: Schedule = {}
         
         result: DeadlineValidation = validate_deadline_compliance(schedule, config)
         assert isinstance(result, DeadlineValidation)

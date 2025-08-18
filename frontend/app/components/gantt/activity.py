@@ -13,7 +13,7 @@ from core.models import Config, Submission
 from app.components.gantt.timeline import assign_activity_rows
 
 
-def add_activity_bars(fig: Figure, schedule: Dict[str, date], config: Config) -> None:
+def add_activity_bars(fig: Figure, schedule: Schedule, config: Config) -> None:
     """Add activity bars to the gantt chart."""
     if not schedule:
         return

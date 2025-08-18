@@ -611,7 +611,7 @@ class TestDataclassesSerialization:
     def test_schedule_state_serialization(self, config) -> None:
         """Test that schedule state can be serialized."""
         # Create a simple schedule
-        schedule: Dict[str, date] = {}
+        schedule: Schedule = {}
         for i, submission in enumerate(config.submissions[:2]):
             schedule[submission.id] = date(2025, 1, 1 + i)
         

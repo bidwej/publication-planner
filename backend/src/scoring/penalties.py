@@ -4,14 +4,14 @@ from typing import Dict, Any
 from datetime import date, timedelta
 from collections import defaultdict
 
-from core.models import Config, PenaltyBreakdown, SubmissionType, ConferenceType
+from core.models import Config, PenaltyBreakdown, SubmissionType, ConferenceType, Schedule
 from core.constants import (
     PENALTY_CONSTANTS, REPORT_CONSTANTS
 )
 # Note: Penalty costs moved to config.json because they are project-specific
 # and should be configurable by users. Only algorithm constants remain in constants.py.
 
-def calculate_penalty_score(schedule: Dict[str, date], config: Config) -> PenaltyBreakdown:
+def calculate_penalty_score(schedule: Schedule, config: Config) -> PenaltyBreakdown:
     """
     Calculate penalty score for a schedule - SINGLE SOURCE OF TRUTH for all penalties.
     
@@ -36,8 +36,8 @@ def calculate_penalty_score(schedule: Dict[str, date], config: Config) -> Penalt
         )
     
     # Get comprehensive validation results
-    from validation.schedule import validate_schedule_constraints
-    comprehensive_result = validate_schedule_constraints(schedule, config)
+    from validation.schedule import validate_schedule
+    comprehensive_result = validate_schedule(schedule, config)
     
     # Calculate basic penalties
     deadline_penalties = _calculate_deadline_penalties(schedule, config)
@@ -80,11 +80,11 @@ def calculate_penalty_score(schedule: Dict[str, date], config: Config) -> Penalt
         abstract_paper_dependency_penalties=abstract_paper_dependency_penalties
     )
 
-def _calculate_deadline_penalties(schedule: Dict[str, date], config: Config) -> float:
+def _calculate_deadline_penalties(schedule: Schedule, config: Config) -> float:
     """Calculate penalties for missed deadlines."""
     total_penalty = 0.0
     
-    for sid, start_date in schedule.items():
+    for sid, interval in schedule.intervals.items():
         sub = config.submissions_dict.get(sid)
         if not sub:
             continue
@@ -104,7 +104,7 @@ def _calculate_deadline_penalties(schedule: Dict[str, date], config: Config) -> 
         else:
             duration = 0
         
-        end_date = start_date + timedelta(days=duration)
+        end_date = interval.start_date + timedelta(days=duration)
         
         # Calculate penalty if deadline is missed
         if end_date > deadline:
@@ -115,23 +115,23 @@ def _calculate_deadline_penalties(schedule: Dict[str, date], config: Config) -> 
     
     return total_penalty
 
-def _calculate_dependency_penalties(schedule: Dict[str, date], config: Config) -> float:
+def _calculate_dependency_penalties(schedule: Schedule, config: Config) -> float:
     """Calculate penalties for dependency violations."""
     total_penalty = 0.0
     
-    for sid, start_date in schedule.items():
+    for sid, interval in schedule.intervals.items():
         sub = config.submissions_dict.get(sid)
         if not sub:
             continue
         
         for dep_id in (sub.depends_on or []):
-            if dep_id not in schedule:
+            if dep_id not in schedule.intervals:
                 # Missing dependency - use config penalty (project-specific)
                 monthly_penalty = (config.penalty_costs or {}).get("default_monthly_slip_penalty", 1000.0)
                 total_penalty += monthly_penalty
                 continue
             
-            dep_start = schedule[dep_id]
+            dep_start = schedule.intervals[dep_id].start_date
             dep_sub = config.submissions_dict.get(dep_id)
             if not dep_sub:
                 continue
@@ -145,20 +145,20 @@ def _calculate_dependency_penalties(schedule: Dict[str, date], config: Config) -
             dep_end = dep_start + timedelta(days=dep_duration)
             
             # Check if dependency is satisfied
-            if start_date < dep_end:
+            if interval.start_date < dep_end:
                 # Dependency violation - use config penalty (project-specific)
                 penalty = (config.penalty_costs or {}).get("default_dependency_violation_penalty", PENALTY_CONSTANTS.default_dependency_violation_penalty)
                 total_penalty += penalty
     
     return total_penalty
 
-def _calculate_resource_penalties(schedule: Dict[str, date], config: Config) -> float:
+def _calculate_resource_penalties(schedule: Schedule, config: Config) -> float:
     """Calculate penalties for resource constraint violations."""
     total_penalty = 0.0
     
     # Calculate daily load
     daily_load = defaultdict(int)
-    for sid, start_date in schedule.items():
+    for sid, interval in schedule.intervals.items():
         sub = config.submissions_dict.get(sid)
         if not sub:
             continue
@@ -171,7 +171,7 @@ def _calculate_resource_penalties(schedule: Dict[str, date], config: Config) -> 
         
         # Add load for each day
         for i in range(duration):
-            check_date = start_date + timedelta(days=i)
+            check_date = interval.start_date + timedelta(days=i)
             daily_load[check_date] += 1
     
     # Check against max concurrent submissions
@@ -209,22 +209,18 @@ def _calculate_blackout_penalties(comprehensive_result: Dict[str, Any], config: 
 
 
 def _calculate_soft_block_penalties(comprehensive_result: Dict[str, Any], config: Config) -> float:
-    """Calculate penalties for soft block model violations."""
-    soft_block_result = comprehensive_result.get("soft_block_model", {})
-    if not isinstance(soft_block_result, dict):
+    """Calculate penalties for soft block model violations (now part of resources)."""
+    resource_result = comprehensive_result.get("resources", {})
+    if not isinstance(resource_result, dict):
         return 0.0
     
-    violations = soft_block_result.get("violations", [])
+    # Look for timing violations in the resource validation
+    violations = resource_result.get("violations", [])
+    timing_violations = [v for v in violations if "days_violation" in v]
+    
     penalty_costs = config.penalty_costs or {}
     penalty_per_violation = penalty_costs.get("soft_block_violation_penalty", 200.0)
-    
-    total_penalty = len(violations) * penalty_per_violation
-    
-    # Add penalties based on violation details
-    for violation in violations:
-        days_violation = violation.get("days_violation", 0)
-        if days_violation > 0:
-            total_penalty += days_violation * penalty_per_violation * 0.1
+    total_penalty = sum(v.get("days_violation", 0) * penalty_per_violation for v in timing_violations)
     
     return total_penalty
 
@@ -317,7 +313,7 @@ def _calculate_abstract_paper_dependency_penalties(comprehensive_result: Dict[st
     return total_penalty
 
 
-def _calculate_slack_cost_penalties(schedule: Dict[str, date], config: Config) -> float:
+def _calculate_slack_cost_penalties(schedule: Schedule, config: Config) -> float:
     """Calculate penalties for slack costs (opportunity costs)."""
     total_penalty = 0.0
     
@@ -333,15 +329,15 @@ def _calculate_slack_cost_penalties(schedule: Dict[str, date], config: Config) -
     AP_missed = (config.penalty_costs or {}).get("missed_abstract_paper_penalty", 4000.0)  # Missed abstract+paper opportunity
     
     # Calculate slack cost components for each submission
-    for sid, start_date in schedule.items():
+    for sid, interval in schedule.intervals.items():
         sub = config.submissions_dict.get(sid)
         if not sub:
             continue
         
         if sub.earliest_start_date:
             # P_j(S_j - S_j,earliest) - monthly slip penalty
-            months_delay = max(0, (start_date.year - sub.earliest_start_date.year) * 12 + 
-                             (start_date.month - sub.earliest_start_date.month))
+            months_delay = max(0, (interval.start_date.year - sub.earliest_start_date.year) * 12 + 
+                             (interval.start_date.month - sub.earliest_start_date.month))
             slip_penalty = P_j * months_delay
             
             # Y_j(1_year-deferred) - full-year deferral penalty

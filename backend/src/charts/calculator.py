@@ -13,7 +13,7 @@ from core.models import Config, Submission
 class ChartCalculator:
     """Calculates chart data structure from schedule and config."""
     
-    def __init__(self, schedule: Dict[str, date], config: Config, forced_timeline: Optional[Dict] = None):
+    def __init__(self, schedule: Schedule, config: Config, forced_timeline: Optional[Dict] = None):
         self.schedule = schedule
         self.config = config
         

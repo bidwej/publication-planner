@@ -767,7 +767,7 @@ class TestUnifiedModels:
 
     def test_schedule_result_creation(self) -> None:
         """Test schedule result creation."""
-        schedule: Dict[str, date] = {"paper1": date(2024, 5, 1), "paper2": date(2024, 7, 1)}
+        schedule: Schedule = {"paper1": date(2024, 5, 1), "paper2": date(2024, 7, 1)}
         
         summary = ScheduleSummary(
             total_submissions=2,

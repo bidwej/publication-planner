@@ -6,13 +6,13 @@ import statistics
 
 from core.models import Config
 from validation.deadline import validate_deadline_constraints
-from validation.schedule import validate_schedule_constraints
+from validation.schedule import validate_schedule
 from validation.resources import validate_resources_constraints
 from core.constants import (
     QUALITY_CONSTANTS, SCORING_CONSTANTS, REPORT_CONSTANTS
 )
 
-def calculate_quality_score(schedule: Dict[str, date], config: Config) -> float:
+def calculate_quality_score(schedule: Schedule, config: Config) -> float:
     """Calculate overall quality score (0-100) based on constraint compliance."""
     # Fixed scoring constants
     max_score = REPORT_CONSTANTS.max_score
@@ -22,8 +22,7 @@ def calculate_quality_score(schedule: Dict[str, date], config: Config) -> float:
         return min_score
     
     # Get comprehensive constraint validations
-    from validation.schedule import validate_schedule_constraints
-    comprehensive_result = validate_schedule_constraints(schedule, config)
+    comprehensive_result = validate_schedule(schedule, config)
     
     # Extract constraint results from the constraints dictionary
     constraints = comprehensive_result.get("constraints", {})
@@ -69,11 +68,17 @@ def calculate_quality_score(schedule: Dict[str, date], config: Config) -> float:
         single_conf_score = max_score if single_conf_result.get("is_valid", True) else min_score
         additional_quality_factors.append(single_conf_score)
     
-    # Soft block model
-    soft_block_result = comprehensive_result.get("soft_block_model", {})
-    if isinstance(soft_block_result, dict):
-        soft_block_score = soft_block_result.get("compliance_rate", max_score)
-        additional_quality_factors.append(soft_block_score)
+    # Soft block model (now part of resources)
+    resource_result = comprehensive_result.get("resources", {})
+    if isinstance(resource_result, dict):
+        # Look for timing compliance in resource validation
+        timing_violations = [v for v in resource_result.get("violations", []) if "days_violation" in v]
+        total_timing_checks = resource_result.get("total_submissions", 0)
+        compliant_timing = resource_result.get("compliant_submissions", 0)
+        
+        if total_timing_checks > 0:
+            timing_compliance_rate = (compliant_timing / total_timing_checks) * max_score
+            additional_quality_factors.append(timing_compliance_rate)
     
     # Paper lead time
     lead_time_result = comprehensive_result.get("paper_lead_time", {})
@@ -101,7 +106,7 @@ def calculate_quality_score(schedule: Dict[str, date], config: Config) -> float:
     
     return quality_score
 
-def calculate_quality_robustness(schedule: Dict[str, date], config: Config) -> float:
+def calculate_quality_robustness(schedule: Schedule, config: Config) -> float:
     """Calculate how robust the schedule is to disruptions."""
     # Fixed scoring constants
     max_score = REPORT_CONSTANTS.max_score
@@ -121,7 +126,7 @@ def calculate_quality_robustness(schedule: Dict[str, date], config: Config) -> f
     return max(min_score, robustness_score)
 
 
-def _calculate_total_slack(schedule: Dict[str, date], config: Config) -> int:
+def _calculate_total_slack(schedule: Schedule, config: Config) -> int:
     """Calculate total slack time between submissions."""
     sorted_submissions = sorted(schedule.items(), key=lambda x: x[1])
     total_slack = 0
@@ -143,7 +148,7 @@ def _calculate_total_slack(schedule: Dict[str, date], config: Config) -> int:
     
     return total_slack
 
-def calculate_quality_balance(schedule: Dict[str, date], config: Config) -> float:
+def calculate_quality_balance(schedule: Schedule, config: Config) -> float:
     """Calculate how well balanced the schedule is."""
     # Fixed scoring constants
     max_score = REPORT_CONSTANTS.max_score

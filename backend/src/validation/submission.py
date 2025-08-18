@@ -1,14 +1,40 @@
 """Individual submission validation functions."""
 
-from typing import Dict, Any
+from typing import Dict, Any, List
 from datetime import date
 
-from core.models import Config, Submission
-from core.constants import QUALITY_CONSTANTS
-from .deadline import _validate_deadline_compliance_single
+from ..core.models import Config, Submission, SubmissionType, Schedule
+from ..core.constants import QUALITY_CONSTANTS
 
 
-def validate_submission_constraints(submission: Submission, start_date: date, schedule: Dict[str, date], config: Config) -> bool:
+def validate_submission(submission: Submission) -> List[str]:
+    """Validate basic submission fields and return list of errors."""
+    errors = []
+    
+    if not submission.id:
+        errors.append("Missing submission ID")
+    if not submission.title:
+        errors.append("Missing title")
+    
+    # Papers need either conference_id or preferred_conferences
+    if submission.kind == SubmissionType.PAPER and not submission.conference_id and submission.preferred_conferences is None:
+        errors.append("Papers must have either conference_id or preferred_conferences")
+    
+    if submission.draft_window_months < 0:
+        errors.append("Draft window months cannot be negative")
+    if submission.lead_time_from_parents < 0:
+        errors.append("Lead time from parents cannot be negative")
+    if submission.penalty_cost_per_day is not None and submission.penalty_cost_per_day < 0:
+        errors.append("Penalty cost per day cannot be negative")
+    if submission.penalty_cost_per_month is not None and submission.penalty_cost_per_month < 0:
+        errors.append("Penalty cost per month cannot be negative")
+    if submission.free_slack_months is not None and submission.free_slack_months < 0:
+        errors.append("Free slack months cannot be negative")
+    
+    return errors
+
+
+def validate_submission_constraints(submission: Submission, start_date: date, schedule: Schedule, config: Config) -> bool:
     """Validate if a submission can be placed at a specific date in the schedule."""
     # Basic deadline check
     if not _validate_deadline_compliance_single(start_date, submission, config):
@@ -32,12 +58,29 @@ def validate_submission_constraints(submission: Submission, start_date: date, sc
     return True
 
 
-def _validate_dependencies_satisfied(sub: Submission, schedule: Dict[str, date], 
+def _validate_deadline_compliance_single(start_date: date, sub: Submission, config: Config) -> bool:
+    """Validate deadline compliance for a single submission."""
+    if not sub.conference_id or sub.conference_id not in config.conferences_dict:
+        return True
+    
+    conf = config.conferences_dict[sub.conference_id]
+    if sub.kind not in conf.deadlines:
+        return True
+    
+    deadline = conf.deadlines[sub.kind]
+    end_date = sub.get_end_date(start_date, config)
+    
+    return end_date <= deadline
+
+
+def _validate_dependencies_satisfied(sub: Submission, schedule: Schedule, 
                                   submissions_dict: Dict[str, Submission], config: Config, 
                                   current_date: date) -> bool:
     """Check if all dependencies are satisfied for one submission."""
     # Use the shared dependency checking logic from models.py
-    return sub.are_dependencies_satisfied(schedule, submissions_dict, config, current_date)
+    # Convert Schedule to Schedule for the existing method
+    schedule_dict = {sub_id: interval.start_date for sub_id, interval in schedule.intervals.items()}
+    return sub.are_dependencies_satisfied(schedule_dict, submissions_dict, config, current_date)
 
 
 def _validate_unified_schema_fields(submission: Submission) -> bool:
@@ -70,41 +113,6 @@ def _validate_unified_schema_fields(submission: Submission) -> bool:
             return False
     
     return True
-
-
-def _validate_submission_data_quality(submission: Submission) -> Dict[str, Any]:
-    """Validate submission data quality and return quality metrics."""
-    quality_metrics = {
-        "has_engineering_ready_date": submission.engineering_ready_date is not None,
-        "has_free_slack": submission.free_slack_months is not None,
-        "has_penalty_cost": submission.penalty_cost_per_month is not None,
-        "has_preferred_conferences": bool(submission.preferred_conferences),
-        "has_submission_workflow": submission.submission_workflow is not None,
-        "total_quality_score": 0.0
-    }
-    
-    # Calculate quality score based on completeness
-    quality_score = 0.0
-    max_score = 6.0  # 6 quality indicators
-    
-    if quality_metrics["has_engineering_ready_date"]:
-        quality_score += 1.0
-    if quality_metrics["has_free_slack"]:
-        quality_score += 1.0
-    if quality_metrics["has_penalty_cost"]:
-        quality_score += 1.0
-    if quality_metrics["has_preferred_conferences"]:
-        quality_score += 1.0
-    if quality_metrics["has_submission_workflow"]:
-        quality_score += 1.0
-    
-    # Bonus for having all fields
-    if quality_score == max_score:
-        quality_score += 0.5
-    
-    quality_metrics["total_quality_score"] = quality_score / max_score
-    
-    return quality_metrics
 
 
 

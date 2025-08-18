@@ -9,7 +9,6 @@ from core.models import Submission, SchedulerStrategy
 from core.constants import SCHEDULING_CONSTANTS, EFFICIENCY_CONSTANTS
 
 
-@BaseScheduler.register_strategy(SchedulerStrategy.LOOKAHEAD)
 class LookaheadGreedyScheduler(GreedyScheduler):
     """Lookahead greedy scheduler that considers future implications of decisions."""
     

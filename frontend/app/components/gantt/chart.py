@@ -322,7 +322,7 @@ def _create_placeholder_gantt_chart() -> Figure:
     return fig
 
 
-def _add_demo_dependencies(fig: Figure, schedule: Dict[str, date], activity_rows: Dict[str, int]) -> None:
+def _add_demo_dependencies(fig: Figure, schedule: Schedule, activity_rows: Dict[str, int]) -> None:
     """Add dependency arrows to the demo chart."""
     # Dependencies: mod_1 → J1-abs, mod_2 → J2-abs, J1-abs → J1-pap, J2-abs → J2-pap
     dependencies = [

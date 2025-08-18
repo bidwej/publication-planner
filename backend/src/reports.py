@@ -5,7 +5,7 @@ from typing import Dict, Any
 from datetime import date
 from core.models import Config
 from validation.deadline import validate_deadline_constraints
-from validation.schedule import validate_schedule_constraints
+from validation.schedule import validate_schedule
 from validation.resources import validate_resources_constraints
 from scoring.penalties import calculate_penalty_score
 from analytics import analyze_timeline, analyze_resources
@@ -13,7 +13,7 @@ from core.constants import (
     REPORT_CONSTANTS
 )
 
-def generate_schedule_report(schedule: Dict[str, date], config: Config) -> Dict[str, Any]:
+def generate_schedule_report(schedule: Schedule, config: Config) -> Dict[str, Any]:
     """Generate a comprehensive schedule report for presentation."""
     if not schedule:
         return {
@@ -30,7 +30,7 @@ def generate_schedule_report(schedule: Dict[str, date], config: Config) -> Dict[
         }
     
     # Validate all constraints using the main validation function
-    validation_result = validate_schedule_constraints(schedule, config)
+            validation_result = validate_schedule(schedule, config)
     deadline_validation = validation_result["constraints"]["deadlines"]
     dependency_validation = validation_result["constraints"]["dependencies"]
     resource_validation = validation_result["constraints"]["resources"]

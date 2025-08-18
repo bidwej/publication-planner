@@ -6,7 +6,7 @@ from datetime import date, timedelta
 from enum import Enum
 from schedulers.base import BaseScheduler
 from core.dates import is_working_day
-from core.models import SchedulerStrategy
+from core.models import SchedulerStrategy, Schedule
 from core.constants import SCHEDULING_CONSTANTS
 
 
@@ -19,7 +19,6 @@ class HeuristicStrategy(Enum):
     CRITICAL_PATH = "critical_path"
 
 
-@BaseScheduler.register_strategy(SchedulerStrategy.HEURISTIC)
 class HeuristicScheduler(BaseScheduler):
     """Heuristic scheduler that implements different scheduling strategies."""
     
@@ -28,17 +27,21 @@ class HeuristicScheduler(BaseScheduler):
         super().__init__(config)
         self.strategy = strategy
     
-    def schedule(self) -> Dict[str, date]:
+    def schedule(self) -> Schedule:
         """
         Generate a schedule using the specified heuristic strategy.
         
         Returns
         -------
-        Dict[str, date]
-            Mapping of submission_id to start_date
+        Schedule
+            Schedule object with intervals for all submissions
         """
         # Use shared setup
-        schedule, topo, start_date, end_date = self._run_common_scheduling_setup()
+        self.reset_schedule()
+        schedule = self.current_schedule
+        topo = self.dependency_order
+        start_date = self.start_date
+        end_date = self.end_date
         
         # Initialize active submissions list
         active: List[str] = []

@@ -146,7 +146,7 @@ class TestConsoleOutput:
         
         monkeypatch.setattr('builtins.print', mock_print)
         
-        empty_schedule: Dict[str, date] = {}
+        empty_schedule: Schedule = {}
         print_schedule_summary(empty_schedule, sample_config)
         
         # Should print "No schedule generated"
@@ -191,7 +191,7 @@ class TestConsoleOutput:
         
         monkeypatch.setattr('builtins.print', mock_print)
         
-        empty_schedule: Dict[str, date] = {}
+        empty_schedule: Schedule = {}
         print_deadline_status(empty_schedule, sample_config)
         
         # Should not print anything for empty schedule
@@ -212,7 +212,7 @@ class TestConsoleOutput:
         monkeypatch.setattr('builtins.print', mock_print)
         
         # Create a schedule with late submissions
-        late_schedule: Dict[str, date] = {
+        late_schedule: Schedule = {
             "J1-pap": date(2025, 2, 1),  # After deadline
             "J2-pap": date(2025, 4, 1)   # After deadline
         }
@@ -264,7 +264,7 @@ class TestConsoleOutput:
         
         monkeypatch.setattr('builtins.print', mock_print)
         
-        empty_schedule: Dict[str, date] = {}
+        empty_schedule: Schedule = {}
         print_utilization_summary(empty_schedule, sample_config)
         
         # Should not print anything for empty schedule
@@ -307,7 +307,7 @@ class TestConsoleOutput:
         
         monkeypatch.setattr('builtins.print', mock_print)
         
-        empty_schedule: Dict[str, date] = {}
+        empty_schedule: Schedule = {}
         print_metrics_summary(empty_schedule, sample_config)
         
         # Should still print something for empty schedule
@@ -377,7 +377,7 @@ class TestConsoleOutput:
         
         monkeypatch.setattr('builtins.print', mock_print)
         
-        mixed_schedule: Dict[str, date] = {
+        mixed_schedule: Schedule = {
             "J1-pap": date(2024, 11, 1),
             "J1-abs": date(2024, 10, 1),
             "J2-pap": date(2024, 12, 1)
@@ -423,7 +423,7 @@ class TestConsoleOutput:
             data_files={}
         )
         
-        schedule: Dict[str, date] = {"J1-pap": date(2024, 11, 1)}
+        schedule: Schedule = {"J1-pap": date(2024, 11, 1)}
         print_deadline_status(schedule, no_deadline_config)
         
         # Should print "No submissions with deadlines found"

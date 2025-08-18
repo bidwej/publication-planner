@@ -13,7 +13,7 @@ from core.models import Config, Submission
 from validation.resources import validate_resources_constraints
 
 
-def assign_activity_rows(schedule: Optional[Dict[str, date]], config: Config) -> Dict[str, int]:
+def assign_activity_rows(schedule: Optional[Schedule], config: Config) -> Dict[str, int]:
     """Assign each activity to a specific row for visual layout."""
     if not schedule:
         return {}
@@ -174,7 +174,7 @@ def _add_month_boundaries(fig: Figure, start_date: date, end_date: date) -> None
             current_date = current_date.replace(month=current_date.month + 1)
 
 
-def _group_by_dependencies(schedule: Dict[str, date], submissions: Dict[str, Submission]) -> Dict[str, List[str]]:
+def _group_by_dependencies(schedule: Schedule, submissions: Dict[str, Submission]) -> Dict[str, List[str]]:
     """Group submissions by their dependency relationships."""
     groups = {}
     processed = set()
@@ -195,7 +195,7 @@ def _group_by_dependencies(schedule: Dict[str, date], submissions: Dict[str, Sub
     return groups
 
 
-def _collect_dependency_chain(submission_id: str, schedule: Dict[str, date], 
+def _collect_dependency_chain(submission_id: str, schedule: Schedule, 
                             submissions: Dict[str, Submission], group: List[str], processed: set):
     """Recursively collect all submissions in a dependency chain."""
     if submission_id in processed or submission_id not in schedule:

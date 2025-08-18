@@ -8,7 +8,7 @@ import pytest
 
 from core.models import (
     Config, Submission, Conference, SubmissionType, 
-    ConferenceType, ConferenceRecurrence, ScheduleState
+    ConferenceType, ConferenceRecurrence, ScheduleState, Schedule
 )
 
 
@@ -245,13 +245,13 @@ def sample_config() -> Config:
 
 
 @pytest.fixture
-def empty_schedule() -> Dict[str, date]:
+def empty_schedule() -> Schedule:
     """Fixture to provide an empty schedule for testing."""
     return {}
 
 
 @pytest.fixture
-def sample_schedule() -> Dict[str, date]:
+def sample_schedule() -> Schedule:
     """Fixture to provide a sample schedule for testing."""
     return {
         "mod1-wrk": date(2024, 12, 1),

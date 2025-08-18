@@ -13,7 +13,9 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 from core.config import load_config
 from core.constants import SCHEDULING_CONSTANTS
 from core.models import SchedulerStrategy
-from planner import Planner
+from schedulers.base import BaseScheduler
+from core.config import load_config
+from core.models import SchedulerStrategy
 from console import print_schedule_summary, print_deadline_status, print_utilization_summary
 from reports import generate_schedule_report
 
@@ -102,56 +104,64 @@ def handle_strategy_mode(strategy: str, config_path: str, output_path: Optional[
         print(f"Using {strategy} scheduling strategy...")
     
     try:
-        # Create planner with configuration
-        planner = Planner(config_path)
+        # Load configuration directly
+        config = load_config(config_path)
         
         # Get the strategy enum
         strategy_enum = AVAILABLE_STRATEGIES[strategy]
         
-        # Generate schedule
+        # Create scheduler and generate schedule
         if not quiet:
             print(f"Generating schedule using {strategy} strategy...")
         
-        schedule = planner.schedule(strategy_enum)
+        scheduler = BaseScheduler.create_scheduler(strategy_enum, config)
+        schedule = scheduler.schedule()
         
-        if not schedule:
+        if not schedule or len(schedule.intervals) == 0:
             print("Error: No schedule was generated")
             return 1
         
-        # Get comprehensive metrics
-        metrics = planner.get_schedule_metrics(schedule)
+        # Calculate basic metrics
+        total_submissions = len(schedule.intervals)
+        duration_days = schedule.calculate_duration_days()
         
         # Display results
         if not quiet:
             print(f"\nSchedule generated successfully!")
-            print(f"Total submissions: {metrics['total_submissions']}")
-            print(f"Duration: {metrics['duration_days']} days")
-            print(f"Quality score: {metrics['quality_score']:.2f}")
-            print(f"Efficiency score: {metrics['efficiency_score']:.2f}")
-            print(f"Penalty score: {metrics['penalty_score']:.2f}")
+            print(f"Total submissions: {total_submissions}")
+            print(f"Duration: {duration_days} days")
             
             # Print detailed console output
-            print_schedule_summary(schedule, planner.config)
-            print_deadline_status(schedule, planner.config)
-            print_utilization_summary(schedule, planner.config)
+            print_schedule_summary(schedule, config)
+            print_deadline_status(schedule, config)
+            print_utilization_summary(schedule, config)
         
         # Save output if requested
         if output_path:
             if not quiet:
                 print(f"\nSaving schedule to: {output_path}")
             
-            # Generate comprehensive report
-            report = planner.get_comprehensive_result(schedule, strategy_enum)
-            
-            # Save as JSON
+            # Save schedule as JSON
             output_file = Path(output_path)
             if output_file.suffix.lower() == '.json':
                 import json
+                schedule_data = {
+                    'strategy': strategy,
+                    'total_submissions': total_submissions,
+                    'duration_days': duration_days,
+                    'intervals': {sid: {'start_date': str(interval.start_date), 'end_date': str(interval.end_date)} 
+                                 for sid, interval in schedule.intervals.items()}
+                }
                 with open(output_file, 'w') as f:
-                    json.dump(report.model_dump(), f, indent=2, default=str)
+                    json.dump(schedule_data, f, indent=2, default=str)
             else:
-                # Generate text report
-                generate_schedule_report(report, output_file)
+                # Generate simple text report
+                with open(output_file, 'w') as f:
+                    f.write(f"Schedule generated using {strategy} strategy\n")
+                    f.write(f"Total submissions: {total_submissions}\n")
+                    f.write(f"Duration: {duration_days} days\n\n")
+                    for sid, interval in schedule.intervals.items():
+                        f.write(f"{sid}: {interval.start_date} to {interval.end_date}\n")
             
             if not quiet:
                 print(f"Schedule saved to: {output_path}")
@@ -169,8 +179,8 @@ def handle_compare_mode(config_path: str, output_path: Optional[str], quiet: boo
         print("Comparing multiple scheduling strategies...")
     
     try:
-        # Create planner with configuration
-        planner = Planner(config_path)
+        # Load configuration directly
+        config = load_config(config_path)
         
         results = {}
         
@@ -180,12 +190,15 @@ def handle_compare_mode(config_path: str, output_path: Optional[str], quiet: boo
                 print(f"\nTesting {strategy_name} strategy...")
             
             try:
-                schedule = planner.schedule(strategy_enum)
-                if schedule:
-                    metrics = planner.get_schedule_metrics(schedule)
+                scheduler = BaseScheduler.create_scheduler(strategy_enum, config)
+                schedule = scheduler.schedule()
+                if schedule and len(schedule.intervals) > 0:
+                    total_submissions = len(schedule.intervals)
+                    duration_days = schedule.calculate_duration_days()
                     results[strategy_name] = {
                         'schedule': schedule,
-                        'metrics': metrics,
+                        'total_submissions': total_submissions,
+                        'duration_days': duration_days,
                         'success': True
                     }
                 else:
@@ -198,13 +211,9 @@ def handle_compare_mode(config_path: str, output_path: Optional[str], quiet: boo
             print("\n=== Strategy Comparison Results ===")
             for strategy_name, result in results.items():
                 if result['success']:
-                    metrics = result['metrics']
                     print(f"\n{strategy_name.upper()}:")
-                    print(f"  Submissions: {metrics['total_submissions']}")
-                    print(f"  Duration: {metrics['duration_days']} days")
-                    print(f"  Quality: {metrics['quality_score']:.2f}")
-                    print(f"  Efficiency: {metrics['efficiency_score']:.2f}")
-                    print(f"  Penalty: {metrics['penalty_score']:.2f}")
+                    print(f"  Submissions: {result['total_submissions']}")
+                    print(f"  Duration: {result['duration_days']} days")
                 else:
                     print(f"\n{strategy_name.upper()}: FAILED - {result['error']}")
         
@@ -223,11 +232,8 @@ def handle_compare_mode(config_path: str, output_path: Optional[str], quiet: boo
                     if result['success']:
                         serializable_results[strategy_name] = {
                             'success': True,
-                            'total_submissions': result['metrics']['total_submissions'],
-                            'duration_days': result['metrics']['duration_days'],
-                            'quality_score': result['metrics']['quality_score'],
-                            'efficiency_score': result['metrics']['efficiency_score'],
-                            'penalty_score': result['metrics']['penalty_score']
+                            'total_submissions': result['total_submissions'],
+                            'duration_days': result['duration_days']
                         }
                     else:
                         serializable_results[strategy_name] = result
@@ -242,12 +248,8 @@ def handle_compare_mode(config_path: str, output_path: Optional[str], quiet: boo
                     for strategy_name, result in results.items():
                         f.write(f"{strategy_name.upper()}:\n")
                         if result['success']:
-                            metrics = result['metrics']
-                            f.write(f"  Submissions: {metrics['total_submissions']}\n")
-                            f.write(f"  Duration: {metrics['duration_days']} days\n")
-                            f.write(f"  Quality: {metrics['quality_score']:.2f}\n")
-                            f.write(f"  Efficiency: {metrics['efficiency_score']:.2f}\n")
-                            f.write(f"  Penalty: {metrics['penalty_score']:.2f}\n")
+                            f.write(f"  Submissions: {result['total_submissions']}\n")
+                            f.write(f"  Duration: {result['duration_days']} days\n")
                         else:
                             f.write(f"  FAILED: {result['error']}\n")
                         f.write("\n")

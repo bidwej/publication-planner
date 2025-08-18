@@ -15,7 +15,7 @@ class TestVenueValidation:
     
     def test_validate_venue_constraints_empty_schedule(self, empty_config) -> None:
         """Test venue validation with empty schedule."""
-        schedule: Dict[str, date] = {}
+        schedule: Schedule = {}
         
         result: Any = validate_venue_constraints(schedule, empty_config)
         assert result["is_valid"] == True

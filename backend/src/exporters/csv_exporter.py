@@ -8,12 +8,55 @@ import csv
 import json
 from collections import defaultdict
 
-from core.models import Config, ScheduleSummary, ScheduleMetrics, SubmissionType
-from core.dates import calculate_schedule_duration
+from core.models import Config, ScheduleSummary, ScheduleMetrics, SubmissionType, Schedule
+
 from tables import (
     generate_schedule_table, generate_metrics_table, generate_deadline_table,
-    generate_violations_table, generate_penalties_table
+    generate_violations_table, generate_penalties_table, save_schedule_json, save_table_csv, save_metrics_json
 )
+
+
+def create_output_directory(base_dir: str = "output") -> str:
+    """Create a timestamped output directory."""
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    output_dir = Path(base_dir) / f"output_{timestamp}"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    return str(output_dir)
+
+
+def save_all_outputs(
+    schedule: Schedule,
+    schedule_table: List[Dict[str, str]],
+    metrics_table: List[Dict[str, str]],
+    deadline_table: List[Dict[str, str]],
+    metrics: ScheduleSummary,
+    output_dir: str
+) -> Dict[str, str]:
+    """Save all output files and return file paths."""
+    saved_files = {}
+    
+    # Save schedule JSON
+    saved_files["schedule"] = save_schedule_json(schedule, output_dir)
+    
+    # Save tables as CSV
+    if schedule_table:
+        saved_files["schedule_table"] = save_table_csv(schedule_table, output_dir, "schedule_table.csv")
+    
+    if metrics_table:
+        saved_files["metrics_table"] = save_table_csv(metrics_table, output_dir, "metrics_table.csv")
+    
+    if deadline_table:
+        saved_files["deadline_table"] = save_table_csv(deadline_table, output_dir, "deadline_table.csv")
+    
+    # Save metrics JSON
+    saved_files["metrics"] = save_metrics_json(metrics, output_dir)
+    
+    # Export comprehensive CSV formats
+    csv_exporter = CSVExporter(Config.create_default())  # We'll need to pass the actual config
+    csv_files = csv_exporter.export_all_csv(schedule, output_dir)
+    saved_files.update(csv_files)
+    
+    return saved_files
 
 
 class CSVExporter:
@@ -23,14 +66,14 @@ class CSVExporter:
         """Initialize CSV exporter with configuration."""
         self.config = config
     
-    def export_schedule_csv(self, schedule: Dict[str, date], output_dir: str, 
+    def export_schedule_csv(self, schedule: Schedule, output_dir: str, 
                            filename: str = "schedule.csv") -> str:
         """
         Export schedule to CSV format with detailed submission information.
         
         Parameters
         ----------
-        schedule : Dict[str, date]
+        schedule : Schedule
             Schedule mapping submission_id to start_date
         output_dir : str
             Output directory path
@@ -60,14 +103,14 @@ class CSVExporter:
         
         return str(filepath)
     
-    def export_metrics_csv(self, schedule: Dict[str, date], output_dir: str,
+    def export_metrics_csv(self, schedule: Schedule, output_dir: str,
                           filename: str = "metrics.csv") -> str:
         """
         Export performance metrics to CSV format.
         
         Parameters
         ----------
-        schedule : Dict[str, date]
+        schedule : Schedule
             Schedule mapping submission_id to start_date
         output_dir : str
             Output directory path
@@ -94,14 +137,14 @@ class CSVExporter:
         
         return str(filepath)
     
-    def export_deadline_csv(self, schedule: Dict[str, date], output_dir: str,
+    def export_deadline_csv(self, schedule: Schedule, output_dir: str,
                            filename: str = "deadlines.csv") -> str:
         """
         Export deadline compliance information to CSV format.
         
         Parameters
         ----------
-        schedule : Dict[str, date]
+        schedule : Schedule
             Schedule mapping submission_id to start_date
         output_dir : str
             Output directory path
@@ -131,14 +174,14 @@ class CSVExporter:
         
         return str(filepath)
     
-    def export_violations_csv(self, schedule: Dict[str, date], output_dir: str,
+    def export_violations_csv(self, schedule: Schedule, output_dir: str,
                              filename: str = "violations.csv") -> str:
         """
         Export constraint violations to CSV format.
         
         Parameters
         ----------
-        schedule : Dict[str, date]
+        schedule : Schedule
             Schedule mapping submission_id to start_date
         output_dir : str
             Output directory path
@@ -169,14 +212,14 @@ class CSVExporter:
         
         return str(filepath)
     
-    def export_penalties_csv(self, schedule: Dict[str, date], output_dir: str,
+    def export_penalties_csv(self, schedule: Schedule, output_dir: str,
                             filename: str = "penalties.csv") -> str:
         """
         Export penalty breakdown to CSV format.
         
         Parameters
         ----------
-        schedule : Dict[str, date]
+        schedule : Schedule
             Schedule mapping submission_id to start_date
         output_dir : str
             Output directory path
@@ -242,14 +285,14 @@ class CSVExporter:
         
         return str(filepath)
     
-    def export_summary_csv(self, schedule: Dict[str, date], output_dir: str,
+    def export_summary_csv(self, schedule: Schedule, output_dir: str,
                           filename: str = "summary.csv") -> str:
         """
         Export schedule summary to CSV format.
         
         Parameters
         ----------
-        schedule : Dict[str, date]
+        schedule : Schedule
             Schedule mapping submission_id to start_date
         output_dir : str
             Output directory path
@@ -275,13 +318,13 @@ class CSVExporter:
         
         return str(filepath)
     
-    def export_all_csv(self, schedule: Dict[str, date], output_dir: str) -> Dict[str, str]:
+    def export_all_csv(self, schedule: Schedule, output_dir: str) -> Dict[str, str]:
         """
         Export all CSV formats for a schedule.
         
         Parameters
         ----------
-        schedule : Dict[str, date]
+        schedule : Schedule
             Schedule mapping submission_id to start_date
         output_dir : str
             Output directory path
@@ -303,25 +346,25 @@ class CSVExporter:
         
         return saved_files
     
-    def _calculate_comprehensive_metrics(self, schedule: Dict[str, date]) -> List[Dict[str, str]]:
+    def _calculate_comprehensive_metrics(self, schedule: Schedule) -> List[Dict[str, str]]:
         """Calculate comprehensive metrics for CSV export."""
         if not schedule:
             return [{"Metric": "Total Submissions", "Value": "0"}]
         
-        # Calculate basic metrics
-        total_submissions = len(schedule)
-        start_date = min(schedule.values())
-        end_date = max(schedule.values())
-        schedule_span = calculate_schedule_duration(schedule)
+        # Calculate basic metrics using intervals
+        total_submissions = len(schedule.intervals)
+        start_date = min(interval.start_date for interval in schedule.intervals.values())
+        end_date = max(interval.end_date for interval in schedule.intervals.values())
+        schedule_span = schedule.calculate_duration_days()
         
         # Calculate resource utilization
         daily_load = defaultdict(int)
-        for sid, start_date in schedule.items():
+        for sid, interval in schedule.intervals.items():
             submission = self.config.submissions_dict.get(sid)
             if submission:
                 duration = submission.get_duration_days(self.config)
                 for i in range(duration):
-                    check_date = start_date + timedelta(days=i)
+                    check_date = interval.start_date + timedelta(days=i)
                     daily_load[check_date] += 1
         
         max_concurrent = max(daily_load.values()) if daily_load else 0
@@ -329,7 +372,7 @@ class CSVExporter:
         
         # Count by submission type
         submission_types = defaultdict(int)
-        for sub_id in schedule.keys():
+        for sub_id in schedule.intervals.keys():
             submission = self.config.submissions_dict.get(sub_id)
             if submission:
                 sub_type = submission.kind.value
@@ -353,12 +396,12 @@ class CSVExporter:
         
         return metrics_data
     
-    def _run_comprehensive_validation(self, schedule: Dict[str, date]) -> Dict[str, Any]:
+    def _run_comprehensive_validation(self, schedule: Schedule) -> Dict[str, Any]:
         """Run comprehensive validation on schedule."""
         try:
             # Import here to avoid circular imports
-            from validation.schedule import validate_schedule_constraints
-            validation_result = validate_schedule_constraints(schedule, self.config)
+            from validation.schedule import validate_schedule
+            validation_result = validate_schedule(schedule, self.config)
             return validation_result
         except ImportError:
             # Fallback if validation module is not available
@@ -372,7 +415,7 @@ class CSVExporter:
                 "analytics": {}
             }
     
-    def _calculate_comprehensive_penalties(self, schedule: Dict[str, date]) -> List[Dict[str, str]]:
+    def _calculate_comprehensive_penalties(self, schedule: Schedule) -> List[Dict[str, str]]:
         """Calculate comprehensive penalties for CSV export."""
         if not schedule:
             return [{"Penalty Type": "Total Penalty", "Amount": "0.0"}]
@@ -398,14 +441,14 @@ class CSVExporter:
             total_penalty = 0.0
             
             # Basic deadline penalty calculation
-            for sid, start_date in schedule.items():
+            for sid, interval in schedule.intervals.items():
                 submission = self.config.submissions_dict.get(sid)
                 if submission and submission.conference_id:
                     conference = self.config.conferences_dict.get(submission.conference_id)
                     if conference and submission.kind in conference.deadlines:
                         deadline = conference.deadlines[submission.kind]
                         duration = submission.get_duration_days(self.config)
-                        end_date = start_date + timedelta(days=duration)
+                        end_date = interval.start_date + timedelta(days=duration)
                         
                         if end_date > deadline:
                             days_late = (end_date - deadline).days
@@ -443,20 +486,20 @@ class CSVExporter:
         
         return comparison_data
     
-    def _create_summary_data(self, schedule: Dict[str, date]) -> List[Dict[str, str]]:
+    def _create_summary_data(self, schedule: Schedule) -> List[Dict[str, str]]:
         """Create summary data for CSV export."""
         if not schedule:
             return [{"Category": "Status", "Value": "No Schedule"}]
         
-        # Calculate summary statistics
-        total_submissions = len(schedule)
-        start_date = min(schedule.values())
-        end_date = max(schedule.values())
-        schedule_span = calculate_schedule_duration(schedule)
+        # Calculate summary statistics using intervals
+        total_submissions = len(schedule.intervals)
+        start_date = min(interval.start_date for interval in schedule.intervals.values())
+        end_date = max(interval.end_date for interval in schedule.intervals.values())
+        schedule_span = schedule.calculate_duration_days()
         
         # Count by submission type
         submission_types = defaultdict(int)
-        for sub_id in schedule.keys():
+        for sub_id in schedule.intervals.keys():
             submission = self.config.submissions_dict.get(sub_id)
             if submission:
                 sub_type = submission.kind.value
@@ -464,12 +507,12 @@ class CSVExporter:
         
         # Calculate resource utilization
         daily_load = defaultdict(int)
-        for sid, start_date in schedule.items():
+        for sid, interval in schedule.intervals.items():
             submission = self.config.submissions_dict.get(sid)
             if submission:
                 duration = submission.get_duration_days(self.config)
                 for i in range(duration):
-                    check_date = start_date + timedelta(days=i)
+                    check_date = interval.start_date + timedelta(days=i)
                     daily_load[check_date] += 1
         
         max_concurrent = max(daily_load.values()) if daily_load else 0
@@ -494,14 +537,14 @@ class CSVExporter:
         return summary_data
 
 
-def export_schedule_to_csv(schedule: Dict[str, date], config: Config, output_dir: str,
+def export_schedule_to_csv(schedule: Schedule, config: Config, output_dir: str,
                           filename: str = "schedule.csv") -> str:
     """
     Convenience function to export schedule to CSV.
     
     Parameters
     ----------
-    schedule : Dict[str, date]
+    schedule : Schedule
         Schedule mapping submission_id to start_date
     config : Config
         Configuration object
@@ -519,13 +562,13 @@ def export_schedule_to_csv(schedule: Dict[str, date], config: Config, output_dir
     return exporter.export_schedule_csv(schedule, output_dir, filename)
 
 
-def export_all_csv_formats(schedule: Dict[str, date], config: Config, output_dir: str) -> Dict[str, str]:
+def export_all_csv_formats(schedule: Schedule, config: Config, output_dir: str) -> Dict[str, str]:
     """
     Convenience function to export all CSV formats.
     
     Parameters
     ----------
-    schedule : Dict[str, date]
+    schedule : Schedule
         Schedule mapping submission_id to start_date
     config : Config
         Configuration object

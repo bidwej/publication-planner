@@ -7,11 +7,13 @@ from datetime import date, timedelta
 from core.models import (
     Config, Submission, SubmissionType, SchedulerStrategy, Conference, Schedule, Interval
 )
-from core.constants import SCHEDULING_CONSTANTS
+
 from core.dates import is_working_day
 
-# Import existing validation functions
+# Validation imports
 from validation.submission import validate_submission_constraints
+from validation.scheduler import validate_scheduler_constraints, validate_scheduling_window
+from validation.dependencies import validate_dependencies_satisfied
 
 
 class BaseScheduler(ABC):
@@ -23,23 +25,28 @@ class BaseScheduler(ABC):
         self.config = config
         self.submissions = {s.id: s for s in config.submissions}  # Index submissions by ID
         self.conferences = {c.id: c for c in config.conferences}  # Index conferences by ID
+        self._schedule: Optional[Schedule] = None
+        self._topo: Optional[List[str]] = None
+        self._start_date: Optional[date] = None
+        self._end_date: Optional[date] = None
     
-    @classmethod
-    def register_strategy(cls, strategy: SchedulerStrategy):
-        """Decorator to register a scheduler class with a strategy."""
-        def decorator(scheduler_class: Type['BaseScheduler']) -> Type['BaseScheduler']:
-            cls._strategy_registry[strategy] = scheduler_class
-            return scheduler_class
-        return decorator
+    # ===== PUBLIC UTILITY METHODS (used by multiple schedulers) =====
     
     @classmethod
     def create_scheduler(cls, strategy: SchedulerStrategy, config: Config) -> 'BaseScheduler':
         """Create a scheduler instance for the given strategy."""
         if strategy not in cls._strategy_registry:
-            raise ValueError(f"Unknown strategy: {strategy}")
+            # Try to auto-register the strategy by looking for scheduler classes
+            cls._auto_register_strategy(strategy)
+            
+            # If still not found, raise error
+            if strategy not in cls._strategy_registry:
+                raise ValueError(f"Unknown strategy: {strategy}. No scheduler class found.")
         
         scheduler_class = cls._strategy_registry[strategy]
         return scheduler_class(config)
+    
+
     
     @abstractmethod
     def schedule(self) -> Schedule:
@@ -54,24 +61,52 @@ class BaseScheduler(ABC):
     
     def get_scheduling_window(self) -> Tuple[date, date]:
         """Get the scheduling window (start and end dates)."""
-        start_date = date.today()
-        
-        # Find latest deadline among all conferences
-        latest_deadline = start_date
-        for conference in self.conferences.values():
-            for deadline in conference.deadlines.values():
-                if deadline > latest_deadline:
-                    latest_deadline = deadline
-        
-        # Add buffer for conference response time using constants
-        response_buffer = SCHEDULING_CONSTANTS.conference_response_time_days
-        end_date = latest_deadline + timedelta(days=response_buffer)
-        
-        return start_date, end_date
+        return validate_scheduling_window(self.config)
     
     def validate_constraints(self, sub: Submission, start: date, schedule: Schedule) -> bool:
         """Validate all constraints for a submission at a given start date."""
-        return validate_submission_constraints(sub, start, schedule.to_dict(), self.config)
+        return validate_scheduler_constraints(sub, start, schedule, self.config)
+    
+    def reset_schedule(self) -> None:
+        """Reset the scheduler to start with a fresh schedule."""
+        self._topo = self.get_dependency_order()
+        self._start_date, self._end_date = self.get_scheduling_window()
+        self._schedule = Schedule()
+    
+    def _ensure_schedule_initialized(self) -> None:
+        """Ensure schedule is initialized before use."""
+        if self._schedule is None:
+            self.reset_schedule()
+    
+    @property
+    def current_schedule(self) -> Schedule:
+        """Get the current schedule, initializing if needed."""
+        self._ensure_schedule_initialized()
+        assert self._schedule is not None  # Type guard
+        return self._schedule
+    
+    @property
+    def dependency_order(self) -> List[str]:
+        """Get the dependency order, initializing if needed."""
+        self._ensure_schedule_initialized()
+        assert self._topo is not None  # Type guard
+        return self._topo
+    
+    @property
+    def start_date(self) -> date:
+        """Get the start date, initializing if needed."""
+        self._ensure_schedule_initialized()
+        assert self._start_date is not None  # Type guard
+        return self._start_date
+    
+    @property
+    def end_date(self) -> date:
+        """Get the end date, initializing if needed."""
+        self._ensure_schedule_initialized()
+        assert self._end_date is not None  # Type guard
+        return self._end_date
+    
+
     
     # ===== PRIVATE HELPER METHODS (internal use only) =====
     
@@ -113,16 +148,6 @@ class BaseScheduler(ABC):
     
 
     
-    def _apply_early_abstract_scheduling(self, schedule: Schedule) -> None:
-        """Apply early abstract scheduling if enabled in config."""
-        if (self.config.scheduling_options and 
-            self.config.scheduling_options.get("enable_early_abstract_scheduling", False)):
-            abstract_advance = self.config.scheduling_options.get(
-                "abstract_advance_days", 
-                SCHEDULING_CONSTANTS.abstract_advance_days
-            )
-            self._schedule_early_abstracts(schedule, abstract_advance)
-    
     def _get_ready_submissions(self, topo: List[str], schedule: Schedule, current_date: date) -> List[str]:
         """Get list of submissions ready to be scheduled at the current date."""
         ready = []
@@ -132,7 +157,7 @@ class BaseScheduler(ABC):
             
             submission = self.submissions[submission_id]
             
-            if not submission.are_dependencies_satisfied(schedule.to_dict(), self.submissions, self.config, current_date):
+            if not validate_dependencies_satisfied(submission, schedule, self.submissions, self.config, current_date):
                 continue  # Dependencies not satisfied
             
             earliest_start = self._calculate_earliest_start_date(submission, schedule)
@@ -160,8 +185,11 @@ class BaseScheduler(ABC):
             if len(active) >= max_concurrent:
                 break  # Reached concurrency limit
             
+            # Get submission object to calculate duration
+            submission = self.submissions[submission_id]
+            
             # Schedule this submission
-            schedule.add_interval(submission_id, current_date)
+            schedule.add_interval(submission_id, current_date, duration_days=submission.get_duration_days(self.config))
             active.append(submission_id)
             scheduled_count += 1
         
@@ -190,17 +218,6 @@ class BaseScheduler(ABC):
         duration_days = sub.get_duration_days(self.config)
         return start + timedelta(days=duration_days)
     
-    def _schedule_early_abstracts(self, schedule: Schedule, advance_days: int) -> None:
-        """Schedule abstracts early if enabled."""
-        early_date = date.today() + timedelta(days=advance_days)
-        
-        for submission in self.submissions.values():
-            if (submission.kind == SubmissionType.ABSTRACT and 
-                submission.submission_workflow == "abstract_then_paper"):
-                # Check if this abstract can be scheduled early
-                if validate_submission_constraints(submission, early_date, schedule.to_dict(), self.config):
-                    schedule.add_interval(submission.id, early_date)
-    
     def _find_next_working_day(self, current_date: date) -> date:
         """Find the next working day (skip blackout dates and weekends)."""
         next_date = current_date + timedelta(days=1)
@@ -209,6 +226,54 @@ class BaseScheduler(ABC):
             next_date += timedelta(days=1)
         
         return next_date
+    
+    @classmethod
+    def _auto_register_strategy(cls, strategy: SchedulerStrategy) -> None:
+        """Automatically register a strategy by finding the scheduler class."""
+        # Look for scheduler classes that might match this strategy
+        strategy_name = strategy.value.lower()
+        
+        # Common naming patterns
+        possible_names = [
+            f"{strategy_name.capitalize()}Scheduler",
+            f"{strategy_name.capitalize()}Scheduler",
+            f"{strategy_name}_scheduler",
+            f"{strategy_name}"
+        ]
+        
+        # Try to import and register
+        for name in possible_names:
+            try:
+                # Try different import paths
+                import_paths = [
+                    f"src.schedulers.{name.lower()}",
+                    f"schedulers.{name.lower()}",
+                    f"src.schedulers.{name.lower()}"
+                ]
+                
+                for module_name in import_paths:
+                    try:
+                        import importlib
+                        module = importlib.import_module(module_name)
+                        
+                        # Try to find the scheduler class in the module
+                        scheduler_class = None
+                        for attr_name in dir(module):
+                            attr = getattr(module, attr_name)
+                            if (isinstance(attr, type) and 
+                                issubclass(attr, cls) and 
+                                attr != cls):
+                                scheduler_class = attr
+                                break
+                        
+                        if scheduler_class:
+                            cls._strategy_registry[strategy] = scheduler_class
+                            return
+                    except (ImportError, AttributeError):
+                        continue
+                    
+            except Exception:
+                continue
     
 
     

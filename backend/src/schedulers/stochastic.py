@@ -9,7 +9,6 @@ from core.models import SchedulerStrategy
 from core.constants import EFFICIENCY_CONSTANTS
 
 
-@BaseScheduler.register_strategy(SchedulerStrategy.STOCHASTIC)
 class StochasticGreedyScheduler(GreedyScheduler):
     """Stochastic greedy scheduler that adds randomness to priority selection."""
     

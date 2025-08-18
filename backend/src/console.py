@@ -9,13 +9,13 @@ from pathlib import Path
 from core.models import Config, SchedulerStrategy
 from core.constants import DISPLAY_CONSTANTS
 from validation.deadline import validate_deadline_constraints
-from validation.schedule import validate_schedule_constraints
+from validation.schedule import validate_schedule
 from scoring.penalties import calculate_penalty_score
 from scoring.efficiency import calculate_efficiency_score
 from scoring.quality import calculate_quality_score
 
 
-def print_schedule_summary(schedule: Dict[str, date], config: Config) -> None:
+def print_schedule_summary(schedule, config: Config) -> None:
     """Print a summary of the schedule to console."""
     if not schedule:
         print("No schedule generated.")
@@ -39,7 +39,7 @@ def print_schedule_summary(schedule: Dict[str, date], config: Config) -> None:
     print()
 
 
-def print_deadline_status(schedule: Dict[str, date], config: Config) -> None:
+def print_deadline_status(schedule: Schedule, config: Config) -> None:
     """Print deadline status information."""
     if not schedule:
         return
@@ -80,7 +80,7 @@ def print_deadline_status(schedule: Dict[str, date], config: Config) -> None:
     print()
 
 
-def print_utilization_summary(schedule: Dict[str, date], config: Config) -> None:
+def print_utilization_summary(schedule: Schedule, config: Config) -> None:
     """Print resource utilization summary."""
     if not schedule:
         return
@@ -118,7 +118,7 @@ def print_utilization_summary(schedule: Dict[str, date], config: Config) -> None
     print()
 
 
-def print_metrics_summary(schedule: Dict[str, date], config: Config) -> None:
+def print_metrics_summary(schedule: Schedule, config: Config) -> None:
     """Print a comprehensive metrics summary."""
     print("\n=== Metrics Summary ===")
     
@@ -144,7 +144,7 @@ def print_metrics_summary(schedule: Dict[str, date], config: Config) -> None:
     print()
 
 
-def print_schedule_analysis(schedule: Dict[str, date], config: Config, strategy_name: str = "Unknown") -> None:
+def print_schedule_analysis(schedule, config: Config, strategy_name: str = "Unknown") -> None:
     """Print comprehensive schedule analysis."""
     if not schedule:
         print(f"No schedule generated for {strategy_name}")
@@ -159,7 +159,7 @@ def print_schedule_analysis(schedule: Dict[str, date], config: Config, strategy_
     
     # Comprehensive validation using all constraints, scoring, and analytics
     try:
-        validation_result = validate_schedule_constraints(schedule, config)
+        validation_result = validate_schedule(schedule, config)
         
         print("Comprehensive Schedule Analysis:")
         print(f"  Feasibility: {'✓' if validation_result['overall_valid'] else '✗'}")
@@ -252,7 +252,7 @@ def print_schedule_analysis(schedule: Dict[str, date], config: Config, strategy_
         print("Skipping detailed metrics analysis")
 
 
-def print_strategy_comparison(results: Dict[str, Dict[str, date]], config: Config, output_file: Optional[str] = None) -> None:
+def print_strategy_comparison(results: Dict[str, Schedule], config: Config, output_file: Optional[str] = None) -> None:
     """Print comparison of different scheduling strategies."""
     print(f"\n{'='*60}")
     print("COMPARISON SUMMARY")

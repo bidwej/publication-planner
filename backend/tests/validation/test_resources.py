@@ -15,7 +15,7 @@ class TestResourcesValidation:
     
     def test_validate_resources_constraints_empty_schedule(self, empty_config) -> None:
         """Test resources validation with empty schedule."""
-        schedule: Dict[str, date] = {}
+        schedule: Schedule = {}
         
         result: Any = validate_resources_constraints(schedule, empty_config)
         assert isinstance(result, ResourceValidation)
@@ -24,7 +24,7 @@ class TestResourcesValidation:
     
     def test_calculate_daily_load_empty_schedule(self, empty_config) -> None:
         """Test daily load calculation with empty schedule."""
-        schedule: Dict[str, date] = {}
+        schedule: Schedule = {}
         
         result: Any = _calculate_daily_load(schedule, empty_config)
         assert isinstance(result, dict)

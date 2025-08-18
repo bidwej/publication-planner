@@ -14,7 +14,7 @@ class TestCalculatePenaltyScore:
     
     def test_empty_schedule(self, config) -> None:
         """Test penalty calculation with empty schedule."""
-        schedule: Dict[str, date] = {}
+        schedule: Schedule = {}
         breakdown = calculate_penalty_score(schedule, config)
         
         assert isinstance(breakdown.total_penalty, (int, float))
@@ -25,7 +25,7 @@ class TestCalculatePenaltyScore:
     
     def test_single_submission(self, config) -> None:
         """Test penalty calculation with single submission."""
-        schedule: Dict[str, date] = {"test-pap": date(2025, 1, 1)}
+        schedule: Schedule = {"test-pap": date(2025, 1, 1)}
         breakdown = calculate_penalty_score(schedule, config)
         
         assert isinstance(breakdown.total_penalty, (int, float))
@@ -36,7 +36,7 @@ class TestCalculatePenaltyScore:
     
     def test_multiple_submissions(self, config) -> None:
         """Test penalty calculation with multiple submissions."""
-        schedule: Dict[str, date] = {
+        schedule: Schedule = {
             "test-pap": date(2025, 1, 1),
             "test-mod": date(2025, 1, 15),
             "test-abs": date(2025, 2, 1)
@@ -52,7 +52,7 @@ class TestCalculatePenaltyScore:
     def test_late_submission_penalty(self, config) -> None:
         """Test penalty for late submissions."""
         # Create a schedule with submissions after their deadlines
-        schedule: Dict[str, date] = {
+        schedule: Schedule = {
             "test-pap": date(2025, 12, 31),  # Very late
             "test-mod": date(2025, 6, 30)    # Moderately late
         }
@@ -65,7 +65,7 @@ class TestCalculatePenaltyScore:
     def test_overlap_penalty(self, config) -> None:
         """Test penalty for overlapping submissions."""
         # Create a schedule with overlapping submissions
-        schedule: Dict[str, date] = {
+        schedule: Schedule = {
             "test-pap": date(2025, 1, 1),
             "test-mod": date(2025, 1, 1),  # Same day - should cause overlap
             "test-abs": date(2025, 1, 1)   # Same day - should cause overlap
@@ -79,7 +79,7 @@ class TestCalculatePenaltyScore:
     def test_dependency_violation_penalty(self, config) -> None:
         """Test penalty for dependency violations."""
         # Create a schedule where child starts before parent
-        schedule: Dict[str, date] = {
+        schedule: Schedule = {
             "parent-pap": date(2025, 2, 1),
             "child-pap": date(2025, 1, 1)  # Child before parent
         }
@@ -170,7 +170,7 @@ class TestCalculatePenaltyScore:
         )
         
         # Schedule in the past
-        schedule: Dict[str, date] = {"past_submission": past_date}
+        schedule: Schedule = {"past_submission": past_date}
         result: Any = calculate_penalty_score(schedule, config)
         
         # Should calculate penalties for past scheduling
@@ -201,7 +201,7 @@ class TestCalculatePenaltyScore:
         )
         
         # Schedule both submissions
-        schedule: Dict[str, date] = {
+        schedule: Schedule = {
             "sub_a": date.today(),
             "sub_b": date.today() + timedelta(days=1)
         }
@@ -227,7 +227,7 @@ class TestCalculatePenaltyScore:
         )
         
         # Schedule submission with missing dependency
-        schedule: Dict[str, date] = {"dependent_sub": date.today()}
+        schedule: Schedule = {"dependent_sub": date.today()}
         result: Any = calculate_penalty_score(schedule, config)
         
         # Should penalize missing dependencies
@@ -254,7 +254,7 @@ class TestCalculatePenaltyScore:
         )
         
         # Schedule all submissions on the same day
-        schedule: Dict[str, date] = {sub.id: date.today() for sub in submissions}
+        schedule: Schedule = {sub.id: date.today() for sub in submissions}
         result: Any = calculate_penalty_score(schedule, config)
         
         # Should heavily penalize resource violations

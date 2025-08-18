@@ -6,11 +6,10 @@ from typing import Dict, List, Optional
 from datetime import date, timedelta
 from schedulers.base import BaseScheduler
 from core.dates import is_working_day
-from core.models import SchedulerStrategy
+from core.models import SchedulerStrategy, Schedule
 from core.constants import SCHEDULING_CONSTANTS
 
 
-@BaseScheduler.register_strategy(SchedulerStrategy.RANDOM)
 class RandomScheduler(BaseScheduler):
     """Random scheduler that schedules submissions in random order for baseline comparison."""
     
@@ -20,17 +19,21 @@ class RandomScheduler(BaseScheduler):
         if seed is not None:
             random.seed(seed)
     
-    def schedule(self) -> Dict[str, date]:
+    def schedule(self) -> Schedule:
         """
         Generate a schedule using random selection.
         
         Returns
         -------
-        Dict[str, date]
-            Mapping of submission_id to start_date
+        Schedule
+            Schedule object with intervals for all submissions
         """
-        # Use shared setup
-        schedule, topo, start_date, end_date = self._run_common_scheduling_setup()
+        # Get what we need from base
+        topo = self.get_dependency_order()
+        start_date, end_date = self.get_scheduling_window()
+        
+        # Initialize empty Schedule object
+        schedule = Schedule()
         
         # Initialize active submissions list
         active: List[str] = []
