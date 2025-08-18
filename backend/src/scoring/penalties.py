@@ -4,35 +4,43 @@ from typing import Dict, Any
 from datetime import date, timedelta
 from collections import defaultdict
 
-from core.models import Config, PenaltyBreakdown, SubmissionType, ConferenceType, Schedule
+from core.models import Config, ScheduleMetrics, SubmissionType, ConferenceType, Schedule
 from core.constants import (
     PENALTY_CONSTANTS, REPORT_CONSTANTS
 )
 # Note: Penalty costs moved to config.json because they are project-specific
 # and should be configurable by users. Only algorithm constants remain in constants.py.
 
-def calculate_penalty_score(schedule: Schedule, config: Config) -> PenaltyBreakdown:
-    """
-    Calculate penalty score for a schedule - SINGLE SOURCE OF TRUTH for all penalties.
+def calculate_penalty_score(schedule: Schedule, config: Config) -> ScheduleMetrics:
+    """Calculate penalty score for a schedule based on various constraint violations.
     
-    This is the only public function for penalty calculations. All other penalty
-    calculations in the system should call this function to ensure consistency.
-    
-    Args:
-        schedule: Dictionary mapping submission_id to start_date
-        config: Configuration object with penalty costs and constraints
-        
     Returns:
-        PenaltyBreakdown with total and categorized penalty amounts
+        ScheduleMetrics with total and categorized penalty amounts
     """
     if not schedule:
-        return PenaltyBreakdown(
+        return ScheduleMetrics(
+            makespan=0,
+            avg_utilization=0.0,
+            peak_utilization=0,
             total_penalty=0.0,
-            deadline_penalties=0.0,
-            dependency_penalties=0.0,
-            resource_penalties=0.0,
-            conference_compatibility_penalties=0.0,
-            abstract_paper_dependency_penalties=0.0
+            compliance_rate=0.0,
+            quality_score=0.0,
+            duration_days=0,
+            avg_daily_load=0.0,
+            timeline_efficiency=0.0,
+            utilization_rate=0.0,
+            efficiency_score=0.0,
+            submission_count=0,
+            scheduled_count=0,
+            completion_rate=0.0,
+            monthly_distribution={},
+            quarterly_distribution={},
+            yearly_distribution={},
+            type_counts={},
+            type_percentages={},
+            missing_submissions=[],
+            start_date=None,
+            end_date=None
         )
     
     # Get comprehensive validation results
@@ -71,13 +79,29 @@ def calculate_penalty_score(schedule: Schedule, config: Config) -> PenaltyBreakd
         slack_cost_penalties
     )
     
-    return PenaltyBreakdown(
+    return ScheduleMetrics(
+        makespan=schedule.calculate_duration_days(),
+        avg_utilization=0.0, # Placeholder, will be implemented
+        peak_utilization=0, # Placeholder, will be implemented
         total_penalty=total_penalty,
-        deadline_penalties=deadline_penalties,
-        dependency_penalties=dependency_penalties,
-        resource_penalties=resource_penalties,
-        conference_compatibility_penalties=conference_compatibility_penalties,
-        abstract_paper_dependency_penalties=abstract_paper_dependency_penalties
+        compliance_rate=0.0, # Placeholder, will be implemented
+        quality_score=0.0, # Placeholder, will be implemented
+        duration_days=0,
+        avg_daily_load=0.0,
+        timeline_efficiency=0.0,
+        utilization_rate=0.0,
+        efficiency_score=0.0,
+        submission_count=0,
+        scheduled_count=0,
+        completion_rate=0.0,
+        monthly_distribution={},
+        quarterly_distribution={},
+        yearly_distribution={},
+        type_counts={},
+        type_percentages={},
+        missing_submissions=[],
+        start_date=None,
+        end_date=None
     )
 
 def _calculate_deadline_penalties(schedule: Schedule, config: Config) -> float:
@@ -85,15 +109,15 @@ def _calculate_deadline_penalties(schedule: Schedule, config: Config) -> float:
     total_penalty = 0.0
     
     for sid, interval in schedule.intervals.items():
-        sub = config.submissions_dict.get(sid)
+        sub = config.get_submission(sid)
         if not sub:
             continue
         
-        if not sub.conference_id or sub.conference_id not in config.conferences_dict:
+        if not sub.conference_id or not config.has_conference(sub.conference_id):
             continue
         
-        conf = config.conferences_dict[sub.conference_id]
-        if sub.kind not in conf.deadlines:
+        conf = config.get_conference(sub.conference_id)
+        if not conf or sub.kind not in conf.deadlines:
             continue
         
         deadline = conf.deadlines[sub.kind]
@@ -120,7 +144,7 @@ def _calculate_dependency_penalties(schedule: Schedule, config: Config) -> float
     total_penalty = 0.0
     
     for sid, interval in schedule.intervals.items():
-        sub = config.submissions_dict.get(sid)
+        sub = config.get_submission(sid)
         if not sub:
             continue
         
@@ -132,7 +156,7 @@ def _calculate_dependency_penalties(schedule: Schedule, config: Config) -> float
                 continue
             
             dep_start = schedule.intervals[dep_id].start_date
-            dep_sub = config.submissions_dict.get(dep_id)
+            dep_sub = config.get_submission(dep_id)
             if not dep_sub:
                 continue
             
@@ -159,7 +183,7 @@ def _calculate_resource_penalties(schedule: Schedule, config: Config) -> float:
     # Calculate daily load
     daily_load = defaultdict(int)
     for sid, interval in schedule.intervals.items():
-        sub = config.submissions_dict.get(sid)
+        sub = config.get_submission(sid)
         if not sub:
             continue
         
@@ -330,7 +354,7 @@ def _calculate_slack_cost_penalties(schedule: Schedule, config: Config) -> float
     
     # Calculate slack cost components for each submission
     for sid, interval in schedule.intervals.items():
-        sub = config.submissions_dict.get(sid)
+        sub = config.get_submission(sid)
         if not sub:
             continue
         
@@ -349,8 +373,10 @@ def _calculate_slack_cost_penalties(schedule: Schedule, config: Config) -> float
             # Calculate missed opportunity penalties based on submission type and conference requirements
             missed_opportunity_penalty = 0
             
-            if sub.conference_id and sub.conference_id in config.conferences_dict:
-                conf = config.conferences_dict[sub.conference_id]
+            if sub.conference_id and config.has_conference(sub.conference_id):
+                conf = config.get_conference(sub.conference_id)
+                if not conf:
+                    continue
                 
                 # Check for missed opportunities based on submission type and conference requirements
                 if sub.kind == SubmissionType.PAPER:

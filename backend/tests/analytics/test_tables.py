@@ -18,6 +18,7 @@ from tables import (
     save_table_csv,
     get_output_summary
 )
+from core.models import Schedule, Interval
 
 
 class TestGenerateSimpleMonthlyTable:
@@ -67,7 +68,7 @@ class TestGenerateScheduleSummaryTable:
     
     def test_empty_schedule(self, config) -> None:
         """Test summary table generation with empty schedule."""
-        schedule: Schedule = {}
+        schedule = Schedule(intervals={})
         table = generate_schedule_summary_table(schedule, config)
         
         assert isinstance(table, list)
@@ -76,7 +77,9 @@ class TestGenerateScheduleSummaryTable:
     
     def test_single_submission(self, config) -> None:
         """Test summary table generation with single submission."""
-        schedule: Schedule = {"test-pap": date(2025, 1, 15)}
+        schedule = Schedule(intervals={
+            "test-pap": Interval(start_date=date(2025, 1, 15), end_date=date(2025, 2, 15))
+        })
         table = generate_schedule_summary_table(schedule, config)
         
         assert isinstance(table, list)
@@ -84,11 +87,11 @@ class TestGenerateScheduleSummaryTable:
     
     def test_multiple_submissions(self, config) -> None:
         """Test summary table generation with multiple submissions."""
-        schedule: Schedule = {
-            "paper1": date(2025, 1, 1),
-            "paper2": date(2025, 2, 15),
-            "paper3": date(2025, 6, 1)
-        }
+        schedule = Schedule(intervals={
+            "paper1": Interval(start_date=date(2025, 1, 1), end_date=date(2025, 4, 1)),
+            "paper2": Interval(start_date=date(2025, 2, 15), end_date=date(2025, 5, 15)),
+            "paper3": Interval(start_date=date(2025, 6, 1), end_date=date(2025, 9, 1))
+        })
         table = generate_schedule_summary_table(schedule, config)
         
         assert isinstance(table, list)

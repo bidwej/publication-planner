@@ -41,13 +41,13 @@ def validate_submission_constraints(submission: Submission, start_date: date, sc
         return False
     
     # Basic dependency check
-    if not _validate_dependencies_satisfied(submission, schedule, config.submissions_dict, config, start_date):
+    if not _validate_dependencies_satisfied(submission, schedule, config, start_date):
         return False
     
     # Basic venue compatibility check
     try:
         from .venue import _validate_venue_compatibility
-        _validate_venue_compatibility({submission.id: submission}, config.conferences_dict)
+        _validate_venue_compatibility({submission.id: submission}, config)
     except ValueError:
         return False
     
@@ -73,14 +73,36 @@ def _validate_deadline_compliance_single(start_date: date, sub: Submission, conf
     return end_date <= deadline
 
 
-def _validate_dependencies_satisfied(sub: Submission, schedule: Schedule, 
-                                  submissions_dict: Dict[str, Submission], config: Config, 
-                                  current_date: date) -> bool:
-    """Check if all dependencies are satisfied for one submission."""
-    # Use the shared dependency checking logic from models.py
-    # Convert Schedule to Schedule for the existing method
-    schedule_dict = {sub_id: interval.start_date for sub_id, interval in schedule.intervals.items()}
-    return sub.are_dependencies_satisfied(schedule_dict, submissions_dict, config, current_date)
+def _validate_dependencies_satisfied(submission: Submission, schedule: Schedule, config: Config, current_date: date) -> bool:
+    """Check if all dependencies are satisfied for this submission."""
+    if not submission.depends_on:
+        return True
+    
+    for dep_id in submission.depends_on:
+        if dep_id not in schedule.intervals:
+            return False
+        
+        dep_start = schedule.intervals[dep_id].start_date
+        dep_sub = config.get_submission(dep_id)
+        if not dep_sub:
+            return False
+        
+        dep_end = dep_sub.get_end_date(dep_start, config)
+        if current_date < dep_end:
+            return False
+    
+    return True
+
+
+def _validate_venue_compatibility(submission: Submission, config: Config) -> None:
+    """Validate venue compatibility for a submission."""
+    if not submission.conference_id:
+        return
+    
+    if not config.has_conference(submission.conference_id):
+        return
+    
+    conf = config.get_conference(submission.conference_id)
 
 
 def _validate_unified_schema_fields(submission: Submission) -> bool:

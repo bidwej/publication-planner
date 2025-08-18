@@ -5,7 +5,8 @@ from datetime import date, timedelta
 from collections import defaultdict
 import statistics
 
-from core.models import Config, EfficiencyMetrics, TimelineMetrics
+from core.models import Config, ScheduleMetrics, Schedule
+from typing import Optional
 from core.constants import (
     EFFICIENCY_CONSTANTS, SCORING_CONSTANTS, REPORT_CONSTANTS, QUALITY_CONSTANTS
 )
@@ -41,6 +42,10 @@ def calculate_efficiency_score(schedule: Schedule, config: Config) -> float:
     # Calculate timeline efficiency
     timeline_metrics = calculate_efficiency_timeline(schedule, config)
     
+    # Handle None cases
+    if resource_metrics is None or timeline_metrics is None:
+        return min_score
+    
     # Combine scores (weighted average)
     efficiency_score = (
         resource_metrics.efficiency_score * SCORING_CONSTANTS.efficiency_resource_weight +
@@ -50,7 +55,7 @@ def calculate_efficiency_score(schedule: Schedule, config: Config) -> float:
     return max(min_score, min(max_score, efficiency_score))
 
 
-def calculate_efficiency_resource(schedule: Schedule, config: Config) -> EfficiencyMetrics:
+def calculate_efficiency_resource(schedule: Schedule, config: Config) -> Optional[ScheduleMetrics]:
     """
     Calculate detailed resource efficiency metrics.
     
@@ -63,8 +68,8 @@ def calculate_efficiency_resource(schedule: Schedule, config: Config) -> Efficie
         
     Returns
     -------
-    EfficiencyMetrics
-        Resource efficiency metrics
+    ScheduleMetrics
+        Resource efficiency metrics with utilization data
     """
     # Fixed scoring constants
     max_score = REPORT_CONSTANTS.max_score
@@ -72,19 +77,12 @@ def calculate_efficiency_resource(schedule: Schedule, config: Config) -> Efficie
     percentage_multiplier = QUALITY_CONSTANTS.percentage_multiplier
     
     if not schedule:
-        return EfficiencyMetrics(
-            utilization_rate=min_score,
-            peak_utilization=0,
-            avg_utilization=min_score,
-            efficiency_score=min_score
-        )
+        return None
     
     # Calculate daily load
     daily_load = defaultdict(int)
-    submissions_dict = config.submissions_dict
-    
     for submission_id, interval in schedule.intervals.items():
-        submission = submissions_dict.get(submission_id)
+        submission = config.get_submission(submission_id)
         if not submission:
             continue
             
@@ -94,12 +92,7 @@ def calculate_efficiency_resource(schedule: Schedule, config: Config) -> Efficie
             daily_load[current_date] += 1
     
     if not daily_load:
-        return EfficiencyMetrics(
-            utilization_rate=min_score,
-            peak_utilization=0,
-            avg_utilization=min_score,
-            efficiency_score=min_score
-        )
+        return None
     
     # Calculate metrics
     peak_utilization = max(daily_load.values())
@@ -115,18 +108,25 @@ def calculate_efficiency_resource(schedule: Schedule, config: Config) -> Efficie
     else:
         efficiency_score = min_score
     
-    return EfficiencyMetrics(
-        utilization_rate=utilization_rate,
-        peak_utilization=peak_utilization,
+    return ScheduleMetrics(
         avg_utilization=avg_utilization,
-        efficiency_score=efficiency_score
+        peak_utilization=peak_utilization,
+        utilization_rate=utilization_rate,
+        efficiency_score=efficiency_score,
+        duration_days=0,
+        avg_daily_load=0.0,
+        timeline_efficiency=0.0,
+        makespan=0,
+        total_penalty=0.0,
+        compliance_rate=0.0,
+        quality_score=0.0
     )
 
 
 
 
 
-def calculate_efficiency_timeline(schedule: Schedule, config: Config) -> TimelineMetrics:
+def calculate_efficiency_timeline(schedule: Schedule, config: Config) -> Optional[ScheduleMetrics]:
     """
     Calculate timeline efficiency metrics.
     
@@ -139,19 +139,15 @@ def calculate_efficiency_timeline(schedule: Schedule, config: Config) -> Timelin
         
     Returns
     -------
-    TimelineMetrics
-        Timeline efficiency metrics
+    ScheduleMetrics
+        Timeline efficiency metrics with timeline data
     """
     # Fixed scoring constants
     max_score = 100.0
     min_score = 0.0
     
     if not schedule:
-        return TimelineMetrics(
-            duration_days=0,
-            avg_daily_load=min_score,
-            timeline_efficiency=min_score
-        )
+        return None
     
     # Calculate timeline span - handle both string and date objects
     start_dates = []
@@ -168,19 +164,16 @@ def calculate_efficiency_timeline(schedule: Schedule, config: Config) -> Timelin
             end_dates.append(date_val)
     
     if not start_dates:
-        return TimelineMetrics(
-            duration_days=0,
-            avg_daily_load=min_score,
-            timeline_efficiency=min_score
-        )
+        return None
     
     start_date = min(start_dates)
     end_date = max(end_dates)
-            # Create a temporary schedule object to calculate duration
-        from core.models import Schedule, Interval
-        temp_intervals = {str(i): Interval(start_date=d, end_date=d) for i, d in enumerate(start_dates)}
-        temp_schedule = Schedule(intervals=temp_intervals)
-        duration_days = temp_schedule.calculate_duration_days() + 1
+    
+    # Create a temporary schedule object to calculate duration
+    from core.models import Schedule, Interval
+    temp_intervals = {str(i): Interval(start_date=d, end_date=d) for i, d in enumerate(start_dates)}
+    temp_schedule = Schedule(intervals=temp_intervals)
+    duration_days = temp_schedule.calculate_duration_days() + 1
     
     # Calculate average daily load
     total_submissions = len(schedule)
@@ -205,8 +198,16 @@ def calculate_efficiency_timeline(schedule: Schedule, config: Config) -> Timelin
     else:
         timeline_efficiency = min_score
     
-    return TimelineMetrics(
+    return ScheduleMetrics(
+        avg_utilization=0.0,
+        peak_utilization=0,
+        utilization_rate=0.0,
+        efficiency_score=0.0,
         duration_days=duration_days,
         avg_daily_load=avg_daily_load,
-        timeline_efficiency=timeline_efficiency
+        timeline_efficiency=timeline_efficiency,
+        makespan=0,
+        total_penalty=0.0,
+        compliance_rate=0.0,
+        quality_score=0.0
     ) 

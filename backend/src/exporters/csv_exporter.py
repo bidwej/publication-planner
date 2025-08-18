@@ -8,7 +8,7 @@ import csv
 import json
 from collections import defaultdict
 
-from core.models import Config, ScheduleSummary, ScheduleMetrics, SubmissionType, Schedule
+from core.models import Config, ScheduleMetrics, SubmissionType, Schedule
 
 from tables import (
     generate_schedule_table, generate_metrics_table, generate_deadline_table,
@@ -29,7 +29,7 @@ def save_all_outputs(
     schedule_table: List[Dict[str, str]],
     metrics_table: List[Dict[str, str]],
     deadline_table: List[Dict[str, str]],
-    metrics: ScheduleSummary,
+    metrics: ScheduleMetrics,
     output_dir: str
 ) -> Dict[str, str]:
     """Save all output files and return file paths."""

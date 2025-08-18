@@ -135,7 +135,7 @@ def _calculate_total_slack(schedule: Schedule, config: Config) -> int:
         current_id, current_start = sorted_submissions[i]
         next_id, next_start = sorted_submissions[i + 1]
         
-        current_sub = config.submissions_dict.get(current_id)
+        current_sub = config.get_submission(current_id)
         if not current_sub:
             continue
         
@@ -160,7 +160,7 @@ def calculate_quality_balance(schedule: Schedule, config: Config) -> float:
     # Calculate work distribution over time
     daily_work = {}
     for sid, start_date in schedule.items():
-        sub = config.submissions_dict.get(sid)
+        sub = config.get_submission(sid)
         if not sub:
             continue
         

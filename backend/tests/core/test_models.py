@@ -5,8 +5,8 @@ from typing import Dict, List, Any, Optional
 
 from core.models import (
     Config, Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence, SubmissionWorkflow,
-    ValidationResult, ScoringResult, ScheduleResult, ScheduleSummary, ScheduleMetrics,
-    PenaltyBreakdown, EfficiencyMetrics, TimelineMetrics, DeadlineValidation, DependencyValidation, ResourceValidation
+    ValidationResult, ScheduleMetrics,
+    ConstraintViolation, DeadlineViolation, DependencyViolation, ResourceViolation
 )
 
 
@@ -726,234 +726,71 @@ class TestUnifiedModels:
         assert len(validation_result.violations) == 0
         assert validation_result.summary == "All validations passed"
     
-    def test_scoring_result_creation(self) -> None:
-        """Test scoring result creation."""
-        penalty_breakdown = PenaltyBreakdown(
-            total_penalty=100.0,
-            deadline_penalties=50.0,
-            dependency_penalties=30.0,
-            resource_penalties=20.0,
-            conference_compatibility_penalties=0.0,
-            abstract_paper_dependency_penalties=0.0
-        )
-        
-        efficiency_metrics = EfficiencyMetrics(
-            utilization_rate=0.8,
-            peak_utilization=5,
-            avg_utilization=3.2,
-            efficiency_score=85.0
-        )
-        
-        timeline_metrics = TimelineMetrics(
-            duration_days=30,
-            avg_daily_load=2.5,
-            timeline_efficiency=0.9
-        )
-        
-        scoring_result: Any = ScoringResult(
-            penalty_score=100.0,
-            quality_score=85.0,
-            efficiency_score=90.0,
-            penalty_breakdown=penalty_breakdown,
-            efficiency_metrics=efficiency_metrics,
-            timeline_metrics=timeline_metrics,
-            overall_score=91.67
-        )
-        
-        assert scoring_result.penalty_score == 100.0
-        assert scoring_result.quality_score == 85.0
-        assert scoring_result.efficiency_score == 90.0
-        assert scoring_result.overall_score == 91.67
-
-    def test_schedule_result_creation(self) -> None:
-        """Test schedule result creation."""
-        schedule: Schedule = {"paper1": date(2024, 5, 1), "paper2": date(2024, 7, 1)}
-        
-        summary = ScheduleSummary(
-            total_submissions=2,
-            schedule_span=61,
-            start_date=date(2024, 5, 1),
-            end_date=date(2024, 7, 1),
-            penalty_score=100.0,
-            quality_score=85.0,
-            efficiency_score=90.0,
-            deadline_compliance=95.0,
-            resource_utilization=0.8
-        )
-        
+    def test_schedule_metrics_creation(self) -> None:
+        """Test schedule metrics creation."""
         metrics = ScheduleMetrics(
             makespan=61,
-            avg_utilization=0.8,
-            peak_utilization=5,
             total_penalty=100.0,
             compliance_rate=95.0,
-            quality_score=85.0
-        )
-        
-        penalty_breakdown = PenaltyBreakdown(
-            total_penalty=100.0,
-            deadline_penalties=50.0,
-            dependency_penalties=30.0,
-            resource_penalties=20.0,
-            conference_compatibility_penalties=0.0,
-            abstract_paper_dependency_penalties=0.0
-        )
-        
-        efficiency_metrics = EfficiencyMetrics(
-            utilization_rate=0.8,
+            quality_score=85.0,
+            avg_utilization=0.8,
             peak_utilization=5,
-            avg_utilization=3.2,
-            efficiency_score=90.0
-        )
-        
-        timeline_metrics = TimelineMetrics(
+            utilization_rate=0.8,
+            efficiency_score=90.0,
             duration_days=61,
             avg_daily_load=2.5,
-            timeline_efficiency=0.9
-        )
-        
-        scoring_result: Any = ScoringResult(
-            penalty_score=100.0,
-            quality_score=85.0,
-            efficiency_score=90.0,
-            penalty_breakdown=penalty_breakdown,
-            efficiency_metrics=efficiency_metrics,
-            timeline_metrics=timeline_metrics,
-            overall_score=91.67
-        )
-        
-        validation_result: Any = ValidationResult(
-            is_valid=True,
-            violations=[],
-            deadline_validation=DeadlineValidation(
-                is_valid=True,
-                violations=[],
-                summary="All deadlines met",
-                compliance_rate=100.0,
-                total_submissions=2,
-                compliant_submissions=2
-            ),
-            dependency_validation=DependencyValidation(
-                is_valid=True,
-                violations=[],
-                summary="All dependencies satisfied",
-                satisfaction_rate=100.0,
-                total_dependencies=0,
-                satisfied_dependencies=0
-            ),
-            resource_validation=ResourceValidation(
-                is_valid=True,
-                violations=[],
-                summary="Resource constraints satisfied",
-                max_concurrent=3,
-                max_observed=2,
-                total_days=61
-            ),
-            summary="Schedule is valid"
-        )
-        
-        schedule_result: Any = ScheduleResult(
-            schedule=schedule,
-            summary=summary,
-            metrics=metrics,
-            tables={"monthly": []},
-            validation=validation_result,
-            scoring=scoring_result
-        )
-        
-        assert schedule_result.schedule == schedule
-        assert schedule_result.summary.total_submissions == 2
-        assert schedule_result.metrics.makespan == 61
-        assert schedule_result.validation.is_valid is True
-        assert schedule_result.scoring.overall_score == 91.67
-
-
-class TestAnalysisClasses:
-    """Test analytics classes."""
-    
-    def test_schedule_analysis(self) -> None:
-        """Test ScheduleAnalysis creation."""
-        from core.models import ScheduleAnalysis
-        
-        analysis = ScheduleAnalysis(
-            scheduled_count=5,
-            total_count=10,
-            completion_rate=50.0,
-            missing_submissions=[{"id": "missing1"}, {"id": "missing2"}],
-            summary="Half of submissions scheduled",
-            metadata={"strategy": "greedy"}
-        )
-        
-        assert analysis.scheduled_count == 5
-        assert analysis.total_count == 10
-        assert analysis.completion_rate == 50.0
-        assert len(analysis.missing_submissions) == 2
-        assert analysis.summary == "Half of submissions scheduled"
-    
-    def test_schedule_distribution(self) -> None:
-        """Test ScheduleDistribution creation."""
-        from core.models import ScheduleDistribution
-        
-        distribution = ScheduleDistribution(
-            monthly_distribution={"2024-05": 2, "2024-06": 3},
-            quarterly_distribution={"2024-Q2": 5},
-            yearly_distribution={"2024": 5},
-            summary="Well distributed schedule",
-            metadata={"analysis_type": "temporal"}
-        )
-        
-        assert distribution.monthly_distribution["2024-05"] == 2
-        assert distribution.quarterly_distribution["2024-Q2"] == 5
-        assert distribution.yearly_distribution["2024"] == 5
-        assert distribution.summary == "Well distributed schedule"
-    
-    def test_submission_type_analysis(self) -> None:
-        """Test SubmissionTypeAnalysis creation."""
-        from core.models import SubmissionTypeAnalysis
-        
-        analysis = SubmissionTypeAnalysis(
-            type_counts={"paper": 3, "abstract": 2},
-            type_percentages={"paper": 60.0, "abstract": 40.0},
-            summary="More papers than abstracts",
-            metadata={"total_submissions": 5}
-        )
-        
-        assert analysis.type_counts["paper"] == 3
-        assert analysis.type_percentages["paper"] == 60.0
-        assert analysis.summary == "More papers than abstracts"
-    
-    def test_timeline_analysis(self) -> None:
-        """Test TimelineAnalysis creation."""
-        from core.models import TimelineAnalysis
-        
-        analysis = TimelineAnalysis(
+            timeline_efficiency=0.9,
+            submission_count=2,
+            scheduled_count=2,
+            completion_rate=1.0,
             start_date=date(2024, 5, 1),
-            end_date=date(2024, 8, 1),
-            duration_days=92,
-            avg_submissions_per_month=1.67,
-            summary="3-month timeline",
-            metadata={"strategy": "optimal"}
+            end_date=date(2024, 7, 1)
         )
         
-        assert analysis.start_date == date(2024, 5, 1)
-        assert analysis.end_date == date(2024, 8, 1)
-        assert analysis.duration_days == 92
-        assert analysis.avg_submissions_per_month == 1.67
-        assert analysis.summary == "3-month timeline"
-    
-    def test_resource_analysis(self) -> None:
-        """Test ResourceAnalysis creation."""
-        from core.models import ResourceAnalysis
-        
-        analysis = ResourceAnalysis(
-            peak_load=3,
-            avg_load=2.1,
-            utilization_pattern={date(2024, 5, 1): 2, date(2024, 5, 2): 3},
-            summary="Good resource utilization",
-            metadata={"max_capacity": 4}
+        assert metrics.makespan == 61
+        assert metrics.total_penalty == 100.0
+        assert metrics.compliance_rate == 95.0
+        assert metrics.quality_score == 85.0
+        assert metrics.efficiency_score == 90.0
+        assert metrics.submission_count == 2
+
+    def test_schedule_metrics_comprehensive(self) -> None:
+        """Test comprehensive schedule metrics."""
+        metrics = ScheduleMetrics(
+            makespan=61,
+            total_penalty=100.0,
+            compliance_rate=95.0,
+            quality_score=85.0,
+            avg_utilization=0.8,
+            peak_utilization=5,
+            utilization_rate=0.8,
+            efficiency_score=90.0,
+            duration_days=61,
+            avg_daily_load=2.5,
+            timeline_efficiency=0.9,
+            submission_count=2,
+            scheduled_count=2,
+            completion_rate=1.0,
+            start_date=date(2024, 5, 1),
+            end_date=date(2024, 7, 1),
+            monthly_distribution={"May": 1, "June": 0, "July": 1},
+            quarterly_distribution={"Q2": 1, "Q3": 1},
+            yearly_distribution={"2024": 2},
+            type_counts={"paper": 2},
+            type_percentages={"paper": 100.0}
         )
         
-        assert analysis.peak_load == 3
-        assert analysis.avg_load == 2.1
-        assert analysis.utilization_pattern[date(2024, 5, 1)] == 2
-        assert analysis.summary == "Good resource utilization"
+        assert metrics.makespan == 61
+        assert metrics.total_penalty == 100.0
+        assert metrics.compliance_rate == 95.0
+        assert metrics.quality_score == 85.0
+        assert metrics.efficiency_score == 90.0
+        assert metrics.submission_count == 2
+        assert metrics.scheduled_count == 2
+        assert metrics.completion_rate == 1.0
+        assert "May" in metrics.monthly_distribution
+        assert "Q2" in metrics.quarterly_distribution
+        assert "2024" in metrics.yearly_distribution
+
+
+

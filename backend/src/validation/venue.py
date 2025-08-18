@@ -1,13 +1,13 @@
 """Venue validation functions for conference compatibility and policies."""
 
-from typing import Dict, Any, List
+from typing import List, Dict
 from datetime import date
 
-from ..core.models import Config, Submission, ConferenceType, Conference, SubmissionWorkflow, Schedule, SubmissionType
+from ..core.models import Config, Submission, ConferenceType, Conference, SubmissionWorkflow, Schedule, SubmissionType, ValidationResult, ConstraintViolation
 from ..core.constants import QUALITY_CONSTANTS
 
 
-def validate_venue_constraints(schedule: Schedule, config: Config) -> Dict[str, Any]:
+def validate_venue_constraints(schedule: Schedule, config: Config) -> ValidationResult:
     """Validate all venue-related constraints for the complete schedule."""
     # Run all venue validations
     conference_compat_result = _validate_conference_compatibility(schedule, config)
@@ -19,33 +19,42 @@ def validate_venue_constraints(schedule: Schedule, config: Config) -> Dict[str, 
     try:
         _validate_venue_compatibility(config.submissions_dict, config.conferences_dict)
     except ValueError as e:
-        compatibility_violations.append({
-            "description": str(e),
-            "severity": "high"
-        })
+        compatibility_violations.append(ConstraintViolation(
+            submission_id="",
+            description=str(e),
+            severity="high"
+        ))
     
     # Combine all violations
     all_violations = (
-        conference_compat_result.get("violations", []) +
-        conf_sub_compat_result.get("violations", []) +
-        single_conf_result.get("violations", []) +
+        conference_compat_result.violations +
+        conf_sub_compat_result.violations +
+        single_conf_result.violations +
         compatibility_violations
     )
     
     # Determine overall validity
     is_valid = len(all_violations) == 0
     
-    return {
-        "is_valid": is_valid,
-        "violations": all_violations,
-        "conference_compatibility": conference_compat_result,
-        "conference_submission_compatibility": conf_sub_compat_result,
-        "single_conference_policy": single_conf_result,
-        "compatibility_validation": {
-            "is_valid": len(compatibility_violations) == 0,
-            "violations": compatibility_violations
+    # Calculate overall compliance rate
+    total_submissions = conference_compat_result.metadata.get("total_submissions", 0)
+    compliant_submissions = conference_compat_result.metadata.get("compliant_submissions", 0)
+    
+    if total_submissions > 0:
+        compatibility_rate = (compliant_submissions / total_submissions * QUALITY_CONSTANTS.percentage_multiplier)
+    else:
+        compatibility_rate = QUALITY_CONSTANTS.perfect_compliance_rate
+    
+    return ValidationResult(
+        is_valid=is_valid,
+        violations=all_violations,
+        summary=f"Venue validation: {len(all_violations)} violations found",
+        metadata={
+            "compatibility_rate": compatibility_rate,
+            "total_submissions": total_submissions,
+            "compliant_submissions": compliant_submissions
         }
-    }
+    )
 
 
 def validate_conference(conference: Conference) -> List[str]:
@@ -63,7 +72,7 @@ def validate_conference(conference: Conference) -> List[str]:
     return errors
 
 
-def _validate_conference_compatibility(schedule: Schedule, config: Config) -> Dict[str, Any]:
+def _validate_conference_compatibility(schedule: Schedule, config: Config) -> ValidationResult:
     """Validate conference compatibility (medical vs engineering)."""
     violations = []
     total_submissions = 0
@@ -77,21 +86,21 @@ def _validate_conference_compatibility(schedule: Schedule, config: Config) -> Di
         total_submissions += 1
         conf = config.conferences_dict.get(sub.conference_id)
         if not conf:
-            violations.append({
-                "submission_id": sid,
-                "description": f"Submission {sid} references unknown conference {sub.conference_id}",
-                "severity": "high"
-            })
+            violations.append(ConstraintViolation(
+                submission_id=sid,
+                description=f"Submission {sid} references unknown conference {sub.conference_id}",
+                severity="high"
+            ))
             continue
         
         # Check if submission type is compatible with conference type
         if sub.kind == SubmissionType.ABSTRACT and conf.conf_type == ConferenceType.ENGINEERING:
             # Engineering conferences typically don't accept abstracts
-            violations.append({
-                "submission_id": sid,
-                "description": f"Abstract {sid} not compatible with engineering conference {sub.conference_id}",
-                "severity": "medium"
-            })
+            violations.append(ConstraintViolation(
+                submission_id=sid,
+                description=f"Abstract {sid} not compatible with engineering conference {sub.conference_id}",
+                severity="medium"
+            ))
             continue
         elif sub.kind == SubmissionType.PAPER and conf.conf_type == ConferenceType.MEDICAL:
             # Medical conferences typically accept both abstracts and papers
@@ -101,29 +110,32 @@ def _validate_conference_compatibility(schedule: Schedule, config: Config) -> Di
             pass
         else:
             # Unknown combination
-            violations.append({
-                "submission_id": sid,
-                "description": f"Submission type {sub.kind.value} not compatible with conference type {conf.conf_type.value}",
-                "severity": "medium"
-            })
+            violations.append(ConstraintViolation(
+                submission_id=sid,
+                description=f"Submission type {sub.kind.value} not compatible with conference type {conf.conf_type.value}",
+                severity="medium"
+            ))
             continue
         
         compatible_submissions += 1
     
+    # Calculate compliance rate using constants from constants.py
     compatibility_rate = (compatible_submissions / total_submissions * QUALITY_CONSTANTS.percentage_multiplier) if total_submissions > 0 else QUALITY_CONSTANTS.perfect_compliance_rate
     is_valid = len(violations) == 0
     
-    return {
-        "is_valid": is_valid,
-        "violations": violations,
-        "compatibility_rate": compatibility_rate,
-        "total_submissions": total_submissions,
-        "compliant_submissions": compatible_submissions,
-        "summary": f"Conference compatibility: {compatible_submissions}/{total_submissions} submissions compatible ({compatibility_rate:.1f}%)"
-    }
+    return ValidationResult(
+        is_valid=is_valid,
+        violations=violations,
+        summary=f"Conference compatibility: {compatible_submissions}/{total_submissions} submissions compatible ({compatibility_rate:.1f}%)",
+        metadata={
+            "compatibility_rate": compatibility_rate,
+            "total_submissions": total_submissions,
+            "compliant_submissions": compatible_submissions
+        }
+    )
 
 
-def _validate_conference_submission_compatibility(schedule: Schedule, config: Config) -> Dict[str, Any]:
+def _validate_conference_submission_compatibility(schedule: Schedule, config: Config) -> ValidationResult:
     """Validate that submissions are compatible with their conference submission types."""
     violations = []
     total_submissions = 0
@@ -137,11 +149,11 @@ def _validate_conference_submission_compatibility(schedule: Schedule, config: Co
         total_submissions += 1
         conf = config.conferences_dict.get(sub.conference_id)
         if not conf:
-            violations.append({
-                "submission_id": sid,
-                "description": f"Submission {sid} references unknown conference {sub.conference_id}",
-                "severity": "high"
-            })
+            violations.append(ConstraintViolation(
+                submission_id=sid,
+                description=f"Submission {sid} references unknown conference {sub.conference_id}",
+                severity="high"
+            ))
             continue
         
         # Check if conference accepts any of the candidate submission types
@@ -151,13 +163,11 @@ def _validate_conference_submission_compatibility(schedule: Schedule, config: Co
             if not any_accepted:
                 submission_type_str = conf.effective_submission_types.value
                 types_str = ", ".join([t.value for t in sub.candidate_kinds])
-                violations.append({
-                    "submission_id": sid,
-                    "description": f"Submission {sid} candidate types ({types_str}) not accepted by conference {sub.conference_id} ({submission_type_str})",
-                    "severity": "high",
-                    "submission_type": types_str,
-                    "conference_submission_type": submission_type_str
-                })
+                violations.append(ConstraintViolation(
+                    submission_id=sid,
+                    description=f"Submission {sid} candidate types ({types_str}) not accepted by conference {sub.conference_id} ({submission_type_str})",
+                    severity="high"
+                ))
                 continue
         # If candidate_kinds is None, submission is open to any opportunity - skip this check
         
@@ -167,17 +177,19 @@ def _validate_conference_submission_compatibility(schedule: Schedule, config: Co
     compatibility_rate = (compatible_submissions / total_submissions * QUALITY_CONSTANTS.percentage_multiplier) if total_submissions > 0 else QUALITY_CONSTANTS.perfect_compliance_rate
     is_valid = len(violations) == 0
     
-    return {
-        "is_valid": is_valid,
-        "violations": violations,
-        "compatibility_rate": compatibility_rate,
-        "total_submissions": total_submissions,
-        "compliant_submissions": compatible_submissions,
-        "summary": f"Conference submission compatibility: {compatible_submissions}/{total_submissions} submissions compatible ({compatibility_rate:.1f}%)"
-    }
+    return ValidationResult(
+        is_valid=is_valid,
+        violations=violations,
+        summary=f"Conference submission compatibility: {compatible_submissions}/{total_submissions} submissions compatible ({compatibility_rate:.1f}%)",
+        metadata={
+            "compatibility_rate": compatibility_rate,
+            "total_submissions": total_submissions,
+            "compliant_submissions": compatible_submissions
+        }
+    )
 
 
-def _validate_single_conference_policy(schedule: Schedule, config: Config) -> Dict[str, Any]:
+def _validate_single_conference_policy(schedule: Schedule, config: Config) -> ValidationResult:
     """Validate single conference policy (no duplicate conferences per submission)."""
     violations = []
     total_submissions = 0
@@ -220,25 +232,28 @@ def _validate_single_conference_policy(schedule: Schedule, config: Config) -> Di
                     continue
             
             # Multiple submissions to same conference not allowed
-            violations.append({
-                "submission_ids": submissions,
-                "conference_id": conf_id,
-                "description": f"Multiple submissions to same conference {conf_id}",
-                "severity": "medium"
-            })
+            violations.append(ConstraintViolation(
+                submission_id=", ".join(submissions),
+                description=f"Multiple submissions to same conference {conf_id}",
+                severity="medium"
+            ))
         else:
             compliant_submissions += 1
     
+    # Calculate compliance rate using constants from constants.py
     compliance_rate = (compliant_submissions / total_submissions * QUALITY_CONSTANTS.percentage_multiplier) if total_submissions > 0 else QUALITY_CONSTANTS.perfect_compliance_rate
     is_valid = len(violations) == 0
     
-    return {
-        "is_valid": is_valid,
-        "violations": violations,
-        "total_submissions": total_submissions,
-        "compliant_submissions": compliant_submissions,
-        "compliance_rate": compliance_rate
-    }
+    return ValidationResult(
+        is_valid=is_valid,
+        violations=violations,
+        summary=f"Single conference policy: {compliant_submissions}/{total_submissions} submissions compliant ({compliance_rate:.1f}%)",
+        metadata={
+            "compatibility_rate": compliance_rate,
+            "total_submissions": total_submissions,
+            "compliant_submissions": compliant_submissions
+        }
+    )
 
 
 def _validate_venue_compatibility(submissions_dict: Dict[str, Submission], conferences_dict: Dict[str, Conference]) -> None:

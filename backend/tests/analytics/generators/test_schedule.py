@@ -1,4 +1,4 @@
-"""Tests for output generators schedule module."""
+"""Tests for schedule analytics functions."""
 
 from datetime import date
 from pathlib import Path
@@ -6,291 +6,167 @@ from typing import Dict, List, Any
 
 import pytest
 
-from src.generators.schedule import (
-    create_output_directory,
-    save_all_outputs,
-    generate_schedule_summary,
-    generate_schedule_metrics
-)
-from core.models import Config, ScheduleSummary, ScheduleMetrics
-
-
-class TestCreateOutputDirectory:
-    """Test the create_output_directory function."""
-
-    def test_create_output_directory_basic(self, tmp_path: Path) -> None:
-        """Test basic directory creation."""
-        base_dir: str = str(tmp_path)
-        output_dir: str = create_output_directory(base_dir)
-        
-        assert output_dir.startswith(base_dir)
-        assert "output_" in output_dir
-        assert Path(output_dir).exists()
-        assert Path(output_dir).is_dir()
-
-    def test_create_output_directory_default(self, tmp_path: Path, monkeypatch) -> None:
-        """Test directory creation with default base_dir."""
-        # Create simple mock objects
-        mock_path_instance = type('MockPath', (), {
-            '__truediv__': lambda self, other: self,
-            'mkdir': lambda self, **kwargs: None
-        })()
-        
-        def mock_path(*args, **kwargs):
-            return mock_path_instance
-        
-        monkeypatch.setattr('src.generators.schedule.Path', mock_path)
-        
-        output_dir: str = create_output_directory()
-        assert output_dir is not None
-
-
-class TestSaveAllOutputs:
-    """Test the save_all_outputs function."""
-
-    def test_save_all_outputs_basic(self, tmp_path: Path, monkeypatch) -> None:
-        """Test save all outputs with basic data."""
-        schedule: Schedule = {"paper1": date(2024, 1, 1)}
-        schedule_table: List[Dict[str, str]] = [{"id": "paper1", "date": "2024-01-01"}]
-        metrics_table: List[Dict[str, str]] = [{"metric": "score", "value": "0.85"}]
-        deadline_table: List[Dict[str, str]] = [{"deadline": "2024-02-01", "status": "met"}]
-        
-        # Create a simple mock metrics object
-        metrics = type('MockScheduleSummary', (), {
-            'total_submissions': 1,
-            'completion_rate': 100.0,
-            'quality_score': 0.85
-        })()
-        
-        output_dir: str = str(tmp_path)
-        
-        # Mock the save functions
-        def mock_save_schedule(*args, **kwargs):
-            return "/test/schedule.json"
-        
-        def mock_save_csv(*args, **kwargs):
-            return "/test/table.csv"
-        
-        def mock_save_metrics(*args, **kwargs):
-            return "/test/metrics.json"
-        
-        monkeypatch.setattr('src.generators.schedule.save_schedule_json', mock_save_schedule)
-        monkeypatch.setattr('src.generators.schedule.save_table_csv', mock_save_csv)
-        monkeypatch.setattr('src.generators.schedule.save_metrics_json', mock_save_metrics)
-        
-        result: Dict[str, str] = save_all_outputs(schedule, schedule_table, metrics_table, deadline_table, metrics, output_dir)  # type: ignore
-        
-        assert isinstance(result, dict)
-        assert "schedule" in result
-        assert "schedule_table" in result
-        assert "metrics_table" in result
-        assert "deadline_table" in result
-        assert "metrics" in result
-
-    def test_save_all_outputs_empty_tables(self, tmp_path: Path, monkeypatch) -> None:
-        """Test save all outputs with empty tables."""
-        schedule: Schedule = {"paper1": date(2024, 1, 1)}
-        schedule_table: List[Dict[str, str]] = []
-        metrics_table: List[Dict[str, str]] = []
-        deadline_table: List[Dict[str, str]] = []
-        
-        # Create a simple mock metrics object
-        metrics = type('MockScheduleSummary', (), {
-            'total_submissions': 1,
-            'completion_rate': 100.0,
-            'quality_score': 0.85
-        })()
-        
-        output_dir: str = str(tmp_path)
-        
-        # Mock the save functions
-        def mock_save_schedule(*args, **kwargs):
-            return "/test/schedule.json"
-        
-        def mock_save_metrics(*args, **kwargs):
-            return "/test/metrics.json"
-        
-        monkeypatch.setattr('src.generators.schedule.save_schedule_json', mock_save_schedule)
-        monkeypatch.setattr('src.generators.schedule.save_metrics_json', mock_save_metrics)
-        
-        result: Dict[str, str] = save_all_outputs(schedule, schedule_table, metrics_table, deadline_table, metrics, output_dir)  # type: ignore
-        
-        assert isinstance(result, dict)
+from core.models import Config, ScheduleMetrics, Schedule, Interval
+from analytics import generate_schedule_summary
 
 
 class TestGenerateScheduleSummary:
     """Test the generate_schedule_summary function."""
 
-    def test_generate_schedule_summary_empty(self, monkeypatch) -> None:
+    def test_generate_schedule_summary_empty(self, empty_schedule, empty_config) -> None:
         """Test generate schedule summary with empty schedule."""
-        # Create a simple mock config object
-        config = type('MockConfig', (), {
-            'submissions': [],
-            'conferences': [],
-            'min_paper_lead_time_days': 60,
-            'min_abstract_lead_time_days': 30
-        })()
+        result = generate_schedule_summary(empty_schedule, empty_config)
         
-        empty_schedule: Schedule = {}
-        
-        result: ScheduleSummary = generate_schedule_summary(empty_schedule, config)  # type: ignore
-        
-        assert isinstance(result, ScheduleSummary)
-        assert result.total_submissions == 0
-        assert result.schedule_span == 0
-        assert result.start_date is None
-        assert result.end_date is None
-        assert result.penalty_score == 0.0
+        assert isinstance(result, ScheduleMetrics)
+        assert result.scheduled_count == 0
+        assert result.submission_count == 0
+        assert result.completion_rate == 0.0
+        assert result.makespan == 0
+        assert result.total_penalty == 0.0
         assert result.quality_score == 0.0
         assert result.efficiency_score == 0.0
-        assert result.deadline_compliance == 100.0
-        assert result.resource_utilization == 0.0
 
-    def test_generate_schedule_summary_with_papers(self, monkeypatch) -> None:
+    def test_generate_schedule_summary_with_papers(self, sample_schedule, sample_config) -> None:
         """Test generate schedule summary with papers."""
-        # Mock the internal functions to avoid complex validation
-        def mock_calculate_penalty_score(*args, **kwargs):
-            mock_result = type('MockPenaltyResult', (), {
-                'total_penalty': 0.0,
-                'deadline_penalties': 0.0,
-                'dependency_penalties': 0.0,
-                'resource_penalties': 0.0
-            })()
-            return mock_result
+        # Convert the old schedule format to new Schedule format
+        schedule = Schedule(intervals={
+            "mod1-wrk": Interval(start_date=date(2024, 12, 1), end_date=date(2024, 12, 31)),
+            "paper1-pap": Interval(start_date=date(2025, 1, 15), end_date=date(2025, 4, 15)),
+            "mod2-wrk": Interval(start_date=date(2025, 1, 1), end_date=date(2025, 1, 31)),
+            "paper2-pap": Interval(start_date=date(2025, 2, 1), end_date=date(2025, 5, 1)),
+            "poster1": Interval(start_date=date(2025, 1, 30), end_date=date(2025, 2, 28))
+        })
         
-        def mock_calculate_quality_score(*args, **kwargs):
-            return 0.85
+        result = generate_schedule_summary(schedule, sample_config)
         
-        def mock_calculate_efficiency_score(*args, **kwargs):
-            return 0.78
-        
-        def mock_validate_deadline_constraints(*args, **kwargs):
-            mock_result = type('MockDeadlineResult', (), {
-                'compliance_rate': 100.0,
-                'total_submissions': 2,
-                'compliant_submissions': 2
-            })()
-            return mock_result
-        
-        def mock_validate_resources_constraints(*args, **kwargs):
-            mock_result = type('MockResourceResult', (), {
-                'max_observed': 1,
-                'max_concurrent': 2,
-                'total_days': 30
-            })()
-            return mock_result
-        
-        # Apply the mocks
-        monkeypatch.setattr('src.generators.schedule.calculate_penalty_score', mock_calculate_penalty_score)
-        monkeypatch.setattr('src.generators.schedule.calculate_quality_score', mock_calculate_quality_score)
-        monkeypatch.setattr('src.generators.schedule.calculate_efficiency_score', mock_calculate_efficiency_score)
-        monkeypatch.setattr('src.generators.schedule.validate_deadline_constraints', mock_validate_deadline_constraints)
-        monkeypatch.setattr('src.generators.schedule.validate_resources_constraints', mock_validate_resources_constraints)
-        
-        # Create a simple mock config object
-        config = type('MockConfig', (), {
-            'submissions': [type('MockSubmission', (), {'id': 'paper1'})(), type('MockSubmission', (), {'id': 'paper2'})()],
-            'conferences': []
-        })()
-        
-        schedule: Schedule = {"paper1": date(2024, 1, 1)}
-        
-        result: ScheduleSummary = generate_schedule_summary(schedule, config)  # type: ignore
-        
-        assert isinstance(result, ScheduleSummary)
-        assert result.total_submissions == 1  # Only paper1 is scheduled
-        assert result.schedule_span >= 0
-        assert result.start_date is not None
-        assert result.penalty_score >= 0.0
+        assert isinstance(result, ScheduleMetrics)
+        assert result.scheduled_count == 5
+        assert result.submission_count == 5
+        assert result.completion_rate == 100.0
+        assert result.makespan > 0
+        assert result.total_penalty >= 0.0
         assert result.quality_score >= 0.0
         assert result.efficiency_score >= 0.0
 
-
-class TestGenerateScheduleMetrics:
-    """Test the generate_schedule_metrics function."""
-
-    def test_generate_schedule_metrics_empty(self, monkeypatch) -> None:
-        """Test generate schedule metrics with empty schedule."""
-        # Create a simple mock config object
-        config = type('MockConfig', (), {
-            'submissions': [],
-            'conferences': [],
-            'min_paper_lead_time_days': 60,
-            'min_abstract_lead_time_days': 30
-        })()
+    def test_generate_schedule_summary_partial(self, sample_config) -> None:
+        """Test generate schedule summary with partial schedule."""
+        # Create a partial schedule with only some submissions
+        schedule = Schedule(intervals={
+            "mod1-wrk": Interval(start_date=date(2024, 12, 1), end_date=date(2024, 12, 31)),
+            "paper1-pap": Interval(start_date=date(2025, 1, 15), end_date=date(2025, 4, 15))
+        })
         
-        empty_schedule: Schedule = {}
-        
-        result: ScheduleMetrics = generate_schedule_metrics(empty_schedule, config)  # type: ignore
+        result = generate_schedule_summary(schedule, sample_config)
         
         assert isinstance(result, ScheduleMetrics)
-        assert result.makespan == 0
-        assert result.avg_utilization == 0.0
-        assert result.peak_utilization == 0
-        assert result.total_penalty == 0.0
-        assert result.compliance_rate == 100.0
-        assert result.quality_score == 0.0
+        assert result.scheduled_count == 2
+        assert result.submission_count == 5  # Total submissions in config
+        assert result.completion_rate == 40.0  # 2/5 = 40%
+        assert result.makespan > 0
+        assert len(result.missing_submissions) == 3  # 3 missing submissions
 
-    def test_generate_schedule_metrics_with_papers(self, monkeypatch) -> None:
-        """Test generate schedule metrics with papers."""
-        # Mock the internal functions to avoid complex validation
-        def mock_calculate_penalty_score(*args, **kwargs):
-            mock_result = type('MockPenaltyResult', (), {
-                'total_penalty': 0.0,
-                'deadline_penalties': 0.0,
-                'dependency_penalties': 0.0,
-                'resource_penalties': 0.0
-            })()
-            return mock_result
+    def test_generate_schedule_summary_metrics_structure(self, sample_schedule, sample_config) -> None:
+        """Test that the generated metrics have the correct structure."""
+        # Convert to new Schedule format
+        schedule = Schedule(intervals={
+            "mod1-wrk": Interval(start_date=date(2024, 12, 1), end_date=date(2024, 12, 31)),
+            "paper1-pap": Interval(start_date=date(2025, 1, 15), end_date=date(2025, 4, 15))
+        })
         
-        def mock_validate_deadline_constraints(*args, **kwargs):
-            mock_result = type('MockDeadlineResult', (), {
-                'compliance_rate': 100.0,
-                'total_submissions': 2,
-                'compliant_submissions': 2
-            })()
-            return mock_result
+        result = generate_schedule_summary(schedule, sample_config)
         
-        def mock_calculate_quality_score(*args, **kwargs):
-            return 0.85
+        # Check all required fields exist
+        assert hasattr(result, 'makespan')
+        assert hasattr(result, 'total_penalty')
+        assert hasattr(result, 'compliance_rate')
+        assert hasattr(result, 'quality_score')
+        assert hasattr(result, 'avg_utilization')
+        assert hasattr(result, 'peak_utilization')
+        assert hasattr(result, 'utilization_rate')
+        assert hasattr(result, 'efficiency_score')
+        assert hasattr(result, 'duration_days')
+        assert hasattr(result, 'avg_daily_load')
+        assert hasattr(result, 'timeline_efficiency')
+        assert hasattr(result, 'monthly_distribution')
+        assert hasattr(result, 'quarterly_distribution')
+        assert hasattr(result, 'yearly_distribution')
+        assert hasattr(result, 'submission_count')
+        assert hasattr(result, 'scheduled_count')
+        assert hasattr(result, 'completion_rate')
+        assert hasattr(result, 'type_counts')
+        assert hasattr(result, 'type_percentages')
+        assert hasattr(result, 'missing_submissions')
+        assert hasattr(result, 'start_date')
+        assert hasattr(result, 'end_date')
+
+    def test_generate_schedule_summary_distribution_data(self, sample_config) -> None:
+        """Test that distribution data is properly calculated."""
+        schedule = Schedule(intervals={
+            "mod1-wrk": Interval(start_date=date(2024, 12, 1), end_date=date(2024, 12, 31)),
+            "paper1-pap": Interval(start_date=date(2025, 1, 15), end_date=date(2025, 4, 15)),
+            "mod2-wrk": Interval(start_date=date(2025, 2, 1), end_date=date(2025, 2, 28))
+        })
         
-        # Apply the mocks
-        monkeypatch.setattr('src.generators.schedule.calculate_penalty_score', mock_calculate_penalty_score)
-        monkeypatch.setattr('src.generators.schedule.validate_deadline_constraints', mock_validate_deadline_constraints)
-        monkeypatch.setattr('src.generators.schedule.calculate_quality_score', mock_calculate_quality_score)
+        result = generate_schedule_summary(schedule, sample_config)
         
-        # Create a simple mock config object
-        config = type('MockConfig', (), {
-            'submissions': [
-                type('MockSubmission', (), {'id': 'paper1', 'kind': 'paper'})(),
-                type('MockSubmission', (), {'id': 'paper2', 'kind': 'paper'})()
-            ],
-            'conferences': [],
-            'min_paper_lead_time_days': 60,
-            'min_abstract_lead_time_days': 30
-        })()
+        # Check monthly distribution
+        assert "2024-12" in result.monthly_distribution
+        assert "2025-01" in result.monthly_distribution
+        assert "2025-02" in result.monthly_distribution
+        assert result.monthly_distribution["2024-12"] == 1  # mod1-wrk
+        assert result.monthly_distribution["2025-01"] == 1  # paper1-pap
+        assert result.monthly_distribution["2025-02"] == 2  # mod2-wrk + paper1-pap (ongoing)
         
-        # Create mock submissions with required attributes
-        mock_submission1 = type('MockSubmission', (), {
-            'id': 'paper1', 
-            'kind': 'paper',
-            'draft_window_months': 3
-        })()
-        mock_submission2 = type('MockSubmission', (), {
-            'id': 'paper2', 
-            'kind': 'paper',
-            'draft_window_months': 2
-        })()
+        # Check quarterly distribution
+        assert "2024-Q4" in result.quarterly_distribution
+        assert "2025-Q1" in result.quarterly_distribution
         
-        # Update config submissions with proper mock objects
-        config.submissions = [mock_submission1, mock_submission2]
+        # Check yearly distribution
+        assert "2024" in result.yearly_distribution
+        assert "2025" in result.yearly_distribution
+
+    def test_generate_schedule_summary_type_breakdown(self, sample_config) -> None:
+        """Test that submission type breakdown is properly calculated."""
+        schedule = Schedule(intervals={
+            "mod1-wrk": Interval(start_date=date(2024, 12, 1), end_date=date(2024, 12, 31)),
+            "paper1-pap": Interval(start_date=date(2025, 1, 15), end_date=date(2025, 4, 15)),
+            "poster1": Interval(start_date=date(2025, 1, 30), end_date=date(2025, 2, 28))
+        })
         
-        schedule: Schedule = {"paper1": date(2024, 1, 1)}
+        result = generate_schedule_summary(schedule, sample_config)
         
-        result: ScheduleMetrics = generate_schedule_metrics(schedule, config)  # type: ignore
+        # Check type counts
+        assert result.type_counts["abstract"] == 1  # mod1-wrk
+        assert result.type_counts["paper"] == 1     # paper1-pap
+        assert result.type_counts["poster"] == 1    # poster1
         
-        assert isinstance(result, ScheduleMetrics)
-        assert result.makespan >= 0
-        assert result.total_penalty >= 0.0
-        assert result.compliance_rate >= 0.0
-        assert result.quality_score >= 0.0
+        # Check type percentages
+        total = 3
+        assert result.type_percentages["abstract"] == pytest.approx(33.33, abs=0.01)
+        assert result.type_percentages["paper"] == pytest.approx(33.33, abs=0.01)
+        assert result.type_percentages["poster"] == pytest.approx(33.33, abs=0.01)
+
+    def test_generate_schedule_summary_missing_submissions(self, sample_config) -> None:
+        """Test that missing submissions are properly identified."""
+        schedule = Schedule(intervals={
+            "mod1-wrk": Interval(start_date=date(2024, 12, 1), end_date=date(2024, 12, 31))
+        })
+        
+        result = generate_schedule_summary(schedule, sample_config)
+        
+        # Should have 4 missing submissions (5 total - 1 scheduled)
+        assert len(result.missing_submissions) == 4
+        
+        # Check that missing submissions have required fields
+        for missing in result.missing_submissions:
+            assert "id" in missing
+            assert "title" in missing
+            assert "kind" in missing
+            assert "conference_id" in missing
+        
+        # Check specific missing submissions
+        missing_ids = [m["id"] for m in result.missing_submissions]
+        assert "paper1-pap" in missing_ids
+        assert "mod2-wrk" in missing_ids
+        assert "paper2-pap" in missing_ids
+        assert "poster1" in missing_ids

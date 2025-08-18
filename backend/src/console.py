@@ -9,7 +9,7 @@ from pathlib import Path
 from core.models import Config, SchedulerStrategy
 from core.constants import DISPLAY_CONSTANTS
 from validation.deadline import validate_deadline_constraints
-from validation.schedule import validate_schedule
+from validation.deadline import validate_schedule
 from scoring.penalties import calculate_penalty_score
 from scoring.efficiency import calculate_efficiency_score
 from scoring.quality import calculate_quality_score
@@ -220,7 +220,6 @@ def print_schedule_analysis(schedule, config: Config, strategy_name: str = "Unkn
             ('conference_submission_compatibility', 'Conference Submission Compatibility'),
             ('abstract_paper_dependencies', 'Abstract-Paper Dependencies'),
             ('single_conference_policy', 'Single Conference Policy'),
-            ('soft_block_model', 'Soft Block Model (PCCP)'),
             ('paper_lead_time', 'Paper Lead Time')
         ]
         

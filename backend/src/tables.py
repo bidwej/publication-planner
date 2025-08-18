@@ -5,7 +5,7 @@ from typing import Dict, List, Any
 from datetime import date, timedelta
 import json
 import csv
-from core.models import Config, SubmissionType, ScheduleSummary, Schedule
+from core.models import Config, SubmissionType, ScheduleMetrics, Schedule
 from core.constants import DISPLAY_CONSTANTS, SCHEDULING_CONSTANTS
 from pathlib import Path
 
@@ -310,33 +310,33 @@ def format_schedule_table(schedule: Schedule, config: Config) -> List[Dict[str, 
     return rows
 
 
-def format_metrics_table(metrics: ScheduleSummary) -> List[Dict[str, str]]:
+def format_metrics_table(metrics: ScheduleMetrics) -> List[Dict[str, str]]:
     """Format metrics as a table for display."""
     rows = []
     
     # Schedule metrics
     rows.append({
         "Metric": "Total Submissions",
-        "Value": str(metrics.total_submissions),
+        "Value": str(metrics.submission_count),
+        "Description": "Number of total submissions"
+    })
+    
+    rows.append({
+        "Metric": "Scheduled Submissions",
+        "Value": str(metrics.scheduled_count),
         "Description": "Number of scheduled submissions"
     })
     
     rows.append({
-        "Metric": "Schedule Span",
-        "Value": _format_duration_days(metrics.schedule_span),
-        "Description": "Total duration of the schedule"
-    })
-    
-    rows.append({
-        "Metric": "Schedule Span",
-        "Value": _format_duration_days(metrics.schedule_span),
-        "Description": "Total duration of the schedule"
+        "Metric": "Schedule Duration",
+        "Value": _format_duration_days(metrics.duration_days),
+        "Description": "Total duration of the schedule in days"
     })
     
     # Quality metrics
     rows.append({
-        "Metric": "Penalty Score",
-        "Value": f"${metrics.penalty_score:.2f}",
+        "Metric": "Total Penalty",
+        "Value": f"${metrics.total_penalty:.2f}",
         "Description": "Total penalty cost for violations"
     })
     
@@ -354,14 +354,14 @@ def format_metrics_table(metrics: ScheduleSummary) -> List[Dict[str, str]]:
     
     # Compliance metrics
     rows.append({
-        "Metric": "Deadline Compliance",
-        "Value": f"{metrics.deadline_compliance:.1f}%",
-        "Description": "Percentage of deadlines met"
+        "Metric": "Compliance Rate",
+        "Value": f"{metrics.compliance_rate:.1f}%",
+        "Description": "Percentage of constraints satisfied"
     })
     
     rows.append({
         "Metric": "Resource Utilization",
-        "Value": f"{metrics.resource_utilization:.1%}",
+        "Value": f"{metrics.utilization_rate:.1f}%",
         "Description": "Average resource utilization"
     })
     
@@ -601,7 +601,7 @@ def save_table_csv(table_data: List[Dict[str, str]], output_dir: str, filename: 
     return str(filepath)
 
 
-def save_metrics_json(metrics: ScheduleSummary, output_dir: str, filename: str = "metrics.json") -> str:
+def save_metrics_json(metrics: ScheduleMetrics, output_dir: str, filename: str = "metrics.json") -> str:
     """Save metrics as JSON file."""
     filepath = Path(output_dir) / filename
     with open(filepath, 'w', encoding='utf-8') as f:

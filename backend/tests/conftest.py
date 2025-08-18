@@ -442,18 +442,25 @@ def config():
 @pytest.fixture 
 def mock_schedule_summary():
     """Fixture to provide a mock schedule summary for testing."""
-    from core.models import ScheduleSummary
+    from core.models import ScheduleMetrics
     
-    return ScheduleSummary(
-        total_submissions=5,
-        schedule_span=120,
-        start_date=date(2024, 1, 1),
-        end_date=date(2024, 5, 1),
-        penalty_score=150.50,
+    return ScheduleMetrics(
+        makespan=120,
+        total_penalty=150.50,
+        compliance_rate=90.5,
         quality_score=0.85,
+        avg_utilization=0.75,
+        peak_utilization=3,
+        utilization_rate=0.75,
         efficiency_score=0.78,
-        deadline_compliance=90.5,
-        resource_utilization=0.75
+        duration_days=120,
+        avg_daily_load=0.75,
+        timeline_efficiency=0.78,
+        submission_count=5,
+        scheduled_count=5,
+        completion_rate=1.0,
+        start_date=date(2024, 1, 1),
+        end_date=date(2024, 5, 1)
     )
 
 

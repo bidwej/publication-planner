@@ -7,7 +7,7 @@ Tests for resources validation module.
 import pytest
 from datetime import date
 from src.validation.resources import validate_resources_constraints, _calculate_daily_load
-from core.models import Config, Submission, ResourceValidation
+from src.core.models import Config, Submission, ResourceValidation, Schedule, Interval
 
 
 class TestResourcesValidation:
@@ -15,7 +15,7 @@ class TestResourcesValidation:
     
     def test_validate_resources_constraints_empty_schedule(self, empty_config) -> None:
         """Test resources validation with empty schedule."""
-        schedule: Schedule = {}
+        schedule = Schedule(intervals={})
         
         result: Any = validate_resources_constraints(schedule, empty_config)
         assert isinstance(result, ResourceValidation)
@@ -24,7 +24,7 @@ class TestResourcesValidation:
     
     def test_calculate_daily_load_empty_schedule(self, empty_config) -> None:
         """Test daily load calculation with empty schedule."""
-        schedule: Schedule = {}
+        schedule = Schedule(intervals={})
         
         result: Any = _calculate_daily_load(schedule, empty_config)
         assert isinstance(result, dict)
@@ -35,12 +35,12 @@ class TestResourcesValidation:
         # Use the sample_config fixture which already has submissions and conferences
         
         # Test with valid schedule (respects concurrency limit)
-        valid_schedule = {
-            "mod1-wrk": date(2025, 1, 1),   # Starts first
-            "paper1-pap": date(2025, 3, 1), # Starts after mod1 completes
-            "mod2-wrk": date(2025, 5, 1),   # Starts after paper1 completes
-            "paper2-pap": date(2025, 7, 1)  # Starts after mod2 completes
-        }
+        valid_schedule = Schedule(intervals={
+            "mod1-wrk": Interval(start_date=date(2025, 1, 1), end_date=date(2025, 2, 1)),
+            "paper1-pap": Interval(start_date=date(2025, 3, 1), end_date=date(2025, 4, 1)),
+            "mod2-wrk": Interval(start_date=date(2025, 5, 1), end_date=date(2025, 6, 1)),
+            "paper2-pap": Interval(start_date=date(2025, 7, 1), end_date=date(2025, 8, 1))
+        })
         
         result = validate_resources_constraints(valid_schedule, sample_config)
         assert result.is_valid == True
@@ -58,35 +58,30 @@ class TestResourcesValidation:
     def test_concurrency_limit_validation(self, sample_config) -> None:
         """Test concurrency limit validation."""
         # Create a modified config with stricter concurrency limits to test resource constraints
-        strict_config = Config(
-            submissions=sample_config.submissions,
-            conferences=sample_config.conferences,
-            min_abstract_lead_time_days=30,
-            min_paper_lead_time_days=90,
-            max_concurrent_submissions=2  # Strict limit
-        )
+        # Modify the existing config instead of creating a new one
+        sample_config.max_concurrent_submissions = 2  # Strict limit
         
         # Test with invalid schedule (exceeds concurrency limit)
-        invalid_schedule = {
-            "mod1-wrk": date(2025, 1, 1),   # All three start on same day
-            "paper1-pap": date(2025, 1, 1), # Violates max_concurrent_submissions=2
-            "mod2-wrk": date(2025, 1, 1),   # Violates max_concurrent_submissions=2
-            "paper2-pap": date(2025, 2, 1)  # After others
-        }
+        invalid_schedule = Schedule(intervals={
+            "mod1-wrk": Interval(start_date=date(2025, 1, 1), end_date=date(2025, 2, 1)),
+            "paper1-pap": Interval(start_date=date(2025, 1, 1), end_date=date(2025, 2, 1)),
+            "mod2-wrk": Interval(start_date=date(2025, 1, 1), end_date=date(2025, 2, 1)),
+            "paper2-pap": Interval(start_date=date(2025, 2, 1), end_date=date(2025, 3, 1))
+        })
         
-        result = validate_resources_constraints(invalid_schedule, strict_config)
+        result = validate_resources_constraints(invalid_schedule, sample_config)
         assert result.is_valid == False
-        assert result.max_observed > strict_config.max_concurrent_submissions
+        assert result.max_observed > sample_config.max_concurrent_submissions
         assert len(result.violations) > 0
         
         # Test with valid schedule (respects concurrency limit)
-        valid_schedule = {
-            "mod1-wrk": date(2025, 1, 1),   # First submission
-            "paper1-pap": date(2025, 2, 1), # Second submission (after mod1 completes)
-            "mod2-wrk": date(2025, 3, 1),   # Third submission (after paper1 completes)
-            "paper2-pap": date(2025, 4, 1)  # Fourth submission (after mod2 completes)
-        }
+        valid_schedule = Schedule(intervals={
+            "mod1-wrk": Interval(start_date=date(2025, 1, 1), end_date=date(2025, 2, 1)),
+            "paper1-pap": Interval(start_date=date(2025, 2, 1), end_date=date(2025, 3, 1)),
+            "mod2-wrk": Interval(start_date=date(2025, 3, 1), end_date=date(2025, 4, 1)),
+            "paper2-pap": Interval(start_date=date(2025, 4, 1), end_date=date(2025, 5, 1))
+        })
         
-        valid_result = validate_resources_constraints(valid_schedule, strict_config)
+        valid_result = validate_resources_constraints(valid_schedule, sample_config)
         assert valid_result.is_valid == True
-        assert valid_result.max_observed <= strict_config.max_concurrent_submissions
+        assert valid_result.max_observed <= sample_config.max_concurrent_submissions

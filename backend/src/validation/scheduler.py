@@ -1,25 +1,53 @@
 """Scheduler-specific validation functions."""
 
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 from datetime import date, timedelta
 
-from core.models import Config, Submission, Schedule, SubmissionType
+from core.models import Config, Submission, Schedule, SubmissionType, ValidationResult, ConstraintViolation
 from core.constants import SCHEDULING_CONSTANTS
 from .submission import validate_submission_constraints
 from .dependencies import validate_dependencies_satisfied
 
 
-def validate_scheduler_constraints(submission: Submission, start_date: date, 
+def validate_all_scheduler_constraints(submission: Submission, start_date: date, 
+                                    schedule: Schedule, config: Config) -> ValidationResult:
+    """Validate all scheduler constraints for a submission at a given start date."""
+    errors = []
+    
+    # Validate basic submission constraints
+    if not _validate_scheduler_constraints(submission, start_date, schedule, config):
+        errors.append(ConstraintViolation(
+            submission_id=submission.id,
+            description="Basic submission constraints not met",
+            severity="high"
+        ))
+    
+    # Validate concurrency constraints
+    concurrency_errors = _validate_concurrency_constraints(schedule, config, start_date)
+    errors.extend(concurrency_errors)
+    
+    # Validate working day constraints
+    working_day_errors = _validate_working_day_constraints(schedule, config)
+    errors.extend(working_day_errors)
+    
+    return ValidationResult(
+        is_valid=len(errors) == 0,
+        violations=errors,
+        summary=f"Scheduler validation: {len(errors)} errors found",
+        metadata={
+            "total_errors": len(errors)
+        }
+    )
+
+
+def _validate_scheduler_constraints(submission: Submission, start_date: date, 
                                 schedule: Schedule, config: Config) -> bool:
     """Validate all constraints for a submission at a given start date in scheduler context."""
-    # Convert Schedule to Schedule for existing validation functions
-    schedule_dict = {sub_id: interval.start_date for sub_id, interval in schedule.intervals.items()}
-    
-    # Use the centralized submission validation
-    return validate_submission_constraints(submission, start_date, schedule_dict, config)
+    # Use the centralized submission validation directly with the Schedule object
+    return validate_submission_constraints(submission, start_date, schedule, config)
 
 
-def validate_scheduling_window(config: Config) -> Tuple[date, date]:
+def _validate_scheduling_window(config: Config) -> Tuple[date, date]:
     """Get the scheduling window (start and end dates) for schedulers."""
     # Use config start date if available, otherwise fall back to today
     start_date = getattr(config, 'start_date', None) or date.today()
@@ -38,8 +66,8 @@ def validate_scheduling_window(config: Config) -> Tuple[date, date]:
     return start_date, end_date
 
 
-def validate_concurrency_constraints(schedule: Schedule, config: Config, 
-                                   current_date: date) -> List[str]:
+def _validate_concurrency_constraints(schedule: Schedule, config: Config, 
+                                   current_date: date) -> List[ConstraintViolation]:
     """Validate that concurrency limits are not exceeded."""
     errors = []
     max_concurrent = config.max_concurrent_submissions
@@ -51,12 +79,16 @@ def validate_concurrency_constraints(schedule: Schedule, config: Config,
             active_count += 1
     
     if active_count > max_concurrent:
-        errors.append(f"Concurrency limit exceeded: {active_count} active submissions, max allowed: {max_concurrent}")
+        errors.append(ConstraintViolation(
+            submission_id="",  # General constraint violation
+            description=f"Concurrency limit exceeded: {active_count} active submissions, max allowed: {max_concurrent}",
+            severity="high"
+        ))
     
     return errors
 
 
-def validate_working_day_constraints(schedule: Schedule, config: Config) -> List[str]:
+def _validate_working_day_constraints(schedule: Schedule, config: Config) -> List[ConstraintViolation]:
     """Validate that submissions are scheduled on working days."""
     errors = []
     
@@ -67,35 +99,11 @@ def validate_working_day_constraints(schedule: Schedule, config: Config) -> List
         current_date = interval.start_date
         while current_date <= interval.end_date:
             if current_date in config.blackout_dates:
-                errors.append(f"Submission {submission_id} scheduled on blackout date: {current_date}")
+                errors.append(ConstraintViolation(
+                    submission_id=submission_id,
+                    description=f"Submission {submission_id} scheduled on blackout date: {current_date}",
+                    severity="high"
+                ))
             current_date += timedelta(days=1)
-    
-    return errors
-
-
-def validate_earliest_start_constraints(schedule: Schedule, config: Config) -> List[str]:
-    """Validate that submissions respect their earliest start date constraints."""
-    errors = []
-    
-    for submission_id, interval in schedule.intervals.items():
-        submission = config.submissions_dict.get(submission_id)
-        if submission and submission.earliest_start_date:
-            if interval.start_date < submission.earliest_start_date:
-                errors.append(f"Submission {submission_id} scheduled before earliest start date: "
-                           f"scheduled {interval.start_date}, earliest allowed {submission.earliest_start_date}")
-    
-    return errors
-
-
-def validate_engineering_ready_constraints(schedule: Schedule, config: Config) -> List[str]:
-    """Validate that engineering submissions respect engineering ready dates."""
-    errors = []
-    
-    for submission_id, interval in schedule.intervals.items():
-        submission = config.submissions_dict.get(submission_id)
-        if submission and submission.engineering and submission.engineering_ready_date:
-            if interval.start_date < submission.engineering_ready_date:
-                errors.append(f"Engineering submission {submission_id} scheduled before engineering ready date: "
-                           f"scheduled {interval.start_date}, engineering ready {submission.engineering_ready_date}")
     
     return errors

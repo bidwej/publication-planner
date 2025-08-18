@@ -3,20 +3,22 @@
 from typing import Dict, Any
 from datetime import date, timedelta
 
-from ..core.models import Config, Schedule, DependencyValidation, SubmissionType
+from ..core.models import Config, Schedule, SubmissionType, ValidationResult, ConstraintViolation
 from ..core.constants import QUALITY_CONSTANTS
 
 
-def validate_dependency_constraints(schedule: Schedule, config: Config) -> DependencyValidation:
+def validate_dependency_constraints(schedule: Schedule, config: Config) -> ValidationResult:
     """Validate that all dependencies are satisfied for entire schedule."""
     if not schedule:
-        return DependencyValidation(
+        return ValidationResult(
             is_valid=True, 
             violations=[], 
             summary="No submissions to validate",
-            satisfaction_rate=QUALITY_CONSTANTS.perfect_compliance_rate, 
-            total_dependencies=0, 
-            satisfied_dependencies=0
+            metadata={
+                "satisfaction_rate": QUALITY_CONSTANTS.perfect_compliance_rate, 
+                "total_dependencies": 0, 
+                "satisfied_dependencies": 0
+            }
         )
     
     violations = []
@@ -24,14 +26,14 @@ def validate_dependency_constraints(schedule: Schedule, config: Config) -> Depen
     satisfied_dependencies = 0
     
     for sid, interval in schedule.intervals.items():
-        sub = config.submissions_dict.get(sid)
+        sub = config.get_submission(sid)
         if not sub or not sub.depends_on:
             continue
         
         for dep_id in sub.depends_on:
             total_dependencies += 1
             
-            if not sub.are_dependencies_satisfied(schedule, config.submissions_dict, config, interval.start_date):
+            if not sub.are_dependencies_satisfied(schedule, config, interval.start_date):
                 if dep_id not in schedule.intervals:
                     violations.append({
                         "submission_id": sid, 
@@ -40,7 +42,7 @@ def validate_dependency_constraints(schedule: Schedule, config: Config) -> Depen
                         "issue": "missing_dependency", 
                         "severity": "high"
                     })
-                elif dep_id not in config.submissions_dict:
+                elif not config.has_submission(dep_id):
                     violations.append({
                         "submission_id": sid, 
                         "description": f"Dependency {dep_id} not found in submissions",
@@ -50,7 +52,7 @@ def validate_dependency_constraints(schedule: Schedule, config: Config) -> Depen
                     })
                 else:
                     dep_start = schedule.intervals[dep_id].start_date
-                    dep_sub = config.submissions_dict[dep_id]
+                    dep_sub = config.get_submission(dep_id)
                     dep_end = dep_sub.get_end_date(dep_start, config)
                     days_violation = (dep_end - interval.start_date).days
                     violations.append({
@@ -64,24 +66,25 @@ def validate_dependency_constraints(schedule: Schedule, config: Config) -> Depen
     
     satisfaction_rate = (satisfied_dependencies / total_dependencies * QUALITY_CONSTANTS.percentage_multiplier) if total_dependencies > 0 else QUALITY_CONSTANTS.perfect_compliance_rate
     
-    return DependencyValidation(
+    return ValidationResult(
         is_valid=len(violations) == 0, 
         violations=violations,
         summary=f"{satisfied_dependencies}/{total_dependencies} dependencies satisfied ({satisfaction_rate:.1f}%)",
-        satisfaction_rate=satisfaction_rate, 
-        total_dependencies=total_dependencies, 
-        satisfied_dependencies=satisfied_dependencies
+        metadata={
+            "total_dependencies": total_dependencies, 
+            "satisfied_dependencies": satisfied_dependencies
+        }
     )
 
 
-def validate_abstract_paper_dependencies(schedule: Schedule, config: Config) -> Dict[str, Any]:
+def validate_abstract_paper_dependencies(schedule: Schedule, config: Config) -> ValidationResult:
     """Validate abstract-paper dependency relationships."""
     violations = []
     total_dependencies = 0
     satisfied_dependencies = 0
     
     for sid, interval in schedule.intervals.items():
-        sub = config.submissions_dict.get(sid)
+        sub = config.get_submission(sid)
         if not sub or sub.kind != SubmissionType.PAPER:
             continue
         
@@ -96,7 +99,7 @@ def validate_abstract_paper_dependencies(schedule: Schedule, config: Config) -> 
         if abstract_id in schedule.intervals:
             total_dependencies += 1
             abstract_start = schedule.intervals[abstract_id].start_date
-            abstract_sub = config.submissions_dict.get(abstract_id)
+            abstract_sub = config.get_submission(abstract_id)
             
             if abstract_sub:
                 abstract_duration = abstract_sub.get_duration_days(config)
@@ -104,21 +107,26 @@ def validate_abstract_paper_dependencies(schedule: Schedule, config: Config) -> 
                 
                 if interval.start_date < abstract_end:
                     days_violation = (abstract_end - interval.start_date).days
-                    violations.append({
-                        "submission_id": sid, "description": f"Paper starts before abstract completes",
-                        "severity": "high", "days_violation": days_violation,
-                        "abstract_id": abstract_id, "issue": "timing_violation"
-                    })
+                    violations.append(ConstraintViolation(
+                        submission_id=sid, 
+                        description=f"Paper starts before abstract completes",
+                        severity="high"
+                    ))
                 else:
                     satisfied_dependencies += 1
             else:
-                violations.append({
-                    "submission_id": sid, "description": f"Abstract {abstract_id} not found in submissions",
-                    "severity": "high", "abstract_id": abstract_id, "issue": "missing_dependency"
-                })
+                violations.append(ConstraintViolation(
+                    submission_id=sid, 
+                    description=f"Abstract {abstract_id} not found in submissions",
+                    severity="high"
+                ))
     
-    return {
-        "is_valid": len(violations) == 0, "violations": violations,
-        "summary": f"{satisfied_dependencies}/{total_dependencies} abstract-paper dependencies satisfied",
-        "total_dependencies": total_dependencies, "satisfied_dependencies": satisfied_dependencies
-    }
+    return ValidationResult(
+        is_valid=len(violations) == 0, 
+        violations=violations,
+        summary=f"{satisfied_dependencies}/{total_dependencies} abstract-paper dependencies satisfied",
+        metadata={
+            "total_dependencies": total_dependencies, 
+            "satisfied_dependencies": satisfied_dependencies
+        }
+    )
