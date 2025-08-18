@@ -8,8 +8,12 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load environment variables (optional)
+try:
+    load_dotenv()
+except Exception:
+    # If .env file is missing or corrupted, use defaults
+    pass
 
 # Database path from environment variable
 DATABASE_PATH = os.getenv("DATABASE_PATH", "../schedules.db")

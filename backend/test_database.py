@@ -47,13 +47,13 @@ def create_sample_data():
         
         # Sample schedule data
         sample_schedule = {
-            "mod_1": "2025-01-01",
-            "mod_2": "2025-02-01", 
-            "J1-abs": "2025-03-01",
-            "J1-pap": "2025-04-15",
-            "J2-abs": "2025-03-15",
-            "J2-pap": "2025-05-01",
-            "J3": "2025-06-01"
+            "mod_1": date(2025, 1, 1),
+            "mod_2": date(2025, 2, 1), 
+            "J1-abs": date(2025, 3, 1),
+            "J1-pap": date(2025, 4, 15),
+            "J2-abs": date(2025, 3, 15),
+            "J2-pap": date(2025, 5, 1),
+            "J3": date(2025, 6, 1)
         }
         
         # Sample config data

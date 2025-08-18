@@ -9,6 +9,7 @@ from core.models import (
     ConferenceRecurrence, SubmissionWorkflow
 )
 from schedulers.optimal import OptimalScheduler
+from validation import ValidationOrchestrator
 
 
 def create_minimal_work_item(submission_id: str, conference_id: str | None = None) -> Submission:
@@ -309,8 +310,9 @@ class TestOptimalSchedulerMinimal:
             submission_types=None  # Auto-determine as ALL_TYPES
         )
         
-        create_minimal_config([paper], [conference])
-        errors = conference.validate_submission_compatibility(paper)
+        config = create_minimal_config([paper], [conference])
+        validator = ValidationOrchestrator(config)
+        errors = validator.validate_submission_compatibility(paper, conference)
         
         # Should be compatible (conference accepts poster and abstract)
         assert len(errors) == 0, f"Should be compatible but got errors: {errors}"

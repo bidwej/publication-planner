@@ -72,7 +72,7 @@ def _validate_unified_schema_fields(submission: Submission) -> bool:
     return True
 
 
-def validate_submission_data_quality(submission: Submission) -> Dict[str, Any]:
+def _validate_submission_data_quality(submission: Submission) -> Dict[str, Any]:
     """Validate submission data quality and return quality metrics."""
     quality_metrics = {
         "has_engineering_ready_date": submission.engineering_ready_date is not None,
@@ -93,7 +93,7 @@ def validate_submission_data_quality(submission: Submission) -> Dict[str, Any]:
         quality_score += 1.0
     if quality_metrics["has_penalty_cost"]:
         quality_score += 1.0
-            if quality_metrics["has_preferred_conferences"]:
+    if quality_metrics["has_preferred_conferences"]:
         quality_score += 1.0
     if quality_metrics["has_submission_workflow"]:
         quality_score += 1.0

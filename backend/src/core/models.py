@@ -37,6 +37,89 @@ class SchedulerStrategy(str, Enum):
     OPTIMAL = "optimal"
     ADVANCED = "advanced"
 
+
+class Interval(BaseModel):
+    """A time interval with start and end dates."""
+    start_date: date
+    end_date: date
+    
+    @property
+    def duration_days(self) -> int:
+        return (self.end_date - self.start_date).days
+
+class Schedule(BaseModel):
+    """A schedule mapping submission IDs to their time intervals."""
+    model_config = ConfigDict(validate_assignment=True)
+    
+    intervals: Dict[str, Interval] = Field(
+        default_factory=dict,
+        description="Submission ID -> Interval mapping"
+    )
+    
+    def add_interval(self, submission_id: str, start_date: date, end_date: Optional[date] = None, 
+                    duration_days: Optional[int] = None) -> None:
+        """Add or update an interval for a submission."""
+        if end_date is None and duration_days is not None:
+            end_date = start_date + timedelta(days=duration_days)
+        elif end_date is None:
+            end_date = start_date + timedelta(days=30)  # Default duration
+        
+        self.intervals[submission_id] = Interval(start_date=start_date, end_date=end_date)
+    
+    def get_start_date(self, submission_id: str) -> Optional[date]:
+        """Get start date for a submission."""
+        interval = self.intervals.get(submission_id)
+        return interval.start_date if interval else None
+    
+    def get_end_date(self, submission_id: str) -> Optional[date]:
+        """Get end date for a submission."""
+        interval = self.intervals.get(submission_id)
+        return interval.end_date if interval else None
+    
+    def has_submission(self, submission_id: str) -> bool:
+        """Check if a submission is scheduled."""
+        return submission_id in self.intervals
+    
+    def __len__(self) -> int:
+        """Return number of scheduled submissions."""
+        return len(self.intervals)
+    
+    def calculate_quality_score(self, config: 'Config') -> Dict[str, float]:
+        """Calculate overall schedule quality score from validation results."""
+        from validation.schedule import validate_schedule_constraints
+        from constants import ScoringConstants
+        
+        # Convert to Dict[str, date] for validation functions
+        schedule_dict = {sub_id: interval.start_date for sub_id, interval in self.intervals.items()}
+        
+        validation_result = validate_schedule_constraints(schedule_dict, config)
+        
+        # Extract individual metrics
+        deadline_rate = validation_result.get('deadline_result', {}).get('compliance_rate', 0.0)
+        dependency_rate = validation_result.get('dependency_result', {}).get('satisfaction_rate', 0.0)
+        resource_rate = validation_result.get('resource_result', {}).get('utilization_rate', 0.0)
+        
+        # Calculate weighted overall score
+        weights = [
+            ScoringConstants.quality_deadline_weight,
+            ScoringConstants.quality_dependency_weight, 
+            ScoringConstants.quality_resource_weight
+        ]
+        metrics = [deadline_rate, dependency_rate, resource_rate]
+        
+        overall_score = sum(w * m for w, m in zip(weights, metrics))
+        
+        return {
+            'deadline_compliance': deadline_rate,
+            'dependency_satisfaction': dependency_rate,
+            'resource_utilization': resource_rate,
+            'overall_score': overall_score
+        }
+    
+    def __contains__(self, submission_id: str) -> bool:
+        """Check if submission is scheduled."""
+        return submission_id in self.intervals
+
 class Submission(BaseModel):
     """A submission to a conference."""
     model_config = ConfigDict(validate_assignment=True)
@@ -69,9 +152,7 @@ class Submission(BaseModel):
             errors.append("Missing submission ID")
         if not self.title:
             errors.append("Missing title")
-        # Conference ID is optional for work items (mods)
-        # Papers can have conference_id or preferred_conferences  
-        # None means "not specified", empty list means "open to any conference"
+        # Papers need either conference_id or preferred_conferences
         if self.kind == SubmissionType.PAPER and not self.conference_id and self.preferred_conferences is None:
             errors.append("Papers must have either conference_id or preferred_conferences")
         if self.draft_window_months < 0:
@@ -134,7 +215,7 @@ class Submission(BaseModel):
         if not self.depends_on:
             return True
         
-        for dep_id in self.depends_on:
+        for dep_id in (self.depends_on or []):
             # Check if dependency exists
             if dep_id not in submissions_dict:
                 return False
@@ -155,21 +236,16 @@ class Submission(BaseModel):
     
     def get_duration_days(self, config: 'Config') -> int:
         """Calculate the duration in days for this submission."""
-        # Fixed time constants
         days_per_month = SCHEDULING_CONSTANTS.days_per_month
         
         if self.kind == SubmissionType.ABSTRACT:
-            # Work items (abstracts) should have meaningful duration for timeline visibility
-            # Use configurable work item duration, default to 14 days if not specified
             work_item_duration = getattr(config, 'work_item_duration_days', 14)
             return work_item_duration
         if self.kind == SubmissionType.POSTER:
-            # Posters typically have shorter duration than papers
             if self.draft_window_months > 0:
                 return self.draft_window_months * days_per_month
             return SCHEDULING_CONSTANTS.poster_duration_days
-        # SubmissionType.PAPER
-        # Use draft_window_months if available, otherwise fall back to config
+        # SubmissionType.PAPER - use draft_window_months or fall back to config
         if self.draft_window_months > 0:
             return self.draft_window_months * days_per_month
         return config.min_paper_lead_time_days
@@ -252,14 +328,29 @@ class Conference(BaseModel):
         # Dependencies are handled at the submission level, not conference level
         return []
     
-    def validate_submission_compatibility(self, submission: Submission) -> List[str]:
-        """Validate that a submission is compatible with this conference."""
-        errors = []
+    def is_compatible_with_submission(self, submission: 'Submission') -> bool:
+        """Check if a submission is compatible with this conference."""
+        from .models import ConferenceType
         
-        # Check if conference accepts any of the preferred submission types
         candidate_types = submission.preferred_kinds if submission.preferred_kinds else [submission.kind]
         
-        # Find first compatible type
+        for submission_type in candidate_types:
+            if submission_type in self.deadlines:
+                break
+        else:
+            return False
+        
+        if submission.engineering:
+            return True
+        else:
+            return self.conf_type != ConferenceType.ENGINEERING
+    
+    def get_submission_compatibility_errors(self, submission: 'Submission') -> List[str]:
+        """Get list of compatibility errors between submission and conference."""
+        errors = []
+        
+        candidate_types = submission.preferred_kinds if submission.preferred_kinds else [submission.kind]
+        
         compatible_type = None
         for submission_type in candidate_types:
             if self.accepts_submission_type(submission_type):
@@ -267,11 +358,12 @@ class Conference(BaseModel):
                 break
         
         if compatible_type is None:
-            # No compatible type found
             types_str = ", ".join([t.value for t in candidate_types])
             errors.append(f"Conference {self.id} does not accept any of the requested submission types: {types_str}")
         
         return errors
+    
+
     
     def validate_conference(self) -> List[str]:
         """Validate conference and return list of errors."""
@@ -319,13 +411,11 @@ class Config(BaseModel):
     @classmethod
     def create_default(cls) -> 'Config':
         """Create a default configuration with minimal data for app initialization."""
-        # Default penalty costs from constants
         default_penalty_costs = {
             "default_mod_penalty_per_day": PENALTY_CONSTANTS.default_mod_penalty_per_day,
             "default_paper_penalty_per_day": PENALTY_CONSTANTS.default_paper_penalty_per_day
         }
         
-        # Default priority weights
         default_priority_weights = {
             "engineering_paper": 2.0,
             "medical_paper": 1.0,
@@ -333,7 +423,6 @@ class Config(BaseModel):
             "abstract": 0.5
         }
         
-        # Default scheduling options
         default_scheduling_options = {
             "enable_blackout_periods": False,
             "enable_early_abstract_scheduling": False,

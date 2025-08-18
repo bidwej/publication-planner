@@ -41,38 +41,19 @@ def create_gantt_chart() -> Figure:
     Returns:
         Plotly Figure object
     """
-    # Try to get data from state manager, fall back to sample data
-    try:
-        from app.storage import get_state_manager
-        stored_state = get_state_manager().load_component_state('gantt')
-        if stored_state and 'config_data' in stored_state:
-            # We have stored config data, use it
-            return _create_real_gantt_chart(stored_state['config_data'])
-        else:
-            return _create_placeholder_gantt_chart()
-    except Exception:
-        return _create_placeholder_gantt_chart()
+    # Until backend API integration is added, always render placeholder chart
+    return _create_placeholder_gantt_chart()
 
 
 def _create_real_gantt_chart(config_data: Dict[str, Any]) -> Figure:
     """Create a gantt chart with real data from stored state or database."""
     fig = go.Figure()
     
-    # Try to get data from database first
-    try:
-        from app.database import get_schedule_data
-        schedule_data = get_schedule_data()
-        if schedule_data:
-            schedule = schedule_data.get('schedule', {})
-            config = schedule_data.get('config', {})
-        else:
-            # Fall back to stored state
-            schedule = config_data.get('schedule', {})
-            config = config_data.get('config', {})
-    except ImportError:
-        # Fall back to stored state
-        schedule = config_data.get('schedule', {})
-        config = config_data.get('config', {})
+    # Backend data loading is not handled here. Use any provided config_data keys
+    # if present; otherwise this will fall back to empty and the caller should
+    # decide whether to render a placeholder.
+    schedule = config_data.get('schedule', {})
+    config = config_data.get('config', {})
     
     if schedule and config:
         # Create a proper timeline chart

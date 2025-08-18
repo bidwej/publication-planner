@@ -21,17 +21,13 @@ class OptimalScheduler(BaseScheduler):
         self.optimization_objective = optimization_objective
         self.max_concurrent = config.max_concurrent_submissions
     
-    def schedule(self) -> Dict[str, date]:
-        """
-        Generate an optimal schedule using MILP optimization.
+    def schedule(self) -> Schedule:
+        """Generate an optimal schedule using MILP optimization."""
+        from core.models import Schedule, Interval
         
-        Returns
-        -------
-        Dict[str, date]
-            Mapping of submission_id to start_date
-        """
-        # Use shared setup
-        schedule, topo, start_date, end_date = self._run_common_scheduling_setup()
+        # Get what we need from base
+        topo = self.get_dependency_order()
+        start_date, end_date = self.get_scheduling_window()
         
         # Try MILP optimization first
         print(f"MILP optimization: Attempting optimal schedule for {len(self.submissions)} submissions")
@@ -43,15 +39,122 @@ class OptimalScheduler(BaseScheduler):
             if solution is not None:
                 milp_schedule = self._extract_schedule_from_solution(solution)
                 if milp_schedule:
-                    print(f"MILP optimization: Successfully generated optimal schedule")
+                    print("MILP optimization: Successfully generated optimal schedule")
                     # Assign conferences to submissions without them
                     milp_schedule = self._assign_conferences(milp_schedule)
-                    return milp_schedule
+                    # Convert to intervals
+                    intervals = {}
+                    for sub_id, start_date in milp_schedule.items():
+                        duration = self.submissions[sub_id].get_duration_days(self.config)
+                        end_date = start_date + timedelta(days=duration)
+                        intervals[sub_id] = Interval(start_date=start_date, end_date=end_date)
+                    return Schedule(intervals=intervals)
         
         # Pure optimal: if MILP fails, return empty schedule
         print(f"MILP optimization: No solution found with current constraints")
         print(f"MILP optimization: Returning empty schedule (use GreedyScheduler for approximate solution)")
-        return {}
+        return Schedule(intervals={})
+    
+    def _assign_conferences(self, schedule: Dict[str, date]) -> Dict[str, date]:
+        """Assign conferences to submissions that don't have them."""
+        for sub_id in schedule.keys():
+            submission = self.submissions[sub_id]
+            if not submission.conference_id:
+                self._assign_best_conference(submission)
+        return schedule
+    
+    def _assign_best_conference(self, submission) -> None:
+        """Assign the best available conference to a submission."""
+        candidate_conferences = self._get_candidate_conferences(submission)
+        if not candidate_conferences:
+            return
+            
+        # Try to find the best conference for this submission
+        for conf_name in candidate_conferences:
+            conf = self._find_conference_by_name(conf_name)
+            if not conf:
+                continue
+                
+            if self._try_assign_conference(submission, conf):
+                return
+    
+    def _get_candidate_conferences(self, submission) -> List[str]:
+        """Get list of candidate conferences for a submission."""
+        if hasattr(submission, 'preferred_conferences') and submission.preferred_conferences:
+            return submission.preferred_conferences
+        
+        # Open to any opportunity if no specific preferences
+        if (submission.preferred_kinds is None or 
+            (submission.preferred_workflow and submission.preferred_workflow.value == "all_types")):
+            return [conf.name for conf in self.conferences.values() if conf.deadlines]
+        
+        # Use specific preferred_kinds
+        candidate_conferences = []
+        for conf in self.conferences.values():
+            if any(ctype in conf.deadlines for ctype in (submission.preferred_kinds or [submission.kind])):
+                candidate_conferences.append(conf.name)
+        return candidate_conferences
+    
+    def _find_conference_by_name(self, conf_name: str):
+        """Find conference by name."""
+        for conf in self.conferences.values():
+            if conf.name == conf_name:
+                return conf
+        return None
+    
+    def _try_assign_conference(self, submission, conf) -> bool:
+        """Try to assign a submission to a specific conference. Returns True if successful."""
+        from core.models import SubmissionType
+        
+        submission_types_to_try = self._get_submission_types_to_try(submission)
+        
+        for submission_type in submission_types_to_try:
+            if submission_type not in conf.deadlines:
+                continue
+                
+            if not self._can_meet_deadline(submission, conf, submission_type):
+                continue
+                
+            if not self._check_conference_compatibility_for_type(conf, submission_type):
+                continue
+                
+            # Handle special case: papers at conferences requiring abstracts
+            if (submission_type == SubmissionType.PAPER and 
+                conf.requires_abstract_before_paper() and 
+                SubmissionType.ABSTRACT in conf.deadlines):
+                submission.conference_id = conf.id
+                submission.preferred_kinds = [SubmissionType.ABSTRACT]
+                return True
+            
+            # Regular assignment
+            submission.conference_id = conf.id
+            if submission.preferred_kinds is None:
+                submission.preferred_kinds = [submission_type]
+            return True
+        
+        return False
+    
+    def _get_submission_types_to_try(self, submission) -> List[SubmissionType]:
+        """Get list of submission types to try in priority order."""
+        if submission.preferred_kinds is not None:
+            return submission.preferred_kinds
+        
+        if (submission.preferred_workflow and 
+            submission.preferred_workflow.value == "all_types"):
+            return [SubmissionType.POSTER, SubmissionType.ABSTRACT, SubmissionType.PAPER]
+        
+        # Default priority order
+        return [SubmissionType.POSTER, SubmissionType.ABSTRACT, SubmissionType.PAPER]
+    
+    def _can_meet_deadline(self, submission, conf, submission_type) -> bool:
+        """Check if submission can meet the deadline for a specific submission type."""
+        duration = submission.get_duration_days(self.config)
+        latest_start = conf.deadlines[submission_type] - timedelta(days=duration)
+        return latest_start >= date.today()
+
+    def _check_conference_compatibility_for_type(self, conference, submission_type: SubmissionType) -> bool:
+        """Check if a submission is compatible with a conference for a specific submission type."""
+        return submission_type in conference.deadlines
     
     def _setup_milp_model(self) -> Optional[Any]:
         """Set up the MILP model for optimization."""
@@ -60,7 +163,7 @@ class OptimalScheduler(BaseScheduler):
             prob = pulp.LpProblem("Academic_Scheduling", pulp.LpMinimize)
             
             # Get scheduling window
-            start_date, end_date = self._get_scheduling_window()
+            start_date, end_date = self.get_scheduling_window()
             horizon_days = (end_date - start_date).days
             
             if horizon_days <= 0:
@@ -254,7 +357,7 @@ class OptimalScheduler(BaseScheduler):
         
         # Create a list of working days
         working_days = []
-        horizon_days = max((end - start).days for start, end in [self._get_scheduling_window()])
+        horizon_days = max((end - start).days for start, end in [self.get_scheduling_window()])
         
         for day in range(horizon_days + 1):
             actual_date = start_date + timedelta(days=day)
@@ -282,12 +385,12 @@ class OptimalScheduler(BaseScheduler):
     def _add_penalty_constraints(self, prob: Any, start_vars: Dict[str, Any], 
                                penalty_vars: Dict[str, Any]) -> None:
         """Add penalty constraints to the MILP model."""
-        start_date, _ = self._get_scheduling_window()
+        start_date, _ = self.get_scheduling_window()
         
         for submission_id, submission in self.submissions.items():
             # Deadline penalty
             if submission.conference_id and submission.conference_id in self.conferences:
-                conf = self.conferences[submission.conference_id]
+                conf = self.conferences[submission_id]
                 if submission.kind in conf.deadlines:
                     deadline = conf.deadlines[submission.kind]
                     if deadline:
@@ -303,19 +406,6 @@ class OptimalScheduler(BaseScheduler):
             # This would require more complex modeling for exact resource violations
             # For now, we'll use a simplified approach
             prob += penalty_vars[submission_id] >= 0
-    
-    def _get_scheduling_window(self) -> tuple[date, date]:
-        """Get the scheduling window, ensuring it starts from today."""
-        # Get the base scheduling window
-        start_date, end_date = super()._get_scheduling_window()
-        
-        # Ensure start_date is not in the past
-        today = date.today()
-        if start_date < today:
-            start_date = today
-            print(f"Debug: Adjusted scheduling window start to today: {start_date}")
-        
-        return start_date, end_date
     
     def _is_working_day(self, date_obj: date) -> bool:
         """Check if a date is a working day."""
@@ -368,7 +458,7 @@ class OptimalScheduler(BaseScheduler):
             return {}
         
         schedule = {}
-        start_date, _ = self._get_scheduling_window()
+        start_date, _ = self.get_scheduling_window()
         
         try:
             # Get all variables from the problem to avoid recursion

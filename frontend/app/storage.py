@@ -319,8 +319,6 @@ class StateManager:
                     'min_abstract_lead_time_days': config.min_abstract_lead_time_days,
                     'min_paper_lead_time_days': config.min_paper_lead_time_days,
                     'max_concurrent_submissions': config.max_concurrent_submissions,
-                    'config': config,  # Store the full config for timeline
-                    'schedule': schedule  # Store the schedule data for timeline
                 }
             
             return save_state(component_name, state_data)

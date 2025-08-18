@@ -51,28 +51,18 @@ def _map_conference_data(json_data: Dict) -> Dict:
 
 def _parse_preferred_kinds(json_data: Dict) -> Optional[List[SubmissionType]]:
     """Parse preferred_kinds from JSON."""
-    if json_data.get("preferred_kinds"):
-        return [SubmissionType(t) for t in json_data["preferred_kinds"]]
-    else:
-        return None
-
+    items = json_data.get("preferred_kinds")
+    return [SubmissionType(t) for t in items] if items else None
 
 def _parse_preferred_workflow(json_data: Dict) -> Optional[SubmissionWorkflow]:
     """Parse preferred workflow from JSON data."""
     workflow = json_data.get('preferred_workflow')
-    if workflow:
-        return SubmissionWorkflow(workflow)
-    else:
-        return None
-
+    return SubmissionWorkflow(workflow) if workflow else None
 
 def _parse_submission_workflow(json_data: Dict) -> Optional[SubmissionWorkflow]:
     """Parse submission workflow from JSON data."""
     workflow = json_data.get('submission_workflow')
-    if workflow:
-        return SubmissionWorkflow(workflow)
-    else:
-        return None
+    return SubmissionWorkflow(workflow) if workflow else None
 
 
 def _build_deadlines_dict(conf_data: Dict) -> Dict[SubmissionType, date]:

@@ -3,36 +3,19 @@ Main Dash application for Paper Planner.
 """
 
 import argparse
-from pathlib import Path
 from dash import Dash, html, dcc, Input, Output, callback, page_container
 from app.components.dashboard.layout import create_dashboard_layout
 from app.components.gantt.layout import create_gantt_layout
 from app.components.metrics.layout import create_metrics_layout
-# Note: Config loading will be handled by backend API calls
-# For now, we'll create a placeholder config
-def load_config(data_path: str):
-    """Placeholder config loader - will be replaced with backend API calls."""
-    print(f"⚠️  Config loading from {data_path} is deprecated")
-    print("   Frontend will load data from backend API instead")
-    return None
-
-# Global constant for data path
-DEFAULT_DATA_PATH = "app/assets/demo/data/config.json"
+from typing import Optional
 
 
-def create_app(mode: str, data_path: str | None = None) -> Dash:
+def create_app(mode: str, data_path: Optional[str] | None = None) -> Dash:
     """Create and configure the Dash application based on mode."""
     app = Dash(__name__, suppress_callback_exceptions=True)
     
-    # Load data
+    # No local asset loading; config will be fetched via backend API in future
     config = None
-    try:
-        target_path = Path(data_path or DEFAULT_DATA_PATH)
-        if target_path.exists():
-            config = load_config(str(target_path))
-            print(f"✅ Data loaded: {len(config.submissions)} submissions, {len(config.conferences)} conferences")
-    except Exception as e:
-        print(f"❌ Data load failed: {e}")
     
     # Set layout
     layouts = {
@@ -56,7 +39,8 @@ def main():
     parser.add_argument('--debug', action='store_true', help='Enable debug mode')
     parser.add_argument('--mode', type=str, choices=['gantt', 'dashboard', 'metrics'], 
                        default='gantt', help='Application mode: gantt (default), dashboard, or metrics')
-    parser.add_argument('--data-path', type=str, help='Custom path to data configuration file')
+    # Deprecated: data-path (kept for CLI compatibility but unused)
+    parser.add_argument('--data-path', type=str, help='[Deprecated] Path to data configuration file')
     
     args = parser.parse_args()
     
