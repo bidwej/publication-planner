@@ -55,6 +55,8 @@ def validate_venue_constraints(schedule: Schedule, config: Config) -> Validation
     else:
         compatibility_rate = QUALITY_CONSTANTS.perfect_compliance_rate
     
+    # Note: This function has custom logic that doesn't fit the standard pattern
+    # Keeping original implementation to preserve exact functionality
     return ValidationResult(
         is_valid=is_valid,
         violations=all_violations,
@@ -63,6 +65,26 @@ def validate_venue_constraints(schedule: Schedule, config: Config) -> Validation
             "compatibility_rate": compatibility_rate,
             "total_submissions": total_submissions,
             "compliant_submissions": compliant_submissions
+        }
+    )
+
+
+def _build_validation_result(violations, total_submissions, compatible_submissions, summary_template):
+    """Helper to build standardized ValidationResult objects for venue validation."""
+    compatibility_rate = (compatible_submissions / total_submissions * QUALITY_CONSTANTS.percentage_multiplier) if total_submissions > 0 else QUALITY_CONSTANTS.perfect_compliance_rate
+    
+    return ValidationResult(
+        is_valid=len(violations) == 0,
+        violations=violations,
+        summary=summary_template.format(
+            compatible=compatible_submissions, 
+            total=total_submissions, 
+            rate=compatibility_rate
+        ),
+        metadata={
+            "compatibility_rate": compatibility_rate,
+            "total_submissions": total_submissions,
+            "compliant_submissions": compatible_submissions
         }
     )
 
@@ -118,15 +140,11 @@ def _validate_conference_compatibility(schedule: Schedule, config: Config) -> Va
     compatibility_rate = (compatible_submissions / total_submissions * QUALITY_CONSTANTS.percentage_multiplier) if total_submissions > 0 else QUALITY_CONSTANTS.perfect_compliance_rate
     is_valid = len(violations) == 0
     
-    return ValidationResult(
-        is_valid=is_valid,
-        violations=violations,
-        summary=f"Conference compatibility: {compatible_submissions}/{total_submissions} submissions compatible ({compatibility_rate:.1f}%)",
-        metadata={
-            "compatibility_rate": compatibility_rate,
-            "total_submissions": total_submissions,
-            "compliant_submissions": compatible_submissions
-        }
+    return _build_validation_result(
+        violations,
+        total_submissions,
+        compatible_submissions,
+        "Conference compatibility: {compatible}/{total} submissions compatible ({rate:.1f}%)"
     )
 
 
@@ -172,15 +190,11 @@ def _validate_conference_submission_compatibility(schedule: Schedule, config: Co
     compatibility_rate = (compatible_submissions / total_submissions * QUALITY_CONSTANTS.percentage_multiplier) if total_submissions > 0 else QUALITY_CONSTANTS.perfect_compliance_rate
     is_valid = len(violations) == 0
     
-    return ValidationResult(
-        is_valid=is_valid,
-        violations=violations,
-        summary=f"Conference submission compatibility: {compatible_submissions}/{total_submissions} submissions compatible ({compatibility_rate:.1f}%)",
-        metadata={
-            "compatibility_rate": compatibility_rate,
-            "total_submissions": total_submissions,
-            "compliant_submissions": compatible_submissions
-        }
+    return _build_validation_result(
+        violations,
+        total_submissions,
+        compatible_submissions,
+        "Conference submission compatibility: {compatible}/{total} submissions compatible ({rate:.1f}%)"
     )
 
 

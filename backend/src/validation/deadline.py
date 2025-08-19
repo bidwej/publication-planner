@@ -3,28 +3,8 @@
 from typing import Dict, Any, List
 from datetime import date, timedelta
 
-from ..core.models import Config, Submission, DeadlineViolation, SubmissionType, Schedule, ConstraintViolation, ValidationResult
-from ..core.constants import QUALITY_CONSTANTS, SCHEDULING_CONSTANTS
-
-
-def _build_validation_result(violations, total_submissions, compliant_submissions, summary_template):
-    """Helper to build standardized ValidationResult objects."""
-    compliance_rate = (compliant_submissions / total_submissions * QUALITY_CONSTANTS.percentage_multiplier) if total_submissions > 0 else QUALITY_CONSTANTS.perfect_compliance_rate
-    
-    return ValidationResult(
-        is_valid=len(violations) == 0,
-        violations=violations,
-        summary=summary_template.format(
-            compliant=compliant_submissions, 
-            total=total_submissions, 
-            rate=compliance_rate
-        ),
-        metadata={
-            "compliance_rate": compliance_rate,
-            "total_submissions": total_submissions,
-            "compliant_submissions": compliant_submissions
-        }
-    )
+from src.core.models import Config, Submission, DeadlineViolation, SubmissionType, Schedule, ConstraintViolation, ValidationResult
+from src.core.constants import QUALITY_CONSTANTS, SCHEDULING_CONSTANTS
 
 
 def validate_deadline_constraints(schedule: Schedule, config: Config) -> ValidationResult:
@@ -165,15 +145,29 @@ def validate_deadline_constraints(schedule: Schedule, config: Config) -> Validat
     # Note: Don't double-count submissions - compliant_submissions already counted in main loop
     # Lead time validations add violations but don't change compliance count
     
+    return _build_validation_result(
+        violations, 
+        total_submissions, 
+        compliant_submissions,
+        "{compliant}/{total} submissions meet deadlines ({rate:.1f}%)"
+    )
+
+
+def _build_validation_result(violations, total_submissions, compliant_submissions, summary_template):
+    """Helper to build standardized ValidationResult objects."""
     compliance_rate = (compliant_submissions / total_submissions * QUALITY_CONSTANTS.percentage_multiplier) if total_submissions > 0 else QUALITY_CONSTANTS.perfect_compliance_rate
     
     return ValidationResult(
-        is_valid=len(violations) == 0, 
+        is_valid=len(violations) == 0,
         violations=violations,
-        summary=f"{compliant_submissions}/{total_submissions} submissions meet deadlines ({compliance_rate:.1f}%)",
+        summary=summary_template.format(
+            compliant=compliant_submissions, 
+            total=total_submissions, 
+            rate=compliance_rate
+        ),
         metadata={
-            "compliance_rate": compliance_rate, 
-            "total_submissions": total_submissions, 
+            "compliance_rate": compliance_rate,
+            "total_submissions": total_submissions,
             "compliant_submissions": compliant_submissions
         }
     )
@@ -235,14 +229,11 @@ def _validate_lead_time_constraints(
         else:
             compliant_submissions += 1
     
-    return ValidationResult(
-        is_valid=len(violations) == 0, 
-        violations=violations,
-        summary=f"{compliant_submissions}/{total_submissions} {submission_type.value.lower()}s meet lead time constraints",
-        metadata={
-            "total_submissions": total_submissions, 
-            "compliant_submissions": compliant_submissions
-        }
+    return _build_validation_result(
+        violations,
+        total_submissions,
+        compliant_submissions,
+        f"{{compliant}}/{{total}} {submission_type.value.lower()}s meet lead time constraints"
     )
 
 

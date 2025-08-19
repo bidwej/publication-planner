@@ -46,12 +46,29 @@ def validate_blackout_constraints(schedule: Schedule, config: Config) -> Validat
         else:
             compliant_submissions += 1
     
+    return _build_validation_result(
+        violations,
+        total_submissions,
+        compliant_submissions,
+        "{compliant}/{total} submissions avoid blackout dates"
+    )
+
+
+def _build_validation_result(violations, total_submissions, compliant_submissions, summary_template):
+    """Helper to build standardized ValidationResult objects for blackout validation."""
+    compliance_rate = (compliant_submissions / total_submissions * QUALITY_CONSTANTS.percentage_multiplier) if total_submissions > 0 else QUALITY_CONSTANTS.perfect_compliance_rate
+    
     return ValidationResult(
-        is_valid=len(violations) == 0, 
+        is_valid=len(violations) == 0,
         violations=violations,
-        summary=f"{compliant_submissions}/{total_submissions} submissions avoid blackout dates",
+        summary=summary_template.format(
+            compliant=compliant_submissions, 
+            total=total_submissions, 
+            rate=compliance_rate
+        ),
         metadata={
-            "total_submissions": total_submissions, 
+            "compliance_rate": compliance_rate,
+            "total_submissions": total_submissions,
             "compliant_submissions": compliant_submissions
         }
     )

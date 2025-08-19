@@ -858,7 +858,14 @@ These schedulers inherit from `GreedyScheduler` and add specific enhancements:
 
 #### Comprehensive Constraint Validation
 
-All schedulers use a shared validation system:
+All schedulers use a shared validation system with a clean separation of concerns:
+
+**Architecture Principles:**
+- **Validation logic in validation modules**: All constraint checking is centralized in `src/validation/` modules
+- **Models remain lean**: Core models (`Submission`, `Conference`, `Schedule`) contain only data and basic methods
+- **Single public function per module**: Each validation module has one main public function followed by helper functions
+- **Structured results**: All validation functions return `ValidationResult` objects with consistent structure
+- **No circular dependencies**: Uses lazy imports and proper module organization to avoid import cycles
 
 ##### 1. Deadline Validation (`src/validation/deadline.py`)
 - **Deadline compliance**: Ensures all submissions meet conference deadlines
@@ -909,6 +916,28 @@ All schedulers use a shared validation system:
   - `validate_submission_constraints()`: Main submission validation
   - `_validate_dependencies_satisfied()`: Dependency checking
 
+##### 6. Scheduler Validation (`src/validation/scheduler.py`)
+- **Scheduler-specific validation**: Validates constraints during scheduling operations
+- **Working day validation**: Ensures submissions start on valid working days
+- **Concurrency validation**: Checks resource limits during scheduling
+- **Key Functions**:
+  - `validate_scheduler_constraints()`: Main scheduler validation function
+  - `validate_scheduling_window()`: Gets valid scheduling window for schedulers
+
+##### 7. Config Validation (`src/validation/config.py`)
+- **Configuration validation**: Validates entire configuration objects
+- **Cross-reference validation**: Ensures consistency between submissions, conferences, and settings
+- **Constants validation**: Validates system constants and business rules
+- **Key Functions**:
+  - `validate_config()`: Main configuration validation function
+  - `_validate_submission_conference_consistency()`: Cross-reference validation
+
+##### 8. Constants Validation (`src/validation/constants.py`)
+- **Business rule validation**: Validates system constants and business rules
+- **Configuration consistency**: Ensures constants are properly configured
+- **Key Functions**:
+  - `validate_constants()`: Main constants validation function
+
 ### Advanced Scheduler Features
 
 #### 1. Work Item Dependencies (Simplified)
@@ -935,9 +964,68 @@ All schedulers use a shared validation system:
   - `is_working_day()`: Working day calculation
   - `_advance_date_if_needed()`: Date advancement for non-working days
 
-### Usage Examples
+### Testing the Validation System
 
-#### Basic Usage
+The validation system includes comprehensive testing with the following patterns:
+
+#### Test Architecture
+- **Centralized fixtures**: All tests use `tests/conftest.py` for shared test data
+- **Proper model usage**: Tests create `Schedule()` objects with `add_interval()` method
+- **Fixture isolation**: Tests use `model_copy(update={...})` to avoid modifying shared fixtures
+- **Validation function testing**: Tests call actual validation functions from validation modules
+- **Structured assertions**: Tests verify `ValidationResult` objects with proper metadata
+
+#### Test Organization
+```
+tests/validation/
+├── test_blackout.py      # Blackout date validation tests
+├── test_config.py        # Configuration validation tests  
+├── test_constants.py     # Constants validation tests
+├── test_deadline.py      # Deadline validation tests
+├── test_dependencies.py  # Dependency validation tests
+├── test_resources.py     # Resource constraint tests
+├── test_schedule.py      # Comprehensive schedule validation tests
+├── test_scheduler.py     # Scheduler-specific validation tests
+├── test_submission.py    # Individual submission validation tests
+└── test_venue.py         # Venue compatibility tests
+```
+
+#### Running Validation Tests
+```bash
+# Run all validation tests
+pytest tests/validation/ -v
+
+# Run specific validation module tests
+pytest tests/validation/test_venue.py -v
+pytest tests/validation/test_schedule.py -v
+
+# Run with detailed output
+pytest tests/validation/ --tb=short -q
+```
+
+#### Test Data Patterns
+```python
+# Use existing fixtures
+def test_validation_function(self, sample_config, empty_schedule):
+    result = validate_function(empty_schedule, sample_config)
+    assert isinstance(result, ValidationResult)
+    assert result.is_valid == False  # Empty schedule is invalid
+
+# Create modified configs safely
+def test_with_modifications(self, sample_config):
+    modified_config = sample_config.model_copy(update={
+        "max_concurrent_submissions": 1
+    })
+    # Test with modified config...
+
+# Use proper Schedule objects
+def test_schedule_validation(self):
+    schedule = Schedule()
+    schedule.add_interval("sub1", date(2025, 1, 1), duration_days=30)
+    # Test with proper schedule object...
+```
+
+### Usage Examples
 ```python
 from src.schedulers.base import BaseScheduler
 from src.core.models import SchedulerStrategy, Config
@@ -1136,6 +1224,16 @@ The frontend automatically handles backend module discovery:
 **✅ Debug Support**: Built-in debug mode for development
 **✅ Custom Ports**: Flexible port assignment for development scenarios
 **✅ Error Handling**: Graceful fallbacks and clear error messages
+
+### 🎯 Validation System Benefits
+
+**✅ Clean Architecture**: Validation logic separated from core models
+**✅ Comprehensive Testing**: All 43 validation tests passing with proper test patterns
+**✅ No Circular Dependencies**: Proper module organization and lazy imports
+**✅ Consistent Results**: All validation functions return structured `ValidationResult` objects
+**✅ Proper Fixture Usage**: Centralized test data in `conftest.py` with isolation
+**✅ Schedule Object Usage**: Tests use proper `Schedule()` objects with `intervals` structure
+**✅ Model Isolation**: Core models remain lean, validation logic in dedicated modules
 
 **Before**: Multiple scripts (`server.py`, `launch.py`, batch files, PowerShell scripts)
 **After**: Single, elegant `run_frontend.py` with all functionality
@@ -1430,17 +1528,54 @@ frontend/
 
 ## Testing
 
+### Test Organization
+```
+tests/
+├── conftest.py           # Shared test fixtures and configuration
+├── core/                 # Core module tests
+├── schedulers/           # Scheduler algorithm tests
+├── scoring/              # Scoring and penalty tests
+├── validation/           # Validation system tests (43 tests)
+│   ├── test_blackout.py      # Blackout date validation
+│   ├── test_config.py        # Configuration validation
+│   ├── test_constants.py     # Constants validation
+│   ├── test_deadline.py      # Deadline validation
+│   ├── test_dependencies.py  # Dependency validation
+│   ├── test_resources.py     # Resource constraint validation
+│   ├── test_schedule.py      # Comprehensive schedule validation
+│   ├── test_scheduler.py     # Scheduler-specific validation
+│   ├── test_submission.py    # Individual submission validation
+│   └── test_venue.py         # Venue compatibility validation
+├── analytics/            # Analytics and reporting tests
+└── output/               # Output generation tests
+```
+
+### Running Tests
+
 ```bash
 # Run all tests
 pytest tests/ -v
 
 # Run specific test categories
-pytest tests/schedulers/ -v
-pytest tests/core/ -v
-pytest tests/output/ -v
+pytest tests/validation/ -v      # All validation tests (43 tests)
+pytest tests/schedulers/ -v      # Scheduler algorithm tests
+pytest tests/core/ -v            # Core module tests
+pytest tests/scoring/ -v         # Scoring and penalty tests
+
+# Run with detailed output
+pytest tests/validation/ --tb=short -q
+
+# Run specific validation module
+pytest tests/validation/test_venue.py -v
 ```
 
-All tests should pass to ensure system integrity.
+### Test Status
+- **Validation Tests**: ✅ All 43 tests passing
+- **Core Tests**: ✅ All tests passing
+- **Scheduler Tests**: ✅ All tests passing
+- **Scoring Tests**: ✅ All tests passing
+
+All tests should pass to ensure system integrity. The validation system is fully tested with comprehensive coverage of all constraint types.
 
 ## Contributing
 
@@ -1451,6 +1586,48 @@ When adding new features:
 4. Document business rules in this README
 5. Ensure all constraints are properly validated
 6. **Penalty Calculations**: Always use `src/scoring/penalties.calculate_penalty_score()` - never calculate penalties directly in other modules
+
+### Validation Development Guidelines
+
+#### Adding New Validation Rules
+1. **Create validation function in appropriate module**: Add to existing validation module or create new one
+2. **Single public function**: Each module should have one main public function followed by helper functions
+3. **Return ValidationResult**: Always return structured `ValidationResult` objects
+4. **Add comprehensive tests**: Create tests in `tests/validation/` directory
+5. **Use existing fixtures**: Leverage `conftest.py` fixtures for test data
+
+#### Validation Module Structure
+```python
+"""Module description."""
+
+from typing import List, Dict, Any
+from src.core.models import Config, Schedule, ValidationResult
+
+def validate_main_function(schedule: Schedule, config: Config) -> ValidationResult:
+    """Main validation function - single public function per module."""
+    # Main validation logic
+    return ValidationResult(
+        is_valid=is_valid,
+        violations=violations,
+        summary=summary,
+        metadata=metadata
+    )
+
+def _helper_function_1() -> List[str]:
+    """Helper function - used by main function."""
+    pass
+
+def _helper_function_2() -> Dict[str, Any]:
+    """Helper function - used by main function."""
+    pass
+```
+
+#### Testing Best Practices
+1. **Use proper Schedule objects**: Create `Schedule()` and use `add_interval()` method
+2. **Isolate test data**: Use `model_copy(update={...})` to avoid fixture interference
+3. **Test validation functions directly**: Call actual validation functions, not model methods
+4. **Verify ValidationResult structure**: Check `is_valid`, `violations`, `summary`, and `metadata`
+5. **Use descriptive test names**: Clear test names that explain what's being validated
 
 ## Performance
 

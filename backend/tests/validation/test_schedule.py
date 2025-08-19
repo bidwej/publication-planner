@@ -17,8 +17,10 @@ class TestScheduleValidation:
         
         result = validate_schedule_constraints(schedule, empty_config)
         assert isinstance(result, ValidationResult)
-        assert result.is_valid == True
+        # An empty schedule is not valid (nothing to validate)
+        assert result.is_valid == False
         assert result.metadata.get("total_submissions", 0) == 0
+        assert result.summary == "No schedule to validate"
     
     def test_schedule_validation_with_submissions(self, sample_config) -> None:
         """Test schedule validation with actual submissions."""

@@ -8,8 +8,29 @@ import pytest
 
 from core.models import (
     Config, Submission, Conference, SubmissionType, 
-    ConferenceType, ConferenceRecurrence, Schedule
+    ConferenceType, ConferenceRecurrence, Schedule, ValidationResult
 )
+from core.constants import QUALITY_CONSTANTS
+
+
+def build_validation_result(violations, total_submissions, compliant_submissions, summary_template):
+    """Shared helper to build standardized ValidationResult objects across all validation modules."""
+    compliance_rate = (compliant_submissions / total_submissions * QUALITY_CONSTANTS.percentage_multiplier) if total_submissions > 0 else QUALITY_CONSTANTS.perfect_compliance_rate
+    
+    return ValidationResult(
+        is_valid=len(violations) == 0,
+        violations=violations,
+        summary=summary_template.format(
+            compliant=compliant_submissions, 
+            total=total_submissions, 
+            rate=compliance_rate
+        ),
+        metadata={
+            "compliance_rate": compliance_rate,
+            "total_submissions": total_submissions,
+            "compliant_submissions": compliant_submissions
+        }
+    )
 
 
 @pytest.fixture

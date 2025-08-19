@@ -4,16 +4,16 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Dict, List, Type, Optional, Tuple, Union
 from datetime import date, timedelta
-from core.models import (
+from src.core.models import (
     Config, Submission, SubmissionType, SchedulerStrategy, Conference, Schedule, Interval
 )
 
-from core.dates import is_working_day
+from src.core.dates import is_working_day
 
 # Validation imports
-from validation.submission import validate_submission_constraints
-from validation.scheduler import validate_scheduler_constraints, validate_scheduling_window
-from validation.dependencies import validate_dependencies_satisfied
+from src.validation.submission import validate_submission_constraints
+from src.validation.scheduler import validate_scheduler_constraints, validate_scheduling_window
+# No need to import validate_dependencies_satisfied - using submission.are_dependencies_satisfied() method
 
 
 class BaseScheduler(ABC):
@@ -157,7 +157,7 @@ class BaseScheduler(ABC):
             
             submission = self.submissions[submission_id]
             
-            if not validate_dependencies_satisfied(submission, schedule, self.submissions, self.config, current_date):
+            if not submission.are_dependencies_satisfied(schedule, self.config, current_date):
                 continue  # Dependencies not satisfied
             
             earliest_start = self._calculate_earliest_start_date(submission, schedule)

@@ -30,7 +30,7 @@ def generate_schedule_report(schedule: Schedule, config: Config) -> Dict[str, An
         }
     
     # Validate all constraints using the main validation function
-            validation_result = validate_schedule_constraints(schedule, config)
+    validation_result = validate_schedule_constraints(schedule, config)
     deadline_validation = validation_result["constraints"]["deadlines"]
     dependency_validation = validation_result["constraints"]["dependencies"]
     resource_validation = validation_result["constraints"]["resources"]
