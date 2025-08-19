@@ -3,8 +3,8 @@
 from __future__ import annotations
 from typing import Dict, List
 from datetime import date, timedelta
-from schedulers.greedy import GreedyScheduler
-from schedulers.base import BaseScheduler
+from src.schedulers.greedy import GreedyScheduler
+from src.schedulers.base import BaseScheduler
 from src.core.dates import is_working_day
 from src.core.models import SchedulerStrategy, Schedule
 from src.core.constants import SCHEDULING_CONSTANTS

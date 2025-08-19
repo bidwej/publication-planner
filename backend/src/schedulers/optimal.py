@@ -9,7 +9,7 @@ import math
 from src.core.models import SchedulerStrategy, SubmissionType, Schedule, Interval
 from src.core.constants import PENALTY_CONSTANTS, SCHEDULING_CONSTANTS, EFFICIENCY_CONSTANTS
 from src.core.dates import is_working_day
-from schedulers.base import BaseScheduler
+from src.schedulers.base import BaseScheduler
 
 
 class OptimalScheduler(BaseScheduler):

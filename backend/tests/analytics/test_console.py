@@ -5,14 +5,14 @@ from datetime import date
 from typing import Dict, List, Any, Optional
 
 
-from console import (
+from src.console import (
     print_schedule_summary,
     print_deadline_status,
     print_utilization_summary,
     print_metrics_summary,
     format_table
 )
-from core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
+from src.core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence, Schedule, Interval
 
 
 class TestConsoleOutput:
@@ -100,11 +100,11 @@ class TestConsoleOutput:
     @pytest.fixture
     def sample_schedule(self):
         """Provide a sample schedule for testing."""
-        return {
-            "J1-pap": date(2024, 11, 1),
-            "J2-pap": date(2024, 12, 1),
-            "J1-abs": date(2024, 10, 1)
-        }
+        schedule = Schedule()
+        schedule.add_interval("J1-pap", date(2024, 11, 1), duration_days=30)
+        schedule.add_interval("J2-pap", date(2024, 12, 1), duration_days=30)
+        schedule.add_interval("J1-abs", date(2024, 10, 1), duration_days=0)
+        return schedule
     
     def test_print_schedule_summary(self, monkeypatch, sample_schedule, sample_config) -> None:
         """Test printing schedule summary."""

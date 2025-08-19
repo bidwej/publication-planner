@@ -9,12 +9,12 @@ from datetime import date
 from typing import Dict, List, Any, Optional
 
 
-from core.config import (
+from src.core.config import (
     load_config, find_mod_by_number, find_paper_by_base_and_conference,
     _load_conferences, _load_submissions_with_abstracts, _load_blackout_dates
 )
-from core.models import Config, SubmissionType, ConferenceType, SchedulerStrategy, ConferenceRecurrence, Conference, Submission
-from core.constants import SCHEDULING_CONSTANTS
+from src.core.models import Config, SubmissionType, ConferenceType, SchedulerStrategy, ConferenceRecurrence, Conference, Submission
+from src.core.constants import SCHEDULING_CONSTANTS
 
 
 class TestLoadConfig:
