@@ -4,9 +4,9 @@ from __future__ import annotations
 from typing import Dict, List, Optional, Tuple
 from datetime import date, timedelta
 from schedulers.base import BaseScheduler
-from core.dates import is_working_day
-from core.models import SchedulerStrategy, SubmissionType, Schedule, Submission
-from core.constants import SCHEDULING_CONSTANTS, EFFICIENCY_CONSTANTS
+from src.core.dates import is_working_day
+from src.core.models import SchedulerStrategy, SubmissionType, Schedule, Submission
+from src.core.constants import SCHEDULING_CONSTANTS, EFFICIENCY_CONSTANTS
 
 
 class GreedyScheduler(BaseScheduler):
@@ -120,12 +120,12 @@ class GreedyScheduler(BaseScheduler):
     
     def _assign_best_conference(self, submission: Submission) -> None:
         """Assign the best available conference to a submission."""
-        candidate_conferences = self._get_candidate_conferences(submission)
-        if not candidate_conferences:
+        preferred_conferences = self._get_preferred_conferences(submission)
+        if not preferred_conferences:
             return
             
         # Try to find the best conference for this submission
-        for conf_name in candidate_conferences:
+        for conf_name in preferred_conferences:
             conf = self._find_conference_by_name(conf_name)
             if not conf:
                 continue
@@ -159,7 +159,7 @@ class GreedyScheduler(BaseScheduler):
     
     def _try_assign_conference(self, submission: Submission, conf) -> bool:
         """Try to assign a submission to a specific conference. Returns True if successful."""
-        from core.models import SubmissionType
+        from src.core.models import SubmissionType
         
         submission_types_to_try = self._get_submission_types_to_try(submission)
         

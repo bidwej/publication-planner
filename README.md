@@ -270,7 +270,7 @@ The system automatically classifies conferences based on their deadline structur
 {
   "id": "flexible_submission",
   "kind": "paper", 
-  "candidate_conferences": []
+  "preferred_conferences": []
 }
 ```
 → Try any appropriate conference (medical/engineering). Accept abstract-only, paper-only, or abstract+paper opportunities.
@@ -303,12 +303,12 @@ The system automatically classifies conferences based on their deadline structur
   "id": "J1",
   "title": "Computer Vision endoscopy review",
   "kind": "paper", 
-  "candidate_kind": "paper",  // Prefer paper submissions
+  "preferred_kinds": ["paper"],  // Prefer paper submissions
   "preferred_conferences": ["ICML", "MIDL"],
   "depends_on": ["mod_1"]  // Paper depends on completed mod
 }
 ```
-→ Creates clear dependency: J1 starts after mod_1 completes. If ICML requires abstract-first, system automatically sets `candidate_kind: ABSTRACT` during scheduling.
+→ Creates clear dependency: J1 starts after mod_1 completes. If ICML requires abstract-first, system automatically sets `preferred_kinds: ["abstract"]` during scheduling.
 
 ### Conference Types
 - **Medical/Clinical**: Healthcare-focused conferences (e.g., SAGES, DDW)
@@ -433,17 +433,17 @@ The system automatically classifies conferences based on their deadline structur
 - **Automatic Detection**: Conference submission types are auto-detected from deadline configuration
 - **Compatibility Validation**: Ensures submissions match conference requirements
 
-### 15. Intelligent Submission Type Assignment (`candidate_kind`)
-- **Dynamic Type Assignment**: Uses `candidate_kind` to adapt submission types to conference requirements
-- **Preference Specification**: `candidate_kind` specifies the preferred submission type at conferences
-- **Automatic Fallback**: System falls back to `kind` when `candidate_kind` is not compatible
-- **Abstract-Before-Paper**: Automatically assigns `candidate_kind: ABSTRACT` for conferences requiring abstract-first
+### 15. Intelligent Submission Type Assignment (`preferred_kinds`)
+- **Dynamic Type Assignment**: Uses `preferred_kinds` to adapt submission types to conference requirements
+- **Preference Specification**: `preferred_kinds` specifies the preferred submission types at conferences
+- **Automatic Fallback**: System falls back to `kind` when `preferred_kinds` is not compatible
+- **Abstract-Before-Paper**: Automatically assigns `preferred_kinds: ["abstract"]` for conferences requiring abstract-first
 - **No Duplicate Entities**: System doesn't create new submissions, just intelligently assigns types
-- **Conference Compatibility**: Uses `candidate_kind` for conference compatibility checking
+- **Conference Compatibility**: Uses `preferred_kinds` for conference compatibility checking
 - **Example Use Cases**:
-  - Paper that prefers to be submitted as abstract: `kind: PAPER, candidate_kind: ABSTRACT`
-  - Abstract-only submission: `kind: PAPER, candidate_kind: ABSTRACT` (same entity, different target)
-  - Flexible submission: `candidate_kind: null` (use conference requirements to decide)
+  - Paper that prefers to be submitted as abstract: `kind: PAPER, preferred_kinds: ["abstract"]`
+  - Abstract-only submission: `kind: PAPER, preferred_kinds: ["abstract"]` (same entity, different target)
+  - Flexible submission: `preferred_kinds: null` (use conference requirements to decide)
 
 ### 16. Work Item Dependencies (Mods → Papers)
 - **Explicit Dependencies**: Papers depend on completed work items (mods) as defined in JSON

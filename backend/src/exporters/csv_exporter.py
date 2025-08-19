@@ -8,7 +8,7 @@ import csv
 import json
 from collections import defaultdict
 
-from core.models import Config, ScheduleMetrics, SubmissionType, Schedule
+from src.core.models import Config, ScheduleMetrics, SubmissionType, Schedule
 
 from tables import (
     generate_schedule_table, generate_metrics_table, generate_deadline_table,
@@ -400,7 +400,7 @@ class CSVExporter:
         """Run comprehensive validation on schedule."""
         try:
             # Import here to avoid circular imports
-            from validation.schedule import validate_schedule_constraints
+            from src.validation.schedule import validate_schedule_constraints
             validation_result = validate_schedule_constraints(schedule, self.config)
             return validation_result
         except ImportError:
@@ -422,7 +422,7 @@ class CSVExporter:
         
         try:
             # Import here to avoid circular imports
-            from scoring.penalties import calculate_penalty_score
+            from src.scoring.penalties import calculate_penalty_score
             penalty_breakdown = calculate_penalty_score(schedule, self.config)
             
             penalties_data = [

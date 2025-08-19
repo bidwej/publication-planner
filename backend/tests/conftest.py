@@ -78,8 +78,8 @@ def create_mock_submission(
 def create_flexible_submission(
     submission_id: str,
     title: str,
-    candidate_conferences: Optional[List[str]] = None,
-    candidate_kinds: Optional[List[SubmissionType]] = None,
+    preferred_conferences: Optional[List[str]] = None,
+    preferred_kinds: Optional[List[SubmissionType]] = None,
     **kwargs: Any
 ) -> Submission:
     """Create a submission for testing flexible assignment behavior."""
@@ -92,8 +92,8 @@ def create_flexible_submission(
         title=title,
         kind=SubmissionType.PAPER,  # Base type
         conference_id=None,  # No assigned conference
-        candidate_conferences=candidate_conferences,
-        candidate_kinds=candidate_kinds,
+        preferred_conferences=preferred_conferences,
+        preferred_kinds=preferred_kinds,
         **kwargs
     )
 

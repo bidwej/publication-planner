@@ -44,7 +44,7 @@ def calculate_penalty_score(schedule: Schedule, config: Config) -> ScheduleMetri
         )
     
     # Get comprehensive validation results
-    from validation.schedule import validate_schedule_constraints
+    from src.validation.schedule import validate_schedule_constraints
     comprehensive_result = validate_schedule_constraints(schedule, config)
     
     # Calculate basic penalties

@@ -5,8 +5,8 @@ from typing import List
 from datetime import timedelta, date
 from schedulers.greedy import GreedyScheduler
 from schedulers.base import BaseScheduler
-from core.models import Submission, SchedulerStrategy
-from core.constants import SCHEDULING_CONSTANTS, EFFICIENCY_CONSTANTS
+from src.core.models import Submission, SchedulerStrategy
+from src.core.constants import SCHEDULING_CONSTANTS, EFFICIENCY_CONSTANTS
 
 
 class LookaheadGreedyScheduler(GreedyScheduler):
