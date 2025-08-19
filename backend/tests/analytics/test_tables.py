@@ -3,7 +3,7 @@
 from datetime import date
 from typing import Dict, List, Any, Optional
 
-from tables import (
+from src.tables import (
     generate_simple_monthly_table, 
     generate_schedule_summary_table, 
     generate_deadline_table,
@@ -18,7 +18,7 @@ from tables import (
     save_table_csv,
     get_output_summary
 )
-from core.models import Schedule, Interval
+from src.core.models import Schedule, Interval
 
 
 class TestGenerateSimpleMonthlyTable:
@@ -103,7 +103,7 @@ class TestGenerateDeadlineTable:
     
     def test_empty_schedule(self, config) -> None:
         """Test deadline table generation with empty schedule."""
-        schedule: Schedule = {}
+        schedule = Schedule(intervals={})
         table = generate_deadline_table(schedule, config)
         
         assert isinstance(table, list)
@@ -120,11 +120,11 @@ class TestGenerateDeadlineTable:
     
     def test_multiple_submissions(self, config) -> None:
         """Test deadline table generation with multiple submissions."""
-        schedule: Schedule = {
-            "paper1": date(2025, 1, 1),
-            "paper2": date(2025, 2, 15),
-            "paper3": date(2025, 6, 1)
-        }
+        schedule = Schedule(intervals={
+            "paper1": Interval(start_date=date(2025, 1, 1), end_date=date(2025, 1, 15)),
+            "paper2": Interval(start_date=date(2025, 2, 15), end_date=date(2025, 3, 1)),
+            "paper3": Interval(start_date=date(2025, 6, 1), end_date=date(2025, 6, 15))
+        })
         table = generate_deadline_table(schedule, config)
         
         assert isinstance(table, list)
@@ -136,7 +136,7 @@ class TestFormatScheduleTable:
     
     def test_empty_schedule(self, config) -> None:
         """Test formatted table generation with empty schedule."""
-        schedule: Schedule = {}
+        schedule = Schedule(intervals={})
         table = format_schedule_table(schedule, config)
         
         assert isinstance(table, list)
@@ -144,16 +144,15 @@ class TestFormatScheduleTable:
     
     def test_single_submission(self, config) -> None:
         """Test formatted table generation with single submission."""
-        schedule: Schedule = {"test-pap": date(2025, 1, 15)}
+        schedule = Schedule(intervals={"test-pap": Interval(start_date=date(2025, 1, 15), end_date=date(2025, 1, 15))})
         table = format_schedule_table(schedule, config)
         
         assert isinstance(table, list)
         assert len(table) >= 0
     
-    def test_table_structure(self, config) -> None:
+    def test_table_structure(self, config, sample_schedule) -> None:
         """Test that formatted table has expected structure."""
-        schedule: Schedule = {"test-pap": date(2025, 1, 15)}
-        table = format_schedule_table(schedule, config)
+        table = format_schedule_table(sample_schedule, config)
         
         if table:
             row = table[0]
@@ -181,18 +180,16 @@ class TestFormatMetricsTable:
 class TestFormatDeadlineTable:
     """Test deadline table formatting."""
     
-    def test_empty_schedule(self, config) -> None:
+    def test_empty_schedule(self, config, empty_schedule) -> None:
         """Test deadline formatting with empty schedule."""
-        schedule: Schedule = {}
-        table = format_deadline_table(schedule, config)
+        table = format_deadline_table(empty_schedule, config)
         
         assert isinstance(table, list)
         assert len(table) == 0
     
-    def test_single_submission(self, config) -> None:
+    def test_single_submission(self, config, sample_schedule) -> None:
         """Test deadline formatting with single submission."""
-        schedule: Schedule = {"test-pap": date(2025, 1, 15)}
-        table = format_deadline_table(schedule, config)
+        table = format_deadline_table(sample_schedule, config)
         
         assert isinstance(table, list)
         assert len(table) >= 0

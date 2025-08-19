@@ -4,7 +4,7 @@ from __future__ import annotations
 import random
 from typing import Dict, List, Optional
 from datetime import date, timedelta
-from schedulers.base import BaseScheduler
+from src.schedulers.base import BaseScheduler
 from src.core.dates import is_working_day
 from src.core.models import SchedulerStrategy, Schedule
 from src.core.constants import SCHEDULING_CONSTANTS

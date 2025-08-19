@@ -5,11 +5,11 @@ from datetime import date
 from typing import Dict, List, Any, Optional
 
 
-from reports import (
+from src.reports import (
     generate_schedule_report,
     calculate_overall_score
 )
-from core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
+from src.core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
 
 
 class TestReports:

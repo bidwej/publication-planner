@@ -1,9 +1,9 @@
 """Tests for analytics functions."""
 
 from datetime import date
-from analytics import generate_schedule_summary
+from src.analytics import generate_schedule_summary
 from typing import Dict, List, Any, Optional
-from core.models import Schedule, Config, ScheduleMetrics
+from src.core.models import Schedule, Config, ScheduleMetrics, Interval
 
 
 class TestGenerateScheduleSummary:
@@ -30,7 +30,6 @@ class TestGenerateScheduleSummary:
     def test_partial_schedule(self, config) -> None:
         """Test summary generation with partial schedule."""
         # Create a partial schedule
-        from core.models import Schedule, Interval
         schedule = Schedule(intervals={
             "test-pap": Interval(start_date=date(2025, 1, 1), end_date=date(2025, 1, 31))
         })
