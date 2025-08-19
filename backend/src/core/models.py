@@ -499,6 +499,18 @@ class ScheduleMetrics(BaseModel):
     compliance_rate: float
     quality_score: float
     
+    # Penalty breakdown fields
+    deadline_penalties: float = 0.0
+    dependency_penalties: float = 0.0
+    resource_penalties: float = 0.0
+    conference_compatibility_penalties: float = 0.0
+    abstract_paper_dependency_penalties: float = 0.0
+    blackout_penalties: float = 0.0
+    soft_block_penalties: float = 0.0
+    single_conference_penalties: float = 0.0
+    lead_time_penalties: float = 0.0
+    slack_cost_penalties: float = 0.0
+    
     # Resource utilization metrics
     avg_utilization: float
     peak_utilization: int

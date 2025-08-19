@@ -13,7 +13,21 @@ from src.core.constants import (
 )
 
 def calculate_quality_score(schedule: Schedule, config: Config) -> float:
-    """Calculate overall quality score (0-100) based on constraint compliance."""
+    """
+    Calculate quality score based on deadline compliance, dependencies, and resource utilization.
+    
+    Parameters
+    ----------
+    schedule : Schedule
+        Schedule object with intervals
+    config : Config
+        Configuration object
+        
+    Returns
+    -------
+    float
+        Quality score (0-100)
+    """
     # Fixed scoring constants
     max_score = REPORT_CONSTANTS.max_score
     min_score = REPORT_CONSTANTS.min_score
@@ -24,67 +38,43 @@ def calculate_quality_score(schedule: Schedule, config: Config) -> float:
     # Get comprehensive constraint validations
     comprehensive_result = validate_schedule_constraints(schedule, config)
     
-    # Extract constraint results from the constraints dictionary
-    constraints = comprehensive_result.get("constraints", {})
-    deadline_validation = constraints.get("deadlines", {})
-    dependency_validation = constraints.get("dependencies", {})
-    resource_validation = constraints.get("resources", {})
+    # Extract constraint results from the ValidationResult object
+    # The comprehensive_result is a ValidationResult, not a dict
+    deadline_score = max_score
+    dependency_score = max_score
+    resource_score = max_score
     
-    # Calculate component scores with comprehensive validation
-    deadline_score = deadline_validation.get("compliance_rate", max_score) if isinstance(deadline_validation, dict) else max_score
-    dependency_score = dependency_validation.get("satisfaction_rate", max_score) if isinstance(dependency_validation, dict) else max_score
-    resource_score = max_score if resource_validation.get("is_valid", True) else QUALITY_CONSTANTS.quality_resource_fallback_score
+    # Check if there are violations to calculate scores
+    if comprehensive_result.violations:
+        total_violations = len(comprehensive_result.violations)
+        deadline_violations = len([v for v in comprehensive_result.violations if hasattr(v, 'deadline')])
+        dependency_violations = len([v for v in comprehensive_result.violations if hasattr(v, 'dependency_id')])
+        resource_violations = len([v for v in comprehensive_result.violations if hasattr(v, 'load')])
+        
+        total_submissions = comprehensive_result.metadata.get("total_submissions", 1)
+        if total_submissions > 0:
+            # Calculate compliance rates based on violations
+            deadline_score = max(min_score, max_score - (deadline_violations / total_submissions * max_score))
+            dependency_score = max(min_score, max_score - (dependency_violations / total_submissions * max_score))
+            resource_score = max(min_score, max_score - (resource_violations / total_submissions * max_score))
     
     # Additional quality factors from comprehensive validation
     additional_quality_factors = []
     
+    # Check metadata for additional quality metrics
+    metadata = comprehensive_result.metadata
+    
     # Blackout dates compliance
-    blackout_result = comprehensive_result.get("blackout_dates", {})
-    if isinstance(blackout_result, dict):
-        blackout_score = blackout_result.get("compliance_rate", max_score)
-        additional_quality_factors.append(blackout_score)
+    if "blackout_compliance_rate" in metadata:
+        additional_quality_factors.append(metadata["blackout_compliance_rate"])
     
     # Conference compatibility
-    conf_compat_result = comprehensive_result.get("conference_compatibility", {})
-    if isinstance(conf_compat_result, dict):
-        conf_compat_score = conf_compat_result.get("compatibility_rate", max_score)
-        additional_quality_factors.append(conf_compat_score)
+    if "compatibility_rate" in metadata:
+        additional_quality_factors.append(metadata["compatibility_rate"])
     
-    # Conference submission compatibility
-    conf_sub_compat_result = comprehensive_result.get("conference_submission_compatibility", {})
-    if isinstance(conf_sub_compat_result, dict):
-        conf_sub_compat_score = conf_sub_compat_result.get("compatibility_rate", max_score)
-        additional_quality_factors.append(conf_sub_compat_score)
-    
-    # Abstract-paper dependencies
-    abstract_paper_result = comprehensive_result.get("abstract_paper_dependencies", {})
-    if isinstance(abstract_paper_result, dict):
-        abstract_paper_score = abstract_paper_result.get("dependency_rate", max_score)
-        additional_quality_factors.append(abstract_paper_score)
-    
-    # Single conference policy
-    single_conf_result = comprehensive_result.get("single_conference_policy", {})
-    if isinstance(single_conf_result, dict):
-        single_conf_score = max_score if single_conf_result.get("is_valid", True) else min_score
-        additional_quality_factors.append(single_conf_score)
-    
-    # Soft block model (now part of resources)
-    resource_result = comprehensive_result.get("resources", {})
-    if isinstance(resource_result, dict):
-        # Look for timing compliance in resource validation
-        timing_violations = [v for v in resource_result.get("violations", []) if "days_violation" in v]
-        total_timing_checks = resource_result.get("total_submissions", 0)
-        compliant_timing = resource_result.get("compliant_submissions", 0)
-        
-        if total_timing_checks > 0:
-            timing_compliance_rate = (compliant_timing / total_timing_checks) * max_score
-            additional_quality_factors.append(timing_compliance_rate)
-    
-    # Paper lead time
-    lead_time_result = comprehensive_result.get("paper_lead_time", {})
-    if isinstance(lead_time_result, dict):
-        lead_time_score = lead_time_result.get("compliance_rate", max_score)
-        additional_quality_factors.append(lead_time_score)
+    # Resource utilization
+    if "utilization_rate" in metadata:
+        additional_quality_factors.append(metadata["utilization_rate"])
     
     # Calculate weighted score with additional factors
     base_score = (
@@ -128,20 +118,20 @@ def calculate_quality_robustness(schedule: Schedule, config: Config) -> float:
 
 def _calculate_total_slack(schedule: Schedule, config: Config) -> int:
     """Calculate total slack time between submissions."""
-    sorted_submissions = sorted(schedule.items(), key=lambda x: x[1])
+    sorted_submissions = sorted(schedule.intervals.items(), key=lambda x: x[1].start_date)
     total_slack = 0
     
     for i in range(len(sorted_submissions) - 1):
-        current_id, current_start = sorted_submissions[i]
-        next_id, next_start = sorted_submissions[i + 1]
+        current_id, current_interval = sorted_submissions[i]
+        next_id, next_interval = sorted_submissions[i + 1]
         
         current_sub = config.get_submission(current_id)
         if not current_sub:
             continue
         
         current_duration = current_sub.get_duration_days(config)
-        current_end = current_start + timedelta(days=current_duration)
-        slack_days = (next_start - current_end).days
+        current_end = current_interval.start_date + timedelta(days=current_duration)
+        slack_days = (next_interval.start_date - current_end).days
         
         if slack_days > 0:
             total_slack += slack_days
@@ -159,7 +149,7 @@ def calculate_quality_balance(schedule: Schedule, config: Config) -> float:
     
     # Calculate work distribution over time
     daily_work = {}
-    for sid, start_date in schedule.items():
+    for sid, interval in schedule.intervals.items():
         sub = config.get_submission(sid)
         if not sub:
             continue
@@ -169,7 +159,7 @@ def calculate_quality_balance(schedule: Schedule, config: Config) -> float:
         
         # Add work for each day
         for i in range(duration + 1):
-            day = start_date + timedelta(days=i)
+            day = interval.start_date + timedelta(days=i)
             daily_work[day] = daily_work.get(day, 0) + 1
     
     if not daily_work:

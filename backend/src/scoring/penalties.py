@@ -4,10 +4,11 @@ from typing import Dict, Any
 from datetime import date, timedelta
 from collections import defaultdict
 
-from core.models import Config, ScheduleMetrics, SubmissionType, ConferenceType, Schedule
-from core.constants import (
+from src.core.models import Config, ScheduleMetrics, SubmissionType, ConferenceType, Schedule
+from src.core.constants import (
     PENALTY_CONSTANTS, REPORT_CONSTANTS
 )
+from src.validation.schedule import validate_schedule_constraints
 # Note: Penalty costs moved to config.json because they are project-specific
 # and should be configurable by users. Only algorithm constants remain in constants.py.
 
@@ -44,7 +45,6 @@ def calculate_penalty_score(schedule: Schedule, config: Config) -> ScheduleMetri
         )
     
     # Get comprehensive validation results
-    from src.validation.schedule import validate_schedule_constraints
     comprehensive_result = validate_schedule_constraints(schedule, config)
     
     # Calculate basic penalties
@@ -53,14 +53,15 @@ def calculate_penalty_score(schedule: Schedule, config: Config) -> ScheduleMetri
     resource_penalties = _calculate_resource_penalties(schedule, config)
     
     # Calculate additional penalties from comprehensive validation
-    conference_compatibility_penalties = _calculate_conference_compatibility_penalties(comprehensive_result, config)
-    abstract_paper_dependency_penalties = _calculate_abstract_paper_dependency_penalties(comprehensive_result, config)
+    # Note: These functions expect ValidationResult.metadata, not the raw result
+    conference_compatibility_penalties = _calculate_conference_compatibility_penalties(comprehensive_result.metadata, config)
+    abstract_paper_dependency_penalties = _calculate_abstract_paper_dependency_penalties(comprehensive_result.metadata, config)
     
     # Calculate additional penalties from README claims
-    blackout_penalties = _calculate_blackout_penalties(comprehensive_result, config)
-    soft_block_penalties = _calculate_soft_block_penalties(comprehensive_result, config)
-    single_conference_penalties = _calculate_single_conference_penalties(comprehensive_result, config)
-    lead_time_penalties = _calculate_lead_time_penalties(comprehensive_result, config)
+    blackout_penalties = _calculate_blackout_penalties(comprehensive_result.metadata, config)
+    soft_block_penalties = _calculate_soft_block_penalties(comprehensive_result.metadata, config)
+    single_conference_penalties = _calculate_single_conference_penalties(comprehensive_result.metadata, config)
+    lead_time_penalties = _calculate_lead_time_penalties(comprehensive_result.metadata, config)
     
     # Calculate slack cost penalties (opportunity costs)
     slack_cost_penalties = _calculate_slack_cost_penalties(schedule, config)
@@ -86,6 +87,19 @@ def calculate_penalty_score(schedule: Schedule, config: Config) -> ScheduleMetri
         total_penalty=total_penalty,
         compliance_rate=0.0, # Placeholder, will be implemented
         quality_score=0.0, # Placeholder, will be implemented
+        
+        # Penalty breakdown
+        deadline_penalties=deadline_penalties,
+        dependency_penalties=dependency_penalties,
+        resource_penalties=resource_penalties,
+        conference_compatibility_penalties=conference_compatibility_penalties,
+        abstract_paper_dependency_penalties=abstract_paper_dependency_penalties,
+        blackout_penalties=blackout_penalties,
+        soft_block_penalties=soft_block_penalties,
+        single_conference_penalties=single_conference_penalties,
+        lead_time_penalties=lead_time_penalties,
+        slack_cost_penalties=slack_cost_penalties,
+        
         duration_days=0,
         avg_daily_load=0.0,
         timeline_efficiency=0.0,

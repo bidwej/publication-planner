@@ -5,7 +5,7 @@ from pathlib import Path
 from datetime import date, timedelta
 from typing import Dict
 
-from core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
+from src.core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
 from exporters.csv_exporter import CSVExporter
 
 
@@ -114,15 +114,7 @@ def sample_config():
     )
 
 
-@pytest.fixture
-def sample_schedule():
-    """Create a sample schedule for testing."""
-    return {
-        "mod1-wrk": date(2025, 10, 1),
-        "paper1-pap": date(2025, 11, 1),
-        "mod2-wrk": date(2025, 12, 1),
-        "paper2-pap": date(2026, 1, 1)
-    }
+# sample_schedule fixture is imported from conftest.py
 
 
 @pytest.fixture

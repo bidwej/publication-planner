@@ -6,8 +6,9 @@ from datetime import date, timedelta
 import pulp
 import math
 
-from core.models import SchedulerStrategy, SubmissionType, Schedule, Interval
-from core.constants import PENALTY_CONSTANTS, SCHEDULING_CONSTANTS, EFFICIENCY_CONSTANTS
+from src.core.models import SchedulerStrategy, SubmissionType, Schedule, Interval
+from src.core.constants import PENALTY_CONSTANTS, SCHEDULING_CONSTANTS, EFFICIENCY_CONSTANTS
+from src.core.dates import is_working_day
 from schedulers.base import BaseScheduler
 
 
@@ -42,10 +43,10 @@ class OptimalScheduler(BaseScheduler):
                     milp_schedule = self._assign_conferences(milp_schedule)
                     # Convert to intervals
                     intervals = {}
-                    for sub_id, start_date in milp_schedule.items():
+                    for sub_id, interval in milp_schedule.intervals.items():
                         duration = self.submissions[sub_id].get_duration_days(self.config)
-                        end_date = start_date + timedelta(days=duration)
-                        intervals[sub_id] = Interval(start_date=start_date, end_date=end_date)
+                        end_date = interval.start_date + timedelta(days=duration)
+                        intervals[sub_id] = Interval(start_date=interval.start_date, end_date=end_date)
                     return Schedule(intervals=intervals)
         
         # Pure optimal: if MILP fails, return empty schedule
@@ -55,7 +56,7 @@ class OptimalScheduler(BaseScheduler):
     
     def _assign_conferences(self, schedule: Schedule) -> Schedule:
         """Assign conferences to submissions that don't have them."""
-        for sub_id in schedule.keys():
+        for sub_id in schedule.intervals.keys():
             submission = self.submissions[sub_id]
             if not submission.conference_id:
                 self._assign_best_conference(submission)
@@ -63,12 +64,12 @@ class OptimalScheduler(BaseScheduler):
     
     def _assign_best_conference(self, submission) -> None:
         """Assign the best available conference to a submission."""
-        candidate_conferences = self._get_candidate_conferences(submission)
-        if not candidate_conferences:
+        preferred_conferences = self._get_preferred_conferences(submission)
+        if not preferred_conferences:
             return
             
         # Try to find the best conference for this submission
-        for conf_name in candidate_conferences:
+        for conf_name in preferred_conferences:
             conf = self._find_conference_by_name(conf_name)
             if not conf:
                 continue
@@ -76,8 +77,8 @@ class OptimalScheduler(BaseScheduler):
             if self._try_assign_conference(submission, conf):
                 return
     
-    def _get_candidate_conferences(self, submission) -> List[str]:
-        """Get list of candidate conferences for a submission."""
+    def _get_preferred_conferences(self, submission) -> List[str]:
+        """Get list of preferred conferences for a submission."""
         if hasattr(submission, 'preferred_conferences') and submission.preferred_conferences:
             return submission.preferred_conferences
         
@@ -87,11 +88,11 @@ class OptimalScheduler(BaseScheduler):
             return [conf.name for conf in self.conferences.values() if conf.deadlines]
         
         # Use specific preferred_kinds
-        candidate_conferences = []
+        preferred_conferences = []
         for conf in self.conferences.values():
             if any(ctype in conf.deadlines for ctype in (submission.preferred_kinds or [submission.kind])):
-                candidate_conferences.append(conf.name)
-        return candidate_conferences
+                preferred_conferences.append(conf.name)
+        return preferred_conferences
     
     def _find_conference_by_name(self, conf_name: str):
         """Find conference by name."""
@@ -102,7 +103,6 @@ class OptimalScheduler(BaseScheduler):
     
     def _try_assign_conference(self, submission, conf) -> bool:
         """Try to assign a submission to a specific conference. Returns True if successful."""
-        from core.models import SubmissionType
         
         submission_types_to_try = self._get_submission_types_to_try(submission)
         
@@ -407,7 +407,6 @@ class OptimalScheduler(BaseScheduler):
     
     def _is_working_day(self, date_obj: date) -> bool:
         """Check if a date is a working day."""
-        from core.dates import is_working_day
         return is_working_day(date_obj, self.config.blackout_dates)
     
     def _solve_milp_model(self, model: Optional[Any]) -> Optional[Any]:
@@ -453,9 +452,9 @@ class OptimalScheduler(BaseScheduler):
     def _extract_schedule_from_solution(self, solution: Optional[Any]) -> Schedule:
         """Extract schedule from MILP solution."""
         if solution is None:
-            return {}
+            return Schedule()
         
-        schedule = {}
+        schedule = Schedule()
         start_date, _ = self.get_scheduling_window()
         
         try:
@@ -503,15 +502,15 @@ class OptimalScheduler(BaseScheduler):
                     # Convert days from start to actual date
                     days_from_start = int(var_value)
                     actual_start_date = start_date + timedelta(days=days_from_start)
-                    schedule[submission_id] = actual_start_date
+                    schedule.add_interval(submission_id, actual_start_date)
                 else:
                     print(f"Warning: Could not extract value for variable {var_name}")
                     
         except RecursionError as e:
             print(f"Recursion error extracting schedule from MILP solution: {e}")
-            return {}
+            return Schedule()
         except Exception as e:
             print(f"Error extracting schedule from MILP solution: {e}")
-            return {}
+            return Schedule()
         
         return schedule

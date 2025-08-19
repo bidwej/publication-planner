@@ -3,8 +3,10 @@
 from typing import Dict, Any, List
 from datetime import date
 
-from src.core.models import Config, Submission, Conference, ValidationResult
+from src.core.models import Config, Submission, Conference, ValidationResult, Schedule
 from src.core.constants import SCHEDULING_CONSTANTS
+from src.validation.constants import validate_constants
+from src.validation.submission import validate_submission_constraints
 
 
 def validate_config(config: Config) -> ValidationResult:
@@ -22,7 +24,6 @@ def validate_config(config: Config) -> ValidationResult:
     
     # Constants validation
     try:
-        from src.validation.constants import validate_constants
         constants_errors = validate_constants()
         if constants_errors:
             errors.extend([f"Constants validation: {error}" for error in constants_errors])
@@ -76,9 +77,6 @@ def _validate_config_submissions(config: Config) -> List[str]:
     submission_ids = set()
     # Validate each submission individually
     for submission in config.submissions:
-        from src.validation.submission import validate_submission_constraints
-        from src.core.models import Schedule
-        from datetime import date
         empty_schedule = Schedule()
         submission_errors = validate_submission_constraints(submission, date.today(), empty_schedule, config)
         errors.extend([f"Submission {submission.id}: {error}" for error in submission_errors])

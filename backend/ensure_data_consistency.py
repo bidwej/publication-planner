@@ -157,7 +157,7 @@ def create_validation_schema():
         "papers": {
             "required": ["id", "title"],
             "optional": [
-                "draft_window_months", "lead_time_from_parents", "candidate_conferences",
+                "draft_window_months", "lead_time_from_parents", "preferred_conferences",
                 "submission_workflow", "depends_on", "engineering_ready_date",
                 "free_slack_months", "penalty_cost_per_month", "author"
             ],

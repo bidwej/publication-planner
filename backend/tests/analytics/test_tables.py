@@ -112,7 +112,7 @@ class TestGenerateDeadlineTable:
     
     def test_single_submission(self, config) -> None:
         """Test deadline table generation with single submission."""
-        schedule: Schedule = {"test-pap": date(2025, 1, 15)}
+        schedule = Schedule(intervals={"test-pap": Interval(start_date=date(2025, 1, 15), end_date=date(2025, 1, 15))})
         table = generate_deadline_table(schedule, config)
         
         assert isinstance(table, list)

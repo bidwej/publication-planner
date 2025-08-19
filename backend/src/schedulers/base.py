@@ -46,7 +46,45 @@ class BaseScheduler(ABC):
         scheduler_class = cls._strategy_registry[strategy]
         return scheduler_class(config)
     
-
+    @classmethod
+    def _auto_register_strategy(cls, strategy: SchedulerStrategy) -> None:
+        """Auto-register scheduler classes by looking for them in the module."""
+        import importlib
+        import inspect
+        
+        # Get the module where this class is defined
+        module = inspect.getmodule(cls)
+        if not module:
+            return
+            
+        # Look for scheduler classes in the module
+        for name, obj in inspect.getmembers(module):
+            if (inspect.isclass(obj) and 
+                issubclass(obj, BaseScheduler) and 
+                obj != BaseScheduler and
+                hasattr(obj, '__module__') and
+                obj.__module__ == module.__name__):
+                
+                # Try to determine the strategy from the class name
+                if strategy.value in name.lower():
+                    cls._strategy_registry[strategy] = obj
+                    return
+        
+        # If not found by name, try to register based on common patterns
+        strategy_mapping = {
+            SchedulerStrategy.GREEDY: 'GreedyScheduler',
+            SchedulerStrategy.STOCHASTIC: 'StochasticScheduler',
+            SchedulerStrategy.LOOKAHEAD: 'LookaheadScheduler',
+            SchedulerStrategy.BACKTRACKING: 'BacktrackingGreedyScheduler',
+            SchedulerStrategy.RANDOM: 'RandomScheduler',
+            SchedulerStrategy.HEURISTIC: 'HeuristicScheduler',
+            SchedulerStrategy.OPTIMAL: 'OptimalScheduler'
+        }
+        
+        if strategy in strategy_mapping:
+            class_name = strategy_mapping[strategy]
+            if hasattr(module, class_name):
+                cls._strategy_registry[strategy] = getattr(module, class_name)
     
     @abstractmethod
     def schedule(self) -> Schedule:
@@ -106,7 +144,23 @@ class BaseScheduler(ABC):
         assert self._end_date is not None  # Type guard
         return self._end_date
     
-
+    def _print_scheduling_summary(self, schedule: Schedule) -> None:
+        """Print a summary of the scheduling results."""
+        if not schedule:
+            print("No schedule generated")
+            return
+        
+        scheduled_count = len(schedule.intervals)
+        total_count = len(self.submissions)
+        
+        print(f"Successfully scheduled {scheduled_count} out of {total_count} submissions")
+        
+        if scheduled_count > 0:
+            start_date = schedule.start_date
+            end_date = schedule.end_date
+            if start_date and end_date:
+                duration = (end_date - start_date).days
+                print(f"Schedule spans {duration} days from {start_date} to {end_date}")
     
     # ===== PRIVATE HELPER METHODS (internal use only) =====
     
@@ -144,10 +198,6 @@ class BaseScheduler(ABC):
         
         return result
     
-
-    
-
-    
     def _get_ready_submissions(self, topo: List[str], schedule: Schedule, current_date: date) -> List[str]:
         """Get list of submissions ready to be scheduled at the current date."""
         ready = []
@@ -172,7 +222,8 @@ class BaseScheduler(ABC):
         """Update list of active submissions by removing finished ones."""
         return [
             submission_id for submission_id in active
-            if self._get_end_date(schedule.get_start_date(submission_id) or date.today(), self.submissions[submission_id]) > current_date
+            if submission_id in schedule.intervals and 
+            self._get_end_date(schedule.intervals[submission_id].start_date, self.submissions[submission_id]) > current_date
         ]
     
     def _schedule_submissions_up_to_limit(self, ready: List[str], schedule: Schedule, 
@@ -207,9 +258,11 @@ class BaseScheduler(ABC):
                     dep = self.submissions[dep_id]
                     if hasattr(dep, 'get_duration_days'):
                         dep_duration = dep.get_duration_days(self.config)
-                        dep_start = schedule.get_start_date(dep_id) or date.today()
-                        dep_end = dep_start + timedelta(days=dep_duration)
-                        earliest = max(earliest, dep_end + timedelta(days=submission.lead_time_from_parents))
+                        # Use the correct Schedule.intervals structure
+                        if dep_id in schedule.intervals:
+                            dep_start = schedule.intervals[dep_id].start_date
+                            dep_end = dep_start + timedelta(days=dep_duration)
+                            earliest = max(earliest, dep_end + timedelta(days=submission.lead_time_from_parents))
         
         return earliest
     

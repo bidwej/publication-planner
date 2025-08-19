@@ -27,5 +27,4 @@ def get_session():
 
 def create_tables():
     """Create all database tables."""
-    from .sqlmodels import SQLModel
     SQLModel.metadata.create_all(engine)

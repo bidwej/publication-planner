@@ -9,8 +9,10 @@ import json
 from collections import defaultdict
 
 from src.core.models import Config, ScheduleMetrics, SubmissionType, Schedule
+from src.validation.schedule import validate_schedule_constraints
+from src.scoring.penalties import calculate_penalty_score
 
-from tables import (
+from src.tables import (
     generate_schedule_table, generate_metrics_table, generate_deadline_table,
     generate_violations_table, generate_penalties_table, save_schedule_json, save_table_csv, save_metrics_json
 )
@@ -399,8 +401,6 @@ class CSVExporter:
     def _run_comprehensive_validation(self, schedule: Schedule) -> Dict[str, Any]:
         """Run comprehensive validation on schedule."""
         try:
-            # Import here to avoid circular imports
-            from src.validation.schedule import validate_schedule_constraints
             validation_result = validate_schedule_constraints(schedule, self.config)
             return validation_result
         except ImportError:
@@ -421,8 +421,6 @@ class CSVExporter:
             return [{"Penalty Type": "Total Penalty", "Amount": "0.0"}]
         
         try:
-            # Import here to avoid circular imports
-            from src.scoring.penalties import calculate_penalty_score
             penalty_breakdown = calculate_penalty_score(schedule, self.config)
             
             penalties_data = [

@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import Dict, List, Optional, Tuple
 from datetime import date, timedelta
-from schedulers.base import BaseScheduler
+from src.schedulers.base import BaseScheduler
 from src.core.dates import is_working_day
 from src.core.models import SchedulerStrategy, SubmissionType, Schedule, Submission
 from src.core.constants import SCHEDULING_CONSTANTS, EFFICIENCY_CONSTANTS
@@ -133,8 +133,8 @@ class GreedyScheduler(BaseScheduler):
             if self._try_assign_conference(submission, conf):
                 return
     
-    def _get_candidate_conferences(self, submission: Submission) -> List[str]:
-        """Get list of candidate conferences for a submission."""
+    def _get_preferred_conferences(self, submission: Submission) -> List[str]:
+        """Get list of preferred conferences for a submission."""
         if hasattr(submission, 'preferred_conferences') and submission.preferred_conferences:
             return submission.preferred_conferences
         
@@ -144,11 +144,11 @@ class GreedyScheduler(BaseScheduler):
             return [conf.name for conf in self.conferences.values() if conf.deadlines]
         
         # Use specific preferred_kinds
-        candidate_conferences = []
+        preferred_conferences = []
         for conf in self.conferences.values():
             if any(ctype in conf.deadlines for ctype in (submission.preferred_kinds or [submission.kind])):
-                candidate_conferences.append(conf.name)
-        return candidate_conferences
+                preferred_conferences.append(conf.name)
+        return preferred_conferences
     
     def _find_conference_by_name(self, conf_name: str):
         """Find conference by name."""
@@ -159,7 +159,6 @@ class GreedyScheduler(BaseScheduler):
     
     def _try_assign_conference(self, submission: Submission, conf) -> bool:
         """Try to assign a submission to a specific conference. Returns True if successful."""
-        from src.core.models import SubmissionType
         
         submission_types_to_try = self._get_submission_types_to_try(submission)
         

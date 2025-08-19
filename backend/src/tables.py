@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 from typing import Dict, List, Any
-from datetime import date, timedelta
+from datetime import date, timedelta, date as current_date
 import json
 import csv
-from core.models import Config, SubmissionType, ScheduleMetrics, Schedule
-from core.constants import DISPLAY_CONSTANTS, SCHEDULING_CONSTANTS
+from src.core.models import Config, SubmissionType, ScheduleMetrics, Schedule
+from src.core.constants import DISPLAY_CONSTANTS, SCHEDULING_CONSTANTS
 from pathlib import Path
 
 
@@ -159,14 +159,14 @@ def generate_deadline_table(schedule: Schedule, config: Config) -> List[Dict[str
         return []
     
     table_data = []
-    for submission_id, start_date in sorted(schedule.items()):
+    for submission_id, interval in sorted(schedule.intervals.items(), key=lambda x: x[1].start_date):
         submission = config.get_submission(submission_id)
         if submission and submission.conference_id:
             conference = config.get_conference(submission.conference_id)
             if conference and submission.kind in conference.deadlines:
                 deadline = conference.deadlines[submission.kind]
                 duration_days = submission.get_duration_days(config)
-                end_date = start_date + timedelta(days=duration_days)
+                end_date = interval.start_date + timedelta(days=duration_days)
                 days_until_deadline = (deadline - end_date).days
                 status = "On Time" if days_until_deadline >= 0 else "Late"
                 
@@ -174,7 +174,7 @@ def generate_deadline_table(schedule: Schedule, config: Config) -> List[Dict[str
                     "Submission": submission_id,
                     "Conference": conference.name,
                     "Type": submission.kind.value.title(),
-                    "Start Date": start_date.strftime("%Y-%m-%d"),
+                    "Start Date": interval.start_date.strftime("%Y-%m-%d"),
                     "End Date": end_date.strftime("%Y-%m-%d"),
                     "Deadline": deadline.strftime("%Y-%m-%d"),
                     "Days Until Deadline": str(days_until_deadline),
@@ -258,7 +258,7 @@ def format_schedule_table(schedule: Schedule, config: Config) -> List[Dict[str, 
     rows = []
     sub_map = {s.id: s for s in config.submissions}
     
-    for sid, start_date in schedule.items():
+    for sid, interval in schedule.intervals.items():
         sub = sub_map.get(sid)
         if not sub:
             continue
@@ -268,11 +268,11 @@ def format_schedule_table(schedule: Schedule, config: Config) -> List[Dict[str, 
         days_per_month = SCHEDULING_CONSTANTS.days_per_month
         
         if sub.kind == SubmissionType.ABSTRACT:
-            end_date = start_date
+            end_date = interval.start_date
             duration_days = 0
         else:
             duration_days = sub.draft_window_months * days_per_month if sub.draft_window_months > 0 else config.min_paper_lead_time_days
-            end_date = start_date + timedelta(days=duration_days)
+            end_date = interval.start_date + timedelta(days=duration_days)
         
         # Get conference info
         conference_name = config.get_conference_name(sub.conference_id, default="Unknown")
@@ -363,7 +363,7 @@ def format_deadline_table(schedule: Schedule, config: Config) -> List[Dict[str, 
     rows = []
     sub_map = {s.id: s for s in config.submissions}
     
-    for sid, start_date in schedule.items():
+    for sid, interval in schedule.intervals.items():
         sub = sub_map.get(sid)
         if not sub:
             continue
@@ -379,10 +379,10 @@ def format_deadline_table(schedule: Schedule, config: Config) -> List[Dict[str, 
             days_per_month = SCHEDULING_CONSTANTS.days_per_month
             
             if sub.kind == SubmissionType.ABSTRACT:
-                end_date = start_date
+                end_date = interval.start_date
             else:
                 duration_days = sub.draft_window_months * days_per_month if sub.draft_window_months > 0 else config.min_paper_lead_time_days
-                end_date = start_date + timedelta(days=duration_days)
+                end_date = interval.start_date + timedelta(days=duration_days)
             
             # Determine status
             if end_date <= deadline_date:
@@ -416,14 +416,14 @@ def create_schedule_table(schedule: Schedule, config: Config) -> List[Dict[str, 
     
     table_data = []
     
-    for submission_id, start_date in schedule.items():
+    for submission_id, interval in schedule.intervals.items():
         submission = config.get_submission(submission_id)
         if not submission:
             continue
         
         # Calculate end date
         duration_days = submission.get_duration_days(config)
-        end_date = start_date + timedelta(days=duration_days)
+        end_date = interval.start_date + timedelta(days=duration_days)
         
         # Get conference name
         conference_name = "No conference"
@@ -433,14 +433,14 @@ def create_schedule_table(schedule: Schedule, config: Config) -> List[Dict[str, 
                 conference_name = conference.name
         
         # Determine status
-        status = _get_submission_status(submission, start_date, end_date, config)
+        status = _get_submission_status(submission, interval.start_date, end_date, config)
         
         # Create table row
         row = {
             'id': submission_id,
             'title': submission.title,
             'type': submission.kind.value.title(),
-            'start_date': start_date.strftime('%Y-%m-%d'),
+            'start_date': interval.start_date.strftime('%Y-%m-%d'),
             'end_date': end_date.strftime('%Y-%m-%d'),
             'conference': conference_name,
             'status': status,
@@ -626,7 +626,6 @@ def _format_duration_days(days: int) -> str:
 
 def _format_relative_time(target_date: date) -> str:
     """Format relative time from today."""
-    from datetime import date as current_date
     today = current_date.today()
     diff = (target_date - today).days
     
@@ -642,8 +641,6 @@ def _format_relative_time(target_date: date) -> str:
 
 def _get_submission_status(submission, start_date: date, end_date: date, config: Config) -> str:
     """Determine the status of a submission."""
-    from datetime import date as current_date
-    
     today = current_date.today()
     
     if today < start_date:

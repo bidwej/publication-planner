@@ -9,6 +9,7 @@ import json
 
 from sqlmodel import SQLModel, Field, Session, select
 from sqlalchemy.sql import func
+from .session import engine as default_engine
 
 # Database Models
 class ScheduleBase(SQLModel):
@@ -51,7 +52,6 @@ class ScheduleDatabase:
     def __init__(self, engine=None):
         """Initialize database connection."""
         if engine is None:
-            from .session import engine as default_engine
             self.engine = default_engine
         else:
             self.engine = engine
@@ -71,12 +71,12 @@ class ScheduleDatabase:
                 raise RuntimeError("Failed to get schedule ID")
             
             # Create schedule items
-            for submission_id, start_date in schedule.items():
-                end_date = start_date + timedelta(days=30)
+            for submission_id, interval in schedule.intervals.items():
+                end_date = interval.start_date + timedelta(days=30)
                 item = ScheduleItem(
                     schedule_id=schedule_id,
                     submission_id=submission_id,
-                    start_date=start_date,
+                    start_date=interval.start_date,
                     end_date=end_date,
                     duration_days=30,
                     row_position=0

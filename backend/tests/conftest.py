@@ -6,11 +6,11 @@ import json
 
 import pytest
 
-from core.models import (
+from src.core.models import (
     Config, Submission, Conference, SubmissionType, 
     ConferenceType, ConferenceRecurrence, Schedule, ValidationResult
 )
-from core.constants import QUALITY_CONSTANTS
+from src.core.constants import QUALITY_CONSTANTS
 
 
 def build_validation_result(violations, total_submissions, compliant_submissions, summary_template):
@@ -274,7 +274,6 @@ def empty_schedule() -> Schedule:
 @pytest.fixture
 def sample_schedule() -> Schedule:
     """Fixture to provide a sample schedule for testing."""
-    from core.models import Interval
     
     schedule = Schedule()
     schedule.add_interval("mod1-wrk", date(2024, 12, 1), duration_days=30)
@@ -446,7 +445,7 @@ def config():
 @pytest.fixture 
 def mock_schedule_summary():
     """Fixture to provide a mock schedule summary for testing."""
-    from core.models import ScheduleMetrics
+    from src.core.models import ScheduleMetrics
     
     return ScheduleMetrics(
         makespan=120,

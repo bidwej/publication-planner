@@ -23,7 +23,7 @@ def print_schedule_summary(schedule, config: Config) -> None:
     
     print("\n=== Schedule Summary ===")
     print(f"Total submissions: {len(schedule)}")
-    print(f"Date range: {min(schedule.values())} to {max(schedule.values())}")
+    print(f"Date range: {min(interval.start_date for interval in schedule.intervals.values())} to {max(interval.start_date for interval in schedule.intervals.values())}")
     
     # Count by type
     abstracts = papers = 0
@@ -49,7 +49,7 @@ def print_deadline_status(schedule: Schedule, config: Config) -> None:
     on_time = late = total = 0
     sub_map = {s.id: s for s in config.submissions}
     
-    for sid, start_date in schedule.items():
+    for sid, interval in schedule.intervals.items():
         sub = sub_map.get(sid)
         if not sub or not sub.conference_id or not config.has_conference(sub.conference_id):
             continue
@@ -63,7 +63,7 @@ def print_deadline_status(schedule: Schedule, config: Config) -> None:
         
         # Calculate end date
         duration = config.min_paper_lead_time_days if sub.kind.value == "PAPER" else 0
-        end_date = start_date + timedelta(days=duration)
+        end_date = interval.start_date + timedelta(days=duration)
         
         if end_date <= deadline:
             on_time += 1
@@ -91,7 +91,7 @@ def print_utilization_summary(schedule: Schedule, config: Config) -> None:
     daily_load = {}
     sub_map = {s.id: s for s in config.submissions}
     
-    for sid, start_date in schedule.items():
+    for sid, interval in schedule.intervals.items():
         sub = sub_map.get(sid)
         if not sub:
             continue
@@ -100,7 +100,7 @@ def print_utilization_summary(schedule: Schedule, config: Config) -> None:
         
         # Add load for each day
         for i in range(duration + 1):
-            day = start_date + timedelta(days=i)
+            day = interval.start_date + timedelta(days=i)
             daily_load[day] = daily_load.get(day, 0) + 1
     
     if not daily_load:

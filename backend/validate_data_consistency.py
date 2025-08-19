@@ -108,7 +108,7 @@ def identify_unused_fields(field_usage: Dict[str, Set[str]], required_fields: Se
     # Fields that are definitely used (based on code analysis)
     definitely_used = {
         "id", "title", "kind", "author", "conference_id", "depends_on",
-        "draft_window_months", "lead_time_from_parents", "candidate_conferences",
+        "draft_window_months", "lead_time_from_parents", "preferred_conferences",
         "submission_workflow", "engineering", "engineering_ready_date",
         "free_slack_months", "penalty_cost_per_month", "name", "conference_type",
         "recurrence", "abstract_deadline", "full_paper_deadline"

@@ -5,8 +5,8 @@ from typing import Dict, List, Any
 
 import pytest
 
-from core.models import SubmissionType, ConferenceType, Config
-from schedulers.greedy import GreedyScheduler
+from src.core.models import SubmissionType, ConferenceType, Config, Schedule
+from src.schedulers.greedy import GreedyScheduler
 from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
 
 
@@ -25,7 +25,7 @@ class TestGreedyScheduler:
         scheduler: GreedyScheduler = GreedyScheduler(empty_config)
         
         result: Schedule = scheduler.schedule()
-        assert isinstance(result, dict)
+        assert isinstance(result, Schedule)
         assert len(result) == 0
 
     def test_schedule_single_submission(self) -> None:
@@ -42,10 +42,10 @@ class TestGreedyScheduler:
         scheduler: GreedyScheduler = GreedyScheduler(config)
         result: Schedule = scheduler.schedule()
         
-        assert isinstance(result, dict)
+        assert isinstance(result, Schedule)
         assert len(result) == 1
         assert "paper1" in result
-        assert isinstance(result["paper1"], date)
+        assert isinstance(result.intervals["paper1"].start_date, date)
 
     def test_schedule_with_dependencies(self) -> None:
         """Test scheduling with dependencies."""
@@ -65,15 +65,15 @@ class TestGreedyScheduler:
         scheduler: GreedyScheduler = GreedyScheduler(config)
         result: Schedule = scheduler.schedule()
         
-        assert isinstance(result, dict)
+        assert isinstance(result, Schedule)
         assert len(result) >= 1
         assert "paper1" in result
         
         # If both are scheduled, check dependency constraint
         if "paper2" in result:
             # Dependent paper should start after dependency ends
-            paper1_end: date = result["paper1"] + timedelta(days=config.min_paper_lead_time_days)
-            assert result["paper2"] >= paper1_end
+            paper1_end: date = result.intervals["paper1"].end_date + timedelta(days=config.min_paper_lead_time_days)
+            assert result.intervals["paper2"].start_date >= paper1_end
 
     def test_schedule_respects_earliest_start_date(self) -> None:
         """Test that schedule respects earliest start dates."""
@@ -91,9 +91,9 @@ class TestGreedyScheduler:
         scheduler: GreedyScheduler = GreedyScheduler(config)
         result: Schedule = scheduler.schedule()
         
-        assert isinstance(result, dict)
+        assert isinstance(result, Schedule)
         if "paper1" in result:
-            assert result["paper1"] >= earliest_start
+            assert result.intervals["paper1"].start_date >= earliest_start
 
     def test_schedule_respects_deadlines(self) -> None:
         """Test that schedule respects deadlines."""
@@ -110,10 +110,10 @@ class TestGreedyScheduler:
         scheduler: GreedyScheduler = GreedyScheduler(config)
         result: Schedule = scheduler.schedule()
         
-        assert isinstance(result, dict)
+        assert isinstance(result, Schedule)
         if "paper1" in result:
             # Start date + duration should be before deadline
-            end_date: date = result["paper1"] + timedelta(days=config.min_paper_lead_time_days)
+            end_date: date = result.intervals["paper1"].start_date + timedelta(days=config.min_paper_lead_time_days)
             assert end_date <= deadline
 
     def test_schedule_respects_concurrency_limit(self) -> None:
@@ -134,10 +134,10 @@ class TestGreedyScheduler:
         scheduler: GreedyScheduler = GreedyScheduler(config)
         result: Schedule = scheduler.schedule()
         
-        assert isinstance(result, dict)
+        assert isinstance(result, Schedule)
         
         # Check that no more than max_concurrent_submissions are scheduled on the same day
-        scheduled_dates: List[date] = list(result.values())
+        scheduled_dates: List[date] = [interval.start_date for interval in result.intervals.values()]
         for i, date1 in enumerate(scheduled_dates):
             same_date_count: int = sum(1 for d in scheduled_dates if d == date1)
             assert same_date_count <= config.max_concurrent_submissions
@@ -177,13 +177,13 @@ class TestGreedyScheduler:
         scheduler: GreedyScheduler = GreedyScheduler(config)
         result: Schedule = scheduler.schedule()
         
-        assert isinstance(result, dict)
+        assert isinstance(result, Schedule)
         assert len(result) >= 1
         
         # Engineering paper should be scheduled first (highest priority)
         if "paper1" in result and "paper2" in result:
             # Engineering paper should start before or on the same day as medical paper
-            assert result["paper1"] <= result["paper2"]
+            assert result.intervals["paper1"].start_date <= result.intervals["paper2"].start_date
 
     def test_schedule_with_impossible_constraints(self) -> None:
         """Test scheduling with impossible constraints."""
@@ -202,7 +202,7 @@ class TestGreedyScheduler:
         result: Schedule = scheduler.schedule()
         
         # Should return empty schedule or skip impossible submission
-        assert isinstance(result, dict)
+        assert isinstance(result, Schedule)
 
     def test_schedule_with_abstract_and_paper(self) -> None:
         """Test scheduling with abstract and paper submissions."""
@@ -224,13 +224,13 @@ class TestGreedyScheduler:
         scheduler: GreedyScheduler = GreedyScheduler(config)
         result: Schedule = scheduler.schedule()
         
-        assert isinstance(result, dict)
+        assert isinstance(result, Schedule)
         assert len(result) >= 1
         
         # If both are scheduled, check dependency constraint
         if "abstract1" in result and "paper1" in result:
-            abstract_end: date = result["abstract1"] + timedelta(days=config.min_abstract_lead_time_days)
-            assert result["paper1"] >= abstract_end
+            abstract_end: date = result.intervals["abstract1"].start_date + timedelta(days=config.min_abstract_lead_time_days)
+            assert result.intervals["paper1"].start_date >= abstract_end
 
     def test_schedule_with_engineering_and_medical_papers(self) -> None:
         """Test scheduling with engineering and medical papers."""
@@ -251,7 +251,7 @@ class TestGreedyScheduler:
         scheduler: GreedyScheduler = GreedyScheduler(config)
         result: Schedule = scheduler.schedule()
         
-        assert isinstance(result, dict)
+        assert isinstance(result, Schedule)
         assert len(result) >= 1
 
     def test_schedule_with_conference_assignment(self) -> None:
@@ -269,7 +269,7 @@ class TestGreedyScheduler:
         scheduler: GreedyScheduler = GreedyScheduler(config)
         result: Schedule = scheduler.schedule()
         
-        assert isinstance(result, dict)
+        assert isinstance(result, Schedule)
         # Should be able to schedule even with conference assignment
 
     def test_schedule_with_multiple_conferences(self) -> None:
@@ -326,16 +326,16 @@ class TestGreedyScheduler:
         # If all are scheduled, check dependency chain
         if all(paper in result for paper in ["paper_a", "paper_b", "paper_c"]):
             # A should start first
-            assert result["paper_a"] <= result["paper_b"]
-            assert result["paper_b"] <= result["paper_c"]
+            assert result.intervals["paper_a"].start_date <= result.intervals["paper_b"].start_date
+            assert result.intervals["paper_b"].start_date <= result.intervals["paper_c"].start_date
             
             # B should start after A ends
-            a_end: date = result["paper_a"] + timedelta(days=config.min_paper_lead_time_days)
-            assert result["paper_b"] >= a_end
+            a_end: date = result.intervals["paper_a"].start_date + timedelta(days=config.min_paper_lead_time_days)
+            assert result.intervals["paper_b"].start_date >= a_end
             
             # C should start after B ends
-            b_end: date = result["paper_b"] + timedelta(days=config.min_paper_lead_time_days)
-            assert result["paper_c"] >= b_end
+            b_end: date = result.intervals["paper_b"].start_date + timedelta(days=config.min_paper_lead_time_days)
+            assert result.intervals["paper_c"].start_date >= b_end
 
     def test_schedule_with_parallel_dependencies(self) -> None:
         """Test scheduling with parallel dependencies."""
@@ -367,10 +367,10 @@ class TestGreedyScheduler:
         # If all are scheduled, check dependencies
         if all(paper in result for paper in ["paper_a", "paper_b", "paper_c"]):
             # A should start first
-            assert result["paper_a"] <= result["paper_b"]
-            assert result["paper_a"] <= result["paper_c"]
+            assert result.intervals["paper_a"].start_date <= result.intervals["paper_b"].start_date
+            assert result.intervals["paper_a"].start_date <= result.intervals["paper_c"].start_date
             
             # B and C should start after A ends
-            a_end: date = result["paper_a"] + timedelta(days=config.min_paper_lead_time_days)
-            assert result["paper_b"] >= a_end
-            assert result["paper_c"] >= a_end
+            a_end: date = result.intervals["paper_a"].start_date + timedelta(days=config.min_paper_lead_time_days)
+            assert result.intervals["paper_b"].start_date >= a_end
+            assert result.intervals["paper_c"].start_date >= a_end

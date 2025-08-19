@@ -5,9 +5,9 @@ from typing import Dict, List
 from datetime import date, timedelta
 from schedulers.greedy import GreedyScheduler
 from schedulers.base import BaseScheduler
-from core.dates import is_working_day
-from core.models import SchedulerStrategy, Schedule
-from core.constants import SCHEDULING_CONSTANTS
+from src.core.dates import is_working_day
+from src.core.models import SchedulerStrategy, Schedule
+from src.core.constants import SCHEDULING_CONSTANTS
 
 
 class BacktrackingGreedyScheduler(GreedyScheduler):
@@ -27,8 +27,12 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
         Schedule
             Schedule object with intervals for all submissions
         """
-        # Initialize schedule
-        schedule, topo, start_date, end_date = self.initialize_schedule()
+        # Use shared setup from base class
+        self.reset_schedule()
+        schedule = self.current_schedule
+        topo = self.dependency_order
+        start_date = self.start_date
+        end_date = self.end_date
         
         # Initialize active submissions list
         active: List[str] = []
@@ -48,7 +52,7 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
             # Get ready submissions
             ready = self._get_ready_submissions(topo, schedule, current_date)
             
-            # Sort by priority
+            # Sort by priority (use greedy scheduler's priority logic)
             ready = self._sort_by_priority(ready)
             
             # Try to schedule up to concurrency limit
@@ -66,6 +70,37 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
         
         return schedule
     
+    def _sort_by_priority(self, ready: List[str]) -> List[str]:
+        """Sort ready submissions by priority using greedy scheduler logic."""
+        def get_priority(submission_id: str) -> float:
+            submission = self.submissions[submission_id]
+            
+            # Base priority: higher for submissions with dependencies
+            base_priority = 0.0
+            if submission.depends_on:
+                base_priority += 10.0
+            
+            # Priority based on submission type
+            if submission.kind.value == "paper":
+                base_priority += 5.0
+            elif submission.kind.value == "abstract":
+                base_priority += 3.0
+            elif submission.kind.value == "poster":
+                base_priority += 1.0
+            
+            # Priority based on deadline proximity
+            if submission.conference_id and submission.conference_id in self.conferences:
+                conf = self.conferences[submission.conference_id]
+                if submission.kind in conf.deadlines:
+                    deadline = conf.deadlines[submission.kind]
+                    days_until_deadline = (deadline - date.today()).days
+                    if days_until_deadline > 0:
+                        base_priority += 100.0 / days_until_deadline  # Closer deadline = higher priority
+            
+            return base_priority
+        
+        return sorted(ready, key=get_priority, reverse=True)
+    
     def _backtrack(self, schedule: Schedule, active: List[str], current_date: date) -> bool:
         """Try to backtrack by rescheduling an active submission earlier."""
         for submission_id in list(active):
@@ -81,9 +116,11 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
     def _can_reschedule_earlier(self, submission_id: str, schedule: Schedule, current_date: date) -> bool:
         """Check if a submission can be rescheduled earlier."""
         submission = self.submissions[submission_id]
-        current_start = schedule.get_start_date(submission_id)
-        if current_start is None:
+        # Use the correct Schedule.intervals structure
+        if submission_id not in schedule.intervals:
             return False
+            
+        current_start = schedule.intervals[submission_id].start_date
         
         # Try to find an earlier valid start date
         for days_back in range(1, SCHEDULING_CONSTANTS.backtrack_limit_days + 1):  # Look back up to max_backtrack_days days
@@ -100,8 +137,26 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
         return False
     
     def _can_schedule(self, submission_id: str, start_date: date, schedule: Schedule, active: List[str]) -> bool:
-        """Check if a submission can be scheduled at the given start date."""
+        """Check if a submission can be scheduled at a given date."""
         submission = self.submissions[submission_id]
         
-        # Use comprehensive validation instead of simple checks
-        return self.validate_constraints(submission, start_date, schedule) 
+        # Check dependencies
+        if not submission.are_dependencies_satisfied(schedule, self.config, start_date):
+            return False
+        
+        # Check resource constraints
+        if len(active) >= self.config.max_concurrent_submissions:
+            return False
+        
+        # Check deadline constraints
+        if submission.conference_id and submission.conference_id in self.conferences:
+            conf = self.conferences[submission.conference_id]
+            if submission.kind in conf.deadlines:
+                deadline = conf.deadlines[submission.kind]
+                if deadline:
+                    duration = submission.get_duration_days(self.config)
+                    end_date = start_date + timedelta(days=duration)
+                    if end_date > deadline:
+                        return False
+        
+        return True 

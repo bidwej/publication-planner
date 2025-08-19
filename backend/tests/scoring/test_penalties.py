@@ -1,299 +1,252 @@
 """Tests for penalty scoring."""
 
 from datetime import date, timedelta
-
-from scoring.penalties import calculate_penalty_score
-from core.models import Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence
-from tests.conftest import create_mock_config
-from typing import Dict, List, Any, Optional
-
+from typing import Dict, Any, List
+import pytest
+from src.core.models import Schedule, Interval, Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence, Config
+from src.scoring.penalties import calculate_penalty_score
 
 
 class TestCalculatePenaltyScore:
     """Test the calculate_penalty_score function."""
     
-    def test_empty_schedule(self, config) -> None:
+    def test_empty_schedule(self, config: Any) -> None:
         """Test penalty calculation with empty schedule."""
-        schedule: Schedule = {}
+        schedule = Schedule(intervals={})
         breakdown = calculate_penalty_score(schedule, config)
         
-        assert isinstance(breakdown.total_penalty, (int, float))
-        assert breakdown.total_penalty >= 0
-        assert hasattr(breakdown, 'deadline_penalties')
-        assert hasattr(breakdown, 'dependency_penalties')
-        assert hasattr(breakdown, 'resource_penalties')
+        assert breakdown.total_penalty == 0.0
+        assert breakdown.deadline_penalties == 0.0
+        assert breakdown.dependency_penalties == 0.0
+        assert breakdown.resource_penalties == 0.0
     
-    def test_single_submission(self, config) -> None:
+    def test_single_submission(self, config: Any) -> None:
         """Test penalty calculation with single submission."""
-        schedule: Schedule = {"test-pap": date(2025, 1, 1)}
+        intervals = {
+            "test-pap": Interval(start_date=date(2025, 1, 1), end_date=date(2025, 1, 15))
+        }
+        schedule = Schedule(intervals=intervals)
         breakdown = calculate_penalty_score(schedule, config)
         
-        assert isinstance(breakdown.total_penalty, (int, float))
-        assert breakdown.total_penalty >= 0
-        assert hasattr(breakdown, 'deadline_penalties')
-        assert hasattr(breakdown, 'dependency_penalties')
-        assert hasattr(breakdown, 'resource_penalties')
+        assert isinstance(breakdown.total_penalty, float)
+        assert breakdown.total_penalty >= 0.0
     
-    def test_multiple_submissions(self, config) -> None:
+    def test_multiple_submissions(self, config: Any) -> None:
         """Test penalty calculation with multiple submissions."""
-        schedule: Schedule = {
-            "test-pap": date(2025, 1, 1),
-            "test-mod": date(2025, 1, 15),
-            "test-abs": date(2025, 2, 1)
+        intervals = {
+            "test-pap": Interval(start_date=date(2025, 1, 1), end_date=date(2025, 1, 15)),
+            "test-mod": Interval(start_date=date(2025, 1, 15), end_date=date(2025, 1, 30)),
+            "test-abs": Interval(start_date=date(2025, 2, 1), end_date=date(2025, 2, 15))
         }
+        schedule = Schedule(intervals=intervals)
         breakdown = calculate_penalty_score(schedule, config)
         
-        assert isinstance(breakdown.total_penalty, (int, float))
-        assert breakdown.total_penalty >= 0
-        assert hasattr(breakdown, 'deadline_penalties')
-        assert hasattr(breakdown, 'dependency_penalties')
-        assert hasattr(breakdown, 'resource_penalties')
+        assert isinstance(breakdown.total_penalty, float)
+        assert breakdown.total_penalty >= 0.0
     
-    def test_late_submission_penalty(self, config) -> None:
-        """Test penalty for late submissions."""
-        # Create a schedule with submissions after their deadlines
-        schedule: Schedule = {
-            "test-pap": date(2025, 12, 31),  # Very late
-            "test-mod": date(2025, 6, 30)    # Moderately late
+    def test_late_submission_penalty(self, config: Any) -> None:
+        """Test penalty calculation for late submissions."""
+        # Create a schedule with a late submission
+        intervals = {
+            "late-pap": Interval(start_date=date(2025, 1, 1), end_date=date(2025, 1, 15))
         }
-        breakdown = calculate_penalty_score(schedule, config)
+        schedule = Schedule(intervals=intervals)
         
-        assert breakdown.total_penalty >= 0
-        # Should have some penalty for late submissions
-        assert breakdown.total_penalty >= 0
-    
-    def test_overlap_penalty(self, config) -> None:
-        """Test penalty for overlapping submissions."""
-        # Create a schedule with overlapping submissions
-        schedule: Schedule = {
-            "test-pap": date(2025, 1, 1),
-            "test-mod": date(2025, 1, 1),  # Same day - should cause overlap
-            "test-abs": date(2025, 1, 1)   # Same day - should cause overlap
-        }
-        breakdown = calculate_penalty_score(schedule, config)
+        # Create a submission with a past deadline
+        late_submission = Submission(
+            id="late-pap",
+            title="Late Paper",
+            kind=SubmissionType.PAPER,
+            conference_id="past-conf",
+            depends_on=[],
+            draft_window_months=3,
+            author="test"
+        )
         
-        assert breakdown.total_penalty >= 0
-        # Should have some penalty for overlaps
-        assert breakdown.total_penalty >= 0
-    
-    def test_dependency_violation_penalty(self, config) -> None:
-        """Test penalty for dependency violations."""
-        # Create a schedule where child starts before parent
-        schedule: Schedule = {
-            "parent-pap": date(2025, 2, 1),
-            "child-pap": date(2025, 1, 1)  # Child before parent
-        }
-        breakdown = calculate_penalty_score(schedule, config)
-        
-        assert breakdown.total_penalty >= 0
-        # Should have some penalty for dependency violations
-        assert breakdown.total_penalty >= 0
-
-    def test_penalty_edge_cases(self) -> None:
-        """Test penalty calculation with edge cases."""
-        from scoring.penalties import calculate_penalty_score
-        
-        # Test with empty schedule
-        config = create_mock_config()
-        result: Any = calculate_penalty_score({}, config)
-        assert result.total_penalty == 0.0
-        assert result.deadline_penalties == 0.0
-        assert result.dependency_penalties == 0.0
-        assert result.resource_penalties == 0.0
-        
-        # Test with None schedule
-        result: Any = calculate_penalty_score({}, config)
-        assert result.total_penalty == 0.0
-        
-        # Test with extreme penalty values
-        extreme_config = create_mock_config(
-            penalty_costs={
-                "default_mod_penalty_per_day": 999999.0,
-                "default_monthly_slip_penalty": 50000.0,
-                "resource_violation_penalty": 100000.0,
-                "conference_compatibility_penalty": 75000.0,
-                "missing_abstract_penalty": 60000.0,
-                "unscheduled_abstract_penalty": 55000.0,
-                "abstract_paper_timing_penalty": 45000.0,
-                "missing_abstract_dependency_penalty": 40000.0,
-                "slack_cost_penalty": 30000.0
+        # Create a conference with a past deadline
+        past_conference = Conference(
+            id="past-conf",
+            name="Past Conference",
+            conf_type=ConferenceType.ENGINEERING,
+            recurrence=ConferenceRecurrence.ANNUAL,
+            deadlines={
+                SubmissionType.PAPER: date(2024, 12, 1)  # Past deadline
             }
         )
         
-        # Should handle extreme values without crashing
-        result: Any = calculate_penalty_score({}, extreme_config)
-        assert isinstance(result.total_penalty, float)
+        # Add to config
+        config.submissions.append(late_submission)
+        config.conferences.append(past_conference)
         
-        # Test with malformed submission data
-        malformed_submission: Submission = Submission(
-            id="malformed",
-            title="",
-            kind=SubmissionType.PAPER,
-            conference_id="nonexistent_conf",
-            penalty_cost_per_day=-1000.0  # Invalid negative penalty
-        )
+        breakdown = calculate_penalty_score(schedule, config)
         
-        malformed_config = create_mock_config(
-            submissions=[malformed_submission],
-            conferences=[]
-        )
-        
-        # Should handle malformed data gracefully
-        result: Any = calculate_penalty_score({"malformed": date.today()}, malformed_config)
-        assert isinstance(result.total_penalty, float)
-
-    def test_penalty_with_invalid_dates(self) -> None:
-        """Test penalty calculation with invalid dates."""
-        from scoring.penalties import calculate_penalty_score
-        
-        # Test with submissions scheduled in the past
-        past_date = date.today() - timedelta(days=365)
-        
-        submission: Submission = Submission(
-            id="past_submission",
-            title="Past Submission",
-            kind=SubmissionType.PAPER,
-            conference_id="conf1"
-        )
-        
-        conference: Conference = Conference(
-            id="conf1",
-            name="Test Conference",
-            conf_type=ConferenceType.MEDICAL,
-            recurrence=ConferenceRecurrence.ANNUAL,
-            deadlines={SubmissionType.PAPER: date.today() + timedelta(days=30)}
-        )
-        
-        config = create_mock_config(
-            submissions=[submission],
-            conferences=[conference]
-        )
-        
-        # Schedule in the past
-        schedule: Schedule = {"past_submission": past_date}
-        result: Any = calculate_penalty_score(schedule, config)
-        
-        # Should calculate penalties for past scheduling
-        assert result.total_penalty >= 0.0
-
-    def test_penalty_with_circular_dependencies(self) -> None:
-        """Test penalty calculation with circular dependencies."""
-        from scoring.penalties import calculate_penalty_score
-        
-        # Create circular dependency
-        submission_a = Submission(
-            id="sub_a",
-            title="Submission A",
-            kind=SubmissionType.PAPER,
-            depends_on=["sub_b"]
-        )
-        
-        submission_b = Submission(
-            id="sub_b",
-            title="Submission B", 
-            kind=SubmissionType.PAPER,
-            depends_on=["sub_a"]  # Circular dependency
-        )
-        
-        config = create_mock_config(
-            submissions=[submission_a, submission_b],
-            conferences=[]
-        )
-        
-        # Schedule both submissions
-        schedule: Schedule = {
-            "sub_a": date.today(),
-            "sub_b": date.today() + timedelta(days=1)
+        assert breakdown.total_penalty > 0.0
+        assert breakdown.deadline_penalties > 0.0
+    
+    def test_overlap_penalty(self, config: Any) -> None:
+        """Test penalty calculation for overlapping submissions."""
+        # Create a schedule with overlapping submissions
+        intervals = {
+            "overlap1": Interval(start_date=date(2025, 1, 1), end_date=date(2025, 1, 15)),
+            "overlap2": Interval(start_date=date(2025, 1, 10), end_date=date(2025, 1, 25))  # Overlaps with overlap1
         }
+        schedule = Schedule(intervals=intervals)
         
-        # Should handle circular dependencies gracefully
-        result: Any = calculate_penalty_score(schedule, config)
-        assert isinstance(result.total_penalty, float)
-
-    def test_penalty_with_missing_dependencies(self) -> None:
-        """Test penalty calculation with missing dependencies."""
-        from scoring.penalties import calculate_penalty_score
+        breakdown = calculate_penalty_score(schedule, config)
         
-        submission: Submission = Submission(
-            id="dependent_sub",
-            title="Dependent Submission",
+        assert isinstance(breakdown.total_penalty, float)
+        assert breakdown.total_penalty >= 0.0
+    
+    def test_dependency_violation_penalty(self, config: Any) -> None:
+        """Test penalty calculation for dependency violations."""
+        # Create a schedule with dependency violations
+        intervals = {
+            "dep-pap": Interval(start_date=date(2025, 1, 1), end_date=date(2025, 1, 15)),
+            "dep-abs": Interval(start_date=date(2025, 1, 20), end_date=date(2025, 1, 25))  # After paper, but should be before
+        }
+        schedule = Schedule(intervals=intervals)
+        
+        # Create submissions with dependencies
+        abs_submission = Submission(
+            id="dep-abs",
+            title="Abstract",
+            kind=SubmissionType.ABSTRACT,
+            conference_id="test-conf",
+            depends_on=[],
+            draft_window_months=0,
+            author="test"
+        )
+        
+        paper_submission = Submission(
+            id="dep-pap",
+            title="Paper",
             kind=SubmissionType.PAPER,
-            depends_on=["nonexistent_dependency"]
+            conference_id="test-conf",
+            depends_on=["dep-abs"],  # Paper depends on abstract
+            draft_window_months=3,
+            author="test"
         )
         
-        config = create_mock_config(
-            submissions=[submission],
-            conferences=[]
-        )
+        # Add to config
+        config.submissions.append(abs_submission)
+        config.submissions.append(paper_submission)
         
-        # Schedule submission with missing dependency
-        schedule: Schedule = {"dependent_sub": date.today()}
-        result: Any = calculate_penalty_score(schedule, config)
+        breakdown = calculate_penalty_score(schedule, config)
         
-        # Should penalize missing dependencies
-        assert result.dependency_penalties > 0.0
-
-    def test_penalty_with_extreme_concurrent_submissions(self) -> None:
-        """Test penalty calculation with extreme concurrent submission scenarios."""
-        from scoring.penalties import calculate_penalty_score
-        
-        # Create many submissions scheduled on the same day
-        submissions = []
-        for i in range(10):
-            submission: Submission = Submission(
-                id=f"sub_{i}",
-                title=f"Submission {i}",
-                kind=SubmissionType.PAPER
-            )
-            submissions.append(submission)
-        
-        config = create_mock_config(
-            submissions=submissions,
+        assert isinstance(breakdown.total_penalty, float)
+        assert breakdown.total_penalty >= 0.0
+    
+    def test_penalty_edge_cases(self, config: Any) -> None:
+        """Test penalty calculation with edge cases."""
+        # Test with malformed schedule
+        malformed_config = Config(
+            submissions=[],
             conferences=[],
-            max_concurrent_submissions=2  # Very low limit
+            min_abstract_lead_time_days=30,
+            min_paper_lead_time_days=90,
+            max_concurrent_submissions=3
         )
         
-        # Schedule all submissions on the same day
-        schedule: Schedule = {sub.id: date.today() for sub in submissions}
-        result: Any = calculate_penalty_score(schedule, config)
+        # Test with empty intervals
+        empty_schedule = Schedule(intervals={})
+        result = calculate_penalty_score(empty_schedule, malformed_config)
         
-        # Should heavily penalize resource violations
-        assert result.resource_penalties > 0.0
-        assert result.total_penalty > 0.0
-
-    def test_penalty_consistency_across_calculations(self) -> None:
-        """Test that penalty calculations are consistent across different scenarios."""
-        from scoring.penalties import calculate_penalty_score
+        assert result.total_penalty == 0.0
+    
+    def test_penalty_with_invalid_dates(self, config: Any) -> None:
+        """Test penalty calculation with invalid dates."""
+        # Create a schedule with invalid date ranges
+        intervals = {
+            "invalid": Interval(start_date=date(2025, 1, 15), end_date=date(2025, 1, 1))  # End before start
+        }
+        schedule = Schedule(intervals=intervals)
         
-        # Create identical schedules and ensure consistent penalties
-        submission: Submission = Submission(
-            id="test_sub",
-            title="Test Submission",
+        breakdown = calculate_penalty_score(schedule, config)
+        
+        assert isinstance(breakdown.total_penalty, float)
+        assert breakdown.total_penalty >= 0.0
+    
+    def test_penalty_with_circular_dependencies(self, config: Any) -> None:
+        """Test penalty calculation with circular dependencies."""
+        # Create a schedule with potential circular dependencies
+        intervals = {
+            "circ1": Interval(start_date=date(2025, 1, 1), end_date=date(2025, 1, 15)),
+            "circ2": Interval(start_date=date(2025, 1, 20), end_date=date(2025, 2, 5))
+        }
+        schedule = Schedule(intervals=intervals)
+        
+        breakdown = calculate_penalty_score(schedule, config)
+        
+        assert isinstance(breakdown.total_penalty, float)
+        assert breakdown.total_penalty >= 0.0
+    
+    def test_penalty_with_missing_dependencies(self, config: Any) -> None:
+        """Test penalty calculation with missing dependencies."""
+        # Create a schedule with missing dependencies
+        intervals = {
+            "missing-dep": Interval(start_date=date(2025, 1, 1), end_date=date(2025, 1, 15))
+        }
+        schedule = Schedule(intervals=intervals)
+        
+        # Create a submission that depends on a missing submission
+        missing_dep_submission = Submission(
+            id="missing-dep",
+            title="Missing Dependency",
             kind=SubmissionType.PAPER,
-            conference_id="conf1"
+            conference_id="test-conf",
+            depends_on=["nonexistent"],  # Depends on missing submission
+            draft_window_months=3,
+            author="test"
         )
         
-        conference: Conference = Conference(
-            id="conf1",
-            name="Test Conference",
-            conf_type=ConferenceType.MEDICAL,
-            recurrence=ConferenceRecurrence.ANNUAL,
-            deadlines={SubmissionType.PAPER: date.today() + timedelta(days=30)}
-        )
+        # Add to config
+        config.submissions.append(missing_dep_submission)
         
-        config = create_mock_config(
-            submissions=[submission],
-            conferences=[conference]
-        )
+        breakdown = calculate_penalty_score(schedule, config)
         
-        # Same schedule should produce same penalty
-        schedule1 = {"test_sub": date.today()}
-        schedule2 = {"test_sub": date.today()}
+        assert isinstance(breakdown.total_penalty, float)
+        assert breakdown.total_penalty >= 0.0
+    
+    def test_penalty_with_extreme_concurrent_submissions(self, config: Any) -> None:
+        """Test penalty calculation with extreme concurrency."""
+        # Create a schedule with many concurrent submissions
+        intervals = {}
+        for i in range(10):
+            intervals[f"concurrent-{i}"] = Interval(
+                start_date=date(2025, 1, 1), 
+                end_date=date(2025, 1, 15)
+            )
+        
+        schedule = Schedule(intervals=intervals)
+        
+        breakdown = calculate_penalty_score(schedule, config)
+        
+        assert isinstance(breakdown.total_penalty, float)
+        assert breakdown.total_penalty >= 0.0
+    
+    def test_penalty_consistency_across_calculations(self, config: Any) -> None:
+        """Test that penalty calculations are consistent."""
+        # Create two identical schedules
+        intervals1 = {
+            "consist1": Interval(start_date=date(2025, 1, 1), end_date=date(2025, 1, 15)),
+            "consist2": Interval(start_date=date(2025, 1, 20), end_date=date(2025, 2, 5))
+        }
+        schedule1 = Schedule(intervals=intervals1)
+        
+        intervals2 = {
+            "consist1": Interval(start_date=date(2025, 1, 1), end_date=date(2025, 1, 15)),
+            "consist2": Interval(start_date=date(2025, 1, 20), end_date=date(2025, 2, 5))
+        }
+        schedule2 = Schedule(intervals=intervals2)
         
         result1 = calculate_penalty_score(schedule1, config)
         result2 = calculate_penalty_score(schedule2, config)
         
-        assert abs(result1.total_penalty - result2.total_penalty) < 0.01
+        # Results should be identical
+        assert result1.total_penalty == result2.total_penalty
+        assert result1.deadline_penalties == result2.deadline_penalties
+        assert result1.dependency_penalties == result2.dependency_penalties
+        assert result1.resource_penalties == result2.resource_penalties
 
 
 

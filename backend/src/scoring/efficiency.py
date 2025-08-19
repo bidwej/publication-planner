@@ -1,13 +1,13 @@
 """Efficiency scoring functions."""
 
 from typing import Dict
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from collections import defaultdict
 import statistics
 
-from core.models import Config, ScheduleMetrics, Schedule
+from src.core.models import Config, ScheduleMetrics, Schedule, Interval
 from typing import Optional
-from core.constants import (
+from src.core.constants import (
     EFFICIENCY_CONSTANTS, SCORING_CONSTANTS, REPORT_CONSTANTS, QUALITY_CONSTANTS
 )
 
@@ -153,15 +153,9 @@ def calculate_efficiency_timeline(schedule: Schedule, config: Config) -> Optiona
     start_dates = []
     end_dates = []
     
-    for date_val in schedule.values():
-        if isinstance(date_val, str):
-            from datetime import datetime
-            parsed_date = datetime.strptime(date_val, "%Y-%m-%d").date()
-            start_dates.append(parsed_date)
-            end_dates.append(parsed_date)
-        else:
-            start_dates.append(date_val)
-            end_dates.append(date_val)
+    for interval in schedule.intervals.values():
+        start_dates.append(interval.start_date)
+        end_dates.append(interval.end_date)
     
     if not start_dates:
         return None
@@ -170,7 +164,6 @@ def calculate_efficiency_timeline(schedule: Schedule, config: Config) -> Optiona
     end_date = max(end_dates)
     
     # Create a temporary schedule object to calculate duration
-    from core.models import Schedule, Interval
     temp_intervals = {str(i): Interval(start_date=d, end_date=d) for i, d in enumerate(start_dates)}
     temp_schedule = Schedule(intervals=temp_intervals)
     duration_days = temp_schedule.calculate_duration_days() + 1
