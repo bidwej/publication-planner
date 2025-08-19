@@ -1,10 +1,10 @@
-"""Venue validation functions for conference compatibility and policies."""
+"""Venue validation functions for conference and submission compatibility."""
 
-from typing import List, Dict
+from typing import Dict, Any, List
 from datetime import date
 
-from ..core.models import Config, Submission, ConferenceType, Conference, SubmissionWorkflow, Schedule, SubmissionType, ValidationResult, ConstraintViolation
-from ..core.constants import QUALITY_CONSTANTS
+from src.core.models import Config, Submission, ConferenceType, Conference, SubmissionWorkflow, Schedule, SubmissionType, ValidationResult, ConstraintViolation
+from src.core.constants import QUALITY_CONSTANTS
 
 
 def validate_venue_constraints(schedule: Schedule, config: Config) -> ValidationResult:
@@ -17,13 +17,23 @@ def validate_venue_constraints(schedule: Schedule, config: Config) -> Validation
     # Additional compatibility validation using the helper function
     compatibility_violations = []
     try:
-        _validate_venue_compatibility(config.submissions_dict, config.conferences_dict)
+        _validate_venue_compatibility(config.submissions, config.conferences)
     except ValueError as e:
         compatibility_violations.append(ConstraintViolation(
             submission_id="",
             description=str(e),
             severity="high"
         ))
+    
+    # Validate conference fields
+    for conference in config.conferences:
+        conference_errors = _validate_conference_fields(conference)
+        for error in conference_errors:
+            compatibility_violations.append(ConstraintViolation(
+                submission_id="",
+                description=f"Conference {conference.id}: {error}",
+                severity="medium"
+            ))
     
     # Combine all violations
     all_violations = (
@@ -57,21 +67,6 @@ def validate_venue_constraints(schedule: Schedule, config: Config) -> Validation
     )
 
 
-def validate_conference(conference: Conference) -> List[str]:
-    """Validate basic conference fields and return list of errors."""
-    errors = []
-    if not conference.id:
-        errors.append("Missing conference ID")
-    if not conference.name:
-        errors.append("Missing conference name")
-    if not conference.deadlines:
-        errors.append("No deadlines defined")
-    for submission_type, deadline in conference.deadlines.items():
-        if not isinstance(deadline, date):
-            errors.append(f"Invalid deadline format for {submission_type}")
-    return errors
-
-
 def _validate_conference_compatibility(schedule: Schedule, config: Config) -> ValidationResult:
     """Validate conference compatibility (medical vs engineering)."""
     violations = []
@@ -79,12 +74,12 @@ def _validate_conference_compatibility(schedule: Schedule, config: Config) -> Va
     compatible_submissions = 0
     
     for sid, interval in schedule.intervals.items():
-        sub = config.submissions_dict.get(sid)
+        sub = config.get_submission(sid)
         if not sub or not sub.conference_id:
             continue
         
         total_submissions += 1
-        conf = config.conferences_dict.get(sub.conference_id)
+        conf = config.get_conference(sub.conference_id)
         if not conf:
             violations.append(ConstraintViolation(
                 submission_id=sid,
@@ -142,12 +137,12 @@ def _validate_conference_submission_compatibility(schedule: Schedule, config: Co
     compatible_submissions = 0
     
     for sid, interval in schedule.intervals.items():
-        sub = config.submissions_dict.get(sid)
+        sub = config.get_submission(sid)
         if not sub or not sub.conference_id:
             continue
         
         total_submissions += 1
-        conf = config.conferences_dict.get(sub.conference_id)
+        conf = config.get_conference(sub.conference_id)
         if not conf:
             violations.append(ConstraintViolation(
                 submission_id=sid,
@@ -156,20 +151,20 @@ def _validate_conference_submission_compatibility(schedule: Schedule, config: Co
             ))
             continue
         
-        # Check if conference accepts any of the candidate submission types
-        if hasattr(sub, 'candidate_kinds') and sub.candidate_kinds is not None:
-            # Check if any candidate type is accepted
-            any_accepted = any(conf.accepts_submission_type(ctype) for ctype in sub.candidate_kinds)
+        # Check if conference accepts any of the preferred submission types
+        if hasattr(sub, 'preferred_kinds') and sub.preferred_kinds is not None:
+            # Check if any preferred type is accepted
+            any_accepted = any(conf.accepts_submission_type(ctype) for ctype in sub.preferred_kinds)
             if not any_accepted:
                 submission_type_str = conf.effective_submission_types.value
-                types_str = ", ".join([t.value for t in sub.candidate_kinds])
+                types_str = ", ".join([t.value for t in sub.preferred_kinds])
                 violations.append(ConstraintViolation(
                     submission_id=sid,
-                    description=f"Submission {sid} candidate types ({types_str}) not accepted by conference {sub.conference_id} ({submission_type_str})",
+                    description=f"Submission {sid} preferred types ({types_str}) not accepted by conference {sub.conference_id} ({submission_type_str})",
                     severity="high"
                 ))
                 continue
-        # If candidate_kinds is None, submission is open to any opportunity - skip this check
+        # If preferred_kinds is None, submission is open to any opportunity - skip this check
         
         compatible_submissions += 1
     
@@ -198,7 +193,7 @@ def _validate_single_conference_policy(schedule: Schedule, config: Config) -> Va
     # Group submissions by conference
     conference_submissions = {}
     for sid, interval in schedule.intervals.items():
-        sub = config.submissions_dict.get(sid)
+        sub = config.get_submission(sid)
         if not sub or not sub.conference_id:
             continue
         
@@ -213,13 +208,13 @@ def _validate_single_conference_policy(schedule: Schedule, config: Config) -> Va
     for conf_id, submissions in conference_submissions.items():
         if len(submissions) > 1:
             # Multiple submissions to same conference - check if this is allowed
-            conf = config.conferences_dict.get(conf_id)
+            conf = config.get_conference(conf_id)
             if conf and conf.effective_submission_types == SubmissionWorkflow.ABSTRACT_THEN_PAPER:
                 # This conference allows both abstract and paper
                 abstract_count = 0
                 paper_count = 0
                 for sid in submissions:
-                    sub = config.submissions_dict.get(sid)
+                    sub = config.get_submission(sid)
                     if sub and sub.kind == SubmissionType.ABSTRACT:
                         abstract_count += 1
                     elif sub and sub.kind == SubmissionType.PAPER:
@@ -256,13 +251,47 @@ def _validate_single_conference_policy(schedule: Schedule, config: Config) -> Va
     )
 
 
-def _validate_venue_compatibility(submissions_dict: Dict[str, Submission], conferences_dict: Dict[str, Conference]) -> None:
+def _validate_venue_compatibility(submissions: List[Submission], conferences: List[Conference]) -> None:
     """Validate that all submissions are compatible with their venues."""
-    for submission in submissions_dict.values():
+    for submission in submissions:
         if submission.conference_id:
-            conference = conferences_dict.get(submission.conference_id)
+            conference = next((c for c in conferences if c.id == submission.conference_id), None)
             if not conference:
                 raise ValueError(f"Submission {submission.id} references unknown conference {submission.conference_id}")
             
             if not conference.is_compatible_with_submission(submission):
                 raise ValueError(f"Submission {submission.id} is not compatible with conference {submission.conference_id}")
+
+
+def validate_conference_submission_compatibility(conference: Conference, submission: Submission) -> List[str]:
+    """Validate that a submission is compatible with a conference."""
+    errors = []
+    
+    # Check if submission type is accepted
+    if not conference.accepts_submission_type(submission.kind):
+        errors.append(f"Submission type {submission.kind.value} not accepted by this conference")
+    
+    # Check engineering/medical compatibility based on author
+    # pccp = engineering, ed = medical
+    is_engineering_submission = submission.author == "pccp"
+    is_medical_submission = submission.author == "ed"
+    
+    if is_medical_submission and conference.conf_type == ConferenceType.ENGINEERING:
+        errors.append("Medical submission not compatible with engineering conference")
+    
+    return errors
+
+
+def _validate_conference_fields(conference: Conference) -> List[str]:
+    """Validate basic conference fields and return list of errors."""
+    errors = []
+    if not conference.id:
+        errors.append("Missing conference ID")
+    if not conference.name:
+        errors.append("Missing conference name")
+    if not conference.deadlines:
+        errors.append("No deadlines defined")
+    for submission_type, deadline in conference.deadlines.items():
+        if not isinstance(deadline, date):
+            errors.append(f"Invalid deadline format for {submission_type}")
+    return errors

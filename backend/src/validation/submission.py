@@ -1,4 +1,4 @@
-"""Individual submission validation functions."""
+"""Submission validation functions for individual submission constraints."""
 
 from typing import Dict, Any, List
 from datetime import date
@@ -7,7 +7,35 @@ from ..core.models import Config, Submission, SubmissionType, Schedule
 from ..core.constants import QUALITY_CONSTANTS
 
 
-def validate_submission(submission: Submission) -> List[str]:
+def validate_submission_constraints(submission: Submission, start_date: date, schedule: Schedule, config: Config) -> List[str]:
+    """Validate submission constraints and return list of errors."""
+    errors = []
+    
+    # Basic field validation
+    errors.extend(_validate_submission_fields(submission))
+    
+    # Constraint validation (if start_date provided)
+    if start_date:
+        # Basic deadline check
+        if not _validate_deadline_compliance_single(start_date, submission, config):
+            errors.append("Submission would miss deadline")
+        
+        # Basic dependency check
+        if not _validate_dependencies_satisfied(submission, schedule, config, start_date):
+            errors.append("Dependencies not satisfied")
+        
+        # Basic venue compatibility check
+        if not _validate_venue_compatibility_single(submission, config):
+            errors.append("Not compatible with assigned conference")
+        
+        # Validate unified schema fields
+        if not _validate_unified_schema_fields(submission):
+            errors.append("Invalid unified schema fields")
+    
+    return errors
+
+
+def _validate_submission_fields(submission: Submission) -> List[str]:
     """Validate basic submission fields and return list of errors."""
     errors = []
     
@@ -34,37 +62,13 @@ def validate_submission(submission: Submission) -> List[str]:
     return errors
 
 
-def validate_submission_constraints(submission: Submission, start_date: date, schedule: Schedule, config: Config) -> bool:
-    """Validate if a submission can be placed at a specific date in the schedule."""
-    # Basic deadline check
-    if not _validate_deadline_compliance_single(start_date, submission, config):
-        return False
-    
-    # Basic dependency check
-    if not _validate_dependencies_satisfied(submission, schedule, config, start_date):
-        return False
-    
-    # Basic venue compatibility check
-    try:
-        from .venue import _validate_venue_compatibility
-        _validate_venue_compatibility({submission.id: submission}, config)
-    except ValueError:
-        return False
-    
-    # Validate unified schema fields
-    if not _validate_unified_schema_fields(submission):
-        return False
-    
-    return True
-
-
 def _validate_deadline_compliance_single(start_date: date, sub: Submission, config: Config) -> bool:
     """Validate deadline compliance for a single submission."""
-    if not sub.conference_id or sub.conference_id not in config.conferences_dict:
+    if not sub.conference_id or not config.has_conference(sub.conference_id):
         return True
     
-    conf = config.conferences_dict[sub.conference_id]
-    if sub.kind not in conf.deadlines:
+    conf = config.get_conference(sub.conference_id)
+    if not conf or sub.kind not in conf.deadlines:
         return True
     
     deadline = conf.deadlines[sub.kind]
@@ -94,15 +98,19 @@ def _validate_dependencies_satisfied(submission: Submission, schedule: Schedule,
     return True
 
 
-def _validate_venue_compatibility(submission: Submission, config: Config) -> None:
-    """Validate venue compatibility for a submission."""
+def _validate_venue_compatibility_single(submission: Submission, config: Config) -> bool:
+    """Validate venue compatibility for a single submission."""
     if not submission.conference_id:
-        return
+        return True
     
     if not config.has_conference(submission.conference_id):
-        return
+        return False
     
     conf = config.get_conference(submission.conference_id)
+    if not conf:
+        return False
+    
+    return conf.is_compatible_with_submission(submission)
 
 
 def _validate_unified_schema_fields(submission: Submission) -> bool:

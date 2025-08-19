@@ -1,10 +1,10 @@
-"""Resource validation functions for concurrent submission limits and preferred timing constraints."""
+"""Resource constraint validation for schedule feasibility."""
 
-from typing import Dict, Any
+from typing import Dict, Any, List
 from datetime import date, timedelta
 
-from ..core.models import Config, ResourceViolation, Schedule, ValidationResult, ConstraintViolation
-from ..core.constants import QUALITY_CONSTANTS
+from src.core.models import Config, ResourceViolation, Schedule, ValidationResult, ConstraintViolation
+from src.core.constants import QUALITY_CONSTANTS
 
 
 def validate_resources_constraints(schedule: Schedule, config: Config) -> ValidationResult:
@@ -24,11 +24,14 @@ def validate_resources_constraints(schedule: Schedule, config: Config) -> Valida
     # Validate concurrent submission limits
     concurrent_result = _validate_concurrent_submissions(schedule, config)
     
+    # Validate author submission limits per conference
+    author_result = _validate_author_submission_limits(schedule, config)
+    
     # Validate preferred timing constraints (soft block model)
     timing_result = _validate_preferred_timing(schedule, config)
     
     # Combine violations
-    all_violations = concurrent_result.violations + timing_result.violations
+    all_violations = concurrent_result.violations + author_result.violations + timing_result.violations
     is_valid = len(all_violations) == 0
     
     # Create combined summary
@@ -43,7 +46,8 @@ def validate_resources_constraints(schedule: Schedule, config: Config) -> Valida
         metadata={
             "max_concurrent": config.max_concurrent_submissions,
             "max_observed": concurrent_result.metadata.get("max_observed", 0), 
-            "total_days": concurrent_result.metadata.get("total_days", 0)
+            "total_days": concurrent_result.metadata.get("total_days", 0),
+            "author_limits": author_result.metadata.get("conferences_with_limits", 0)
         }
     )
 
@@ -82,6 +86,54 @@ def _validate_concurrent_submissions(schedule: Schedule, config: Config) -> Vali
     )
 
 
+def _validate_author_submission_limits(schedule: Schedule, config: Config) -> ValidationResult:
+    """Validate that authors don't exceed submission limits per conference."""
+    violations = []
+    total_submissions = 0
+    compliant_submissions = 0
+    
+    # Group submissions by conference and author
+    conference_author_counts = {}
+    
+    for sid, interval in schedule.intervals.items():
+        sub = config.get_submission(sid)
+        if not sub or not sub.conference_id or not sub.author:
+            continue
+        
+        total_submissions += 1
+        conf = config.get_conference(sub.conference_id)
+        if not conf or not conf.max_submissions_per_author:
+            compliant_submissions += 1
+            continue
+        
+        # Count submissions per author per conference
+        key = (sub.conference_id, sub.author)
+        if key not in conference_author_counts:
+            conference_author_counts[key] = 0
+        conference_author_counts[key] += 1
+        
+        # Check if limit exceeded
+        if conference_author_counts[key] > conf.max_submissions_per_author:
+            violations.append(ConstraintViolation(
+                submission_id=sid,
+                description=f"Author {sub.author} has {conference_author_counts[key]} submissions to {sub.conference_id} (limit: {conf.max_submissions_per_author})",
+                severity="high"
+            ))
+        else:
+            compliant_submissions += 1
+    
+    return ValidationResult(
+        is_valid=len(violations) == 0,
+        violations=violations,
+        summary=f"Author submission limits: {compliant_submissions}/{total_submissions} compliant",
+        metadata={
+            "total_submissions": total_submissions,
+            "compliant_submissions": compliant_submissions,
+            "conferences_with_limits": len([c for c in config.conferences if c.max_submissions_per_author])
+        }
+    )
+
+
 def _validate_preferred_timing(schedule: Schedule, config: Config) -> ValidationResult:
     """Validate preferred timing constraints (soft block model - PCCP)."""
     violations = []
@@ -89,7 +141,7 @@ def _validate_preferred_timing(schedule: Schedule, config: Config) -> Validation
     compliant_submissions = 0
     
     for sid, interval in schedule.intervals.items():
-        sub = config.submissions_dict.get(sid)
+        sub = config.get_submission(sid)
         if not sub or not sub.earliest_start_date:
             continue
         
@@ -121,7 +173,7 @@ def _calculate_daily_load(schedule: Schedule, config: Config) -> Dict[date, int]
     daily_load = {}
     
     for sid, interval in schedule.intervals.items():
-        submission = config.submissions_dict.get(sid)
+        submission = config.get_submission(sid)
         if not submission:
             continue
         

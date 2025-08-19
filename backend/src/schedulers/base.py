@@ -227,53 +227,7 @@ class BaseScheduler(ABC):
         
         return next_date
     
-    @classmethod
-    def _auto_register_strategy(cls, strategy: SchedulerStrategy) -> None:
-        """Automatically register a strategy by finding the scheduler class."""
-        # Look for scheduler classes that might match this strategy
-        strategy_name = strategy.value.lower()
-        
-        # Common naming patterns
-        possible_names = [
-            f"{strategy_name.capitalize()}Scheduler",
-            f"{strategy_name.capitalize()}Scheduler",
-            f"{strategy_name}_scheduler",
-            f"{strategy_name}"
-        ]
-        
-        # Try to import and register
-        for name in possible_names:
-            try:
-                # Try different import paths
-                import_paths = [
-                    f"src.schedulers.{name.lower()}",
-                    f"schedulers.{name.lower()}",
-                    f"src.schedulers.{name.lower()}"
-                ]
-                
-                for module_name in import_paths:
-                    try:
-                        import importlib
-                        module = importlib.import_module(module_name)
-                        
-                        # Try to find the scheduler class in the module
-                        scheduler_class = None
-                        for attr_name in dir(module):
-                            attr = getattr(module, attr_name)
-                            if (isinstance(attr, type) and 
-                                issubclass(attr, cls) and 
-                                attr != cls):
-                                scheduler_class = attr
-                                break
-                        
-                        if scheduler_class:
-                            cls._strategy_registry[strategy] = scheduler_class
-                            return
-                    except (ImportError, AttributeError):
-                        continue
-                    
-            except Exception:
-                continue
+
     
 
     

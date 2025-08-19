@@ -4,14 +4,14 @@ Web application specific models.
 
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field, ConfigDict
-from core.models import ScheduleState, SchedulerStrategy, Config
+from core.models import SchedulerStrategy, Config
 
 
 class WebAppState(BaseModel):
     """State for the web application."""
     model_config = ConfigDict(validate_assignment=True)
     
-    current_schedule: Optional[ScheduleState] = None
+    current_schedule: Optional[Dict[str, Any]] = None  # Simple dict-based schedule
     available_strategies: Optional[List[SchedulerStrategy]] = None
     config_path: str = "config.json"
     # Add config data for components to access

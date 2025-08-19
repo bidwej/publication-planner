@@ -1,13 +1,13 @@
-"""Blackout date validation functions for submission scheduling constraints."""
+"""Blackout date validation functions for schedule feasibility."""
 
-from typing import List
+from typing import Dict, Any, List
 from datetime import date, timedelta
 
-from ..core.models import Config, Schedule, ValidationResult, ConstraintViolation
-from ..core.constants import QUALITY_CONSTANTS
+from src.core.models import Config, Schedule, ValidationResult, ConstraintViolation
+from src.core.constants import QUALITY_CONSTANTS
 
 
-def validate_blackout_dates(schedule: Schedule, config: Config) -> ValidationResult:
+def validate_blackout_constraints(schedule: Schedule, config: Config) -> ValidationResult:
     """Validate blackout date constraints."""
     violations = []
     total_submissions = 0
@@ -26,12 +26,13 @@ def validate_blackout_dates(schedule: Schedule, config: Config) -> ValidationRes
         )
     
     for sid, interval in schedule.intervals.items():
-        sub = config.submissions_dict.get(sid)
+        sub = config.get_submission(sid)
         if not sub:
             continue
         
         total_submissions += 1
-        submission_duration = sub.get_duration_days(config)
+        # Use the schedule's interval duration, not the submission's calculated duration
+        submission_duration = interval.duration_days
         
         for i in range(submission_duration):
             check_date = interval.start_date + timedelta(days=i)

@@ -66,7 +66,7 @@ def run_schedule_operation(args: argparse.Namespace) -> int:
     """Run schedule generation operation."""
     try:
         from schedulers.base import BaseScheduler
-from core.config import load_config
+        from core.config import load_config
         from console import print_schedule_summary, print_deadline_status, print_utilization_summary
         from reports import generate_schedule_report
         
@@ -75,8 +75,8 @@ from core.config import load_config
         print(f"📊 Output: {args.output or 'default'}")
         print("-" * 50)
         
-        # Initialize planner
-        planner = Planner(args.config)
+        # Load configuration
+        config = load_config(args.config)
         
         if args.compare:
             # Compare multiple strategies
@@ -89,14 +89,17 @@ from core.config import load_config
                     # Convert string to SchedulerStrategy enum
                     from core.models import SchedulerStrategy
                     strategy_enum = SchedulerStrategy(strategy)
-                    schedule = planner.schedule(strategy_enum)
-                    if schedule:
-                        # Get comprehensive result for scoring
-                        result = planner.get_comprehensive_result(schedule, strategy_enum)
-                        results[strategy] = result.summary
-                        # Calculate overall score from available metrics
-                        overall_score = (result.summary.quality_score + result.summary.efficiency_score - result.summary.penalty_score) / 3
-                        print(f"  ✓ {strategy}: {len(schedule)} submissions, score: {overall_score:.2f}")
+                    scheduler = BaseScheduler.create_scheduler(strategy_enum, config)
+                    schedule = scheduler.schedule()
+                    if schedule and len(schedule.intervals) > 0:
+                        # Calculate basic metrics
+                        total_submissions = len(schedule.intervals)
+                        duration_days = schedule.calculate_duration_days()
+                        print(f"  ✓ {strategy}: {total_submissions} submissions, duration: {duration_days} days")
+                        results[strategy] = {
+                            'total_submissions': total_submissions,
+                            'duration_days': duration_days
+                        }
                     else:
                         print(f"  ❌ {strategy}: Failed to generate schedule")
                 except Exception as e:
@@ -105,36 +108,36 @@ from core.config import load_config
             # Show comparison
             if results:
                 print("\n📊 Strategy Comparison:")
-                # Sort by calculated overall score
-                strategy_scores = []
-                for strategy, summary in results.items():
-                    overall_score = (summary.quality_score + summary.efficiency_score - summary.penalty_score) / 3
-                    strategy_scores.append((strategy, overall_score, summary.schedule_span))
-                
-                sorted_results = sorted(strategy_scores, key=lambda x: x[1], reverse=True)
-                for strategy, score, span in sorted_results:
-                    print(f"  {strategy}: {score:.2f} (span: {span} days)")
+                # Sort by duration (shorter is better)
+                sorted_results = sorted(results.items(), key=lambda x: x[1]['duration_days'])
+                for strategy, metrics in sorted_results:
+                    print(f"  {strategy}: {metrics['total_submissions']} submissions, {metrics['duration_days']} days")
         else:
             # Single strategy
             from core.models import SchedulerStrategy
             strategy_enum = SchedulerStrategy(args.strategy)
-            schedule = planner.schedule(strategy_enum)
-            if not schedule:
+            scheduler = BaseScheduler.create_scheduler(strategy_enum, config)
+            schedule = scheduler.schedule()
+            if not schedule or len(schedule.intervals) == 0:
                 print("❌ Failed to generate schedule")
                 return 1
             
-            # Generate and display results
-            result = planner.get_comprehensive_result(schedule, strategy_enum)
-            print_schedule_summary(schedule, planner.config)
-            print_deadline_status(schedule, planner.config)
-            print_utilization_summary(schedule, planner.config)
+            # Display results
+            print_schedule_summary(schedule, config)
+            print_deadline_status(schedule, config)
+            print_utilization_summary(schedule, config)
             
             # Generate report
             if args.output:
-                report = generate_schedule_report(schedule, planner.config)
                 import json
-                # Convert schedule dates to strings for JSON serialization
-                schedule_for_json = {k: v.isoformat() if hasattr(v, 'isoformat') else str(v) for k, v in schedule.items()}
+                # Convert schedule to JSON format
+                schedule_for_json = {
+                    'strategy': args.strategy,
+                    'total_submissions': len(schedule.intervals),
+                    'duration_days': schedule.calculate_duration_days(),
+                    'intervals': {sid: {'start_date': str(interval.start_date), 'end_date': str(interval.end_date)} 
+                                 for sid, interval in schedule.intervals.items()}
+                }
                 with open(args.output, 'w') as f:
                     json.dump(schedule_for_json, f, indent=2)
                 print(f"\n📄 Schedule saved to: {args.output}")
@@ -231,7 +234,7 @@ def run_validate_operation(args: argparse.Namespace) -> int:
     """Run validation operation."""
     try:
         from core.config import load_config
-        from validation.schedule import validate_schedule
+        from validation.schedule import validate_schedule_constraints
         from validation.deadline import validate_deadline_constraints
         from validation.resources import validate_resources_constraints
         
@@ -261,7 +264,7 @@ def run_validate_operation(args: argparse.Namespace) -> int:
             print(f"\n📅 Validating schedule with {len(schedule)} submissions...")
             
             # Validate all constraints
-            validation_result = validate_schedule(schedule, config)
+            validation_result = validate_schedule_constraints(schedule, config)
             
             all_valid = True
             for constraint_type, result in validation_result["constraints"].items():

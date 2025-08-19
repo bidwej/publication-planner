@@ -202,7 +202,7 @@ The system uses a unified approach where all work items and papers are treated a
 - **No Auto-Generation**: All dependencies are explicit in the JSON files
 - **Uniform Scheduling**: All submissions follow the same scheduling logic
 
-#### Conference Matching (`candidate_kind` + `candidate_conferences`)
+#### Conference Matching (`preferred_kinds` + `preferred_conferences`)
 The system determines what type of submission opportunity to pursue:
 
 1. **Specific Preference** (`candidate_kind` specified):
@@ -214,7 +214,7 @@ The system determines what type of submission opportunity to pursue:
    - Defaults to base `kind` (usually "paper")
    - Will consider any appropriate submission type the conference accepts
 
-3. **Conference Selection** (`candidate_conferences`):
+3. **Conference Selection** (`preferred_conferences`):
    - **Specific conferences**: `["ICML", "MICCAI"]` → Only try these conferences
    - **Empty list**: `[]` → Try any appropriate conference (medical/engineering)
    - **Not specified**: `null` → Invalid (must be specified, even if empty)
@@ -239,7 +239,7 @@ The system automatically classifies conferences based on their deadline structur
 - **Intelligent type assignment**: Uses `candidate_kind` to dynamically assign submission types based on conference requirements
 - **Abstract-before-paper handling**: Papers automatically assigned as abstracts (`candidate_kind: ABSTRACT`) when conferences require abstract-first
 - **No duplicate entities**: System doesn't create new submissions, just intelligently assigns submission types using `candidate_kind`
-- **Conference assignment**: Happens during scheduling based on candidate_conferences and conference requirements
+- **Conference assignment**: Happens during scheduling based on preferred_conferences and conference requirements
 
 #### Practical Examples
 
@@ -249,7 +249,7 @@ The system automatically classifies conferences based on their deadline structur
   "id": "my_paper",
   "kind": "paper",
   "candidate_kind": "paper",
-  "candidate_conferences": ["ICML", "MICCAI"]
+  "preferred_conferences": ["ICML", "MICCAI"]
 }
 ```
 → Only pursue paper opportunities at ICML or MICCAI. If ICML requires abstract+paper, system will automatically assign `candidate_kind: ABSTRACT`.
@@ -260,7 +260,7 @@ The system automatically classifies conferences based on their deadline structur
   "id": "quick_abstract", 
   "kind": "paper",
   "candidate_kind": "abstract",
-  "candidate_conferences": ["RSNA", "IFAR"]
+  "preferred_conferences": ["RSNA", "IFAR"]
 }
 ```
 → Only pursue abstract opportunities. Won't consider paper options even if available.
@@ -282,7 +282,7 @@ The system automatically classifies conferences based on their deadline structur
   "id": "flexible_paper",
   "kind": "paper",
   "candidate_kind": "abstract",  // Prefer to submit as abstract
-  "candidate_conferences": ["ICML", "RSNA"]
+  "preferred_conferences": ["ICML", "RSNA"]
 }
 ```
 → System will submit as abstract at RSNA (abstract-only) and ICML (if abstract+paper), but as paper at paper-only conferences.
@@ -294,7 +294,7 @@ The system automatically classifies conferences based on their deadline structur
   "id": "mod_1", 
   "title": "Samurai Automated 2D",
   "kind": "paper",  // All submissions are kind=paper
-  "candidate_conferences": [],  // No conference needed for work items
+  "preferred_conferences": [],  // No conference needed for work items
   "depends_on": []
 }
 
@@ -304,7 +304,7 @@ The system automatically classifies conferences based on their deadline structur
   "title": "Computer Vision endoscopy review",
   "kind": "paper", 
   "candidate_kind": "paper",  // Prefer paper submissions
-  "candidate_conferences": ["ICML", "MIDL"],
+  "preferred_conferences": ["ICML", "MIDL"],
   "depends_on": ["mod_1"]  // Paper depends on completed mod
 }
 ```
@@ -921,7 +921,7 @@ All schedulers use a shared validation system:
 
 #### 2. Conference Assignment
 - **Dynamic assignment**: Conferences assigned during scheduling based on preferences
-- **Candidate validation**: Only valid conferences from candidate_conferences used
+- **Preferred validation**: Only valid conferences from preferred_conferences used
 - **Compatibility checking**: Ensures submission types match conference requirements
 - **Key Functions**:
   - `_assign_best_conference()`: Conference assignment logic

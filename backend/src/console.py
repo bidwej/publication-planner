@@ -9,7 +9,7 @@ from pathlib import Path
 from core.models import Config, SchedulerStrategy
 from core.constants import DISPLAY_CONSTANTS
 from validation.deadline import validate_deadline_constraints
-from validation.deadline import validate_schedule
+from validation.schedule import validate_schedule_constraints
 from scoring.penalties import calculate_penalty_score
 from scoring.efficiency import calculate_efficiency_score
 from scoring.quality import calculate_quality_score
@@ -51,10 +51,10 @@ def print_deadline_status(schedule: Schedule, config: Config) -> None:
     
     for sid, start_date in schedule.items():
         sub = sub_map.get(sid)
-        if not sub or not sub.conference_id or sub.conference_id not in config.conferences_dict:
+        if not sub or not sub.conference_id or not config.has_conference(sub.conference_id):
             continue
         
-        conf = config.conferences_dict[sub.conference_id]
+        conf = config.get_conference(sub.conference_id)
         if sub.kind not in conf.deadlines:
             continue
         
@@ -159,7 +159,7 @@ def print_schedule_analysis(schedule, config: Config, strategy_name: str = "Unkn
     
     # Comprehensive validation using all constraints, scoring, and analytics
     try:
-        validation_result = validate_schedule(schedule, config)
+        validation_result = validate_schedule_constraints(schedule, config)
         
         print("Comprehensive Schedule Analysis:")
         print(f"  Feasibility: {'✓' if validation_result['overall_valid'] else '✗'}")

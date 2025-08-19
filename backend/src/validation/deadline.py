@@ -7,6 +7,26 @@ from ..core.models import Config, Submission, DeadlineViolation, SubmissionType,
 from ..core.constants import QUALITY_CONSTANTS, SCHEDULING_CONSTANTS
 
 
+def _build_validation_result(violations, total_submissions, compliant_submissions, summary_template):
+    """Helper to build standardized ValidationResult objects."""
+    compliance_rate = (compliant_submissions / total_submissions * QUALITY_CONSTANTS.percentage_multiplier) if total_submissions > 0 else QUALITY_CONSTANTS.perfect_compliance_rate
+    
+    return ValidationResult(
+        is_valid=len(violations) == 0,
+        violations=violations,
+        summary=summary_template.format(
+            compliant=compliant_submissions, 
+            total=total_submissions, 
+            rate=compliance_rate
+        ),
+        metadata={
+            "compliance_rate": compliance_rate,
+            "total_submissions": total_submissions,
+            "compliant_submissions": compliant_submissions
+        }
+    )
+
+
 def validate_deadline_constraints(schedule: Schedule, config: Config) -> ValidationResult:
     """Validate all deadline constraints for the complete schedule."""
     if not schedule:
@@ -142,9 +162,8 @@ def validate_deadline_constraints(schedule: Schedule, config: Config) -> Validat
             days_late=0
         ))
     
-    # Update compliance count to include lead time validations
-    compliant_submissions += (abstract_lead_time_result.metadata.get("compliant_submissions", 0) + 
-                            paper_lead_time_result.metadata.get("compliant_submissions", 0))
+    # Note: Don't double-count submissions - compliant_submissions already counted in main loop
+    # Lead time validations add violations but don't change compliance count
     
     compliance_rate = (compliant_submissions / total_submissions * QUALITY_CONSTANTS.percentage_multiplier) if total_submissions > 0 else QUALITY_CONSTANTS.perfect_compliance_rate
     
@@ -175,91 +194,75 @@ def _validate_deadline_compliance_single(start_date: date, sub: Submission, conf
     return end_date <= deadline
 
 
-def _validate_abstract_lead_time(schedule: Schedule, config: Config) -> ValidationResult:
-    """Validate abstract lead time constraints."""
+def _validate_lead_time_constraints(
+    schedule: Schedule, 
+    config: Config, 
+    submission_type: SubmissionType,
+    deadline_type: SubmissionType,
+    description_template: str
+) -> ValidationResult:
+    """Generic lead time validation for any submission type."""
     violations = []
-    total_abstracts = 0
-    compliant_abstracts = 0
+    total_submissions = 0
+    compliant_submissions = 0
     
     for sid, interval in schedule.intervals.items():
         sub = config.get_submission(sid)
-        if not sub or sub.kind != SubmissionType.ABSTRACT:
+        if not sub or sub.kind != submission_type:
             continue
         
-        total_abstracts += 1
+        total_submissions += 1
         end_date = sub.get_end_date(interval.start_date, config)
         
-        # Check if abstract completes before paper deadline
+        # Check if submission completes before deadline
         if sub.conference_id and config.has_conference(sub.conference_id):
             conf = config.get_conference(sub.conference_id)
-            if conf and SubmissionType.PAPER in conf.deadlines:
-                paper_deadline = conf.deadlines[SubmissionType.PAPER]
-                if end_date > paper_deadline:
-                    days_violation = (end_date - paper_deadline).days
+            if conf and deadline_type in conf.deadlines:
+                deadline = conf.deadlines[deadline_type]
+                if end_date > deadline:
+                    days_violation = (end_date - deadline).days
                     violations.append(ConstraintViolation(
                         submission_id=sid, 
-                        description=f"Abstract completes {days_violation} days after paper deadline",
+                        description=description_template.format(
+                            days_violation=days_violation
+                        ),
                         severity="high"
                     ))
                 else:
-                    compliant_abstracts += 1
+                    compliant_submissions += 1
             else:
-                compliant_abstracts += 1
+                compliant_submissions += 1
         else:
-            compliant_abstracts += 1
+            compliant_submissions += 1
     
     return ValidationResult(
         is_valid=len(violations) == 0, 
         violations=violations,
-        summary=f"{compliant_abstracts}/{total_abstracts} abstracts meet lead time constraints",
+        summary=f"{compliant_submissions}/{total_submissions} {submission_type.value.lower()}s meet lead time constraints",
         metadata={
-            "total_submissions": total_abstracts, 
-            "compliant_submissions": compliant_abstracts
+            "total_submissions": total_submissions, 
+            "compliant_submissions": compliant_submissions
         }
+    )
+
+
+def _validate_abstract_lead_time(schedule: Schedule, config: Config) -> ValidationResult:
+    """Validate abstract lead time constraints."""
+    return _validate_lead_time_constraints(
+        schedule, config, 
+        SubmissionType.ABSTRACT, 
+        SubmissionType.PAPER,
+        "Abstract completes {days_violation} days after paper deadline"
     )
 
 
 def _validate_paper_lead_time(schedule: Schedule, config: Config) -> ValidationResult:
     """Validate paper lead time constraints."""
-    violations = []
-    total_papers = 0
-    compliant_papers = 0
-    
-    for sid, interval in schedule.intervals.items():
-        sub = config.get_submission(sid)
-        if not sub or sub.kind != SubmissionType.PAPER:
-            continue
-        
-        total_papers += 1
-        end_date = sub.get_end_date(interval.start_date, config)
-        
-        # Check if paper completes before conference deadline
-        if sub.conference_id and config.has_conference(sub.conference_id):
-            conf = config.get_conference(sub.conference_id)
-            if conf and sub.kind in conf.deadlines:
-                deadline = conf.deadlines[sub.kind]
-                if end_date > deadline:
-                    days_violation = (end_date - deadline).days
-                    violations.append(ConstraintViolation(
-                        submission_id=sid, 
-                        description=f"Paper completes {days_violation} days after deadline",
-                        severity="high"
-                    ))
-                else:
-                    compliant_papers += 1
-            else:
-                compliant_papers += 1
-        else:
-            compliant_papers += 1
-    
-    return ValidationResult(
-        is_valid=len(violations) == 0, 
-        violations=violations,
-        summary=f"{compliant_papers}/{total_papers} papers meet lead time constraints",
-        metadata={
-            "total_submissions": total_papers, 
-            "compliant_submissions": compliant_papers
-        }
+    return _validate_lead_time_constraints(
+        schedule, config, 
+        SubmissionType.PAPER, 
+        SubmissionType.PAPER,
+        "Paper completes {days_violation} days after deadline"
     )
 
 
@@ -291,52 +294,7 @@ def _validate_engineering_ready_constraints(schedule: Schedule, config: Config) 
     return errors
 
 
-def validate_schedule(schedule: Schedule, config: Config) -> ValidationResult:
-    """Validate comprehensive schedule constraints."""
-    if not schedule:
-        return ValidationResult(
-            is_valid=False, 
-            violations=[], 
-            summary="No schedule to validate",
-            metadata={
-                "total_submissions": 0,
-                "compliant_submissions": 0
-            }
-        )
-    
-    # Import here to avoid circular imports
-    from .resources import validate_resources_constraints
-    from .venue import validate_venue_constraints
-    
-    # Validate all constraint types
-    deadline_result = validate_deadline_constraints(schedule, config)
-    resource_result = validate_resources_constraints(schedule, config)
-    venue_result = validate_venue_constraints(schedule, config)
-    
-    # Combine all violations
-    all_violations = (
-        deadline_result.violations + 
-        resource_result.violations + 
-        venue_result.violations
-    )
-    
-    # Calculate totals
-    total_submissions = len(schedule.intervals)
-    compliant_submissions = sum([
-        deadline_result.metadata.get("compliant_submissions", 0),
-        resource_result.metadata.get("compliant_submissions", 0),
-        venue_result.metadata.get("compliant_submissions", 0)
-    ])
-    
-    # Overall validation
-    is_valid = len(all_violations) == 0
-    
-    return ValidationResult(
-        is_valid=is_valid,
-        violations=all_violations,
-        summary=f"Schedule validation: {len(all_violations)} violations found",
-        metadata={
-            "total_submissions": total_submissions,
-            "compliant_submissions": compliant_submissions
-        }
-    )
+
+
+
+

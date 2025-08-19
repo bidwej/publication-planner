@@ -1,9 +1,10 @@
-"""Configuration validation functions."""
+"""Configuration validation functions for data integrity and schema compliance."""
 
-from typing import Dict, List, Any
+from typing import Dict, Any, List
 from datetime import date
 
-from ..core.models import Config, Submission, Conference
+from src.core.models import Config, Submission, Conference
+from src.core.constants import SCHEDULING_CONSTANTS
 
 
 def validate_config(config: Config) -> List[str]:
@@ -21,8 +22,8 @@ def validate_config(config: Config) -> List[str]:
     
     # Constants validation
     try:
-        from .constants import validate_all_constants
-        constants_errors = validate_all_constants()
+        from src.validation.constants import validate_constants
+        constants_errors = validate_constants()
         if constants_errors:
             errors.extend([f"Constants validation: {error}" for error in constants_errors])
     except ImportError:
@@ -30,6 +31,7 @@ def validate_config(config: Config) -> List[str]:
         pass
     
     return errors
+
 
 
 def _validate_config_fields(config: Config) -> List[str]:
@@ -57,9 +59,13 @@ def _validate_config_submissions(config: Config) -> List[str]:
     
     # Validate submissions - first pass: build submission IDs and validate basic submission data
     submission_ids = set()
+    # Validate each submission individually
     for submission in config.submissions:
-        from .submission import validate_submission
-        submission_errors = validate_submission(submission)
+        from src.validation.submission import validate_submission_constraints
+        from src.core.models import Schedule
+        from datetime import date
+        empty_schedule = Schedule()
+        submission_errors = validate_submission_constraints(submission, date.today(), empty_schedule, config)
         errors.extend([f"Submission {submission.id}: {error}" for error in submission_errors])
         if submission.id in submission_ids:
             errors.append(f"Duplicate submission ID: {submission.id}")
@@ -89,9 +95,17 @@ def _validate_config_conferences(config: Config) -> List[str]:
     # Validate conferences
     conference_ids = set()
     for conference in config.conferences:
-        from .venue import validate_conference
-        conference_errors = validate_conference(conference)
-        errors.extend([f"Conference {conference.id}: {error}" for error in conference_errors])
+        # Basic field validation
+        if not conference.id:
+            errors.append("Conference missing ID")
+        if not conference.name:
+            errors.append("Conference missing name")
+        if not conference.deadlines:
+            errors.append(f"Conference {conference.id}: No deadlines defined")
+        for submission_type, deadline in conference.deadlines.items():
+            if not isinstance(deadline, date):
+                errors.append(f"Conference {conference.id}: Invalid deadline format for {submission_type}")
+        
         if conference.id in conference_ids:
             errors.append(f"Duplicate conference ID: {conference.id}")
         conference_ids.add(conference.id)

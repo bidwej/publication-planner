@@ -1,14 +1,14 @@
 """Constants validation functions to ensure all constants are within reasonable ranges."""
 
 from typing import List, Dict, Any
-from core.constants import (
+from src.core.constants import (
     SCHEDULING_CONSTANTS, PENALTY_CONSTANTS, EFFICIENCY_CONSTANTS, 
     QUALITY_CONSTANTS, SCORING_CONSTANTS, REPORT_CONSTANTS, 
     DISPLAY_CONSTANTS, ANALYTICS_CONSTANTS
 )
 
 
-def validate_scheduling_constants() -> List[str]:
+def _validate_scheduling_constants() -> List[str]:
     """Validate scheduling constants are within reasonable ranges."""
     errors = []
     
@@ -53,7 +53,7 @@ def validate_scheduling_constants() -> List[str]:
     return errors
 
 
-def validate_penalty_constants() -> List[str]:
+def _validate_penalty_constants() -> List[str]:
     """Validate penalty constants are within reasonable ranges."""
     errors = []
     
@@ -85,7 +85,7 @@ def validate_penalty_constants() -> List[str]:
     return errors
 
 
-def validate_efficiency_constants() -> List[str]:
+def _validate_efficiency_constants() -> List[str]:
     """Validate efficiency constants are within reasonable ranges."""
     errors = []
     
@@ -125,7 +125,7 @@ def validate_efficiency_constants() -> List[str]:
     return errors
 
 
-def validate_quality_constants() -> List[str]:
+def _validate_quality_constants() -> List[str]:
     """Validate quality constants are within reasonable ranges."""
     errors = []
     
@@ -154,7 +154,7 @@ def validate_quality_constants() -> List[str]:
     return errors
 
 
-def validate_scoring_constants() -> List[str]:
+def _validate_scoring_constants() -> List[str]:
     """Validate scoring constants are within reasonable ranges."""
     errors = []
     
@@ -185,7 +185,7 @@ def validate_scoring_constants() -> List[str]:
     return errors
 
 
-def validate_report_constants() -> List[str]:
+def _validate_report_constants() -> List[str]:
     """Validate report constants are within reasonable ranges."""
     errors = []
     
@@ -212,7 +212,7 @@ def validate_report_constants() -> List[str]:
     return errors
 
 
-def validate_display_constants() -> List[str]:
+def _validate_display_constants() -> List[str]:
     """Validate display constants are within reasonable ranges."""
     errors = []
     
@@ -231,7 +231,7 @@ def validate_display_constants() -> List[str]:
     return errors
 
 
-def validate_analytics_constants() -> List[str]:
+def _validate_analytics_constants() -> List[str]:
     """Validate analytics constants are within reasonable ranges."""
     errors = []
     
@@ -246,29 +246,20 @@ def validate_analytics_constants() -> List[str]:
     return errors
 
 
-def validate_all_constants() -> List[str]:
+def validate_constants() -> List[str]:
     """Validate all constants in the application."""
     errors = []
     
-    errors.extend(validate_scheduling_constants())
-    errors.extend(validate_penalty_constants())
-    errors.extend(validate_efficiency_constants())
-    errors.extend(validate_quality_constants())
-    errors.extend(validate_scoring_constants())
-    errors.extend(validate_report_constants())
-    errors.extend(validate_display_constants())
-    errors.extend(validate_analytics_constants())
+    errors.extend(_validate_scheduling_constants())
+    errors.extend(_validate_penalty_constants())
+    errors.extend(_validate_efficiency_constants())
+    errors.extend(_validate_quality_constants())
+    errors.extend(_validate_scoring_constants())
+    errors.extend(_validate_report_constants())
+    errors.extend(_validate_display_constants())
+    errors.extend(_validate_analytics_constants())
     
     return errors
 
 
-def get_constants_validation_summary() -> Dict[str, Any]:
-    """Get a summary of constants validation results."""
-    errors = validate_all_constants()
-    
-    return {
-        "is_valid": len(errors) == 0,
-        "total_errors": len(errors),
-        "errors": errors,
-        "summary": f"Constants validation: {len(errors)} errors found" if errors else "All constants are valid"
-    }
+

@@ -48,10 +48,13 @@ class Configuration(ConfigurationBase, table=True):
 class ScheduleDatabase:
     """SQLModel-based database manager for Paper Planner."""
     
-    def __init__(self):
+    def __init__(self, engine=None):
         """Initialize database connection."""
-        from .session import engine
-        self.engine = engine
+        if engine is None:
+            from .session import engine as default_engine
+            self.engine = default_engine
+        else:
+            self.engine = engine
     
     def save_schedule(self, name: str, strategy: str, schedule: Schedule, 
                      config: Dict[str, Any]) -> int:

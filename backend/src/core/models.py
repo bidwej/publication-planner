@@ -70,16 +70,6 @@ class Schedule(BaseModel):
         
         self.intervals[submission_id] = Interval(start_date=start_date, end_date=end_date)
     
-    def get_start_date(self, submission_id: str) -> Optional[date]:
-        """Get start date for a submission."""
-        interval = self.intervals.get(submission_id)
-        return interval.start_date if interval else None
-    
-    def get_end_date(self, submission_id: str) -> Optional[date]:
-        """Get end date for a submission."""
-        interval = self.intervals.get(submission_id)
-        return interval.end_date if interval else None
-    
     def has_submission(self, submission_id: str) -> bool:
         """Check if a submission is scheduled."""
         return submission_id in self.intervals
@@ -120,6 +110,10 @@ class Schedule(BaseModel):
         
         dates = [interval.start_date for interval in self.intervals.values()]
         return (max(dates) - min(dates)).days if dates else 0
+    
+
+    
+
 
 class Submission(BaseModel):
     """A submission to a conference."""
@@ -146,58 +140,9 @@ class Submission(BaseModel):
     free_slack_months: Optional[int] = None  # Buffer time in months
     penalty_cost_per_month: Optional[float] = None  # Monthly penalty cost for delays
     
-    def validate_submission(self) -> List[str]:
-        """Validate submission and return list of errors."""
-        try:
-            from validation.submission import validate_submission_basic
-            return validate_submission_basic(self)
-        except ImportError:
-            # Fallback to basic validation if validation modules not available
-            errors = []
-            if not self.id:
-                errors.append("Missing submission ID")
-            if not self.title:
-                errors.append("Missing title")
-            if self.draft_window_months < 0:
-                errors.append("Draft window months cannot be negative")
-            if self.lead_time_from_parents < 0:
-                errors.append("Lead time from parents cannot be negative")
-            return errors
+
     
-    def get_priority_score(self, config: 'Config') -> float:
-        """Calculate priority score based on config weights."""
-        if not config.priority_weights:
-            return 1.0
-        
-        # For abstracts that are required for papers, inherit the paper's priority
-        if self.kind == SubmissionType.ABSTRACT and self._is_required_abstract(config):
-            # Required abstracts get paper priority, not abstract priority
-            type_key = "paper"
-        else:
-            # Normal priority based on submission type
-            type_key = self.kind.value  # "paper", "abstract", etc.
-            
-        base_weight = config.priority_weights.get(type_key, 1.0)
-        
-        # Engineering bonus
-        if self.engineering:  # Engineering submissions get bonus
-            engineering_bonus = config.priority_weights.get("engineering_paper", 2.0)
-            base_weight *= engineering_bonus
-        
-        return base_weight
-    
-    def _is_required_abstract(self, config: 'Config') -> bool:
-        """Check if this abstract is required for a paper submission."""
-        if self.kind != SubmissionType.ABSTRACT or '-abs-' not in self.id:
-            return False
-            
-        # Find if there's a corresponding paper that depends on this abstract
-        return any(
-            submission.kind == SubmissionType.PAPER and 
-            submission.depends_on and 
-            self.id in submission.depends_on
-            for submission in config.submissions
-        )
+
     
     def are_dependencies_satisfied(self, schedule: 'Schedule', 
                                   config: 'Config', current_date: date) -> bool:
@@ -266,6 +211,7 @@ class Conference(BaseModel):
     recurrence: ConferenceRecurrence
     deadlines: Dict[SubmissionType, date]
     submission_types: Optional[SubmissionWorkflow] = None  # What types of submissions are accepted
+    max_submissions_per_author: Optional[int] = None  # Maximum submissions allowed per author
     
     @property
     def effective_submission_types(self) -> SubmissionWorkflow:
@@ -307,11 +253,6 @@ class Conference(BaseModel):
         """Check if conference requires abstract submission before paper submission."""
         return self.effective_submission_types == SubmissionWorkflow.ABSTRACT_THEN_PAPER
     
-    def get_required_dependencies(self, submission_type: SubmissionType) -> List[str]:
-        """Get list of required dependencies for this submission type at this conference."""
-        # Dependencies are handled at the submission level, not conference level
-        return []
-    
     def is_compatible_with_submission(self, submission: 'Submission') -> bool:
         """Check if a submission is compatible with this conference."""
         candidate_types = submission.preferred_kinds or [submission.kind]
@@ -323,33 +264,11 @@ class Conference(BaseModel):
         # Engineering submissions can go anywhere, medical only to medical venues
         return submission.engineering or self.conf_type != ConferenceType.ENGINEERING
     
-    def get_submission_compatibility_errors(self, submission: 'Submission') -> List[str]:
-        """Get list of compatibility errors between submission and conference."""
-        candidate_types = submission.preferred_kinds or [submission.kind]
-        
-        if any(self.accepts_submission_type(st) for st in candidate_types):
-            return []
-        
-        types_str = ", ".join(t.value for t in candidate_types)
-        return [f"Conference {self.id} does not accept any of the requested submission types: {types_str}"]
+
     
 
     
-    def validate_conference(self) -> List[str]:
-        """Validate conference and return list of errors."""
-        try:
-            from validation.venue import validate_conference_basic
-            return validate_conference_basic(self)
-        except ImportError:
-            # Fallback to basic validation if validation modules not available
-            errors = []
-            if not self.id:
-                errors.append("Missing conference ID")
-            if not self.name:
-                errors.append("Missing conference name")
-            if not self.deadlines:
-                errors.append("No deadlines defined")
-            return errors
+
     
     def get_deadline(self, submission_type: SubmissionType) -> Optional[date]:
         """Get deadline for a specific submission type."""
@@ -423,25 +342,7 @@ class Config(BaseModel):
             }
         )
     
-    def validate_config(self) -> List[str]:
-        """Validate configuration and return list of errors."""
-        try:
-            from validation.config import validate_config_basic
-            return validate_config_basic(self)
-        except ImportError:
-            # Fallback to basic validation if validation modules not available
-            errors = []
-            if not self.submissions:
-                errors.append("No submissions defined")
-            if not self.conferences:
-                errors.append("No conferences defined")
-            if self.min_abstract_lead_time_days < 0:
-                errors.append("Min abstract lead time cannot be negative")
-            if self.min_paper_lead_time_days < 0:
-                errors.append("Min paper lead time cannot be negative")
-            if self.max_concurrent_submissions < 1:
-                errors.append("Max concurrent submissions must be at least 1")
-            return errors
+
     
     # Type-safe access methods with better structure
     def get_submission(self, submission_id: str) -> Optional[Submission]:
@@ -460,27 +361,48 @@ class Config(BaseModel):
         """Check if conference exists."""
         return any(conf.id == conference_id for conf in self.conferences)
     
-    # Structured access methods for common patterns
-    def get_submissions_by_type(self, submission_type: 'SubmissionType') -> List[Submission]:
-        """Get all submissions of a specific type."""
-        return [sub for sub in self.submissions if sub.kind == submission_type]
+
     
-    def get_submissions_by_conference(self, conference_id: str) -> List[Submission]:
-        """Get all submissions for a specific conference."""
-        return [sub for sub in self.submissions if sub.conference_id == conference_id]
+    # Convenience helpers to avoid repetitive None checks in call sites
+    def get_conference_name(self, conference_id: Optional[str], default: str = "N/A") -> str:
+        """Safely get a conference name or return a default label.
+
+        Parameters
+        ----------
+        conference_id: Optional[str]
+            The conference identifier; may be None
+        default: str
+            Fallback label when conference is missing
+        """
+        if not conference_id:
+            return default
+        conference = self.get_conference(conference_id)
+        return conference.name if conference else default
+
+    def get_deadline_for(self, submission: 'Submission') -> Optional[date]:
+        """Safely get the deadline for a submission's type at its conference.
+
+        Returns None when conference or deadline is missing.
+        """
+        if not submission.conference_id:
+            return None
+        conference = self.get_conference(submission.conference_id)
+        if not conference:
+            return None
+        return conference.deadlines.get(submission.kind)
+
+    def get_deadline_for_type(self, conference_id: Optional[str], submission_type: 'SubmissionType') -> Optional[date]:
+        """Safely get the deadline for a given submission type at a conference."""
+        if not conference_id:
+            return None
+        conference = self.get_conference(conference_id)
+        if not conference:
+            return None
+        return conference.deadlines.get(submission_type)
     
-    def get_conferences_by_type(self, conf_type: 'ConferenceType') -> List[Conference]:
-        """Get all conferences of a specific type."""
-        return [conf for conf in self.conferences if conf.conf_type == conf_type]
+
     
-    # Validation helpers
-    def validate_submission_exists(self, submission_id: str) -> bool:
-        """Check if submission exists."""
-        return self.has_submission(submission_id)
-    
-    def validate_conference_exists(self, conference_id: str) -> bool:
-        """Check if conference exists."""
-        return self.has_conference(conference_id)
+
     
 
     
@@ -562,12 +484,9 @@ class ResourceViolation(ConstraintViolation):
     limit: int
     excess: int
 
-# ===== ANALYTICS MODELS =====
 
-class AnalyticsResult(BaseModel):
-    """Base class for all analytics results."""
-    summary: str
-    metadata: Optional[Dict[str, Any]] = None
+
+# ===== ANALYTICS MODELS =====
 
 # Note: All specific analytics models have been consolidated into ScheduleMetrics
 # which now provides comprehensive schedule analysis in a single model

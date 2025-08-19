@@ -5,9 +5,7 @@
     "full_paper_deadline": "2025-01-31",
     "abstract_deadline": "2025-01-15",
     "submission_types": "abstract_then_paper",
-    "is_biennial": false,
-    "recurrence": "annual",
-    "max_submissions_per_author": 2
+    "recurrence": "annual"
   },
   {
     "name": "MICCAI_DEMO",
@@ -15,9 +13,7 @@
     "full_paper_deadline": "2025-02-28",
     "abstract_deadline": "2025-02-10",
     "submission_types": "abstract_then_paper",
-    "is_biennial": false,
-    "recurrence": "annual",
-    "max_submissions_per_author": 2
+    "recurrence": "annual"
   },
   {
     "name": "NeurIPS_DEMO",
@@ -25,8 +21,6 @@
     "full_paper_deadline": "2025-02-15",
     "abstract_deadline": null,
     "submission_types": "paper_only",
-    "is_biennial": false,
-    "recurrence": "annual",
-    "max_submissions_per_author": 1
+    "recurrence": "annual"
   }
 ]

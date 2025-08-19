@@ -360,7 +360,7 @@ class CSVExporter:
         # Calculate resource utilization
         daily_load = defaultdict(int)
         for sid, interval in schedule.intervals.items():
-            submission = self.config.submissions_dict.get(sid)
+            submission = self.config.get_submission(sid)
             if submission:
                 duration = submission.get_duration_days(self.config)
                 for i in range(duration):
@@ -373,7 +373,7 @@ class CSVExporter:
         # Count by submission type
         submission_types = defaultdict(int)
         for sub_id in schedule.intervals.keys():
-            submission = self.config.submissions_dict.get(sub_id)
+            submission = self.config.get_submission(sub_id)
             if submission:
                 sub_type = submission.kind.value
                 submission_types[sub_type] += 1
@@ -400,8 +400,8 @@ class CSVExporter:
         """Run comprehensive validation on schedule."""
         try:
             # Import here to avoid circular imports
-            from validation.schedule import validate_schedule
-            validation_result = validate_schedule(schedule, self.config)
+            from validation.schedule import validate_schedule_constraints
+            validation_result = validate_schedule_constraints(schedule, self.config)
             return validation_result
         except ImportError:
             # Fallback if validation module is not available
@@ -442,9 +442,9 @@ class CSVExporter:
             
             # Basic deadline penalty calculation
             for sid, interval in schedule.intervals.items():
-                submission = self.config.submissions_dict.get(sid)
+                submission = self.config.get_submission(sid)
                 if submission and submission.conference_id:
-                    conference = self.config.conferences_dict.get(submission.conference_id)
+                    conference = self.config.get_conference(submission.conference_id)
                     if conference and submission.kind in conference.deadlines:
                         deadline = conference.deadlines[submission.kind]
                         duration = submission.get_duration_days(self.config)
@@ -500,7 +500,7 @@ class CSVExporter:
         # Count by submission type
         submission_types = defaultdict(int)
         for sub_id in schedule.intervals.keys():
-            submission = self.config.submissions_dict.get(sub_id)
+            submission = self.config.get_submission(sub_id)
             if submission:
                 sub_type = submission.kind.value
                 submission_types[sub_type] += 1
@@ -508,7 +508,7 @@ class CSVExporter:
         # Calculate resource utilization
         daily_load = defaultdict(int)
         for sid, interval in schedule.intervals.items():
-            submission = self.config.submissions_dict.get(sid)
+            submission = self.config.get_submission(sid)
             if submission:
                 duration = submission.get_duration_days(self.config)
                 for i in range(duration):

@@ -24,7 +24,7 @@ This document summarizes the analysis of data consistency between backend and te
 
 The following fields appear to be unused in the codebase and can be safely deprecated:
 
-1. **`is_biennial`** - Not referenced in any source code
+1. **`is_biennial`** - Removed, use `recurrence` enum instead
 2. **`max_submissions_per_author`** - Not referenced in any source code
 
 **Note**: `max_backtrack_days` was initially flagged but is actually used in the codebase.
@@ -39,7 +39,7 @@ The following fields appear to be unused in the codebase and can be safely depre
 **Optional Fields:**
 - `draft_window_months` - Draft preparation time
 - `lead_time_from_parents` - Lead time from dependencies
-- `candidate_conferences` - Suggested conferences
+- `preferred_conferences` - Suggested conferences
 - `submission_workflow` - Submission process type
 - `depends_on` - Dependencies list
 - `engineering_ready_date` - When engineering work completes
@@ -48,7 +48,7 @@ The following fields appear to be unused in the codebase and can be safely depre
 - `author` - Author identifier
 
 **Deprecated Fields:**
-- `is_biennial` - Use `recurrence` instead
+- `is_biennial` - Removed, use `recurrence` enum instead
 - `max_submissions_per_author` - Not implemented
 
 ### Conferences
@@ -95,7 +95,7 @@ The following fields appear to be unused in the codebase and can be safely depre
 ## Recommendations
 
 ### 1. Immediate Actions
-- [ ] **Deprecate unused fields**: Remove `is_biennial` and `max_submissions_per_author`
+- [x] **Deprecate unused fields**: Removed `is_biennial`, use `recurrence` enum instead
 - [ ] **Update data files**: Ensure both environments use the same field sets
 - [ ] **Run consistency checker**: Use the new checker in CI/CD pipeline
 

@@ -22,9 +22,7 @@ def generate_simple_monthly_table(config: Config) -> List[Dict[str, Any]]:
     table = []
     for submission in config.submissions:
         # Get conference info
-        conf_name = "N/A"
-        if submission.conference_id and submission.conference_id in config.conferences_dict:
-            conf_name = config.conferences_dict[submission.conference_id].name
+        conf_name = config.get_conference_name(submission.conference_id, default="N/A")
         
         table.append({
             "ID": submission.id,
@@ -55,9 +53,7 @@ def generate_schedule_summary_table(schedule: Schedule, config: Config) -> List[
         end_date = interval.start_date + timedelta(days=duration)
         
         # Get conference info
-        conf_name = "N/A"
-        if sub.conference_id and sub.conference_id in config.conferences_dict:
-            conf_name = config.conferences_dict[sub.conference_id].name
+        conf_name = config.get_conference_name(sub.conference_id, default="N/A")
         
         table.append({
             "ID": sid,
@@ -80,17 +76,13 @@ def generate_schedule_table(schedule: Schedule, config: Config) -> List[Dict[str
     
     table_data = []
     for submission_id, interval in sorted(schedule.intervals.items(), key=lambda x: x[1].start_date):
-        submission = config.submissions_dict.get(submission_id)
+        submission = config.get_submission(submission_id)
         if submission:
             duration_days = submission.get_duration_days(config)
             end_date = interval.start_date + timedelta(days=duration_days)
             
             # Get conference info
-            conference_name = "N/A"
-            if submission.conference_id:
-                conference = config.conferences_dict.get(submission.conference_id)
-                if conference:
-                    conference_name = conference.name
+            conference_name = config.get_conference_name(submission.conference_id, default="N/A")
             
             table_data.append({
                 "ID": submission_id,
@@ -117,7 +109,7 @@ def generate_metrics_table(schedule: Schedule, config: Config) -> List[Dict[str,
     end_dates = []
     
     for submission_id, interval in schedule.intervals.items():
-        submission = config.submissions_dict.get(submission_id)
+        submission = config.get_submission(submission_id)
         if submission:
             duration_days = submission.get_duration_days(config)
             end_date = interval.start_date + timedelta(days=duration_days)
@@ -135,9 +127,9 @@ def generate_metrics_table(schedule: Schedule, config: Config) -> List[Dict[str,
     total_with_deadlines = 0
     
     for submission_id, interval in schedule.intervals.items():
-        submission = config.submissions_dict.get(submission_id)
+        submission = config.get_submission(submission_id)
         if submission and submission.conference_id:
-            conference = config.conferences_dict.get(submission.conference_id)
+            conference = config.get_conference(submission.conference_id)
             if conference and submission.kind in conference.deadlines:
                 total_with_deadlines += 1
                 deadline = conference.deadlines[submission.kind]
@@ -168,9 +160,9 @@ def generate_deadline_table(schedule: Schedule, config: Config) -> List[Dict[str
     
     table_data = []
     for submission_id, start_date in sorted(schedule.items()):
-        submission = config.submissions_dict.get(submission_id)
+        submission = config.get_submission(submission_id)
         if submission and submission.conference_id:
-            conference = config.conferences_dict.get(submission.conference_id)
+            conference = config.get_conference(submission.conference_id)
             if conference and submission.kind in conference.deadlines:
                 deadline = conference.deadlines[submission.kind]
                 duration_days = submission.get_duration_days(config)
@@ -283,18 +275,13 @@ def format_schedule_table(schedule: Schedule, config: Config) -> List[Dict[str, 
             end_date = start_date + timedelta(days=duration_days)
         
         # Get conference info
-        conference_name = "Unknown"
-        if sub.conference_id and sub.conference_id in config.conferences_dict:
-            conf = config.conferences_dict[sub.conference_id]
-            conference_name = conf.name
+        conference_name = config.get_conference_name(sub.conference_id, default="Unknown")
         
         # Get deadline info
         deadline_info = "No deadline"
-        if sub.conference_id and sub.conference_id in config.conferences_dict:
-            conf = config.conferences_dict[sub.conference_id]
-            if sub.kind in conf.deadlines:
-                deadline = conf.deadlines[sub.kind]
-                deadline_info = _format_date_display(deadline)
+        deadline = config.get_deadline_for(sub)
+        if deadline:
+            deadline_info = _format_date_display(deadline)
         
         rows.append({
             "Submission": sub.title,
@@ -382,33 +369,27 @@ def format_deadline_table(schedule: Schedule, config: Config) -> List[Dict[str, 
             continue
         
         # Get conference and deadline info
-        conference_name = "Unknown"
+        conference_name = config.get_conference_name(sub.conference_id, default="Unknown")
         deadline_date = None
         status = "Unknown"
         
-        if sub.conference_id and sub.conference_id in config.conferences_dict:
-            conf = config.conferences_dict[sub.conference_id]
-            conference_name = conf.name
+        if deadline_date:
+            # Calculate end date
+            # Fixed time constants
+            days_per_month = SCHEDULING_CONSTANTS.days_per_month
             
-            if sub.kind in conf.deadlines:
-                deadline_date = conf.deadlines[sub.kind]
-                
-                # Calculate end date
-                # Fixed time constants
-                days_per_month = SCHEDULING_CONSTANTS.days_per_month
-                
-                if sub.kind == SubmissionType.ABSTRACT:
-                    end_date = start_date
-                else:
-                    duration_days = sub.draft_window_months * days_per_month if sub.draft_window_months > 0 else config.min_paper_lead_time_days
-                    end_date = start_date + timedelta(days=duration_days)
-                
-                # Determine status
-                if end_date <= deadline_date:
-                    status = "On Time"
-                else:
-                    days_late = (end_date - deadline_date).days
-                    status = f"{days_late} days late"
+            if sub.kind == SubmissionType.ABSTRACT:
+                end_date = start_date
+            else:
+                duration_days = sub.draft_window_months * days_per_month if sub.draft_window_months > 0 else config.min_paper_lead_time_days
+                end_date = start_date + timedelta(days=duration_days)
+            
+            # Determine status
+            if end_date <= deadline_date:
+                status = "On Time"
+            else:
+                days_late = (end_date - deadline_date).days
+                status = f"{days_late} days late"
         
         rows.append({
             "Submission": sub.title,
@@ -431,13 +412,12 @@ def create_schedule_table(schedule: Schedule, config: Config) -> List[Dict[str, 
     if not schedule:
         return []
     
-    submissions_dict = config.submissions_dict
-    conferences_dict = config.conferences_dict
+    # Use the config methods instead of dict access
     
     table_data = []
     
     for submission_id, start_date in schedule.items():
-        submission = submissions_dict.get(submission_id)
+        submission = config.get_submission(submission_id)
         if not submission:
             continue
         
@@ -448,7 +428,7 @@ def create_schedule_table(schedule: Schedule, config: Config) -> List[Dict[str, 
         # Get conference name
         conference_name = "No conference"
         if submission.conference_id:
-            conference = conferences_dict.get(submission.conference_id)
+            conference = config.get_conference(submission.conference_id)
             if conference:
                 conference_name = conference.name
         

@@ -8,7 +8,7 @@ import pytest
 
 from core.models import (
     Config, Submission, Conference, SubmissionType, 
-    ConferenceType, ConferenceRecurrence, ScheduleState, Schedule
+    ConferenceType, ConferenceRecurrence, Schedule
 )
 
 
@@ -247,42 +247,25 @@ def sample_config() -> Config:
 @pytest.fixture
 def empty_schedule() -> Schedule:
     """Fixture to provide an empty schedule for testing."""
-    return {}
+    return Schedule()
 
 
 @pytest.fixture
 def sample_schedule() -> Schedule:
     """Fixture to provide a sample schedule for testing."""
-    return {
-        "mod1-wrk": date(2024, 12, 1),
-        "paper1-pap": date(2025, 1, 15),
-        "mod2-wrk": date(2025, 1, 1),
-        "paper2-pap": date(2025, 2, 1),
-        "poster1": date(2025, 1, 30)
-    }
-
-
-@pytest.fixture
-def sample_schedule_state(sample_config) -> ScheduleState:
-    """Fixture to provide a sample schedule state for testing."""
-    from core.models import ScheduleState, SchedulerStrategy
+    from core.models import Interval
     
-    return ScheduleState(
-        schedule={
-            "mod1-wrk": date(2024, 12, 1),
-            "paper1-pap": date(2025, 1, 15),
-            "mod2-wrk": date(2025, 1, 1),
-            "paper2-pap": date(2025, 2, 1),
-            "poster1": date(2025, 1, 30)
-        },
-        config=sample_config,
-        strategy=SchedulerStrategy.GREEDY,
-        metadata={
-            "scheduler": "greedy",
-            "timestamp": "2024-01-01T00:00:00"
-        },
-        timestamp="2024-01-01T00:00:00"
-    )
+    schedule = Schedule()
+    schedule.add_interval("mod1-wrk", date(2024, 12, 1), duration_days=30)
+    schedule.add_interval("paper1-pap", date(2025, 1, 15), duration_days=45)
+    schedule.add_interval("mod2-wrk", date(2025, 1, 1), duration_days=30)
+    schedule.add_interval("paper2-pap", date(2025, 2, 1), duration_days=45)
+    schedule.add_interval("poster1", date(2025, 1, 30), duration_days=15)
+    
+    return schedule
+
+
+
 
 
 @pytest.fixture

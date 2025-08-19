@@ -1,15 +1,15 @@
-"""Scheduler-specific validation functions."""
+"""Scheduler validation functions for strategy and constraint compliance."""
 
-from typing import List, Tuple
+from typing import Dict, Any, List, Tuple
 from datetime import date, timedelta
 
-from core.models import Config, Submission, Schedule, SubmissionType, ValidationResult, ConstraintViolation
-from core.constants import SCHEDULING_CONSTANTS
-from .submission import validate_submission_constraints
-from .dependencies import validate_dependencies_satisfied
+from src.core.models import Config, Submission, Schedule, SubmissionType, ValidationResult, ConstraintViolation
+from src.core.constants import SCHEDULING_CONSTANTS
+from src.validation.submission import validate_submission_constraints
+from src.validation.dependencies import validate_dependency_constraints
 
 
-def validate_all_scheduler_constraints(submission: Submission, start_date: date, 
+def validate_scheduler_constraints(submission: Submission, start_date: date, 
                                     schedule: Schedule, config: Config) -> ValidationResult:
     """Validate all scheduler constraints for a submission at a given start date."""
     errors = []
@@ -44,10 +44,11 @@ def _validate_scheduler_constraints(submission: Submission, start_date: date,
                                 schedule: Schedule, config: Config) -> bool:
     """Validate all constraints for a submission at a given start date in scheduler context."""
     # Use the centralized submission validation directly with the Schedule object
-    return validate_submission_constraints(submission, start_date, schedule, config)
+    errors = validate_submission_constraints(submission, start_date, schedule, config)
+    return len(errors) == 0
 
 
-def _validate_scheduling_window(config: Config) -> Tuple[date, date]:
+def validate_scheduling_window(config: Config) -> Tuple[date, date]:
     """Get the scheduling window (start and end dates) for schedulers."""
     # Use config start date if available, otherwise fall back to today
     start_date = getattr(config, 'start_date', None) or date.today()

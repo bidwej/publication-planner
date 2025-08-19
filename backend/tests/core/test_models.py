@@ -350,10 +350,10 @@ class TestConfig:
             max_concurrent_submissions=3
         )
         
-        assert "test-pap" in config.submissions_dict
-        assert "conf1" in config.conferences_dict
-        assert config.submissions_dict["test-pap"] == submission
-        assert config.conferences_dict["conf1"] == conference
+        assert config.has_submission("test-pap")
+        assert config.has_conference("conf1")
+        assert config.get_submission("test-pap") == submission
+        assert config.get_conference("conf1") == conference
     
     def test_config_abstract_paper_dependency_validation(self) -> None:
         """Test config validation works with simplified architecture (no auto-generation)."""
@@ -432,7 +432,7 @@ class TestConfig:
         
         # Initially no abstract
         assert len(config.submissions) == 1
-        assert "paper1-abs-conf1" not in config.submissions_dict
+        assert not config.has_submission("paper1-abs-conf1")
         
         # NOTE: ensure_abstract_paper_dependencies no longer exists - simplified architecture
         # Just validate that config is properly structured
@@ -688,38 +688,21 @@ class TestUnifiedModels:
     
     def test_validation_result_creation(self) -> None:
         """Test ValidationResult creation."""
-        deadline_validation = DeadlineValidation(
-            is_valid=True,
-            violations=[],
-            summary="All deadlines met",
-            compliance_rate=100.0,
-            total_submissions=0,
-            compliant_submissions=0
-        )
-        dependency_validation = DependencyValidation(
-            is_valid=True,
-            violations=[],
-            summary="All dependencies satisfied",
-            satisfaction_rate=100.0,
-            total_dependencies=0,
-            satisfied_dependencies=0
-        )
-        resource_validation = ResourceValidation(
-            is_valid=True,
-            violations=[],
-            summary="Resource constraints satisfied",
-            max_concurrent=3,
-            max_observed=0,
-            total_days=0
-        )
-        
         validation_result: ValidationResult = ValidationResult(
             is_valid=True,
             violations=[],
-            deadline_validation=deadline_validation,
-            dependency_validation=dependency_validation,
-            resource_validation=resource_validation,
-            summary="All validations passed"
+            summary="All validations passed",
+            metadata={
+                "compliance_rate": 100.0,
+                "total_submissions": 0,
+                "compliant_submissions": 0,
+                "satisfaction_rate": 100.0,
+                "total_dependencies": 0,
+                "satisfied_dependencies": 0,
+                "max_concurrent": 3,
+                "max_observed": 0,
+                "total_days": 0
+            }
         )
         
         assert validation_result.is_valid is True

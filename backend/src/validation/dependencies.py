@@ -1,10 +1,10 @@
-"""Dependency validation functions for submission dependency constraints."""
+"""Dependency validation functions for submission ordering constraints."""
 
-from typing import Dict, Any
+from typing import Dict, Any, List
 from datetime import date, timedelta
 
-from ..core.models import Config, Schedule, SubmissionType, ValidationResult, ConstraintViolation
-from ..core.constants import QUALITY_CONSTANTS
+from src.core.models import Config, Schedule, SubmissionType, ValidationResult, ConstraintViolation
+from src.core.constants import QUALITY_CONSTANTS
 
 
 def validate_dependency_constraints(schedule: Schedule, config: Config) -> ValidationResult:
@@ -64,6 +64,14 @@ def validate_dependency_constraints(schedule: Schedule, config: Config) -> Valid
             else:
                 satisfied_dependencies += 1
     
+    # Also validate abstract-paper dependencies
+    abstract_paper_result = _validate_abstract_paper_dependencies(schedule, config)
+    violations.extend(abstract_paper_result.violations)
+    
+    # Update totals
+    total_dependencies += abstract_paper_result.metadata.get("total_dependencies", 0)
+    satisfied_dependencies += abstract_paper_result.metadata.get("satisfied_dependencies", 0)
+    
     satisfaction_rate = (satisfied_dependencies / total_dependencies * QUALITY_CONSTANTS.percentage_multiplier) if total_dependencies > 0 else QUALITY_CONSTANTS.perfect_compliance_rate
     
     return ValidationResult(
@@ -77,7 +85,7 @@ def validate_dependency_constraints(schedule: Schedule, config: Config) -> Valid
     )
 
 
-def validate_abstract_paper_dependencies(schedule: Schedule, config: Config) -> ValidationResult:
+def _validate_abstract_paper_dependencies(schedule: Schedule, config: Config) -> ValidationResult:
     """Validate abstract-paper dependency relationships."""
     violations = []
     total_dependencies = 0

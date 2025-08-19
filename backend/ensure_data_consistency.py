@@ -113,7 +113,7 @@ def identify_unused_fields():
     
     # Based on the analysis, these fields appear unused
     potentially_unused = {
-        "is_biennial",
+
         "max_backtrack_days", 
         "max_submissions_per_author"
     }
@@ -161,7 +161,7 @@ def create_validation_schema():
                 "submission_workflow", "depends_on", "engineering_ready_date",
                 "free_slack_months", "penalty_cost_per_month", "author"
             ],
-            "deprecated": ["is_biennial", "max_backtrack_days", "max_submissions_per_author"]
+            "deprecated": ["max_backtrack_days", "max_submissions_per_author"]
         },
         "conferences": {
             "required": ["name"],

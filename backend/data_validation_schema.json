@@ -16,7 +16,6 @@
       "author"
     ],
     "deprecated": [
-      "is_biennial",
       "max_backtrack_days",
       "max_submissions_per_author"
     ]
