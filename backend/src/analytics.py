@@ -7,16 +7,14 @@ import statistics
 from collections import defaultdict, deque
 from dataclasses import dataclass
 
-from core.models import Config, Schedule, ScheduleMetrics
-from validation.resources import _calculate_daily_load
-from core.constants import ANALYTICS_CONSTANTS, QUALITY_CONSTANTS, SCHEDULING_CONSTANTS
-from validation.deadline import validate_deadline_constraints
-from validation.resources import validate_resources_constraints
-from scoring.efficiency import calculate_efficiency_score
-from scoring.penalties import calculate_penalty_score
-from scoring.quality import calculate_quality_score
-
-from core.models import SubmissionType
+from src.core.models import Config, Schedule, ScheduleMetrics, SubmissionType
+from src.validation.resources import _calculate_daily_load
+from src.core.constants import ANALYTICS_CONSTANTS, QUALITY_CONSTANTS, SCHEDULING_CONSTANTS
+from src.validation.deadline import validate_deadline_constraints
+from src.validation.resources import validate_resources_constraints
+from src.scoring.efficiency import calculate_efficiency_score
+from src.scoring.penalties import calculate_penalty_score
+from src.scoring.quality import calculate_quality_score
 
 
 @dataclass
@@ -410,6 +408,86 @@ def _find_isolated_nodes(nodes: Dict[str, GraphNode]) -> List[str]:
             isolated.append(node_id)
     
     return isolated
+
+
+def analyze_timeline(schedule: Schedule, config: Config) -> Dict[str, Any]:
+    """Analyze timeline information for the schedule."""
+    if not schedule:
+        return {
+            "start_date": None,
+            "end_date": None,
+            "duration_days": 0,
+            "avg_submissions_per_month": 0.0,
+            "summary": "No schedule to analyze"
+        }
+    
+    # Basic timeline metrics using intervals
+    start_date = min(interval.start_date for interval in schedule.intervals.values())
+    end_date = max(interval.end_date for interval in schedule.intervals.values())
+    duration_days = (end_date - start_date).days if start_date and end_date else 0
+    
+    # Calculate average submissions per month
+    months = max(1, duration_days // 30)
+    avg_submissions_per_month = len(schedule.intervals) / months if months > 0 else 0.0
+    
+    return {
+        "start_date": start_date,
+        "end_date": end_date,
+        "duration_days": duration_days,
+        "avg_submissions_per_month": avg_submissions_per_month,
+        "summary": f"Schedule spans {duration_days} days with {len(schedule.intervals)} submissions"
+    }
+
+
+def analyze_resources(schedule: Schedule, config: Config) -> Dict[str, Any]:
+    """Analyze resource utilization for the schedule."""
+    if not schedule:
+        return {
+            "peak_load": 0,
+            "avg_load": 0.0,
+            "utilization_pattern": "empty",
+            "summary": "No schedule to analyze"
+        }
+    
+    # Calculate daily load for utilization metrics
+    daily_load = {}
+    for sid, interval in schedule.intervals.items():
+        sub = config.get_submission(sid)
+        if not sub:
+            continue
+        
+        duration = sub.get_duration_days(config)
+        for i in range(duration):
+            day = interval.start_date + timedelta(days=i)
+            daily_load[day] = daily_load.get(day, 0) + 1
+    
+    if not daily_load:
+        return {
+            "peak_load": 0,
+            "avg_load": 0.0,
+            "utilization_pattern": "no_load",
+            "summary": "No daily load calculated"
+        }
+    
+    # Calculate utilization metrics
+    avg_load = statistics.mean(daily_load.values()) if daily_load else 0.0
+    peak_load = max(daily_load.values()) if daily_load else 0
+    utilization_rate = min((avg_load / config.max_concurrent_submissions) * 100, 100.0) if config.max_concurrent_submissions > 0 else 0.0
+    
+    # Determine utilization pattern
+    if peak_load <= config.max_concurrent_submissions:
+        pattern = "under_utilized"
+    elif peak_load <= config.max_concurrent_submissions * 1.2:
+        pattern = "well_utilized"
+    else:
+        pattern = "over_utilized"
+    
+    return {
+        "peak_load": peak_load,
+        "avg_load": avg_load,
+        "utilization_pattern": pattern,
+        "summary": f"Peak load: {peak_load}, Average: {avg_load:.1f}, Pattern: {pattern}"
+    }
 
 
 def analyze_schedule_with_scoring(schedule, config: Config) -> ScheduleMetrics:

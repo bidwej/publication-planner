@@ -19,19 +19,21 @@ class TestConfigValidation:
         )
         
         result = validate_config(empty_config)
-        assert isinstance(result, list)
+        assert hasattr(result, 'is_valid')
+        assert hasattr(result, 'metadata')
         # Should have errors for missing submissions and conferences
-        assert len(result) > 0
+        assert result.metadata['error_count'] > 0
     
     def test_validate_config_valid_config(self, sample_config) -> None:
         """Test config validation with valid configuration."""
         result = validate_config(sample_config)
-        assert isinstance(result, list)
+        assert hasattr(result, 'is_valid')
+        assert hasattr(result, 'metadata')
         # The sample_config fixture has some validation issues (venue compatibility, dependencies)
-        # but we're testing that the validation function runs and returns a list
-        assert isinstance(result, list)
+        # but we're testing that the validation function runs and returns a ValidationResult
+        assert hasattr(result, 'is_valid')
         # Should have some validation errors due to fixture data issues
-        assert len(result) > 0
+        assert result.metadata['error_count'] > 0
     
     def test_validate_config_invalid_lead_times(self) -> None:
         """Test config validation with invalid lead times."""
@@ -44,11 +46,11 @@ class TestConfigValidation:
         )
         
         result = validate_config(invalid_config)
-        assert isinstance(result, list)
-        assert len(result) > 0
+        assert hasattr(result, 'is_valid')
+        assert result.metadata['error_count'] > 0
         
         # Check for specific error messages
-        error_messages = [error.lower() for error in result]
+        error_messages = [error.lower() for error in result.metadata['errors']]
         assert any("negative" in error for error in error_messages)
     
     def test_validate_config_invalid_concurrency_limit(self) -> None:
@@ -62,11 +64,11 @@ class TestConfigValidation:
         )
         
         result = validate_config(invalid_config)
-        assert isinstance(result, list)
-        assert len(result) > 0
+        assert hasattr(result, 'is_valid')
+        assert result.metadata['error_count'] > 0
         
         # Check for specific error message
-        error_messages = [error.lower() for error in result]
+        error_messages = [error.lower() for error in result.metadata['errors']]
         assert any("at least 1" in error for error in error_messages)
     
     def test_validate_config_submission_validation(self, sample_config) -> None:
@@ -85,11 +87,11 @@ class TestConfigValidation:
         })
         
         result = validate_config(invalid_config)
-        assert isinstance(result, list)
-        assert len(result) > 0
+        assert hasattr(result, 'is_valid')
+        assert result.metadata['error_count'] > 0
         
         # Check for submission validation errors
-        error_messages = [error.lower() for error in result]
+        error_messages = [error.lower() for error in result.metadata['errors']]
         assert any("missing title" in error for error in error_messages)
     
     def test_validate_config_conference_validation(self, sample_config) -> None:
@@ -109,11 +111,11 @@ class TestConfigValidation:
         })
         
         result = validate_config(invalid_config)
-        assert isinstance(result, list)
-        assert len(result) > 0
+        assert hasattr(result, 'is_valid')
+        assert result.metadata['error_count'] > 0
         
         # Check for conference validation errors
-        error_messages = [error.lower() for error in result]
+        error_messages = [error.lower() for error in result.metadata['errors']]
         assert any("no deadlines defined" in error for error in error_messages)
     
     def test_validate_config_constants_validation(self, sample_config) -> None:
@@ -121,5 +123,6 @@ class TestConfigValidation:
         # This test ensures that constants validation is called
         # The actual constants validation logic is tested separately
         result = validate_config(sample_config)
-        assert isinstance(result, list)
-        # Should run without crashing and return a list
+        assert hasattr(result, 'is_valid')
+        assert hasattr(result, 'metadata')
+        # Should run without crashing and return a ValidationResult

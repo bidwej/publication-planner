@@ -3,12 +3,12 @@
 from typing import Dict, Any, List
 from datetime import date
 
-from src.core.models import Config, Submission, Conference
+from src.core.models import Config, Submission, Conference, ValidationResult
 from src.core.constants import SCHEDULING_CONSTANTS
 
 
-def validate_config(config: Config) -> List[str]:
-    """Validate complete configuration and return list of errors."""
+def validate_config(config: Config) -> ValidationResult:
+    """Validate complete configuration and return validation result."""
     errors = []
     
     # Field validation
@@ -30,7 +30,22 @@ def validate_config(config: Config) -> List[str]:
         # Constants validation not available, skip
         pass
     
-    return errors
+    # Build standardized ValidationResult
+    is_valid = len(errors) == 0
+    total_checks = 3  # fields, submissions, conferences
+    passed_checks = total_checks - len([e for e in errors if "validation:" not in e])
+    
+    return ValidationResult(
+        is_valid=is_valid,
+        violations=[],  # Config validation doesn't use ConstraintViolation
+        summary=f"Configuration validation: {passed_checks}/{total_checks} checks passed",
+        metadata={
+            "total_checks": total_checks,
+            "passed_checks": passed_checks,
+            "error_count": len(errors),
+            "errors": errors  # Keep the detailed errors in metadata
+        }
+    )
 
 
 

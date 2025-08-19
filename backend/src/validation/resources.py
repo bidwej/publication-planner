@@ -5,6 +5,7 @@ from datetime import date, timedelta
 
 from src.core.models import Config, ResourceViolation, Schedule, ValidationResult, ConstraintViolation
 from src.core.constants import QUALITY_CONSTANTS
+from tests.conftest import build_validation_result
 
 
 def validate_resources_constraints(schedule: Schedule, config: Config) -> ValidationResult:
@@ -30,14 +31,21 @@ def validate_resources_constraints(schedule: Schedule, config: Config) -> Valida
     # Validate preferred timing constraints (soft block model)
     timing_result = _validate_preferred_timing(schedule, config)
     
+    # Validate peak and average load constraints
+    peak_result = _validate_peak_load(schedule, config)
+    average_result = _validate_average_load(schedule, config)
+    
     # Combine violations
-    all_violations = concurrent_result.violations + author_result.violations + timing_result.violations
+    all_violations = (concurrent_result.violations + author_result.violations + 
+                     timing_result.violations + peak_result.violations + average_result.violations)
     is_valid = len(all_violations) == 0
     
     # Create combined summary
     concurrent_summary = concurrent_result.summary
     timing_summary = timing_result.summary
-    combined_summary = f"{concurrent_summary}; {timing_summary}" if timing_summary else concurrent_summary
+    peak_summary = peak_result.summary
+    average_summary = average_result.summary
+    combined_summary = f"{concurrent_summary}; {timing_summary}; {peak_summary}; {average_summary}"
     
     return ValidationResult(
         is_valid=is_valid, 
@@ -47,27 +55,10 @@ def validate_resources_constraints(schedule: Schedule, config: Config) -> Valida
             "max_concurrent": config.max_concurrent_submissions,
             "max_observed": concurrent_result.metadata.get("max_observed", 0), 
             "total_days": concurrent_result.metadata.get("total_days", 0),
-            "author_limits": author_result.metadata.get("conferences_with_limits", 0)
-        }
-    )
-
-
-def _build_validation_result(violations, total_submissions, compliant_submissions, summary_template):
-    """Helper to build standardized ValidationResult objects."""
-    compliance_rate = (compliant_submissions / total_submissions * QUALITY_CONSTANTS.percentage_multiplier) if total_submissions > 0 else QUALITY_CONSTANTS.perfect_compliance_rate
-    
-    return ValidationResult(
-        is_valid=len(violations) == 0,
-        violations=violations,
-        summary=summary_template.format(
-            compliant=compliant_submissions, 
-            total=total_submissions, 
-            rate=compliance_rate
-        ),
-        metadata={
-            "compliance_rate": compliance_rate,
-            "total_submissions": total_submissions,
-            "compliant_submissions": compliant_submissions
+            "author_limits": author_result.metadata.get("conferences_with_limits", 0),
+            "peak_load": peak_result.metadata.get("peak_load", 0),
+            "average_load": average_result.metadata.get("average_load", 0.0),
+            "load_threshold": average_result.metadata.get("threshold", 0.0)
         }
     )
 
@@ -142,11 +133,15 @@ def _validate_author_submission_limits(schedule: Schedule, config: Config) -> Va
         else:
             compliant_submissions += 1
     
-    return _build_validation_result(
-        violations,
-        total_submissions,
-        compliant_submissions,
-        "Author submission limits: {compliant}/{total} compliant"
+    return ValidationResult(
+        is_valid=len(violations) == 0,
+        violations=violations,
+        summary=f"Author submission limits: {compliant_submissions}/{total_submissions} compliant",
+        metadata={
+            "total_submissions": total_submissions,
+            "compliant_submissions": compliant_submissions,
+            "conferences_with_limits": len([c for c in config.conferences if c.max_submissions_per_author])
+        }
     )
 
 
@@ -173,11 +168,14 @@ def _validate_preferred_timing(schedule: Schedule, config: Config) -> Validation
         else:
             compliant_submissions += 1
     
-    return _build_validation_result(
-        violations,
-        total_submissions,
-        compliant_submissions,
-        "{compliant}/{total} submissions within preferred timing constraints"
+    return ValidationResult(
+        is_valid=len(violations) == 0, 
+        violations=violations,
+        summary=f"{compliant_submissions}/{total_submissions} submissions within preferred timing constraints",
+        metadata={
+            "total_submissions": total_submissions, 
+            "compliant_submissions": compliant_submissions
+        }
     )
 
 

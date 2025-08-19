@@ -6,13 +6,13 @@ from datetime import date, timedelta
 import json
 import statistics
 from pathlib import Path
-from core.models import Config, SchedulerStrategy
-from core.constants import DISPLAY_CONSTANTS
-from validation.deadline import validate_deadline_constraints
-from validation.schedule import validate_schedule_constraints
-from scoring.penalties import calculate_penalty_score
-from scoring.efficiency import calculate_efficiency_score
-from scoring.quality import calculate_quality_score
+from src.core.models import Config, SchedulerStrategy, Schedule
+from src.core.constants import DISPLAY_CONSTANTS
+from src.validation.deadline import validate_deadline_constraints
+from src.validation.schedule import validate_schedule_constraints
+from src.scoring.penalties import calculate_penalty_score
+from src.scoring.efficiency import calculate_efficiency_score
+from src.scoring.quality import calculate_quality_score
 
 
 def print_schedule_summary(schedule, config: Config) -> None:

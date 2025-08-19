@@ -205,12 +205,12 @@ The system uses a unified approach where all work items and papers are treated a
 #### Conference Matching (`preferred_kinds` + `preferred_conferences`)
 The system determines what type of submission opportunity to pursue:
 
-1. **Specific Preference** (`candidate_kind` specified):
-   - If `candidate_kind: "paper"` → Only interested in paper opportunities
-   - If `candidate_kind: "abstract"` → Only interested in abstract opportunities  
-   - If `candidate_kind: "poster"` → Only interested in poster opportunities
+1. **Specific Preference** (`preferred_kinds` specified):
+   - If `preferred_kinds: ["paper"]` → Only interested in paper opportunities
+   - If `preferred_kinds: ["abstract"]` → Only interested in abstract opportunities  
+   - If `preferred_kinds: ["poster"]` → Only interested in poster opportunities
 
-2. **Open to Any Opportunity** (`candidate_kind` not specified):
+2. **Open to Any Opportunity** (`preferred_kinds` not specified):
    - Defaults to base `kind` (usually "paper")
    - Will consider any appropriate submission type the conference accepts
 
@@ -236,9 +236,9 @@ The system automatically classifies conferences based on their deadline structur
 #### Conference Matching Logic
 - **Conference rules determine opportunities**: System respects what each conference actually accepts
 - **Explicit dependencies**: All work item → paper dependencies are defined in JSON files  
-- **Intelligent type assignment**: Uses `candidate_kind` to dynamically assign submission types based on conference requirements
-- **Abstract-before-paper handling**: Papers automatically assigned as abstracts (`candidate_kind: ABSTRACT`) when conferences require abstract-first
-- **No duplicate entities**: System doesn't create new submissions, just intelligently assigns submission types using `candidate_kind`
+- **Intelligent type assignment**: Uses `preferred_kinds` to dynamically assign submission types based on conference requirements
+- **Abstract-before-paper handling**: Papers automatically assigned as abstracts (`preferred_kinds: ["abstract"]`) when conferences require abstract-first
+- **No duplicate entities**: System doesn't create new submissions, just intelligently assigns submission types using `preferred_kinds`
 - **Conference assignment**: Happens during scheduling based on preferred_conferences and conference requirements
 
 #### Practical Examples
@@ -248,18 +248,18 @@ The system automatically classifies conferences based on their deadline structur
 {
   "id": "my_paper",
   "kind": "paper",
-  "candidate_kind": "paper",
+  "preferred_kinds": ["paper"],
   "preferred_conferences": ["ICML", "MICCAI"]
 }
 ```
-→ Only pursue paper opportunities at ICML or MICCAI. If ICML requires abstract+paper, system will automatically assign `candidate_kind: ABSTRACT`.
+→ Only pursue paper opportunities at ICML or MICCAI. If ICML requires abstract+paper, system will automatically assign `preferred_kinds: ["abstract"]`.
 
 **Example 2: Abstract-Only Interest** 
 ```json
 {
   "id": "quick_abstract", 
   "kind": "paper",
-  "candidate_kind": "abstract",
+  "preferred_kinds": ["abstract"],
   "preferred_conferences": ["RSNA", "IFAR"]
 }
 ```
@@ -275,13 +275,13 @@ The system automatically classifies conferences based on their deadline structur
 ```
 → Try any appropriate conference (medical/engineering). Accept abstract-only, paper-only, or abstract+paper opportunities.
 
-**Example 4: Intelligent Type Assignment with `candidate_kind`**
+**Example 4: Intelligent Type Assignment with `preferred_kinds`**
 ```json
 // Paper that can be submitted as either paper or abstract
 {
   "id": "flexible_paper",
   "kind": "paper",
-  "candidate_kind": "abstract",  // Prefer to submit as abstract
+  "preferred_kinds": ["abstract"],  // Prefer to submit as abstract
   "preferred_conferences": ["ICML", "RSNA"]
 }
 ```
