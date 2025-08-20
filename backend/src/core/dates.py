@@ -4,6 +4,7 @@ from typing import Optional, Dict, Union
 from datetime import date, timedelta, datetime
 
 from core.models import Conference, SubmissionType
+from core.constants import SCHEDULING_CONSTANTS
 
 
 def is_working_day(check_date: date, blackout_dates: list[date] | None = None) -> bool:
@@ -78,7 +79,7 @@ def format_relative_time(input_date: Optional[date], reference_date: Optional[da
     elif days > 0:
         if days < 7:
             return f"In {days} days"
-        elif days < 30:
+        elif days < SCHEDULING_CONSTANTS.days_per_month:
             weeks = days // 7
             return f"In {weeks} week{'s' if weeks != 1 else ''}"
         else:
@@ -87,7 +88,7 @@ def format_relative_time(input_date: Optional[date], reference_date: Optional[da
     else:
         if days > -7:
             return f"{abs(days)} days ago"
-        elif days > -30:
+        elif days > -SCHEDULING_CONSTANTS.days_per_month:
             weeks = abs(days) // 7
             return f"{weeks} week{'s' if weeks != 1 else ''} ago"
         else:

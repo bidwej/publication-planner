@@ -1,7 +1,7 @@
 """Submission validation functions for individual submission constraints."""
 
 from typing import Dict, Any, List
-from datetime import date
+from datetime import date, timedelta
 
 from core.models import Config, Submission, SubmissionType, Schedule
 from core.constants import QUALITY_CONSTANTS
@@ -97,7 +97,18 @@ def _validate_dependencies_satisfied(submission: Submission, schedule: Schedule,
             return False
         
         dep_end = dep_sub.get_end_date(dep_start, config)
-        if current_date < dep_end:
+        
+        # Add lead time buffer to ensure proper spacing between dependent submissions
+        if submission.kind == SubmissionType.PAPER:
+            lead_time_buffer = config.min_paper_lead_time_days
+        elif submission.kind == SubmissionType.ABSTRACT:
+            lead_time_buffer = config.min_abstract_lead_time_days
+        else:
+            lead_time_buffer = 0
+        
+        dep_end_with_buffer = dep_end + timedelta(days=lead_time_buffer)
+        
+        if current_date < dep_end_with_buffer:
             return False
     
     return True

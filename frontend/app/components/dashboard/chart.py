@@ -12,6 +12,7 @@ from app.components.gantt.chart import create_gantt_chart
 
 # Import backend modules directly - TOML pythonpath should handle this
 from core.models import Config, Submission
+from core.constants import DISPLAY_CONSTANTS
 
 
 def create_dashboard_chart(chart_type: str = 'timeline', config: Optional[Config] = None) -> Figure:
@@ -50,8 +51,8 @@ def _create_schedule_timeline_chart(config: Optional[Config] = None) -> Figure:
         submission_names = []
         for submission in config.submissions:
             title = submission.title
-            if len(title) > 30:
-                submission_names.append(title[:30] + "...")
+                    if len(title) > DISPLAY_CONSTANTS.max_title_length:
+            submission_names.append(title[:DISPLAY_CONSTANTS.max_title_length] + "...")
             else:
                 submission_names.append(title)
         

@@ -66,7 +66,7 @@ class Schedule(BaseModel):
         if end_date is None and duration_days is not None:
             end_date = start_date + timedelta(days=duration_days)
         elif end_date is None:
-            end_date = start_date + timedelta(days=30)  # Default duration
+            end_date = start_date + timedelta(days=SCHEDULING_CONSTANTS.poster_duration_days)  # Default duration
         
         self.intervals[submission_id] = Interval(start_date=start_date, end_date=end_date)
     
@@ -175,7 +175,7 @@ class Submission(BaseModel):
         days_per_month = SCHEDULING_CONSTANTS.days_per_month
         
         if self.kind == SubmissionType.ABSTRACT:
-            work_item_duration = getattr(config, 'work_item_duration_days', 14)
+            work_item_duration = getattr(config, 'work_item_duration_days', SCHEDULING_CONSTANTS.work_item_duration_days)
             return work_item_duration
         if self.kind == SubmissionType.POSTER:
             if self.draft_window_months > 0:

@@ -16,6 +16,7 @@ from app.storage import get_state_manager
 
 # Import backend modules directly - TOML pythonpath should handle this
 from core.models import Config
+from core.constants import SCHEDULING_CONSTANTS
 
 
 def create_dashboard_layout(config: Optional[Config] = None) -> html.Div:
@@ -146,7 +147,7 @@ def update_dashboard_chart(n_clicks: Optional[int], chart_type: str) -> Figure:
             config = Config(
                 submissions=[],  # We'll need to store actual submission data
                 conferences=[],
-                min_abstract_lead_time_days=config_data.get('min_abstract_lead_time_days', 30),
+                min_abstract_lead_time_days=config_data.get('min_abstract_lead_time_days', SCHEDULING_CONSTANTS.min_abstract_lead_time_days),
                 min_paper_lead_time_days=config_data.get('min_paper_lead_time_days', 60),
                 max_concurrent_submissions=config_data.get('max_concurrent_submissions', 2)
             )

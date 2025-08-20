@@ -10,6 +10,7 @@ import json
 from sqlmodel import SQLModel, Field, Session, select
 from sqlalchemy.sql import func
 from database.session import engine as default_engine
+from core.constants import SCHEDULING_CONSTANTS
 
 # Database Models
 class ScheduleBase(SQLModel):
@@ -28,7 +29,7 @@ class ScheduleItemBase(SQLModel):
     submission_id: str = Field(index=True)
     start_date: date
     end_date: Optional[date] = None
-    duration_days: int = Field(default=30)
+    duration_days: int = Field(default=SCHEDULING_CONSTANTS.poster_duration_days)
     row_position: int = Field(default=0)
 
 class ScheduleItem(ScheduleItemBase, table=True):
@@ -72,13 +73,13 @@ class ScheduleDatabase:
             
             # Create schedule items
             for submission_id, interval in schedule.intervals.items():
-                end_date = interval.start_date + timedelta(days=30)
+                end_date = interval.start_date + timedelta(days=SCHEDULING_CONSTANTS.poster_duration_days)
                 item = ScheduleItem(
                     schedule_id=schedule_id,
                     submission_id=submission_id,
                     start_date=interval.start_date,
                     end_date=end_date,
-                    duration_days=30,
+                    duration_days=SCHEDULING_CONSTANTS.poster_duration_days,
                     row_position=0
                 )
                 session.add(item)

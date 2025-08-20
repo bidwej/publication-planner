@@ -150,7 +150,7 @@ def _calculate_deadline_penalties(schedule: Schedule, config: Config) -> float:
         if end_date > deadline:
             days_late = (end_date - deadline).days
             # Use config penalty costs (project-specific) instead of constants
-            penalty_per_day = sub.penalty_cost_per_day or (config.penalty_costs or {}).get("default_mod_penalty_per_day", 1000.0)
+            penalty_per_day = sub.penalty_cost_per_day or (config.penalty_costs or {}).get("default_mod_penalty_per_day", PENALTY_CONSTANTS.default_mod_penalty_per_day)
             total_penalty += days_late * penalty_per_day
     
     return total_penalty
@@ -167,7 +167,7 @@ def _calculate_dependency_penalties(schedule: Schedule, config: Config) -> float
         for dep_id in (sub.depends_on or []):
             if dep_id not in schedule.intervals:
                 # Missing dependency - use config penalty (project-specific)
-                monthly_penalty = (config.penalty_costs or {}).get("default_monthly_slip_penalty", 1000.0)
+                monthly_penalty = (config.penalty_costs or {}).get("default_monthly_slip_penalty", PENALTY_CONSTANTS.default_monthly_slip_penalty)
                 total_penalty += monthly_penalty
                 continue
             
