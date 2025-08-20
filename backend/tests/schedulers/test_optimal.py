@@ -241,7 +241,7 @@ class TestOptimalScheduler:
         
         # Test a weekend
         weekend = date(2024, 1, 13)  # Saturday
-        assert scheduler._is_working_day(weekday) == True  # Should handle weekends
+        assert scheduler._is_working_day(weekend) == False  # Should handle weekends
     
     def test_penalty_constraints(self, scheduler) -> None:
         """Test that penalty constraints are added correctly."""

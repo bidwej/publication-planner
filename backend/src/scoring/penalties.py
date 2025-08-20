@@ -1,6 +1,6 @@
 """Penalty scoring functions."""
 
-from typing import Dict, Any
+from typing import Dict, Any, List
 from datetime import date, timedelta
 from collections import defaultdict
 
@@ -9,6 +9,8 @@ from core.constants import (
     PENALTY_CONSTANTS, REPORT_CONSTANTS
 )
 from validation.schedule import validate_schedule_constraints
+from src.scoring.efficiency import calculate_efficiency_score, calculate_efficiency_resource
+from src.scoring.quality import calculate_quality_score
 # Note: Penalty costs moved to config.json because they are project-specific
 # and should be configurable by users. Only algorithm constants remain in constants.py.
 
@@ -82,11 +84,11 @@ def calculate_penalty_score(schedule: Schedule, config: Config) -> ScheduleMetri
     
     return ScheduleMetrics(
         makespan=schedule.calculate_duration_days(),
-        avg_utilization=0.0, # Placeholder, will be implemented
-        peak_utilization=0, # Placeholder, will be implemented
+        avg_utilization=calculate_efficiency_resource(schedule, config).avg_utilization if calculate_efficiency_resource(schedule, config) else 0.0,
+        peak_utilization=calculate_efficiency_resource(schedule, config).peak_utilization if calculate_efficiency_resource(schedule, config) else 0,
         total_penalty=total_penalty,
-        compliance_rate=0.0, # Placeholder, will be implemented
-        quality_score=0.0, # Placeholder, will be implemented
+        compliance_rate=1.0 - (total_penalty / max(total_penalty, 1)),  # Calculate compliance rate based on penalties
+        quality_score=calculate_quality_score(schedule, config),
         
         # Penalty breakdown
         deadline_penalties=deadline_penalties,
@@ -100,22 +102,22 @@ def calculate_penalty_score(schedule: Schedule, config: Config) -> ScheduleMetri
         lead_time_penalties=lead_time_penalties,
         slack_cost_penalties=slack_cost_penalties,
         
-        duration_days=0,
-        avg_daily_load=0.0,
-        timeline_efficiency=0.0,
-        utilization_rate=0.0,
-        efficiency_score=0.0,
-        submission_count=0,
-        scheduled_count=0,
-        completion_rate=0.0,
-        monthly_distribution={},
-        quarterly_distribution={},
-        yearly_distribution={},
-        type_counts={},
-        type_percentages={},
-        missing_submissions=[],
-        start_date=None,
-        end_date=None
+        duration_days=schedule.calculate_duration_days(),
+        avg_daily_load=len(schedule.intervals) / max(schedule.calculate_duration_days(), 1) if schedule.intervals else 0.0,
+        timeline_efficiency=calculate_efficiency_score(schedule, config),
+        utilization_rate=calculate_efficiency_resource(schedule, config).utilization_rate if calculate_efficiency_resource(schedule, config) else 0.0,
+        efficiency_score=calculate_efficiency_score(schedule, config),
+        submission_count=len(config.submissions),
+        scheduled_count=len(schedule.intervals),
+        completion_rate=len(schedule.intervals) / max(len(config.submissions), 1),
+        monthly_distribution=_calculate_monthly_distribution(schedule),
+        quarterly_distribution=_calculate_quarterly_distribution(schedule),
+        yearly_distribution=_calculate_yearly_distribution(schedule),
+        type_counts=_calculate_type_counts(schedule, config),
+        type_percentages=_calculate_type_percentages(schedule, config),
+        missing_submissions=_find_missing_submissions(schedule, config),
+        start_date=schedule.start_date,
+        end_date=schedule.end_date
     )
 
 def _calculate_deadline_penalties(schedule: Schedule, config: Config) -> float:
@@ -418,5 +420,62 @@ def _calculate_slack_cost_penalties(schedule: Schedule, config: Config) -> float
             total_penalty += slip_penalty + deferral_penalty + missed_opportunity_penalty
     
     return total_penalty
+
+def _calculate_monthly_distribution(schedule: Schedule) -> Dict[str, int]:
+    """Calculate monthly distribution of submissions."""
+    monthly_dist = {}
+    for interval in schedule.intervals.values():
+        month_key = f"{interval.start_date.year}-{interval.start_date.month:02d}"
+        monthly_dist[month_key] = monthly_dist.get(month_key, 0) + 1
+    return monthly_dist
+
+def _calculate_quarterly_distribution(schedule: Schedule) -> Dict[str, int]:
+    """Calculate quarterly distribution of submissions."""
+    quarterly_dist = {}
+    for interval in schedule.intervals.values():
+        quarter = (interval.start_date.month - 1) // 3 + 1
+        quarter_key = f"{interval.start_date.year}-Q{quarter}"
+        quarterly_dist[quarter_key] = quarterly_dist.get(quarter_key, 0) + 1
+    return quarterly_dist
+
+def _calculate_yearly_distribution(schedule: Schedule) -> Dict[str, int]:
+    """Calculate yearly distribution of submissions."""
+    yearly_dist = {}
+    for interval in schedule.intervals.values():
+        year_key = str(interval.start_date.year)
+        yearly_dist[year_key] = yearly_dist.get(year_key, 0) + 1
+    return yearly_dist
+
+def _calculate_type_counts(schedule: Schedule, config: Config) -> Dict[str, int]:
+    """Calculate counts by submission type."""
+    type_counts = {}
+    for sid in schedule.intervals:
+        sub = config.get_submission(sid)
+        if sub:
+            sub_type = sub.kind.value
+            type_counts[sub_type] = type_counts.get(sub_type, 0) + 1
+    return type_counts
+
+def _calculate_type_percentages(schedule: Schedule, config: Config) -> Dict[str, float]:
+    """Calculate percentages by submission type."""
+    type_counts = _calculate_type_counts(schedule, config)
+    total = sum(type_counts.values())
+    if total == 0:
+        return {}
+    
+    return {sub_type: (count / total) * 100 for sub_type, count in type_counts.items()}
+
+def _find_missing_submissions(schedule: Schedule, config: Config) -> List[Dict[str, Any]]:
+    """Find submissions that are not scheduled."""
+    missing = []
+    for sub in config.submissions:
+        if sub.id not in schedule.intervals:
+            missing.append({
+                "id": sub.id,
+                "title": sub.title,
+                "kind": sub.kind.value,
+                "conference_id": sub.conference_id
+            })
+    return missing
 
  

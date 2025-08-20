@@ -2,10 +2,9 @@
 
 import pytest
 from datetime import date, timedelta
-from pathlib import Path
 
 from core.config import load_config
-from core.models import SchedulerStrategy, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
+from core.models import Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
 from schedulers.optimal import OptimalScheduler
 
 

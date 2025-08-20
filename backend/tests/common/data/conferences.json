@@ -2,8 +2,8 @@
   {
     "name": "ICML",
     "conference_type": "ENGINEERING",
-    "full_paper_deadline": "2025-01-30",
-    "abstract_deadline": "2025-01-23",
+    "full_paper_deadline": "2025-09-30",
+    "abstract_deadline": "2025-09-23",
     "submission_types": "abstract_and_paper",
     "recurrence": "annual",
     "max_submissions_per_author": 2
@@ -11,8 +11,8 @@
   {
     "name": "MIDL",
     "conference_type": "MEDICAL",
-    "full_paper_deadline": "2025-01-31",
-    "abstract_deadline": "2025-01-17",
+    "full_paper_deadline": "2025-10-31",
+    "abstract_deadline": "2025-10-17",
     "submission_types": "abstract_and_paper",
     "recurrence": "annual",
     "max_submissions_per_author": 2
@@ -20,8 +20,8 @@
   {
     "name": "MICCAI",
     "conference_type": "MEDICAL",
-    "full_paper_deadline": "2025-02-27",
-    "abstract_deadline": "2025-02-13",
+    "full_paper_deadline": "2025-11-27",
+    "abstract_deadline": "2025-11-13",
     "submission_types": "abstract_and_paper",
     "recurrence": "annual",
     "max_submissions_per_author": 2
@@ -29,7 +29,7 @@
   {
     "name": "EMBC",
     "conference_type": "MEDICAL",
-    "full_paper_deadline": "2025-02-09",
+    "full_paper_deadline": "2025-12-09",
     "abstract_deadline": null,
     "recurrence": "annual",
     "max_submissions_per_author": 2
@@ -37,15 +37,15 @@
   {
     "name": "ICCV",
     "conference_type": "ENGINEERING",
-    "full_paper_deadline": "2025-03-07",
-    "abstract_deadline": "2025-03-03",
+    "full_paper_deadline": "2025-12-07",
+    "abstract_deadline": "2025-12-03",
     "recurrence": "biennial",
     "max_submissions_per_author": 2
   },
   {
     "name": "AMIA Annual Symposium",
     "conference_type": "MEDICAL",
-    "full_paper_deadline": "2025-03-25",
+    "full_paper_deadline": "2025-12-25",
     "abstract_deadline": null,
     "recurrence": "annual",
     "max_submissions_per_author": 2
@@ -54,15 +54,15 @@
     "name": "ARS",
     "conference_type": "MEDICAL",
     "full_paper_deadline": null,
-    "abstract_deadline": "2025-04-04",
+    "abstract_deadline": "2026-01-04",
     "recurrence": "annual",
     "max_submissions_per_author": 2
   },
   {
     "name": "NeurIPS",
     "conference_type": "ENGINEERING",
-    "full_paper_deadline": "2025-05-15",
-    "abstract_deadline": "2025-05-11",
+    "full_paper_deadline": "2026-01-15",
+    "abstract_deadline": "2026-01-11",
     "recurrence": "annual",
     "max_submissions_per_author": 2
   },
@@ -70,7 +70,7 @@
     "name": "RSNA",
     "conference_type": "MEDICAL",
     "full_paper_deadline": null,
-    "abstract_deadline": "2025-05-07T12:00:00-05:00",
+    "abstract_deadline": "2026-01-07T12:00:00-05:00",
     "recurrence": "annual",
     "max_submissions_per_author": 2
   },
@@ -78,7 +78,7 @@
     "name": "SPIE Medical Imaging",
     "conference_type": "MEDICAL",
     "full_paper_deadline": "2026-01-28",
-    "abstract_deadline": "2025-08-06",
+    "abstract_deadline": "2026-01-06",
     "recurrence": "annual",
     "max_submissions_per_author": 2
   },
@@ -86,14 +86,14 @@
     "name": "IFAR",
     "conference_type": "MEDICAL",
     "full_paper_deadline": null,
-    "abstract_deadline": "2025-08-08",
+    "abstract_deadline": "2026-01-08",
     "recurrence": "annual",
     "max_submissions_per_author": 2
   },
   {
     "name": "ICRA",
     "conference_type": "ENGINEERING",
-    "full_paper_deadline": "2024-09-15",
+    "full_paper_deadline": "2026-01-15",
     "abstract_deadline": null,
     "recurrence": "annual",
     "max_submissions_per_author": 2

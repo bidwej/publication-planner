@@ -234,19 +234,26 @@ class TestConference:
         assert conference.has_deadline(SubmissionType.ABSTRACT) is False
     
     def test_conference_validation_valid(self) -> None:
-        """Test conference validation with valid data."""
+        """Test conference validation with valid data (recent deadline)."""
         conference: Conference = Conference(
             id="conf1",
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,
             recurrence=ConferenceRecurrence.ANNUAL,
-            deadlines={SubmissionType.PAPER: date(2024, 6, 1)}
+            deadlines={SubmissionType.PAPER: date(2025, 6, 1)}  # Use recent date within 1 year
         )
         
         # Conference validation is now part of config validation
         # Create a minimal config to test conference validation
+        submission: Submission = Submission(
+            id="test-pap",
+            title="Test Paper",
+            kind=SubmissionType.PAPER,
+            conference_id="conf1"
+        )
+        
         test_config = Config(
-            submissions=[],
+            submissions=[submission],
             conferences=[conference],
             min_abstract_lead_time_days=30,
             min_paper_lead_time_days=90,
@@ -254,6 +261,38 @@ class TestConference:
         )
         validation_result = validate_config(test_config)
         assert validation_result.is_valid
+    
+    def test_conference_validation_past_deadline(self) -> None:
+        """Test conference validation with past deadline (should fail)."""
+        conference: Conference = Conference(
+            id="conf1",
+            name="Test Conference",
+            conf_type=ConferenceType.MEDICAL,
+            recurrence=ConferenceRecurrence.ANNUAL,
+            deadlines={SubmissionType.PAPER: date(2024, 6, 1)}  # Use past date more than 1 year ago
+        )
+        
+        # Conference validation is now part of config validation
+        # Create a minimal config to test conference validation
+        submission: Submission = Submission(
+            id="test-pap",
+            title="Test Paper",
+            kind=SubmissionType.PAPER,
+            conference_id="conf1"
+        )
+        
+        test_config = Config(
+            submissions=[submission],
+            conferences=[conference],
+            min_abstract_lead_time_days=30,
+            min_paper_lead_time_days=90,
+            max_concurrent_submissions=3
+        )
+        validation_result = validate_config(test_config)
+        # Should fail because deadline is more than 1 year ago
+        assert not validation_result.is_valid
+        errors = validation_result.metadata.get("errors", [])
+        assert any("would miss deadline" in error for error in errors)
     
     def test_conference_validation_invalid(self) -> None:
         """Test conference validation with invalid data."""
@@ -299,7 +338,7 @@ class TestConfig:
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,
             recurrence=ConferenceRecurrence.ANNUAL,
-            deadlines={SubmissionType.PAPER: date(2024, 6, 1)}
+            deadlines={SubmissionType.PAPER: date(2025, 6, 1)}  # Use recent date for creation test
         )
         
         config: Config = Config(
@@ -317,7 +356,7 @@ class TestConfig:
         assert config.max_concurrent_submissions == 3
     
     def test_config_validation_valid(self) -> None:
-        """Test config validation with valid data."""
+        """Test config validation with valid data (recent deadline)."""
         submission: Submission = Submission(
             id="test-pap",
             title="Test Paper",
@@ -330,7 +369,7 @@ class TestConfig:
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,
             recurrence=ConferenceRecurrence.ANNUAL,
-            deadlines={SubmissionType.PAPER: date(2024, 6, 1)}
+            deadlines={SubmissionType.PAPER: date(2025, 6, 1)}  # Use recent date within 1 year
         )
         
         config: Config = Config(
@@ -344,6 +383,37 @@ class TestConfig:
         validation_result = validate_config(config)
         assert validation_result.is_valid
     
+    def test_config_validation_past_deadline(self) -> None:
+        """Test config validation with past deadline (should fail)."""
+        submission: Submission = Submission(
+            id="test-pap",
+            title="Test Paper",
+            kind=SubmissionType.PAPER,
+            conference_id="conf1"
+        )
+        
+        conference: Conference = Conference(
+            id="conf1",
+            name="Test Conference",
+            conf_type=ConferenceType.MEDICAL,
+            recurrence=ConferenceRecurrence.ANNUAL,
+            deadlines={SubmissionType.PAPER: date(2024, 6, 1)}  # Use past date more than 1 year ago
+        )
+        
+        config: Config = Config(
+            submissions=[submission],
+            conferences=[conference],
+            min_abstract_lead_time_days=30,
+            min_paper_lead_time_days=90,
+            max_concurrent_submissions=3
+        )
+        
+        validation_result = validate_config(config)
+        # Should fail because deadline is more than 1 year ago
+        assert not validation_result.is_valid
+        errors = validation_result.metadata.get("errors", [])
+        assert any("Submission" in error and "would miss deadline" in error for error in errors)
+    
     def test_config_validation_invalid(self) -> None:
         """Test config validation with invalid data."""
         # Test empty submissions
@@ -352,7 +422,7 @@ class TestConfig:
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,
             recurrence=ConferenceRecurrence.ANNUAL,
-            deadlines={SubmissionType.PAPER: date(2024, 6, 1)}
+            deadlines={SubmissionType.PAPER: date(2025, 6, 1)}  # Use recent date for invalid test
         )
         
         config: Config = Config(
@@ -382,7 +452,7 @@ class TestConfig:
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,
             recurrence=ConferenceRecurrence.ANNUAL,
-            deadlines={SubmissionType.PAPER: date(2024, 6, 1)}
+            deadlines={SubmissionType.PAPER: date(2025, 6, 1)}  # Use recent date for computed properties test
         )
         
         config: Config = Config(
