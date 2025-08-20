@@ -7,28 +7,8 @@ from plotly.graph_objs import Figure
 from datetime import date, timedelta
 from typing import Dict, Any, List, Optional, TYPE_CHECKING
 
-# Import backend modules with fallback to avoid hanging
-try:
-    from core.models import Config, Submission, Schedule
-    from core.config import load_config
-    from app.components.gantt.activity import add_activity_bars
-    from app.components.gantt.timeline import add_background_elements
-    BACKEND_AVAILABLE = True
-except ImportError:
-    # Fallback types when backend is not available
-    if TYPE_CHECKING:
-        from core.models import Config, Submission, Schedule
-        from core.config import load_config
-        from app.components.gantt.activity import add_activity_bars
-        from app.components.gantt.timeline import add_background_elements
-    else:
-        Config = object  # type: ignore
-        Submission = object  # type: ignore
-        Schedule = object  # type: ignore
-        load_config = lambda *args, **kwargs: None  # type: ignore
-        add_activity_bars = lambda *args, **kwargs: None  # type: ignore
-        add_background_elements = lambda *args, **kwargs: None  # type: ignore
-    BACKEND_AVAILABLE = False
+# For minimal chart mode, we don't need any backend imports
+# This prevents any potential data loading that could cause encoding errors
 
 
 def create_gantt_chart() -> Figure:
@@ -37,7 +17,8 @@ def create_gantt_chart() -> Figure:
     Returns:
         Plotly Figure object
     """
-    # Create a minimal chart to avoid type errors
+    # Create a minimal chart to avoid any potential data loading
+    # This should be completely isolated from backend modules
     return _create_minimal_chart()
 
 
@@ -75,13 +56,8 @@ def _create_real_gantt_chart(config_data: Dict[str, Any]) -> Figure:
             )
         )
         
-        # Use advanced features if available, fall back to simple if not available
-        if BACKEND_AVAILABLE:
-            add_activity_bars(fig, schedule, config)
-            add_background_elements(fig)
-        else:
-            # Fall back to enhanced simple chart if advanced modules aren't available
-            _add_enhanced_activity_bars(fig, schedule, config)
+        # For minimal chart mode, just use the enhanced simple chart
+        _add_enhanced_activity_bars(fig, schedule, config)
         
         # Set y-axis range based on number of activities
         if schedule:

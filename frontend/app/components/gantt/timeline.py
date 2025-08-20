@@ -11,13 +11,13 @@ from plotly.graph_objs import Figure
 # Import backend modules with fallback to avoid hanging
 try:
     from core.models import Config, Submission, Schedule
-    from validation.resources import validate_resources_constraints
+    from src.validation.resources import validate_resources_constraints
     BACKEND_AVAILABLE = True
 except ImportError:
     # Fallback types when backend is not available
     if TYPE_CHECKING:
         from core.models import Config, Submission, Schedule
-        from validation.resources import validate_resources_constraints
+        from src.validation.resources import validate_resources_constraints
     else:
         Config = object  # type: ignore
         Submission = object  # type: ignore

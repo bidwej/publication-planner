@@ -118,10 +118,13 @@ class TestSubmission:
             id="test-pap",
             title="Test Paper",
             kind=SubmissionType.PAPER,
-            conference_id="conf1"
+            conference_id="conf1",
+            draft_window_months=1  # Shorter duration to fit within deadline
         )
         
-        validation_errors: List[str] = validate_submission_constraints(submission, date.today(), Schedule(), config)
+        # Use a future date to avoid deadline issues
+        future_date = date(2024, 5, 1)  # Before the June 1 deadline
+        validation_errors: List[str] = validate_submission_constraints(submission, future_date, Schedule(), config)
         assert len(validation_errors) == 0
     
     def test_submission_validation_invalid(self) -> None:

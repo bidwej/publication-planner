@@ -15,6 +15,7 @@ from src.core.config import (
 )
 from src.core.models import Config, SubmissionType, ConferenceType, SchedulerStrategy, ConferenceRecurrence, Conference, Submission
 from src.core.constants import SCHEDULING_CONSTANTS
+from src.validation.config import validate_config
 
 
 class TestLoadConfig:
@@ -628,8 +629,8 @@ class TestDataclassesSerialization:
         })
         
         # Should still be valid
-        validation_errors: List[str] = modified_config.validate_config()
-        assert len(validation_errors) == 0
+        validation_result = validate_config(modified_config)
+        assert validation_result.is_valid
 
 
 class TestConferenceMappingAndEngineering:
