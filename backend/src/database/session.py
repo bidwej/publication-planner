@@ -4,7 +4,6 @@ Database session management for Paper Planner.
 
 from sqlmodel import create_engine, Session, SQLModel
 from pathlib import Path
-import os
 
 # Database path - works from both backend/ and frontend/ directories
 # From backend/: points to ../schedules.db (project root)

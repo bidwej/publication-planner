@@ -38,14 +38,10 @@ pytest tests/ -v
 
 The backend requires proper environment configuration for imports and database access:
 
-### Required Environment Variables
-- **PYTHONPATH**: Set to `src` for proper module imports
-- **DATABASE_PATH**: Path to SQLite database (default: `../schedules.db`)
-
 ### Setup Steps
 1. No environment setup required
-2. Update `PYTHONPATH` to point to the `src` directory
-3. Set `DATABASE_PATH` to your database location
+2. Paths are automatically configured via pyproject.toml
+3. Database is automatically placed in project root regardless of working directory
 
 ## Core Components
 
