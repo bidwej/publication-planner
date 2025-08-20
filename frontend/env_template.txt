@@ -1,9 +1,0 @@
-# Frontend Environment Configuration
-# Copy this file to .env and update values as needed
-
-# Database path - points to SQLite database in project root
-DATABASE_PATH=../schedules.db
-
-# Frontend configuration
-DEBUG=true
-PORT=8050

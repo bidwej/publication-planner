@@ -22,8 +22,7 @@ cd backend
 pip install -r requirements.txt
 
 # Set up environment (copy template and configure paths)
-cp env.template .env
-# Edit .env to set PYTHONPATH and DATABASE_PATH
+# No environment setup required - paths configured in pyproject.toml
 
 # Generate schedule with greedy strategy
 python generate_schedule.py --strategy greedy
@@ -44,7 +43,7 @@ The backend requires proper environment configuration for imports and database a
 - **DATABASE_PATH**: Path to SQLite database (default: `../schedules.db`)
 
 ### Setup Steps
-1. Copy `env.template` to `.env`
+1. No environment setup required
 2. Update `PYTHONPATH` to point to the `src` directory
 3. Set `DATABASE_PATH` to your database location
 

@@ -17,8 +17,7 @@ The frontend consists of three main interfaces, all accessible through a single 
 cd frontend
 
 # Set up environment (copy template and configure paths)
-cp env.template .env
-# Edit .env to set PYTHONPATH and DATABASE_PATH
+# No environment setup required - paths configured in pyproject.toml
 
 # List available interfaces
 python run_frontend.py --list
@@ -47,8 +46,8 @@ The frontend requires proper environment configuration for backend imports and d
 - **PYTHONPATH**: Set to `../backend/src` for backend module imports
 
 ### Setup Steps
-1. Copy `env.template` to `.env`
-2. Update `PYTHONPATH` to point to `../backend/src`
+1. No environment setup required
+2. Paths are automatically configured via pyproject.toml
 
 **Note**: The frontend `env.template` focuses on import paths. Debug mode is controlled via command line arguments (`--debug` flag).
 

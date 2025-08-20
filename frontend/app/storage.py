@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional, Any, TYPE_CHECKING
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 # Import backend modules with fallback to avoid hanging
 try:

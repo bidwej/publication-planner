@@ -16,6 +16,11 @@ try:
     from core.config import load_config
     BACKEND_IMPORTS_AVAILABLE = True
 except ImportError:
+    # For testing and when backend is not available, use type hints
+    from typing import TYPE_CHECKING
+    if TYPE_CHECKING:
+        from core.models import Config, Submission, Schedule
+        from core.config import load_config
     BACKEND_IMPORTS_AVAILABLE = False
 
 # Frontend imports

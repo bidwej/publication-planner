@@ -233,7 +233,6 @@ class TestOptimalSchedulerEdgeCases:
     
     def test_milp_very_short_deadline_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with very short deadline window."""
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
         # Create submission with very short deadline
         submissions = [
@@ -256,7 +255,6 @@ class TestOptimalSchedulerEdgeCases:
     
     def test_milp_duplicate_submission_ids_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with duplicate submission IDs."""
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
         # Create submissions with duplicate IDs
         submissions = [
@@ -278,7 +276,6 @@ class TestOptimalSchedulerEdgeCases:
     
     def test_milp_missing_dependency_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with missing dependency."""
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
         # Create submission that depends on non-existent submission
         submissions = [
@@ -314,7 +311,6 @@ class TestOptimalSchedulerEdgeCases:
     
     def test_milp_empty_dependency_list_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with empty dependency list vs None."""
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
         # Create submissions with empty vs None dependencies
         submissions = [
@@ -336,7 +332,6 @@ class TestOptimalSchedulerEdgeCases:
     
     def test_milp_very_far_future_deadline_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with deadline very far in the future."""
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
         # Create submission with deadline far in the future
         submissions = [

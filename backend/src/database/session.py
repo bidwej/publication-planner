@@ -2,21 +2,15 @@
 Database session management for Paper Planner.
 """
 
-from sqlmodel import create_engine, Session
+from sqlmodel import create_engine, Session, SQLModel
 from pathlib import Path
-
 import os
-from dotenv import load_dotenv
 
-# Load environment variables (optional)
-try:
-    load_dotenv()
-except Exception:
-    # If .env file is missing or corrupted, use defaults
-    pass
-
-# Database path from environment variable
-DATABASE_PATH = os.getenv("DATABASE_PATH", "../schedules.db")
+# Database path - works from both backend/ and frontend/ directories
+# From backend/: points to ../schedules.db (project root)
+# From frontend/: points to ../schedules.db (project root) 
+# From root/: points to ./schedules.db (current directory)
+DATABASE_PATH = Path("schedules.db") if Path("backend").exists() and Path("frontend").exists() else Path("../schedules.db")
 
 # Create engine
 engine = create_engine(f"sqlite:///{DATABASE_PATH}", echo=False)

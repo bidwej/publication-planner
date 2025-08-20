@@ -51,24 +51,23 @@ The Paper Planner is designed to help researchers and teams efficiently schedule
 
 3. **Install dependencies:**
    ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Install dependencies:**
-   ```bash
-   # Install backend dependencies
+   # Install backend package and dependencies
    cd backend
-   pip install -r requirements.txt
+   pip install -e .          # Install main dependencies
+   pip install -e ".[test]"  # Install test dependencies
    
-   # Install frontend dependencies
+   # Install frontend package and dependencies
    cd ../frontend
-   pip install -r requirements.txt
+   pip install -e .          # Install main dependencies
+   pip install -e ".[test]"  # Install test dependencies
    ```
 
-The project uses `pyproject.toml` configuration for automatic Python import path resolution:
-- **No environment variables needed** - paths are configured automatically
+The project uses modern `pyproject.toml` configuration for dependency management and automatic Python import path resolution:
+- **No requirements.txt files** - all dependencies managed via TOML
+- **No environment variables needed** - paths are configured automatically in TOML
 - **Works from any directory** - root, backend, or frontend
 - **VSCode integration** - includes launch configurations and settings
+- **Editable installs** - code changes are immediately available without reinstalling
 
 ### Running the Application
 
@@ -155,7 +154,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 **Frontend Import Issues**
 - Make sure you're running from the `frontend/` directory
-- Copy `env.template` to `.env` and ensure `PYTHONPATH=../backend/src`
+- No environment setup required - paths are automatically configured via pyproject.toml
 - The `run_frontend.py` script automatically loads environment variables
 - If issues persist, check that `backend/src/` exists relative to frontend
 
@@ -1231,26 +1230,25 @@ python run_frontend.py metrics        # Launch metrics visualization
 - **Responsive Design**: Mobile-friendly interface
 - **Automatic Environment Setup**: Backend module discovery via PYTHONPATH
 
-### Environment Management
+### Import Path Management
 
-The system uses environment variables for clean, maintainable import paths:
-- **Simple Configuration**: Just copy `env.template` to `.env` in each directory
-- **Automatic Loading**: Both frontend and backend automatically load `.env` files
+The system uses pyproject.toml configuration for clean, maintainable import paths:
+- **Simple Configuration**: No environment setup required - paths configured in pyproject.toml
+- **Automatic Loading**: Both frontend and backend automatically resolve import paths
 - **Clean Imports**: No complex path detection or sys.path manipulation
 - **Cross-platform**: Works on Windows, macOS, and Linux
-- **Easy Maintenance**: Update paths in one place (`.env` file)
+- **Easy Maintenance**: Update paths in pyproject.toml files
 
-**Environment Variables:**
-- `PYTHONPATH`: Python import path for backend modules
-- `DATABASE_PATH`: SQLite database location (backend only)
-- `DEBUG`: Enable debug mode
-- `LOG_LEVEL`: Logging level
+**Path Configuration:**
+- **Backend**: `src/` directory for core modules
+- **Frontend**: `app/` directory for frontend components
+- **Cross-project**: Automatic resolution between frontend and backend
 
 ### 🎯 Frontend Architecture Benefits
 
 **✅ Consolidated Launcher**: Single `run_frontend.py` script replaces multiple launcher files
 **✅ Cross-platform**: Works identically on Windows, macOS, and Linux
-**✅ Environment-Based**: Simple `.env` file configuration for import paths
+**✅ Path-Based**: Simple pyproject.toml configuration for import paths
 **✅ Elegant Design**: Clean, compact code following Python best practices
 **✅ Multiple Interfaces**: Dashboard, Gantt chart, and metrics from one script
 **✅ Debug Support**: Built-in debug mode for development
