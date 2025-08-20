@@ -10,18 +10,9 @@ import sys
 import os
 from pathlib import Path
 
-# Try to import backend modules
-try:
-    from core.models import Config, Submission, Schedule
-    from core.config import load_config
-    BACKEND_IMPORTS_AVAILABLE = True
-except ImportError:
-    # For testing and when backend is not available, use type hints
-    from typing import TYPE_CHECKING
-    if TYPE_CHECKING:
-        from core.models import Config, Submission, Schedule
-        from core.config import load_config
-    BACKEND_IMPORTS_AVAILABLE = False
+# Import backend modules directly - TOML pythonpath should handle this
+from core.models import Config, Submission, Schedule
+from core.config import load_config
 
 # Frontend imports
 from app.components.gantt.sample import create_sample_gantt_chart, create_demo_schedule_from_config

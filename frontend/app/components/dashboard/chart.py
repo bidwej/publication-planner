@@ -10,15 +10,8 @@ from plotly.graph_objs import Figure
 
 from app.components.gantt.chart import create_gantt_chart
 
-# Try to import backend modules, but provide fallbacks if they're not available
-try:
-    from core.models import Config, Submission
-    BACKEND_AVAILABLE = True
-except ImportError:
-    # When running the app directly, backend modules may not be available
-    BACKEND_AVAILABLE = False
-    Config = Any  # type: ignore
-    Submission = Any  # type: ignore
+# Import backend modules directly - TOML pythonpath should handle this
+from core.models import Config, Submission
 
 
 def create_dashboard_chart(chart_type: str = 'timeline', config: Optional[Config] = None) -> Figure:

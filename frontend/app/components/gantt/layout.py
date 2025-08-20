@@ -13,17 +13,8 @@ from app.components.gantt.chart import (
 from app.components.exporter.controls import create_export_controls, export_chart_png, export_chart_html
 from app.storage import get_state_manager
 
-# Import backend modules with fallback to avoid hanging
-try:
-    from core.models import Config
-    BACKEND_AVAILABLE = True
-except ImportError:
-    # Fallback types when backend is not available
-    if TYPE_CHECKING:
-        from core.models import Config
-    else:
-        Config = object  # type: ignore
-    BACKEND_AVAILABLE = False
+# Import backend modules directly - TOML pythonpath should handle this
+from core.models import Config
 
 
 def create_gantt_layout(config: Optional[Config] = None) -> html.Div:

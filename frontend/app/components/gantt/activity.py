@@ -6,24 +6,11 @@ Handles a single activity bar with its styling and positioning.
 import plotly.graph_objects as go
 from plotly.graph_objs import Figure
 from datetime import date, timedelta
-from typing import Dict, Optional, Any, Union, TYPE_CHECKING
+from typing import Dict, Optional, Any, Union
 
-# Import backend modules with fallback to avoid hanging
-try:
-    from core.models import Config, Submission, Schedule
-    from app.components.gantt.timeline import assign_activity_rows
-    BACKEND_AVAILABLE = True
-except ImportError:
-    # Fallback types when backend is not available
-    if TYPE_CHECKING:
-        from core.models import Config, Submission, Schedule
-        from app.components.gantt.timeline import assign_activity_rows
-    else:
-        Config = object  # type: ignore
-        Submission = object  # type: ignore
-        Schedule = object  # type: ignore
-        assign_activity_rows = lambda *args, **kwargs: {}  # type: ignore
-    BACKEND_AVAILABLE = False
+# Import backend modules directly - TOML pythonpath should handle this
+from core.models import Config, Submission, Schedule
+from app.components.gantt.timeline import assign_activity_rows
 
 
 def add_activity_bars(fig: Figure, schedule: Schedule, config: Config) -> None:

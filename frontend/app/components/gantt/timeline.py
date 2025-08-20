@@ -4,26 +4,13 @@ Handles activity row assignments, dependency grouping, and background visualizat
 """
 
 from datetime import date, timedelta
-from typing import Dict, Any, Optional, List, TYPE_CHECKING
+from typing import Dict, Any, Optional, List
 import plotly.graph_objects as go
 from plotly.graph_objs import Figure
 
-# Import backend modules with fallback to avoid hanging
-try:
-    from core.models import Config, Submission, Schedule
-    from src.validation.resources import validate_resources_constraints
-    BACKEND_AVAILABLE = True
-except ImportError:
-    # Fallback types when backend is not available
-    if TYPE_CHECKING:
-        from core.models import Config, Submission, Schedule
-        from src.validation.resources import validate_resources_constraints
-    else:
-        Config = object  # type: ignore
-        Submission = object  # type: ignore
-        Schedule = object  # type: ignore
-        validate_resources_constraints = lambda *args, **kwargs: None  # type: ignore
-    BACKEND_AVAILABLE = False
+# Import backend modules directly - TOML pythonpath should handle this
+from core.models import Config, Submission, Schedule
+from validation.resources import validate_resources_constraints
 
 
 def assign_activity_rows(schedule: Optional[Schedule], config: Config) -> Dict[str, int]:

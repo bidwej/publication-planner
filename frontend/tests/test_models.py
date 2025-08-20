@@ -97,13 +97,13 @@ def test_component_state_with_data():
     )
     
     assert state.component_name == "dashboard"
-    # config_data is now a simplified dict, so check key fields
+    # config_data is now a proper Config object, so check attributes
     assert state.config_data is not None
-    assert state.config_data["submissions"] == []
-    assert state.config_data["conferences"] == []
-    assert state.config_data["min_abstract_lead_time_days"] == 30
-    assert state.config_data["min_paper_lead_time_days"] == 60
-    assert state.config_data["max_concurrent_submissions"] == 3
+    assert state.config_data.submissions == []
+    assert state.config_data.conferences == []
+    assert state.config_data.min_abstract_lead_time_days == 30
+    assert state.config_data.min_paper_lead_time_days == 60
+    assert state.config_data.max_concurrent_submissions == 3
     assert state.last_refresh == "2024-01-01"
     assert state.chart_type == "timeline"
     assert state.custom_settings == custom_settings

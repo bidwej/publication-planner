@@ -6,22 +6,11 @@ Handles SQLite-based localStorage equivalent for schedules.
 import sqlite3
 import json
 from pathlib import Path
-from typing import Dict, List, Optional, Any, TYPE_CHECKING
+from typing import Dict, List, Optional, Any
 from datetime import datetime
-from typing import TYPE_CHECKING
 
-# Import backend modules with fallback to avoid hanging
-try:
-    from core.models import Config, Schedule
-    BACKEND_AVAILABLE = True
-except ImportError:
-    # Fallback types when backend is not available
-    if TYPE_CHECKING:
-        from core.models import Config, Schedule
-    else:
-        Config = object  # type: ignore
-        Schedule = object  # type: ignore
-    BACKEND_AVAILABLE = False
+# Import backend modules directly - TOML pythonpath should handle this
+from core.models import Config, Schedule
 
 
 class ScheduleStorage:
