@@ -3,15 +3,16 @@
 from __future__ import annotations
 from typing import Dict, Any
 from datetime import date
+
+from core.constants import REPORT_CONSTANTS
 from core.models import Config, Schedule
-from validation.deadline import validate_deadline_constraints
-from validation.schedule import validate_schedule_constraints
-from validation.resources import validate_resources_constraints
-from scoring.penalties import calculate_penalty_score
+
 from analytics import analyze_timeline, analyze_resources
-from core.constants import (
-    REPORT_CONSTANTS
-)
+from scoring.penalties import calculate_penalty_score
+from validation.deadline import validate_deadline_constraints
+from validation.resources import validate_resources_constraints
+from validation.schedule import validate_schedule_constraints
+
 
 def generate_schedule_report(schedule: Schedule, config: Config) -> Dict[str, Any]:
     """Generate a comprehensive schedule report for presentation."""

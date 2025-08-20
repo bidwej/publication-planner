@@ -267,7 +267,7 @@ def _validate_average_load(schedule: Schedule, config: Config) -> ValidationResu
     
     # Check if average load is reasonable (e.g., not too close to max)
     max_load = config.max_concurrent_submissions
-            threshold = max_load * EFFICIENCY_CONSTANTS.optimal_utilization_rate  # Optimal utilization rate
+    threshold = max_load * EFFICIENCY_CONSTANTS.optimal_utilization_rate  # Optimal utilization rate
     
     is_valid = average_load <= threshold
     

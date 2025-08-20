@@ -56,7 +56,7 @@ class HeuristicScheduler(BaseScheduler):
             ready = self.get_ready_submissions(topo, schedule, current_date)
             
             # Sort by heuristic strategy
-            ready = self.sort_by_heuristic(ready)
+            ready = self._sort_by_heuristic(ready)
             
             # Schedule submissions up to concurrency limit
             self.schedule_submissions_up_to_limit(ready, schedule, active, current_date)
@@ -70,21 +70,21 @@ class HeuristicScheduler(BaseScheduler):
     
     # ===== HEURISTIC-SPECIFIC METHODS =====
     
-    def sort_by_heuristic(self, ready: List[str]) -> List[str]:
+    def _sort_by_heuristic(self, ready: List[str]) -> List[str]:
         """Sort ready submissions by the specified heuristic strategy."""
         if self.strategy == HeuristicStrategy.EARLIEST_DEADLINE:
-            return self.sort_by_earliest_deadline(ready)
+            return self._sort_by_earliest_deadline(ready)
         if self.strategy == HeuristicStrategy.LATEST_START:
-            return self.sort_by_latest_start(ready)
+            return self._sort_by_latest_start(ready)
         if self.strategy == HeuristicStrategy.SHORTEST_PROCESSING_TIME:
-            return self.sort_by_processing_time(ready, reverse=False)
+            return self._sort_by_processing_time(ready, reverse=False)
         if self.strategy == HeuristicStrategy.LONGEST_PROCESSING_TIME:
-            return self.sort_by_processing_time(ready, reverse=True)
+            return self._sort_by_processing_time(ready, reverse=True)
         if self.strategy == HeuristicStrategy.CRITICAL_PATH:
-            return self.sort_by_critical_path(ready)
+            return self._sort_by_critical_path(ready)
         raise ValueError(f"Unknown heuristic strategy: {self.strategy}")
     
-    def sort_by_earliest_deadline(self, ready: List[str]) -> List[str]:
+    def _sort_by_earliest_deadline(self, ready: List[str]) -> List[str]:
         """Sort by earliest deadline first."""
         def get_deadline(submission_id: str) -> date:
             submission = self.submissions[submission_id]
@@ -97,7 +97,7 @@ class HeuristicScheduler(BaseScheduler):
         
         return sorted(ready, key=get_deadline)
     
-    def sort_by_latest_start(self, ready: List[str]) -> List[str]:
+    def _sort_by_latest_start(self, ready: List[str]) -> List[str]:
         """Sort by latest start time first (reverse of earliest start)."""
         def get_latest_start(submission_id: str) -> date:
             submission = self.submissions[submission_id]
@@ -117,7 +117,7 @@ class HeuristicScheduler(BaseScheduler):
         
         return sorted(ready, key=get_latest_start, reverse=True)
     
-    def sort_by_processing_time(self, ready: List[str], reverse: bool = False) -> List[str]:
+    def _sort_by_processing_time(self, ready: List[str], reverse: bool = False) -> List[str]:
         """Sort by processing time (shortest or longest first)."""
         def get_processing_time(submission_id: str) -> int:
             submission = self.submissions[submission_id]
@@ -128,7 +128,7 @@ class HeuristicScheduler(BaseScheduler):
         
         return sorted(ready, key=get_processing_time, reverse=reverse)
     
-    def sort_by_critical_path(self, ready: List[str]) -> List[str]:
+    def _sort_by_critical_path(self, ready: List[str]) -> List[str]:
         """Sort by critical path priority (submissions that block others get higher priority)."""
         def get_critical_priority(submission_id: str) -> int:
             # Count how many other submissions depend on this one

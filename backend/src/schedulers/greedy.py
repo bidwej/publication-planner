@@ -31,7 +31,7 @@ class GreedyScheduler(BaseScheduler):
             submission = self.submissions[submission_id]
             
             # Find earliest valid start date
-            proposed_start_date = self.find_earliest_start(submission, schedule, start_date, end_date)
+            proposed_start_date = self._find_earliest_start(submission, schedule, start_date, end_date)
             
             if proposed_start_date:
                 # Add interval to schedule
@@ -47,7 +47,7 @@ class GreedyScheduler(BaseScheduler):
     
     # ===== GREEDY-SPECIFIC METHODS =====
     
-    def find_earliest_start(self, submission: Submission, schedule: Schedule, 
+    def _find_earliest_start(self, submission: Submission, schedule: Schedule, 
                            start_date: date, end_date: date) -> Optional[date]:
         """Find the earliest valid start date for a submission with comprehensive constraint validation."""
         # If submission doesn't have a conference assigned, try to assign one
@@ -99,25 +99,19 @@ class GreedyScheduler(BaseScheduler):
                 if interval.start_date <= current_date <= interval.end_date:
                     active_count += 1
             
-            # Check resource constraint
-            if active_count >= max_concurrent:
-                current_date += timedelta(days=1)
-                continue
-            
-            # Check working day constraint only if enabled
-            if (self.config.scheduling_options and 
-                self.config.scheduling_options.get("enable_working_days_only", False) and
-                not is_working_day(current_date, self.config.blackout_dates)):
-                current_date += timedelta(days=1)
-                continue
-            
-            # Check all other constraints using comprehensive validation
-            if self.can_schedule(submission, current_date, schedule):
-                return current_date
+            # Check if we can schedule at this date
+            if active_count < max_concurrent:
+                # Check working days constraint
+                if (self.config.scheduling_options and 
+                    self.config.scheduling_options.get("enable_working_days_only", False)):
+                    if not is_working_day(current_date, self.config.blackout_dates):
+                        current_date += timedelta(days=1)
+                        continue
+                
+                # Check all other constraints using base class method
+                if self.validate_constraints(submission, current_date, schedule):
+                    return current_date
             
             current_date += timedelta(days=1)
         
-        if iteration_count >= max_iterations:
-            print(f"Warning: Could not find valid start date for {submission.id} after {max_iterations} iterations")
-        
-        return None  # Could not find valid start date
+        return None  # Couldn't find a valid start date

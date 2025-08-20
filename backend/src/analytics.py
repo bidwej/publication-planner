@@ -441,7 +441,7 @@ def analyze_timeline(schedule: Schedule, config: Config) -> Dict[str, Any]:
     duration_days = (end_date - start_date).days if start_date and end_date else 0
     
     # Calculate average submissions per month
-            months = max(1, duration_days // SCHEDULING_CONSTANTS.days_per_month)
+    months = max(1, duration_days // SCHEDULING_CONSTANTS.days_per_month)
     avg_submissions_per_month = len(schedule.intervals) / months if months > 0 else 0.0
     
     return {
