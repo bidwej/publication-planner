@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 from core.models import Config, Schedule, ScheduleMetrics, SubmissionType
 from validation.resources import _calculate_daily_load
-from core.constants import ANALYTICS_CONSTANTS, QUALITY_CONSTANTS, SCHEDULING_CONSTANTS, EFFICIENCY_CONSTANTS
+from core.constants import SCHEDULING_CONSTANTS, EFFICIENCY_CONSTANTS
 from validation.deadline import validate_deadline_constraints
 from validation.resources import validate_resources_constraints
 from scoring.efficiency import calculate_efficiency_score

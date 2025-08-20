@@ -1,12 +1,12 @@
 """Greedy scheduler implementation."""
 
 from __future__ import annotations
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional
 from datetime import date, timedelta
 from schedulers.base import BaseScheduler
 from core.dates import is_working_day
-from core.models import SchedulerStrategy, SubmissionType, Schedule, Submission
-from core.constants import SCHEDULING_CONSTANTS, EFFICIENCY_CONSTANTS
+from core.models import Schedule, Submission
+from core.constants import EFFICIENCY_CONSTANTS
 
 
 class GreedyScheduler(BaseScheduler):

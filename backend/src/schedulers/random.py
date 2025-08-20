@@ -6,7 +6,7 @@ from typing import Dict, List, Optional
 from datetime import date, timedelta
 from schedulers.base import BaseScheduler
 from core.dates import is_working_day
-from core.models import SchedulerStrategy, Schedule
+from core.models import Schedule
 
 
 class RandomScheduler(BaseScheduler):

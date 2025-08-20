@@ -5,7 +5,7 @@ from typing import Dict, List
 from datetime import date, timedelta
 from schedulers.greedy import GreedyScheduler
 from core.dates import is_working_day
-from core.models import SchedulerStrategy, Schedule
+from core.models import Schedule
 from core.constants import SCHEDULING_CONSTANTS
 
 
