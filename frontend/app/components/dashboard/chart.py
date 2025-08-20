@@ -51,8 +51,8 @@ def _create_schedule_timeline_chart(config: Optional[Config] = None) -> Figure:
         submission_names = []
         for submission in config.submissions:
             title = submission.title
-                    if len(title) > DISPLAY_CONSTANTS.max_title_length:
-            submission_names.append(title[:DISPLAY_CONSTANTS.max_title_length] + "...")
+            if len(title) > DISPLAY_CONSTANTS.max_title_length:
+                submission_names.append(title[:DISPLAY_CONSTANTS.max_title_length] + "...")
             else:
                 submission_names.append(title)
         
