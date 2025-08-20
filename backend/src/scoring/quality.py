@@ -87,7 +87,7 @@ def calculate_quality_score(schedule: Schedule, config: Config) -> float:
     if additional_quality_factors:
         additional_score = sum(additional_quality_factors) / len(additional_quality_factors)
         # Weight the additional factors at 30% of the total score
-        quality_score = base_score * 0.7 + additional_score * 0.3
+        quality_score = base_score * SCORING_CONSTANTS.quality_deadline_weight + additional_score * SCORING_CONSTANTS.quality_dependency_weight
     else:
         quality_score = base_score
     

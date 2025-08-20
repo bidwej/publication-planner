@@ -151,10 +151,10 @@ def calculate_overall_score(deadline_validation, dependency_validation,
     score -= penalty_factor
     
     # Bonus for high compliance rates (but cap at 1.0)
-    if deadline_validation.get("compliance_rate", 100) > 95:
-        score += 0.05
-    if dependency_validation.get("satisfaction_rate", 100) > 95:
-        score += 0.05
+    if deadline_validation.get("compliance_rate", 100) > REPORT_CONSTANTS.high_compliance_threshold:
+        score += REPORT_CONSTANTS.compliance_bonus
+    if dependency_validation.get("satisfaction_rate", 100) > REPORT_CONSTANTS.high_compliance_threshold:
+        score += REPORT_CONSTANTS.compliance_bonus
     
     # Clamp between min_score and max_score
     return max(min(score, 1.0), REPORT_CONSTANTS.min_score) 

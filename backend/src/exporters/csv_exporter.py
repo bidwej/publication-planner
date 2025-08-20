@@ -9,6 +9,7 @@ import json
 from collections import defaultdict
 
 from core.models import Config, ScheduleMetrics, SubmissionType, Schedule
+from core.constants import PENALTY_CONSTANTS
 from validation.schedule import validate_schedule_constraints
 from scoring.penalties import calculate_penalty_score
 
@@ -402,7 +403,13 @@ class CSVExporter:
         """Run comprehensive validation on schedule."""
         try:
             validation_result = validate_schedule_constraints(schedule, self.config)
-            return validation_result
+            if hasattr(validation_result, 'model_dump'):
+                return validation_result.model_dump()
+            elif isinstance(validation_result, dict):
+                return validation_result
+            else:
+                # Convert to dict if it's a Pydantic model
+                return dict(validation_result)
         except ImportError:
             # Fallback if validation module is not available
             return {
@@ -450,7 +457,7 @@ class CSVExporter:
                         
                         if end_date > deadline:
                             days_late = (end_date - deadline).days
-                            penalty_per_day = (self.config.penalty_costs or {}).get("default_paper_penalty_per_day", 500.0)
+                            penalty_per_day = (self.config.penalty_costs or {}).get("default_paper_penalty_per_day", PENALTY_CONSTANTS.default_paper_penalty_per_day)
                             total_penalty += days_late * penalty_per_day
             
             return [

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 @dataclass
 class SchedulingConstants:
-    """Core scheduling constants that should be configurable."""
+    """Constants related to scheduling algorithms and constraints."""
     abstract_advance_days: int = 30
     lookahead_window_days: int = 30
     heuristic_lookahead_days: int = 30  # For heuristic algorithms
@@ -16,10 +16,18 @@ class SchedulingConstants:
     days_per_month: int = 30
     conference_response_time_days: int = 90
     default_paper_lead_time_months: int = 3
+    # Additional scheduling constants
     work_item_duration_days: int = 14
     min_paper_lead_time_days: int = 90
     min_abstract_lead_time_days: int = 30
     max_concurrent_submissions: int = 3
+    # Threshold constants for penalties
+    months_delay_threshold: int = 12
+    abstract_missed_threshold: int = 6
+    paper_missed_threshold: int = 4
+    poster_missed_threshold: int = 3
+    # Reference period constants
+    reference_period_days: int = 365  # 1 year reference period for validation
 
 # ===== PENALTY CONSTANTS =====
 # These should be configurable via Config.penalty_costs
@@ -35,6 +43,16 @@ class PenaltyConstants:
     default_monthly_slip_penalty: float = 1000.0
     default_full_year_deferral_penalty: float = 5000.0
     missed_abstract_penalty: float = 3000.0
+    # Additional penalty constants for hardcoded values
+    resource_violation_penalty: float = 200.0
+    soft_block_violation_penalty: float = 200.0
+    single_conference_violation_penalty: float = 500.0
+    lead_time_violation_penalty: float = 150.0
+    conference_compatibility_penalty: float = 300.0
+    abstract_paper_dependency_penalty: float = 400.0
+    # Multiplier constants for penalty calculations
+    deadline_mismatch_multiplier: float = 1.2
+    missing_dependency_multiplier: float = 2.0
 
 # ===== SCORING CONSTANTS =====
 
@@ -50,14 +68,21 @@ class EfficiencyConstants:
     lookahead_bonus_increment: float = 0.5  # For lookahead algorithms
     max_algorithm_iterations: int = 1000  # Safety limit for greedy algorithms
     milp_timeout_seconds: int = 60  # MILP solver timeout in seconds (increased from 10)
+    # Utilization threshold for over-utilization detection
+    over_utilization_threshold: float = 1.2
 
 @dataclass
 class PriorityConstants:
     """Constants related to priority weighting."""
-    engineering_paper_weight: float = 2.0
-    medical_paper_weight: float = 1.0
+    paper_weight: float = 1.0
     mod_weight: float = 1.5
     abstract_weight: float = 0.5
+    # Base priority values for scheduler algorithms
+    base_paper_priority: float = 5.0
+    base_abstract_priority: float = 3.0
+    base_poster_priority: float = 1.0
+    dependency_bonus: float = 10.0
+    deadline_proximity_factor: float = 100.0
 
 @dataclass
 class QualityConstants:
@@ -91,6 +116,13 @@ class ReportConstants:
     resource_violation_penalty: float = 0.2
     max_penalty_factor: float = 0.5
     penalty_normalization_factor: float = 10000.0
+    # Compliance bonus and threshold values
+    compliance_bonus: float = 0.05
+    high_compliance_threshold: float = 95.0
+    # Score thresholds for status evaluation
+    excellent_score_threshold: float = 80.0
+    good_score_threshold: float = 60.0
+    fair_score_threshold: float = 40.0
 
 # ===== DISPLAY CONSTANTS =====
 

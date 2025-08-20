@@ -6,7 +6,7 @@ from collections import defaultdict
 
 from core.models import Config, ScheduleMetrics, SubmissionType, ConferenceType, Schedule
 from core.constants import (
-    PENALTY_CONSTANTS, REPORT_CONSTANTS
+    PENALTY_CONSTANTS, REPORT_CONSTANTS, SCHEDULING_CONSTANTS
 )
 from validation.schedule import validate_schedule_constraints
 from src.scoring.efficiency import calculate_efficiency_score, calculate_efficiency_resource
@@ -219,8 +219,8 @@ def _calculate_resource_penalties(schedule: Schedule, config: Config) -> float:
     for load in daily_load.values():
         if load > max_concurrent:
             excess = load - max_concurrent
-            # Use config penalty costs (project-specific) instead of constants
-            penalty_per_excess = (config.penalty_costs or {}).get("resource_violation_penalty", 200.0)
+            # Use config penalty costs (project-specific) or constants
+            penalty_per_excess = (config.penalty_costs or {}).get("resource_violation_penalty", PENALTY_CONSTANTS.resource_violation_penalty)
             total_penalty += excess * penalty_per_excess
     
     return total_penalty
@@ -233,7 +233,7 @@ def _calculate_blackout_penalties(comprehensive_result: Dict[str, Any], config: 
     
     violations = blackout_result.get("violations", [])
     penalty_costs = config.penalty_costs or {}
-    penalty_per_violation = penalty_costs.get("blackout_violation_penalty", 100.0)
+    penalty_per_violation = penalty_costs.get("blackout_violation_penalty", PENALTY_CONSTANTS.default_dependency_violation_penalty)
     
     total_penalty = len(violations) * penalty_per_violation
     
@@ -243,7 +243,7 @@ def _calculate_blackout_penalties(comprehensive_result: Dict[str, Any], config: 
         if severity == "high":
             total_penalty += penalty_per_violation * 2
         elif severity == "low":
-            total_penalty += penalty_per_violation * 0.5
+            total_penalty += penalty_per_violation * REPORT_CONSTANTS.max_penalty_factor
     
     return total_penalty
 
@@ -259,7 +259,7 @@ def _calculate_soft_block_penalties(comprehensive_result: Dict[str, Any], config
     timing_violations = [v for v in violations if "days_violation" in v]
     
     penalty_costs = config.penalty_costs or {}
-    penalty_per_violation = penalty_costs.get("soft_block_violation_penalty", 200.0)
+    penalty_per_violation = penalty_costs.get("soft_block_violation_penalty", PENALTY_CONSTANTS.soft_block_violation_penalty)
     total_penalty = sum(v.get("days_violation", 0) * penalty_per_violation for v in timing_violations)
     
     return total_penalty
@@ -273,7 +273,7 @@ def _calculate_single_conference_penalties(comprehensive_result: Dict[str, Any],
     
     violations = single_conf_result.get("violations", [])
     penalty_costs = config.penalty_costs or {}
-    penalty_per_violation = penalty_costs.get("single_conference_violation_penalty", 500.0)
+    penalty_per_violation = penalty_costs.get("single_conference_violation_penalty", PENALTY_CONSTANTS.single_conference_violation_penalty)
     
     total_penalty = len(violations) * penalty_per_violation
     
@@ -281,7 +281,7 @@ def _calculate_single_conference_penalties(comprehensive_result: Dict[str, Any],
     for violation in violations:
         conference_id = violation.get("conference_id", "")
         if "ICML" in conference_id or "NeurIPS" in conference_id or "CVPR" in conference_id:
-            total_penalty += penalty_per_violation * 1.5  # Higher penalty for top-tier conferences
+            total_penalty += penalty_per_violation * REPORT_CONSTANTS.mod_weight  # Higher penalty for top-tier conferences
     
     return total_penalty
 
@@ -294,7 +294,7 @@ def _calculate_lead_time_penalties(comprehensive_result: Dict[str, Any], config:
     
     violations = lead_time_result.get("violations", [])
     penalty_costs = config.penalty_costs or {}
-    penalty_per_violation = penalty_costs.get("lead_time_violation_penalty", 150.0)
+    penalty_per_violation = penalty_costs.get("lead_time_violation_penalty", PENALTY_CONSTANTS.lead_time_violation_penalty)
     
     total_penalty = len(violations) * penalty_per_violation
     
@@ -302,7 +302,7 @@ def _calculate_lead_time_penalties(comprehensive_result: Dict[str, Any], config:
     for violation in violations:
         days_shortage = violation.get("days_shortage", 0)
         if days_shortage > 0:
-            total_penalty += days_shortage * penalty_per_violation * 0.2
+            total_penalty += days_shortage * penalty_per_violation * REPORT_CONSTANTS.resource_violation_penalty
     
     return total_penalty
 
@@ -315,7 +315,7 @@ def _calculate_conference_compatibility_penalties(comprehensive_result: Dict[str
     
     violations = conf_compat_result.get("violations", [])
     penalty_costs = config.penalty_costs or {}
-    penalty_per_violation = penalty_costs.get("conference_compatibility_penalty", 300.0)
+    penalty_per_violation = penalty_costs.get("conference_compatibility_penalty", PENALTY_CONSTANTS.conference_compatibility_penalty)
     
     total_penalty = len(violations) * penalty_per_violation
     
@@ -323,9 +323,9 @@ def _calculate_conference_compatibility_penalties(comprehensive_result: Dict[str
     for violation in violations:
         issue_type = violation.get("issue", "general")
         if issue_type == "submission_type_mismatch":
-            total_penalty += penalty_per_violation * 1.5
+            total_penalty += penalty_per_violation * REPORT_CONSTANTS.mod_weight
         elif issue_type == "deadline_mismatch":
-            total_penalty += penalty_per_violation * 1.2
+            total_penalty += penalty_per_violation * PENALTY_CONSTANTS.deadline_mismatch_multiplier
     
     return total_penalty
 
@@ -338,7 +338,7 @@ def _calculate_abstract_paper_dependency_penalties(comprehensive_result: Dict[st
     
     violations = abstract_paper_result.get("violations", [])
     penalty_costs = config.penalty_costs or {}
-    penalty_per_violation = penalty_costs.get("abstract_paper_dependency_penalty", 400.0)
+    penalty_per_violation = penalty_costs.get("abstract_paper_dependency_penalty", PENALTY_CONSTANTS.abstract_paper_dependency_penalty)
     
     total_penalty = len(violations) * penalty_per_violation
     
@@ -346,9 +346,9 @@ def _calculate_abstract_paper_dependency_penalties(comprehensive_result: Dict[st
     for violation in violations:
         issue_type = violation.get("issue", "missing_dependency")
         if issue_type == "missing_dependency":
-            total_penalty += penalty_per_violation * 2.0  # High penalty for missing dependencies
+            total_penalty += penalty_per_violation * PENALTY_CONSTANTS.missing_dependency_multiplier  # High penalty for missing dependencies
         elif issue_type == "timing_violation":
-            total_penalty += penalty_per_violation * 1.5  # Medium penalty for timing issues
+            total_penalty += penalty_per_violation * REPORT_CONSTANTS.mod_weight  # Medium penalty for timing issues
     
     return total_penalty
 
@@ -358,15 +358,15 @@ def _calculate_slack_cost_penalties(schedule: Schedule, config: Config) -> float
     total_penalty = 0.0
     
     # Calculate P_j (monthly slip penalty)
-    P_j = (config.penalty_costs or {}).get("default_monthly_slip_penalty", 1000.0)
+    P_j = (config.penalty_costs or {}).get("default_monthly_slip_penalty", PENALTY_CONSTANTS.default_monthly_slip_penalty)
     
     # Calculate Y_j (full-year deferral penalty)
-    Y_j = (config.penalty_costs or {}).get("default_full_year_deferral_penalty", 5000.0)
+    Y_j = (config.penalty_costs or {}).get("default_full_year_deferral_penalty", PENALTY_CONSTANTS.default_full_year_deferral_penalty)
     
     # Calculate different missed opportunity penalties
-    A_j = (config.penalty_costs or {}).get("missed_abstract_penalty", 3000.0)  # Missed abstract-only opportunity
-    P_missed = (config.penalty_costs or {}).get("missed_poster_penalty", 2000.0)  # Missed poster opportunity
-    AP_missed = (config.penalty_costs or {}).get("missed_abstract_paper_penalty", 4000.0)  # Missed abstract+paper opportunity
+    A_j = (config.penalty_costs or {}).get("missed_abstract_penalty", PENALTY_CONSTANTS.missed_abstract_penalty)  # Missed abstract-only opportunity
+    P_missed = (config.penalty_costs or {}).get("missed_poster_penalty", PENALTY_CONSTANTS.default_paper_penalty_per_day)  # Missed poster opportunity
+    AP_missed = (config.penalty_costs or {}).get("missed_abstract_paper_penalty", PENALTY_CONSTANTS.default_paper_penalty_per_day * 2)  # Missed abstract+paper opportunity
     
     # Calculate slack cost components for each submission
     for sid, interval in schedule.intervals.items():
@@ -381,7 +381,7 @@ def _calculate_slack_cost_penalties(schedule: Schedule, config: Config) -> float
             slip_penalty = P_j * months_delay
             
             # Y_j(1_year-deferred) - full-year deferral penalty
-            if months_delay >= 12:
+            if months_delay >= SCHEDULING_CONSTANTS.months_delay_threshold:
                 deferral_penalty = Y_j
             else:
                 deferral_penalty = 0
@@ -398,22 +398,22 @@ def _calculate_slack_cost_penalties(schedule: Schedule, config: Config) -> float
                 if sub.kind == SubmissionType.PAPER:
                     if conf.requires_abstract_before_paper():
                         # Abstract+Paper conference - check if abstract opportunity was missed
-                        missed_opportunity_penalty = AP_missed if months_delay >= 6 else 0
+                        missed_opportunity_penalty = AP_missed if months_delay >= SCHEDULING_CONSTANTS.abstract_missed_threshold else 0
                     else:
                         # Paper-only conference - check if poster opportunity was missed
-                        missed_opportunity_penalty = P_missed if months_delay >= 4 else 0
+                        missed_opportunity_penalty = P_missed if months_delay >= SCHEDULING_CONSTANTS.paper_missed_threshold else 0
                 elif sub.kind == SubmissionType.ABSTRACT:
                     # Abstract-only submission - check if poster opportunity was missed
-                    missed_opportunity_penalty = P_missed if months_delay >= 3 else 0
+                    missed_opportunity_penalty = P_missed if months_delay >= SCHEDULING_CONSTANTS.poster_missed_threshold else 0
                 elif sub.kind == SubmissionType.POSTER:
                     # Poster submission - no additional missed opportunity penalty
                     missed_opportunity_penalty = 0
             else:
                 # Generic penalty for submissions without conference assignment
                 if sub.kind == SubmissionType.PAPER:
-                    missed_opportunity_penalty = A_j if months_delay >= 6 else 0
+                    missed_opportunity_penalty = A_j if months_delay >= SCHEDULING_CONSTANTS.abstract_missed_threshold else 0
                 elif sub.kind == SubmissionType.ABSTRACT:
-                    missed_opportunity_penalty = P_missed if months_delay >= 3 else 0
+                    missed_opportunity_penalty = P_missed if months_delay >= SCHEDULING_CONSTANTS.poster_missed_threshold else 0
                 else:  # POSTER
                     missed_opportunity_penalty = 0
             

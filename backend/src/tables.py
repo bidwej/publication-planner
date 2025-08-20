@@ -6,7 +6,7 @@ from datetime import date, timedelta, date as current_date
 import json
 import csv
 from core.models import Config, SubmissionType, ScheduleMetrics, Schedule
-from core.constants import DISPLAY_CONSTANTS, SCHEDULING_CONSTANTS
+from core.constants import DISPLAY_CONSTANTS, SCHEDULING_CONSTANTS, REPORT_CONSTANTS
 from pathlib import Path
 
 
@@ -86,7 +86,7 @@ def generate_schedule_table(schedule: Schedule, config: Config) -> List[Dict[str
             
             table_data.append({
                 "ID": submission_id,
-                "Title": submission.title[:50] + "..." if len(submission.title) > 50 else submission.title,
+                "Title": submission.title[:DISPLAY_CONSTANTS.max_title_length] + "..." if len(submission.title) > DISPLAY_CONSTANTS.max_title_length else submission.title,
                 "Type": submission.kind.value.title(),
                 "Start Date": interval.start_date.strftime("%Y-%m-%d"),
                 "End Date": end_date.strftime("%Y-%m-%d"),
@@ -287,11 +287,11 @@ def format_schedule_table(schedule: Schedule, config: Config) -> List[Dict[str, 
             "Submission": sub.title,
             "Type": sub.kind.value.title(),
             "Conference": conference_name,
-            "Start Date": _format_date_display(start_date),
+            "Start Date": _format_date_display(interval.start_date),
             "End Date": _format_date_display(end_date),
             "Duration": _format_duration_days(duration_days),
             "Deadline": deadline_info,
-            "Relative Time": _format_relative_time(start_date)
+            "Relative Time": _format_relative_time(interval.start_date)
         })
     
     return rows
@@ -395,7 +395,7 @@ def format_deadline_table(schedule: Schedule, config: Config) -> List[Dict[str, 
             "Submission": sub.title,
             "Conference": conference_name,
             "Type": sub.kind.value.title(),
-            "Start Date": _format_date_display(start_date),
+            "Start Date": _format_date_display(interval.start_date),
             "Deadline": _format_date_display(deadline_date) if deadline_date else "No deadline",
             "Status": status
         })
@@ -653,11 +653,11 @@ def _get_submission_status(submission, start_date: date, end_date: date, config:
 
 def _get_score_status(score: float) -> str:
     """Get status based on score value."""
-    if score >= 80:
+    if score >= REPORT_CONSTANTS.excellent_score_threshold:
         return "Excellent"
-    elif score >= 60:
+    elif score >= REPORT_CONSTANTS.good_score_threshold:
         return "Good"
-    elif score >= 40:
+    elif score >= REPORT_CONSTANTS.fair_score_threshold:
         return "Fair"
     else:
         return "Poor" 

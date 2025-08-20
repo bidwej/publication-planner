@@ -9,8 +9,7 @@
   "randomness_factor": 0.1,
   "lookahead_bonus_increment": 0.5,
   "priority_weights": {
-    "engineering_paper": 1.0,
-    "medical_paper": 1.0,
+    "paper": 1.0,
     "mod": 1.5,
     "abstract": 0.5,
     "poster": 0.6

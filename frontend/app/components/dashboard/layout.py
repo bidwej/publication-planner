@@ -148,7 +148,7 @@ def update_dashboard_chart(n_clicks: Optional[int], chart_type: str) -> Figure:
                 submissions=[],  # We'll need to store actual submission data
                 conferences=[],
                 min_abstract_lead_time_days=config_data.get('min_abstract_lead_time_days', SCHEDULING_CONSTANTS.min_abstract_lead_time_days),
-                min_paper_lead_time_days=config_data.get('min_paper_lead_time_days', 60),
+                min_paper_lead_time_days=config_data.get('min_paper_lead_time_days', SCHEDULING_CONSTANTS.min_paper_lead_time_days),
                 max_concurrent_submissions=config_data.get('max_concurrent_submissions', 2)
             )
         

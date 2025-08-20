@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 from core.models import Config, Schedule, ScheduleMetrics, SubmissionType
 from validation.resources import _calculate_daily_load
-from core.constants import ANALYTICS_CONSTANTS, QUALITY_CONSTANTS, SCHEDULING_CONSTANTS
+from core.constants import ANALYTICS_CONSTANTS, QUALITY_CONSTANTS, SCHEDULING_CONSTANTS, EFFICIENCY_CONSTANTS
 from validation.deadline import validate_deadline_constraints
 from validation.resources import validate_resources_constraints
 from scoring.efficiency import calculate_efficiency_score
@@ -491,7 +491,7 @@ def analyze_resources(schedule: Schedule, config: Config) -> Dict[str, Any]:
     # Determine utilization pattern
     if peak_load <= config.max_concurrent_submissions:
         pattern = "under_utilized"
-    elif peak_load <= config.max_concurrent_submissions * 1.2:
+    elif peak_load <= config.max_concurrent_submissions * EFFICIENCY_CONSTANTS.over_utilization_threshold:
         pattern = "well_utilized"
     else:
         pattern = "over_utilized"

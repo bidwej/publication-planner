@@ -7,27 +7,23 @@ from datetime import date, timedelta
 from schedulers.base import BaseScheduler
 from core.dates import is_working_day
 from core.models import SchedulerStrategy, Schedule
-from core.constants import SCHEDULING_CONSTANTS
 
 
 class RandomScheduler(BaseScheduler):
     """Random scheduler that schedules submissions in random order for baseline comparison."""
     
-    def __init__(self, config, seed: Optional[int] = None):
+    # ===== INITIALIZATION =====
+    
+    def __init__(self, config, seed: Optional[int] = None) -> None:
         """Initialize scheduler with config and optional seed."""
         super().__init__(config)
         if seed is not None:
             random.seed(seed)
     
+    # ===== PUBLIC INTERFACE METHODS =====
+    
     def schedule(self) -> Schedule:
-        """
-        Generate a schedule using random selection.
-        
-        Returns
-        -------
-        Schedule
-            Schedule object with intervals for all submissions
-        """
+        """Generate a schedule using random selection."""
         # Get what we need from base
         topo = self.get_dependency_order()
         start_date, end_date = self.get_scheduling_window()

@@ -4,8 +4,6 @@
   "max_concurrent_submissions": 5,
   "default_paper_lead_time_months": 3,
   "priority_weights": {
-    "engineering_paper": 2.0,
-    "medical_paper": 1.0,
     "paper": 1.0,
     "abstract": 0.5
   },

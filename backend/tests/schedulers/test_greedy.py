@@ -156,11 +156,11 @@ class TestGreedyScheduler:
     def test_schedule_with_priority_weights(self) -> None:
         """Test that schedule respects priority weights."""
         # Create submissions with different priorities
-        engineering_paper = create_mock_submission(
+        eng_submission = create_mock_submission(
             "paper1", "Engineering Paper", SubmissionType.PAPER, "conf1",
             engineering=True
         )
-        medical_paper = create_mock_submission(
+        med_submission = create_mock_submission(
             "paper2", "Medical Paper", SubmissionType.PAPER, "conf1",
             engineering=False
         )
@@ -177,12 +177,11 @@ class TestGreedyScheduler:
         
         # Custom priority weights
         priority_weights: Dict[str, float] = {
-            "engineering_paper": 3.0,
-            "medical_paper": 1.0,
+            "paper": 1.0,
             "abstract": 0.5
         }
         
-        config: Config = create_mock_config([engineering_paper, medical_paper, abstract], [conference])
+        config: Config = create_mock_config([eng_submission, med_submission, abstract], [conference])
         config.priority_weights = priority_weights
         
         scheduler: GreedyScheduler = GreedyScheduler(config)
@@ -243,13 +242,13 @@ class TestGreedyScheduler:
             abstract_end: date = result.intervals["abstract1"].start_date + timedelta(days=config.min_abstract_lead_time_days)
             assert result.intervals["paper1"].start_date >= abstract_end
 
-    def test_schedule_with_engineering_and_medical_papers(self) -> None:
-        """Test scheduling with engineering and medical papers."""
-        engineering_paper = create_mock_submission(
+    def test_schedule_with_different_paper_types(self) -> None:
+        """Test scheduling with different paper types."""
+        eng_submission = create_mock_submission(
             "paper1", "Engineering Paper", SubmissionType.PAPER, "conf1",
             engineering=True
         )
-        medical_paper = create_mock_submission(
+        med_submission = create_mock_submission(
             "paper2", "Medical Paper", SubmissionType.PAPER, "conf2",
             engineering=False
         )
@@ -263,7 +262,7 @@ class TestGreedyScheduler:
             {SubmissionType.PAPER: get_paper_deadline()},
             conf_type=ConferenceType.MEDICAL
         )
-        config: Config = create_mock_config([engineering_paper, medical_paper], [engineering_conference, medical_conference])
+        config: Config = create_mock_config([eng_submission, med_submission], [engineering_conference, medical_conference])
         
         scheduler: GreedyScheduler = GreedyScheduler(config)
         result: Schedule = scheduler.schedule()

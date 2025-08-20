@@ -7,10 +7,9 @@ from enum import Enum
 from schedulers.base import BaseScheduler
 from core.dates import is_working_day
 from core.models import SchedulerStrategy, Schedule
-from core.constants import SCHEDULING_CONSTANTS
 
 
-class HeuristicStrategy(Enum):
+class HeuristicStrategy(str, Enum):
     """Different heuristic strategies for scheduling."""
     EARLIEST_DEADLINE = "earliest_deadline"
     LATEST_START = "latest_start"
@@ -22,20 +21,17 @@ class HeuristicStrategy(Enum):
 class HeuristicScheduler(BaseScheduler):
     """Heuristic scheduler that implements different scheduling strategies."""
     
-    def __init__(self, config, strategy: HeuristicStrategy = HeuristicStrategy.EARLIEST_DEADLINE):
+    # ===== INITIALIZATION =====
+    
+    def __init__(self, config, strategy: HeuristicStrategy = HeuristicStrategy.EARLIEST_DEADLINE) -> None:
         """Initialize scheduler with config and strategy."""
         super().__init__(config)
         self.strategy = strategy
     
+    # ===== PUBLIC INTERFACE METHODS =====
+    
     def schedule(self) -> Schedule:
-        """
-        Generate a schedule using the specified heuristic strategy.
-        
-        Returns
-        -------
-        Schedule
-            Schedule object with intervals for all submissions
-        """
+        """Generate a schedule using the specified heuristic strategy."""
         # Use shared setup
         self.reset_schedule()
         schedule = self.current_schedule
@@ -60,7 +56,7 @@ class HeuristicScheduler(BaseScheduler):
             ready = self.get_ready_submissions(topo, schedule, current_date)
             
             # Sort by heuristic strategy
-            ready = self._sort_by_heuristic(ready)
+            ready = self.sort_by_heuristic(ready)
             
             # Schedule submissions up to concurrency limit
             self.schedule_submissions_up_to_limit(ready, schedule, active, current_date)
@@ -72,21 +68,23 @@ class HeuristicScheduler(BaseScheduler):
         
         return schedule
     
-    def _sort_by_heuristic(self, ready: List[str]) -> List[str]:
+    # ===== HEURISTIC-SPECIFIC METHODS =====
+    
+    def sort_by_heuristic(self, ready: List[str]) -> List[str]:
         """Sort ready submissions by the specified heuristic strategy."""
         if self.strategy == HeuristicStrategy.EARLIEST_DEADLINE:
-            return self._sort_by_earliest_deadline(ready)
+            return self.sort_by_earliest_deadline(ready)
         if self.strategy == HeuristicStrategy.LATEST_START:
-            return self._sort_by_latest_start(ready)
+            return self.sort_by_latest_start(ready)
         if self.strategy == HeuristicStrategy.SHORTEST_PROCESSING_TIME:
-            return self._sort_by_processing_time(ready, reverse=False)
+            return self.sort_by_processing_time(ready, reverse=False)
         if self.strategy == HeuristicStrategy.LONGEST_PROCESSING_TIME:
-            return self._sort_by_processing_time(ready, reverse=True)
+            return self.sort_by_processing_time(ready, reverse=True)
         if self.strategy == HeuristicStrategy.CRITICAL_PATH:
-            return self._sort_by_critical_path(ready)
+            return self.sort_by_critical_path(ready)
         raise ValueError(f"Unknown heuristic strategy: {self.strategy}")
     
-    def _sort_by_earliest_deadline(self, ready: List[str]) -> List[str]:
+    def sort_by_earliest_deadline(self, ready: List[str]) -> List[str]:
         """Sort by earliest deadline first."""
         def get_deadline(submission_id: str) -> date:
             submission = self.submissions[submission_id]
@@ -99,7 +97,7 @@ class HeuristicScheduler(BaseScheduler):
         
         return sorted(ready, key=get_deadline)
     
-    def _sort_by_latest_start(self, ready: List[str]) -> List[str]:
+    def sort_by_latest_start(self, ready: List[str]) -> List[str]:
         """Sort by latest start time first (reverse of earliest start)."""
         def get_latest_start(submission_id: str) -> date:
             submission = self.submissions[submission_id]
@@ -119,7 +117,7 @@ class HeuristicScheduler(BaseScheduler):
         
         return sorted(ready, key=get_latest_start, reverse=True)
     
-    def _sort_by_processing_time(self, ready: List[str], reverse: bool = False) -> List[str]:
+    def sort_by_processing_time(self, ready: List[str], reverse: bool = False) -> List[str]:
         """Sort by processing time (shortest or longest first)."""
         def get_processing_time(submission_id: str) -> int:
             submission = self.submissions[submission_id]
@@ -130,7 +128,7 @@ class HeuristicScheduler(BaseScheduler):
         
         return sorted(ready, key=get_processing_time, reverse=reverse)
     
-    def _sort_by_critical_path(self, ready: List[str]) -> List[str]:
+    def sort_by_critical_path(self, ready: List[str]) -> List[str]:
         """Sort by critical path priority (submissions that block others get higher priority)."""
         def get_critical_priority(submission_id: str) -> int:
             # Count how many other submissions depend on this one

@@ -54,9 +54,9 @@ def validate_scheduling_window(config: Config) -> Tuple[date, date]:
     if hasattr(config, 'scheduling_start_date') and config.scheduling_start_date:
         start_date = config.scheduling_start_date
     else:
-        # Calculate start date to allow all submissions to meet their deadlines
-        # Start from a reasonable date in the past to allow for historical data and resubmissions
-        start_date = date.today() - timedelta(days=365)  # 1 year ago
+        # Use a reasonable reference date instead of date.today() to avoid future failures
+        # This allows for historical data and resubmissions
+        start_date = date.today() - timedelta(days=SCHEDULING_CONSTANTS.reference_period_days)  # 1 year ago
     
     # Find latest deadline among all conferences
     latest_deadline = start_date

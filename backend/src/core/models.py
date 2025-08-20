@@ -8,7 +8,7 @@ from dateutil.parser import parse as parse_date
 
 from pydantic import BaseModel, Field, ConfigDict
 
-from core.constants import SCHEDULING_CONSTANTS, PENALTY_CONSTANTS, EFFICIENCY_CONSTANTS, SCORING_CONSTANTS
+from core.constants import SCHEDULING_CONSTANTS, PENALTY_CONSTANTS, EFFICIENCY_CONSTANTS, SCORING_CONSTANTS, PRIORITY_CONSTANTS
 
 # Forward imports to avoid circular dependencies
 # These will be imported locally in methods that need them
@@ -110,9 +110,6 @@ class Schedule(BaseModel):
         
         dates = [interval.start_date for interval in self.intervals.values()]
         return (max(dates) - min(dates)).days if dates else 0
-    
-
-    
 
 
 class Submission(BaseModel):
@@ -195,19 +192,16 @@ class Submission(BaseModel):
     
     def get_priority_score(self, config: 'Config') -> float:
         """Calculate priority score for this submission."""
-        base_score = 1.0
+        base_score = PRIORITY_CONSTANTS.paper_weight
         
         # Apply type-based weights if available
         if config.priority_weights:
             if self.kind == SubmissionType.ABSTRACT:
-                base_score = config.priority_weights.get("abstract", 0.5)
+                base_score = config.priority_weights.get("abstract", PRIORITY_CONSTANTS.abstract_weight)
             elif self.kind == SubmissionType.PAPER:
-                if self.engineering:
-                    base_score = config.priority_weights.get("engineering_paper", 2.0)
-                else:
-                    base_score = config.priority_weights.get("paper", 1.0)
+                base_score = config.priority_weights.get("paper", PRIORITY_CONSTANTS.paper_weight)
             elif self.kind == SubmissionType.POSTER:
-                base_score = config.priority_weights.get("poster", 0.8)
+                base_score = config.priority_weights.get("poster", PRIORITY_CONSTANTS.abstract_weight)
         
         return base_score
 
@@ -332,10 +326,9 @@ class Config(BaseModel):
         }
         
         default_priority_weights = {
-            "engineering_paper": 2.0,
-            "medical_paper": 1.0,
-            "mod": 1.5,
-            "abstract": 0.5
+            "paper": PRIORITY_CONSTANTS.paper_weight,
+            "mod": PRIORITY_CONSTANTS.mod_weight,
+            "abstract": PRIORITY_CONSTANTS.abstract_weight
         }
         
         default_scheduling_options = {
@@ -453,7 +446,7 @@ class Config(BaseModel):
     def end_date(self) -> date:
         """Get the latest deadline for any conference."""
         if not self.conferences:
-            return date.today() + timedelta(days=365)
+            return date.today() + timedelta(days=SCHEDULING_CONSTANTS.reference_period_days)
         
         # Find the latest deadline and add buffer
         all_deadlines = [
@@ -464,7 +457,7 @@ class Config(BaseModel):
         if all_deadlines:
             return max(all_deadlines) + timedelta(days=SCHEDULING_CONSTANTS.conference_response_time_days)
         
-        return date.today() + timedelta(days=365)
+        return date.today() + timedelta(days=SCHEDULING_CONSTANTS.reference_period_days)
 
     @property
     def submissions_dict(self) -> Dict[str, Submission]:

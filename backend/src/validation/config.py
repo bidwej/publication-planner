@@ -83,9 +83,8 @@ def _validate_config_submissions(config: Config) -> List[str]:
     # Validate each submission individually
     for submission in config.submissions:
         empty_schedule = Schedule()
-        # Use a reasonable reference date instead of date.today() to avoid future failures
-        # This allows for historical data and resubmissions
-        reference_date = date.today() - timedelta(days=365)  # Allow validation up to 1 year in the past
+        # Allow validation up to 1 year in the past
+        reference_date = date.today() - timedelta(days=SCHEDULING_CONSTANTS.reference_period_days)
         submission_errors = validate_submission_constraints(submission, reference_date, empty_schedule, config)
         errors.extend([f"Submission {submission.id}: {error}" for error in submission_errors])
         if submission.id in submission_ids:

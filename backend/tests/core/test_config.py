@@ -64,11 +64,10 @@ class TestLoadConfig:
     def test_priority_weights_defaults(self, config) -> None:
         """Test that priority weights have sensible defaults."""
         weights = config.priority_weights
-        assert 'engineering_paper' in weights
-        assert 'medical_paper' in weights
+        assert 'paper' in weights
         assert 'mod' in weights
         assert 'abstract' in weights
-        assert weights['engineering_paper'] > weights['medical_paper']
+        assert weights['mod'] > weights['abstract']
 
 
 class TestLoadConferences:
@@ -428,8 +427,7 @@ class TestConfigIntegration:
             min_abstract_lead_time_days=SCHEDULING_CONSTANTS.min_abstract_lead_time_days,
             max_concurrent_submissions=SCHEDULING_CONSTANTS.max_concurrent_submissions,
             priority_weights={
-                "engineering_paper": 1.0,
-                "medical_paper": 1.2,
+                "paper": 1.0,
                 "abstract": 0.5
             }
         )
@@ -438,7 +436,7 @@ class TestConfigIntegration:
         assert len(config.submissions) == 3
         assert len(config.conferences) == 2
         assert config.priority_weights is not None
-        assert "engineering_paper" in config.priority_weights
+        assert "paper" in config.priority_weights
         
         # Test submission-conference relationships
         for submission in config.submissions:

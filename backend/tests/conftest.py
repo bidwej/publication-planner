@@ -308,8 +308,7 @@ def sample_config() -> Config:
     
     # Default priority weights - using constants
     default_priority_weights: Dict[str, float] = {
-        "engineering_paper": PRIORITY_CONSTANTS.engineering_paper_weight,
-        "medical_paper": PRIORITY_CONSTANTS.medical_paper_weight,
+        "paper": PRIORITY_CONSTANTS.paper_weight,
         "mod": PRIORITY_CONSTANTS.mod_weight,
         "abstract": PRIORITY_CONSTANTS.abstract_weight
     }
@@ -388,8 +387,7 @@ def test_config_path(tmp_path):
             "papers": "ed_papers.json"
         },
         "priority_weights": {
-            "engineering_paper": PRIORITY_CONSTANTS.engineering_paper_weight,
-            "medical_paper": PRIORITY_CONSTANTS.medical_paper_weight,
+            "paper": PRIORITY_CONSTANTS.paper_weight,
             "mod": PRIORITY_CONSTANTS.mod_weight,
             "abstract": PRIORITY_CONSTANTS.abstract_weight
         },
@@ -508,8 +506,7 @@ def config():
         blackout_dates=[],
         scheduling_options={"enable_early_abstract_scheduling": False},
         priority_weights={
-            "engineering_paper": PRIORITY_CONSTANTS.engineering_paper_weight,
-            "medical_paper": PRIORITY_CONSTANTS.medical_paper_weight,
+            "paper": PRIORITY_CONSTANTS.paper_weight,
             "mod": PRIORITY_CONSTANTS.mod_weight,
             "abstract": PRIORITY_CONSTANTS.abstract_weight
         },

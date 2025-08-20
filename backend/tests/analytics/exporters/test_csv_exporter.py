@@ -92,8 +92,7 @@ def sample_config():
             "resource_violation_penalty": 200.0
         },
         priority_weights={
-            "engineering_paper": 2.0,
-            "medical_paper": 1.0,
+            "paper": 1.0,
             "mod": 1.5,
             "abstract": 0.5
         },

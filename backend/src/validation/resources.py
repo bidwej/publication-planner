@@ -4,7 +4,7 @@ from typing import Dict, Any, List
 from datetime import date, timedelta
 
 from core.models import Config, ResourceViolation, Schedule, ValidationResult, ConstraintViolation
-from core.constants import QUALITY_CONSTANTS
+from core.constants import QUALITY_CONSTANTS, SCHEDULING_CONSTANTS, EFFICIENCY_CONSTANTS
 
 
 def validate_resources_constraints(schedule: Schedule, config: Config) -> ValidationResult:
@@ -178,10 +178,10 @@ def _validate_preferred_timing(schedule: Schedule, config: Config) -> Validation
         total_submissions += 1
         days_diff = abs((interval.start_date - sub.earliest_start_date).days)
         
-        if days_diff > 60:  # ±2 months (60 days) preferred window
+        if days_diff > SCHEDULING_CONSTANTS.days_per_month * 2:  # ±2 months preferred window
             violations.append(ConstraintViolation(
                 submission_id=sid, 
-                description=f"Submission scheduled {days_diff} days from earliest start date (preferred: ±60 days)",
+                description=f"Submission scheduled {days_diff} days from earliest start date (preferred: ±{SCHEDULING_CONSTANTS.days_per_month * 2} days)",
                 severity="medium"
             ))
         else:
@@ -267,7 +267,7 @@ def _validate_average_load(schedule: Schedule, config: Config) -> ValidationResu
     
     # Check if average load is reasonable (e.g., not too close to max)
     max_load = config.max_concurrent_submissions
-    threshold = max_load * 0.8  # 80% of max capacity
+            threshold = max_load * EFFICIENCY_CONSTANTS.optimal_utilization_rate  # Optimal utilization rate
     
     is_valid = average_load <= threshold
     

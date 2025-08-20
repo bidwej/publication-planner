@@ -4,29 +4,25 @@ from __future__ import annotations
 from typing import Dict, List
 from datetime import date, timedelta
 from schedulers.greedy import GreedyScheduler
-from schedulers.base import BaseScheduler
 from core.dates import is_working_day
 from core.models import SchedulerStrategy, Schedule
 from core.constants import SCHEDULING_CONSTANTS
 
 
-class BacktrackingScheduler(GreedyScheduler):
-    """Backtracking greedy scheduler that can reschedule submissions to find better solutions."""
+class BacktrackingGreedyScheduler(GreedyScheduler):
+    """Backtracking scheduler with rescheduling capabilities."""
     
-    def __init__(self, config, max_backtracks: int = 5):
+    # ===== INITIALIZATION =====
+    
+    def __init__(self, config, max_backtracks: int = 5) -> None:
         """Initialize scheduler with config and max backtracks."""
         super().__init__(config)
         self.max_backtracks = max_backtracks
     
+    # ===== OVERRIDDEN METHODS =====
+    
     def schedule(self) -> Schedule:
-        """
-        Generate a schedule using backtracking algorithm.
-        
-        Returns
-        -------
-        Schedule
-            Schedule object with intervals for all submissions
-        """
+        """Generate a schedule using backtracking algorithm."""
         # Use shared setup from base class
         self.reset_schedule()
         schedule = self.current_schedule
@@ -70,7 +66,7 @@ class BacktrackingScheduler(GreedyScheduler):
         
         return schedule
     
-
+    # ===== BACKTRACKING-SPECIFIC METHODS =====
     
     def _backtrack(self, schedule: Schedule, active: List[str], current_date: date) -> bool:
         """Try to backtrack by rescheduling an active submission earlier."""

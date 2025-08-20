@@ -160,8 +160,7 @@ class TestSubmission:
             max_concurrent_submissions=3,
             priority_weights={
                 "paper": 1.0,
-                "abstract": 0.5,
-                "engineering_paper": 2.0
+                "abstract": 0.5
             }
         )
         
@@ -184,7 +183,7 @@ class TestSubmission:
             author="test",
             engineering=True
         )
-        assert eng_paper.get_priority_score(config) == 2.0  # 1.0 * 2.0
+        assert eng_paper.get_priority_score(config) == 1.0  # Uses paper weight
         
         # Test abstract
         abstract_submission: Submission = Submission(
@@ -777,7 +776,7 @@ class TestConfig:
             deadlines={SubmissionType.PAPER: get_recent_deadline()}
         )
         
-        engineering_paper = Submission(
+        eng_submission = Submission(
             id="eng_paper",
             title="Engineering Paper",
             kind=SubmissionType.PAPER,
@@ -786,7 +785,7 @@ class TestConfig:
         )
         
         config_mismatch = Config(
-            submissions=[engineering_paper],
+            submissions=[eng_submission],
             conferences=[conference_medical],
             min_abstract_lead_time_days=30,
             min_paper_lead_time_days=90,
