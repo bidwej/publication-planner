@@ -7,7 +7,8 @@ from core.config import load_config
 from core.models import Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
 from schedulers.optimal import OptimalScheduler
 from conftest import (
-    get_future_date, get_medium_deadline, get_long_deadline, get_blackout_date, get_abstract_deadline
+    get_future_date, get_medium_deadline, get_long_deadline, get_blackout_date, get_abstract_deadline,
+    get_short_deadline, get_dependency_date
 )
 
 
@@ -119,7 +120,7 @@ class TestOptimalSchedulerComprehensive:
         """Test MILP with minimal blackout date constraints."""
         # Mock the entire MILP process to return quickly
         def mock_schedule(self):
-            return {"mod_1": date.today() + timedelta(days=20)}  # After blackout date
+            return {"mod_1": get_future_date(20)}  # After blackout date
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
         
@@ -135,7 +136,7 @@ class TestOptimalSchedulerComprehensive:
             Conference(
                 id="test_conf", name="Test Conference", conf_type=ConferenceType.MEDICAL,
                 recurrence=ConferenceRecurrence.ANNUAL,
-                deadlines={SubmissionType.ABSTRACT: date.today() + timedelta(days=60)}
+                deadlines={SubmissionType.ABSTRACT: get_abstract_deadline()}
             )
         ]
         
@@ -146,7 +147,7 @@ class TestOptimalSchedulerComprehensive:
             min_abstract_lead_time_days=0,
             min_paper_lead_time_days=30,
             max_concurrent_submissions=1,
-            blackout_dates=[date.today() + timedelta(days=15)]  # Single blackout date
+            blackout_dates=[get_blackout_date()]  # Single blackout date
         )
         
         scheduler = OptimalScheduler(config)
@@ -164,7 +165,7 @@ class TestOptimalSchedulerComprehensive:
         """Test MILP with basic resource constraints."""
         # Mock the entire MILP process to return quickly
         def mock_schedule(self):
-            return {"mod_1": date.today(), "mod_2": date.today() + timedelta(days=14)}
+            return {"mod_1": get_future_date(), "mod_2": get_dependency_date()}
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
         
@@ -184,7 +185,7 @@ class TestOptimalSchedulerComprehensive:
             Conference(
                 id="test_conf", name="Test Conference", conf_type=ConferenceType.MEDICAL,
                 recurrence=ConferenceRecurrence.ANNUAL,
-                deadlines={SubmissionType.ABSTRACT: date.today() + timedelta(days=30)}
+                deadlines={SubmissionType.ABSTRACT: get_future_date(30)}
             )
         ]
         
@@ -215,7 +216,7 @@ class TestOptimalSchedulerComprehensive:
         """Test that MILP provides optimal solutions when it works."""
         # Mock the entire MILP process to return quickly
         def mock_schedule(self):
-            return {"mod_1": date.today()}  # Earliest possible start
+            return {"mod_1": get_future_date()}  # Earliest possible start
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
         
@@ -231,7 +232,7 @@ class TestOptimalSchedulerComprehensive:
             Conference(
                 id="test_conf", name="Test Conference", conf_type=ConferenceType.MEDICAL,
                 recurrence=ConferenceRecurrence.ANNUAL,
-                deadlines={SubmissionType.ABSTRACT: date.today() + timedelta(days=60)}
+                deadlines={SubmissionType.ABSTRACT: get_abstract_deadline()}
             )
         ]
         

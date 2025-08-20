@@ -339,7 +339,7 @@ class TestConfig:
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,
             recurrence=ConferenceRecurrence.ANNUAL,
-            deadlines={SubmissionType.PAPER: date(2025, 6, 1)}  # Use recent date for creation test
+            deadlines={SubmissionType.PAPER: get_recent_deadline()}  # Use recent date for creation test
         )
         
         config: Config = Config(
@@ -370,7 +370,7 @@ class TestConfig:
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,
             recurrence=ConferenceRecurrence.ANNUAL,
-            deadlines={SubmissionType.PAPER: date(2025, 6, 1)}  # Use recent date within 1 year
+            deadlines={SubmissionType.PAPER: get_recent_deadline()}  # Use recent date within 1 year
         )
         
         config: Config = Config(
@@ -423,7 +423,7 @@ class TestConfig:
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,
             recurrence=ConferenceRecurrence.ANNUAL,
-            deadlines={SubmissionType.PAPER: date(2025, 6, 1)}  # Use recent date for invalid test
+            deadlines={SubmissionType.PAPER: get_recent_deadline()}  # Use recent date for invalid test
         )
         
         config: Config = Config(
@@ -453,7 +453,7 @@ class TestConfig:
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,
             recurrence=ConferenceRecurrence.ANNUAL,
-            deadlines={SubmissionType.PAPER: date(2025, 6, 1)}  # Use recent date for computed properties test
+            deadlines={SubmissionType.PAPER: get_recent_deadline()}  # Use recent date for computed properties test
         )
         
         config: Config = Config(

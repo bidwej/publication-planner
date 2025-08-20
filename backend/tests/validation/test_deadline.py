@@ -5,6 +5,7 @@ from datetime import date, timedelta
 from unittest.mock import Mock
 
 from core.models import Config, Submission, Schedule, SubmissionType, Conference, ConferenceType, ConferenceRecurrence, ValidationResult
+from conftest import get_far_future_date
 from validation.deadline import validate_deadline_constraints
 
 
@@ -50,7 +51,7 @@ class TestDeadlineValidation:
         # Test with invalid schedule (submissions after deadlines)
         invalid_schedule = Schedule()
         # Use dates that are after the fixture's deadlines (which are relative to today + 1 year)
-        base_date = date.today() + timedelta(days=365)
+        base_date = get_far_future_date()
         invalid_schedule.add_interval("mod1-wrk", base_date + timedelta(days=35), duration_days=30)  # After ICRA abstract deadline
         invalid_schedule.add_interval("paper1-pap", base_date + timedelta(days=65), duration_days=45) # After ICRA paper deadline
         invalid_schedule.add_interval("mod2-wrk", base_date + timedelta(days=95), duration_days=30)  # After MICCAI abstract deadline

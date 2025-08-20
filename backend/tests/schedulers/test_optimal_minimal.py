@@ -9,6 +9,10 @@ from core.models import (
     ConferenceRecurrence, SubmissionWorkflow, Schedule
 )
 from schedulers.optimal import OptimalScheduler
+from conftest import (
+    get_future_date, get_working_date, get_dependency_date, get_medium_deadline, get_long_deadline,
+    get_abstract_deadline, get_paper_deadline
+)
 # ValidationOrchestrator doesn't exist - using validation modules directly
 
 
@@ -20,7 +24,7 @@ def create_minimal_work_item(submission_id: str, conference_id: str | None = Non
         kind=SubmissionType.PAPER,  # Mods are kind=paper but represent work phases
         conference_id=conference_id,  # Work items may not have conferences
         draft_window_months=1,
-        earliest_start_date=date.today() + timedelta(days=7),
+        earliest_start_date=get_working_date(),
         depends_on=None,
         candidate_conferences=[] if conference_id is None else [conference_id]
     )
@@ -35,7 +39,7 @@ def create_minimal_paper(submission_id: str, conference_id: str = "test_conf",
         kind=SubmissionType.PAPER,
         conference_id=conference_id,
         draft_window_months=2,
-        earliest_start_date=date.today() + timedelta(days=30),
+        earliest_start_date=get_future_date(30),
         depends_on=depends_on,
         candidate_conferences=[conference_id]
     )
@@ -75,7 +79,7 @@ class TestOptimalSchedulerMinimal:
         # Mock the entire schedule method to return quickly
         def mock_schedule(self):
             from core.models import Schedule, Interval
-            return Schedule(intervals={"mod1": Interval(start_date=date.today(), end_date=date.today() + timedelta(days=7))})
+            return Schedule(intervals={"mod1": Interval(start_date=get_future_date(), end_date=get_working_date())})
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
         
@@ -89,7 +93,7 @@ class TestOptimalSchedulerMinimal:
         # Should complete instantly
         assert isinstance(schedule, Schedule)
         assert "mod1" in schedule.intervals
-        assert schedule.intervals["mod1"].start_date >= date.today()
+        assert schedule.intervals["mod1"].start_date >= get_future_date()
     
     def test_single_paper_success(self, monkeypatch):
         """Test OptimalScheduler with single paper - should work instantly."""
@@ -101,7 +105,7 @@ class TestOptimalSchedulerMinimal:
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
         
         # Create single paper with distant deadline
-        deadline = date.today() + timedelta(days=180)  # 6 months out
+        deadline = get_long_deadline()  # 6 months out
         paper = create_minimal_paper("paper1", "test_conf")
         conference = create_minimal_conference("test_conf", deadline)
         config = create_minimal_config([paper], [conference])
@@ -112,7 +116,7 @@ class TestOptimalSchedulerMinimal:
         # Should complete instantly
         assert isinstance(schedule, Schedule)
         assert "paper1" in schedule.intervals
-        assert schedule.intervals["paper1"].start_date >= date.today()
+        assert schedule.intervals["paper1"].start_date >= get_future_date()
         assert schedule.intervals["paper1"].start_date <= deadline - timedelta(days=60)  # Allow for lead time
     
     def test_two_submissions_no_dependencies(self, monkeypatch):
@@ -127,7 +131,7 @@ class TestOptimalSchedulerMinimal:
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
         
-        deadline = date.today() + timedelta(days=180)
+        deadline = get_long_deadline()
         submissions = [
             create_minimal_paper("paper1", "test_conf"),
             create_minimal_paper("paper2", "test_conf")
@@ -143,7 +147,7 @@ class TestOptimalSchedulerMinimal:
         assert len(schedule.intervals) >= 2
         
         # If solved, both should be scheduled
-        assert all(interval.start_date >= date.today() for interval in schedule.intervals.values())
+        assert all(interval.start_date >= get_future_date() for interval in schedule.intervals.values())
     
     def test_solver_failure_handling(self, monkeypatch):
         """Test that OptimalScheduler handles solver failures gracefully."""
@@ -173,7 +177,7 @@ class TestOptimalSchedulerMinimal:
             submissions.append(paper)
             
             # Create tight deadlines
-            deadline = date.today() + timedelta(days=30 + i * 10)
+            deadline = get_future_date(30 + i * 10)
             conference = create_minimal_conference(f"conf{i}", deadline)
             conferences.append(conference)
         
@@ -195,12 +199,12 @@ class TestOptimalSchedulerMinimal:
         """Test that OptimalScheduler provides value when it works."""
         # Mock the entire schedule method to return quickly
         def mock_schedule(self):
-            return {"paper1": date.today(), "paper2": date.today() + timedelta(days=14)}
+            return {"paper1": get_future_date(), "paper2": get_dependency_date()}
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
         
         # Simple scenario that both should handle
-        deadline = date.today() + timedelta(days=90)
+        deadline = get_medium_deadline()
         submissions = [
             create_minimal_paper("paper1", "test_conf"),
             create_minimal_paper("paper2", "test_conf")
@@ -262,7 +266,7 @@ class TestOptimalSchedulerMinimal:
         ]
         
         for case in test_cases:
-            deadline = date.today() + timedelta(days=case["deadline_days"])
+            deadline = get_future_date(case["deadline_days"])
             submission = create_minimal_paper("paper1", "test_conf")
             conference = create_minimal_conference("test_conf", deadline)
             
@@ -298,7 +302,7 @@ class TestOptimalSchedulerMinimal:
     
     def test_poster_and_abstract_but_not_paper_case(self):
         """Test your specific use case: poster + abstract but not paper."""
-        deadline = date.today() + timedelta(days=90)
+        deadline = get_medium_deadline()
         
         # Create submission that wants poster OR abstract but NOT paper
         paper = create_minimal_paper("flexible_submission", "test_conf")
@@ -334,7 +338,7 @@ class TestOptimalSchedulerMinimal:
         work_item = create_minimal_work_item("mod1")
         paper = create_minimal_paper("paper1", "test_conf", depends_on=["mod1"])
         
-        deadline = date.today() + timedelta(days=120)
+        deadline = get_paper_deadline()
         conference = create_minimal_conference("test_conf", deadline)
         config = create_minimal_config([work_item, paper], [conference])
         
@@ -377,7 +381,7 @@ class TestOptimalSchedulerMinimal:
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
         
-        deadline = date.today() + timedelta(days=90)
+        deadline = get_medium_deadline()
         paper = create_minimal_paper("paper1", "test_conf")
         conference = create_minimal_conference("test_conf", deadline)
         config = create_minimal_config([paper], [conference])

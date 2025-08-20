@@ -50,8 +50,13 @@ def _validate_scheduler_constraints(submission: Submission, start_date: date,
 
 def validate_scheduling_window(config: Config) -> Tuple[date, date]:
     """Get the scheduling window (start and end dates) for schedulers."""
-    # Use config start date if available, otherwise fall back to today
-    start_date = getattr(config, 'start_date', None) or date.today()
+    # Use config scheduling start date if available, otherwise calculate a reasonable start date
+    if hasattr(config, 'scheduling_start_date') and config.scheduling_start_date:
+        start_date = config.scheduling_start_date
+    else:
+        # Calculate start date to allow all submissions to meet their deadlines
+        # Start from a reasonable date in the past to allow for historical data and resubmissions
+        start_date = date.today() - timedelta(days=365)  # 1 year ago
     
     # Find latest deadline among all conferences
     latest_deadline = start_date

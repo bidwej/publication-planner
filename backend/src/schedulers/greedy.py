@@ -52,13 +52,15 @@ class GreedyScheduler(BaseScheduler):
             self._assign_best_conference(submission)
         
         # For work items (no conference), start with earliest start date if available
-        # For conference submissions, start with today
+        # For conference submissions, start with a reasonable date that allows meeting deadlines
         if submission.conference_id is None and submission.earliest_start_date:
             # Work items should be scheduled at their intended start date
             current_date = submission.earliest_start_date
         else:
-            # Conference submissions start with today
-            current_date = date.today()
+            # Conference submissions should start early enough to meet deadlines
+            # Start from the beginning of the scheduling window
+            start_date, _ = self.get_scheduling_window()
+            current_date = start_date
         
         # Check dependencies
         if submission.depends_on:
@@ -86,7 +88,10 @@ class GreedyScheduler(BaseScheduler):
         max_iterations = EFFICIENCY_CONSTANTS.max_algorithm_iterations  # Safety limit to prevent infinite loops
         iteration_count = 0
         
-        while current_date <= date.today() + timedelta(days=365) and iteration_count < max_iterations:  # Reasonable limit
+        # Get the scheduling window end date
+        _, end_date = self.get_scheduling_window()
+        
+        while current_date <= end_date and iteration_count < max_iterations:  # Use actual scheduling window
             iteration_count += 1
             
             # Count active submissions on this date
