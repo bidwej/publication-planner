@@ -8,11 +8,11 @@ import csv
 import json
 from collections import defaultdict
 
-from src.core.models import Config, ScheduleMetrics, SubmissionType, Schedule
-from src.validation.schedule import validate_schedule_constraints
-from src.scoring.penalties import calculate_penalty_score
+from core.models import Config, ScheduleMetrics, SubmissionType, Schedule
+from validation.schedule import validate_schedule_constraints
+from scoring.penalties import calculate_penalty_score
 
-from src.tables import (
+from tables import (
     generate_schedule_table, generate_metrics_table, generate_deadline_table,
     generate_violations_table, generate_penalties_table, save_schedule_json, save_table_csv, save_metrics_json
 )

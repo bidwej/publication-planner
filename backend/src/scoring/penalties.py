@@ -4,11 +4,11 @@ from typing import Dict, Any
 from datetime import date, timedelta
 from collections import defaultdict
 
-from src.core.models import Config, ScheduleMetrics, SubmissionType, ConferenceType, Schedule
-from src.core.constants import (
+from core.models import Config, ScheduleMetrics, SubmissionType, ConferenceType, Schedule
+from core.constants import (
     PENALTY_CONSTANTS, REPORT_CONSTANTS
 )
-from src.validation.schedule import validate_schedule_constraints
+from validation.schedule import validate_schedule_constraints
 # Note: Penalty costs moved to config.json because they are project-specific
 # and should be configurable by users. Only algorithm constants remain in constants.py.
 

@@ -3,8 +3,8 @@
 from typing import Dict, Any, List
 from datetime import date
 
-from src.core.models import Config, Submission, SubmissionType, Schedule
-from src.core.constants import QUALITY_CONSTANTS
+from core.models import Config, Submission, SubmissionType, Schedule
+from core.constants import QUALITY_CONSTANTS
 
 
 def validate_submission_constraints(submission: Submission, start_date: date, schedule: Schedule, config: Config) -> List[str]:

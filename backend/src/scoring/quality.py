@@ -4,11 +4,11 @@ from typing import Dict, Any
 from datetime import date, timedelta
 import statistics
 
-from src.core.models import Config, Schedule
-from src.validation.deadline import validate_deadline_constraints
-from src.validation.schedule import validate_schedule_constraints
-from src.validation.resources import validate_resources_constraints
-from src.core.constants import (
+from core.models import Config, Schedule
+from validation.deadline import validate_deadline_constraints
+from validation.schedule import validate_schedule_constraints
+from validation.resources import validate_resources_constraints
+from core.constants import (
     QUALITY_CONSTANTS, SCORING_CONSTANTS, REPORT_CONSTANTS
 )
 

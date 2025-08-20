@@ -1,8 +1,8 @@
 """Test config validation functions."""
 
 import pytest
-from src.core.models import Config, Submission, Conference, SubmissionType, ConferenceType
-from src.validation.config import validate_config
+from core.models import Config, Submission, Conference, SubmissionType, ConferenceType
+from validation.config import validate_config
 
 
 class TestConfigValidation:

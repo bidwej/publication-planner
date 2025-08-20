@@ -448,7 +448,7 @@ def config():
 @pytest.fixture 
 def mock_schedule_summary():
     """Fixture to provide a mock schedule summary for testing."""
-    from src.core.models import ScheduleMetrics
+    from core.models import ScheduleMetrics
     
     return ScheduleMetrics(
         makespan=120,

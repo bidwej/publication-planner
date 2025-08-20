@@ -9,7 +9,7 @@ import json
 
 from sqlmodel import SQLModel, Field, Session, select
 from sqlalchemy.sql import func
-from .session import engine as default_engine
+from database.session import engine as default_engine
 
 # Database Models
 class ScheduleBase(SQLModel):

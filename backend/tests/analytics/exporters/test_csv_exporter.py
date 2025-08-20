@@ -5,7 +5,7 @@ from pathlib import Path
 from datetime import date, timedelta
 from typing import Dict
 
-from src.core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
+from core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
 from exporters.csv_exporter import CSVExporter
 
 

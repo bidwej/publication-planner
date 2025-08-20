@@ -1,9 +1,9 @@
 """Tests for analytics functions."""
 
 from datetime import date
-from src.analytics import generate_schedule_summary
+from analytics import generate_schedule_summary
 from typing import Dict, List, Any, Optional
-from src.core.models import Schedule, Config, ScheduleMetrics, Interval
+from core.models import Schedule, Config, ScheduleMetrics, Interval
 
 
 class TestGenerateScheduleSummary:

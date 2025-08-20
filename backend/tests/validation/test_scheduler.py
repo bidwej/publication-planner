@@ -2,8 +2,8 @@
 
 import pytest
 from datetime import date
-from src.core.models import Config, Submission, Schedule, SubmissionType, ValidationResult
-from src.validation.scheduler import validate_scheduler_constraints
+from core.models import Config, Submission, Schedule, SubmissionType, ValidationResult
+from validation.scheduler import validate_scheduler_constraints
 
 
 class TestSchedulerValidation:

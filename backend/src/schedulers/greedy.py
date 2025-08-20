@@ -3,10 +3,10 @@
 from __future__ import annotations
 from typing import Dict, List, Optional, Tuple
 from datetime import date, timedelta
-from src.schedulers.base import BaseScheduler
-from src.core.dates import is_working_day
-from src.core.models import SchedulerStrategy, SubmissionType, Schedule, Submission
-from src.core.constants import SCHEDULING_CONSTANTS, EFFICIENCY_CONSTANTS
+from schedulers.base import BaseScheduler
+from core.dates import is_working_day
+from core.models import SchedulerStrategy, SubmissionType, Schedule, Submission
+from core.constants import SCHEDULING_CONSTANTS, EFFICIENCY_CONSTANTS
 
 
 class GreedyScheduler(BaseScheduler):

@@ -6,8 +6,8 @@ from typing import Dict, List, Any
 
 import pytest
 
-from src.core.models import Config, ScheduleMetrics, Schedule, Interval
-from src.analytics import generate_schedule_summary
+from core.models import Config, ScheduleMetrics, Schedule, Interval
+from analytics import generate_schedule_summary
 
 
 class TestGenerateScheduleSummary:

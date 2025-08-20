@@ -2,8 +2,8 @@
 
 import pytest
 from datetime import date
-from src.core.models import Config, Submission, Schedule, SubmissionType, ValidationResult
-from src.validation.dependencies import validate_dependency_constraints
+from core.models import Config, Submission, Schedule, SubmissionType, ValidationResult
+from validation.dependencies import validate_dependency_constraints
 
 
 class TestDependenciesValidation:

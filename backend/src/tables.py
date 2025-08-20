@@ -5,8 +5,8 @@ from typing import Dict, List, Any
 from datetime import date, timedelta, date as current_date
 import json
 import csv
-from src.core.models import Config, SubmissionType, ScheduleMetrics, Schedule
-from src.core.constants import DISPLAY_CONSTANTS, SCHEDULING_CONSTANTS
+from core.models import Config, SubmissionType, ScheduleMetrics, Schedule
+from core.constants import DISPLAY_CONSTANTS, SCHEDULING_CONSTANTS
 from pathlib import Path
 
 

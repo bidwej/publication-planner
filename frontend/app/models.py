@@ -2,33 +2,36 @@
 Web application specific models.
 """
 
-from typing import Optional, List, TYPE_CHECKING
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field, ConfigDict
+from enum import Enum
 
-# Import backend modules with fallback to avoid hanging
-try:
-    from core.models import SchedulerStrategy, Config, Schedule
-    BACKEND_AVAILABLE = True
-except ImportError:
-    # Fallback types when backend is not available
-    if TYPE_CHECKING:
-        from core.models import SchedulerStrategy, Config, Schedule
-    else:
-        SchedulerStrategy = object  # type: ignore
-        Config = object  # type: ignore
-        Schedule = object  # type: ignore
-    BACKEND_AVAILABLE = False
+
+class SchedulerStrategy(str, Enum):
+    """Available scheduling strategies."""
+    GREEDY = "greedy"
+    OPTIMAL = "optimal"
+    BACKTRACKING = "backtracking"
+    STOCHASTIC = "stochastic"
+    LOOKAHEAD = "lookahead"
+    HEURISTIC = "heuristic"
+    RANDOM = "random"
+
+
+# Type aliases for frontend use - no backend dependencies
+ConfigData = Dict[str, Any]  # Simplified config representation
+ScheduleData = Dict[str, Any]  # Simplified schedule representation
 
 
 class WebAppState(BaseModel):
     """State for the web application."""
     model_config = ConfigDict(validate_assignment=True)
     
-    current_schedule: Optional[Schedule] = None  # Use proper Schedule model
+    current_schedule: Optional[ScheduleData] = None  # Use simplified schedule data
     available_strategies: Optional[List[SchedulerStrategy]] = None
     config_path: str = "config.json"
     # Add config data for components to access
-    config_data: Optional[Config] = None  # Use proper Config model
+    config_data: Optional[ConfigData] = None  # Use simplified config data
     
     def __init__(self, **data):
         super().__init__(**data)
@@ -41,7 +44,7 @@ class ComponentState(BaseModel):
     model_config = ConfigDict(validate_assignment=True)
     
     component_name: str
-    config_data: Optional[Config] = None  # Use proper Config model
+    config_data: Optional[ConfigData] = None  # Use simplified config data
     last_refresh: Optional[str] = None
     chart_type: Optional[str] = None
     custom_settings: Optional[dict] = None  # Use generic dict for settings

@@ -2,9 +2,9 @@
 
 from datetime import date
 from typing import Dict, Any
-from src.core.models import Schedule, Interval
+from core.models import Schedule, Interval
 
-from src.scoring.efficiency import calculate_efficiency_score
+from scoring.efficiency import calculate_efficiency_score
 
 
 class TestCalculateEfficiencyScore:

@@ -234,10 +234,10 @@ def run_validate_operation(args: argparse.Namespace) -> int:
     """Run validation operation."""
     try:
         from core.config import load_config
-        from src.validation.schedule import validate_schedule_constraints
-        from src.validation.deadline import validate_deadline_constraints
-        from src.validation.resources import validate_resources_constraints
-        from src.validation.config import validate_config
+        from validation.schedule import validate_schedule_constraints
+        from validation.deadline import validate_deadline_constraints
+        from validation.resources import validate_resources_constraints
+        from validation.config import validate_config
         
         print(f"\n✅ Validating configuration and constraints")
         print(f"📁 Config: {args.config}")

@@ -3,7 +3,7 @@
 from typing import Optional, Dict, Union
 from datetime import date, timedelta, datetime
 
-from src.core.models import Conference, SubmissionType
+from core.models import Conference, SubmissionType
 
 
 def is_working_day(check_date: date, blackout_dates: list[date] | None = None) -> bool:

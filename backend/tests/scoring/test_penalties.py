@@ -3,8 +3,8 @@
 from datetime import date, timedelta
 from typing import Dict, Any, List
 import pytest
-from src.core.models import Schedule, Interval, Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence, Config
-from src.scoring.penalties import calculate_penalty_score
+from core.models import Schedule, Interval, Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence, Config
+from scoring.penalties import calculate_penalty_score
 
 
 class TestCalculatePenaltyScore:

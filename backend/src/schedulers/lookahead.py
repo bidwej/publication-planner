@@ -3,10 +3,10 @@
 from __future__ import annotations
 from typing import List
 from datetime import timedelta, date
-from src.schedulers.greedy import GreedyScheduler
-from src.schedulers.base import BaseScheduler
-from src.core.models import Submission, SchedulerStrategy
-from src.core.constants import SCHEDULING_CONSTANTS, EFFICIENCY_CONSTANTS
+from schedulers.greedy import GreedyScheduler
+from schedulers.base import BaseScheduler
+from core.models import Submission, SchedulerStrategy
+from core.constants import SCHEDULING_CONSTANTS, EFFICIENCY_CONSTANTS
 
 
 class LookaheadGreedyScheduler(GreedyScheduler):

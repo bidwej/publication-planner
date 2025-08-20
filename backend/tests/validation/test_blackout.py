@@ -2,8 +2,8 @@
 
 import pytest
 from datetime import date
-from src.core.models import Config, Schedule, ValidationResult
-from src.validation.blackout import validate_blackout_constraints
+from core.models import Config, Schedule, ValidationResult
+from validation.blackout import validate_blackout_constraints
 
 
 class TestBlackoutValidation:

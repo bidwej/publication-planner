@@ -8,8 +8,8 @@ from core.models import (
     ValidationResult, ScheduleMetrics, Schedule,
     ConstraintViolation, DeadlineViolation, DependencyViolation, ResourceViolation
 )
-from src.validation.submission import validate_submission_constraints
-from src.validation.config import validate_config
+from validation.submission import validate_submission_constraints
+from validation.config import validate_config
 
 
 class TestScheduleType:

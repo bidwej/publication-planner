@@ -4,15 +4,15 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Dict, List, Type, Optional, Tuple, Union
 from datetime import date, timedelta
-from src.core.models import (
+from core.models import (
     Config, Submission, SubmissionType, SchedulerStrategy, Conference, Schedule, Interval
 )
 
-from src.core.dates import is_working_day
+from core.dates import is_working_day
 
 # Validation imports
-from src.validation.submission import validate_submission_constraints
-from src.validation.scheduler import validate_scheduler_constraints, validate_scheduling_window
+from validation.submission import validate_submission_constraints
+from validation.scheduler import validate_scheduler_constraints, validate_scheduling_window
 # No need to import validate_dependencies_satisfied - using submission.are_dependencies_satisfied() method
 
 
@@ -51,13 +51,13 @@ class BaseScheduler(ABC):
         """Auto-register scheduler classes by looking for them in the schedulers module."""
         try:
             # Import the scheduler classes directly
-            from src.schedulers.greedy import GreedyScheduler
-            from src.schedulers.random import RandomScheduler
-            from src.schedulers.stochastic import StochasticGreedyScheduler
-            from src.schedulers.lookahead import LookaheadGreedyScheduler
-            from src.schedulers.heuristic import HeuristicScheduler
-            from src.schedulers.backtracking import BacktrackingGreedyScheduler
-            from src.schedulers.optimal import OptimalScheduler
+            from schedulers.greedy import GreedyScheduler
+            from schedulers.random import RandomScheduler
+            from schedulers.stochastic import StochasticGreedyScheduler
+            from schedulers.lookahead import LookaheadGreedyScheduler
+            from schedulers.heuristic import HeuristicScheduler
+            from schedulers.backtracking import BacktrackingGreedyScheduler
+            from schedulers.optimal import OptimalScheduler
             
             # Map strategies to scheduler classes
             strategy_mapping = {

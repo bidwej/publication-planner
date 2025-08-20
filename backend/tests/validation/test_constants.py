@@ -1,7 +1,7 @@
 """Test constants validation functions."""
 
 import pytest
-from src.validation.constants import validate_constants
+from validation.constants import validate_constants
 
 
 class TestConstantsValidation:

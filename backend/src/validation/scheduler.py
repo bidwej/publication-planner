@@ -3,10 +3,10 @@
 from typing import Dict, Any, List, Tuple
 from datetime import date, timedelta
 
-from src.core.models import Config, Submission, Schedule, SubmissionType, ValidationResult, ConstraintViolation
-from src.core.constants import SCHEDULING_CONSTANTS
-from src.validation.submission import validate_submission_constraints
-from src.validation.dependencies import validate_dependency_constraints
+from core.models import Config, Submission, Schedule, SubmissionType, ValidationResult, ConstraintViolation
+from core.constants import SCHEDULING_CONSTANTS
+from validation.submission import validate_submission_constraints
+from validation.dependencies import validate_dependency_constraints
 
 
 def validate_scheduler_constraints(submission: Submission, start_date: date, 

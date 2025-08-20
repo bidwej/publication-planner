@@ -5,8 +5,8 @@ from typing import Dict, List, Any
 
 import pytest
 
-from src.core.models import SubmissionType, ConferenceType, Config, Schedule
-from src.schedulers.greedy import GreedyScheduler
+from core.models import SubmissionType, ConferenceType, Config, Schedule
+from schedulers.greedy import GreedyScheduler
 from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
 
 

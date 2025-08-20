@@ -6,10 +6,10 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Dict, Any
 
-from src.core.config import load_config
-from src.core.models import Config, SubmissionType, ConferenceType, ConferenceRecurrence, Schedule
-from src.schedulers.optimal import OptimalScheduler
-from src.schedulers.base import BaseScheduler
+from core.config import load_config
+from core.models import Config, SubmissionType, ConferenceType, ConferenceRecurrence, Schedule
+from schedulers.optimal import OptimalScheduler
+from schedulers.base import BaseScheduler
 
 
 class TestOptimalSchedulerEdgeCases:

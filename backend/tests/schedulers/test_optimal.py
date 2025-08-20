@@ -4,10 +4,10 @@ import pytest
 from datetime import date, timedelta
 
 
-from src.core.config import load_config
-from src.core.models import SchedulerStrategy, Schedule, Conference, ConferenceType, ConferenceRecurrence, SubmissionType
-from src.schedulers.optimal import OptimalScheduler
-from src.schedulers.base import BaseScheduler
+from core.config import load_config
+from core.models import SchedulerStrategy, Schedule, Conference, ConferenceType, ConferenceRecurrence, SubmissionType
+from schedulers.optimal import OptimalScheduler
+from schedulers.base import BaseScheduler
 from typing import Dict, List, Any, Optional
 
 
@@ -304,8 +304,8 @@ class TestOptimalScheduler:
     
     def test_candidate_kinds_none_scenarios(self) -> None:
         """Test scheduling with candidate_kinds=None and empty preferred_conferences."""
-        from src.core.models import Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence, Schedule
-        from src.core.config import Config
+        from core.models import Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence, Schedule
+        from core.config import Config
         from datetime import date, timedelta
         
         # Create test conferences that accept different submission types
@@ -413,7 +413,7 @@ class TestOptimalSchedulerIntegration:
     
     def test_optimal_vs_greedy_comparison(self) -> None:
         """Compare optimal scheduler with greedy scheduler."""
-        from src.schedulers.greedy import GreedyScheduler
+        from schedulers.greedy import GreedyScheduler
         
         config = load_config('config.json')
         
@@ -444,7 +444,7 @@ class TestOptimalSchedulerIntegration:
     
     def test_optimal_scheduler_with_different_objectives(self) -> None:
         """Test optimal scheduler with different optimization objectives."""
-        from src.core.config import load_config
+        from core.config import load_config
         
         config = load_config('config.json')
         objectives = ["minimize_makespan", "minimize_penalties", "minimize_total_time"]

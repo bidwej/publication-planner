@@ -4,11 +4,11 @@ import pytest
 from datetime import date, timedelta
 from typing import Dict, List
 
-from src.core.models import (
+from core.models import (
     Submission, Conference, Config, SubmissionType, ConferenceType, 
     ConferenceRecurrence, SubmissionWorkflow, Schedule
 )
-from src.schedulers.optimal import OptimalScheduler
+from schedulers.optimal import OptimalScheduler
 # ValidationOrchestrator doesn't exist - using validation modules directly
 
 
@@ -74,7 +74,7 @@ class TestOptimalSchedulerMinimal:
         """Test OptimalScheduler with single work item - should work instantly."""
         # Mock the entire schedule method to return quickly
         def mock_schedule(self):
-            from src.core.models import Schedule, Interval
+            from core.models import Schedule, Interval
             return Schedule(intervals={"mod1": Interval(start_date=date.today(), end_date=date.today() + timedelta(days=7))})
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
@@ -95,7 +95,7 @@ class TestOptimalSchedulerMinimal:
         """Test OptimalScheduler with single paper - should work instantly."""
         # Mock the entire schedule method to return quickly
         def mock_schedule(self):
-            from src.core.models import Schedule, Interval
+            from core.models import Schedule, Interval
             return Schedule(intervals={"paper1": Interval(start_date=date.today(), end_date=date.today() + timedelta(days=14))})
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
@@ -119,7 +119,7 @@ class TestOptimalSchedulerMinimal:
         """Test two independent papers - simple case that should complete instantly."""
         # Mock the entire schedule method to return quickly
         def mock_schedule(self):
-            from src.core.models import Schedule, Interval
+            from core.models import Schedule, Interval
             return Schedule(intervals={
                 "paper1": Interval(start_date=date.today(), end_date=date.today() + timedelta(days=14)),
                 "paper2": Interval(start_date=date.today() + timedelta(days=14), end_date=date.today() + timedelta(days=28))
@@ -149,7 +149,7 @@ class TestOptimalSchedulerMinimal:
         """Test that OptimalScheduler handles solver failures gracefully."""
         # Mock the entire schedule method to return quickly
         def mock_schedule(self):
-            from src.core.models import Schedule
+            from core.models import Schedule
             return Schedule(intervals={})  # Simulate solver failure
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
@@ -232,7 +232,7 @@ class TestOptimalSchedulerMinimal:
         """Test edge cases that might stress MILP constraints."""
         # Mock the entire schedule method to return quickly
         def mock_schedule(self):
-            from src.core.models import Schedule, Interval
+            from core.models import Schedule, Interval
             return Schedule(intervals={"paper1": Interval(start_date=date.today(), end_date=date.today() + timedelta(days=14))})
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
@@ -340,7 +340,7 @@ class TestOptimalSchedulerMinimal:
         
         # Mock the entire schedule method to return quickly
         def mock_schedule(self):
-            from src.core.models import Schedule, Interval
+            from core.models import Schedule, Interval
             # Use actual duration calculation from config
             mod1_start = date.today()
             mod1_duration = work_item.get_duration_days(config)
@@ -372,7 +372,7 @@ class TestOptimalSchedulerMinimal:
         """Test different optimization objectives."""
         # Mock the entire schedule method to return quickly
         def mock_schedule(self):
-            from src.core.models import Schedule, Interval
+            from core.models import Schedule, Interval
             return Schedule(intervals={"paper1": Interval(start_date=date.today(), end_date=date.today() + timedelta(days=14))})
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)

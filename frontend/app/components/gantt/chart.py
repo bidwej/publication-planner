@@ -5,22 +5,42 @@ Gantt chart component for timeline visualization.
 import plotly.graph_objects as go
 from plotly.graph_objs import Figure
 from datetime import date, timedelta
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Union
+import sys
+from pathlib import Path
 
-# Global imports - all at the top
-from core.models import Config, Submission, Schedule
-from core.config import load_config
+# Try to import backend models from the correct path
+try:
+    # Add backend to path and import
+    backend_path = Path(__file__).parent.parent.parent.parent / "backend" / "src"
+    if backend_path.exists():
+        sys.path.insert(0, str(backend_path))
+        from core.models import Config, Submission, Schedule
+        from core.config import load_config
+        BACKEND_IMPORTS_AVAILABLE = True
+    else:
+        BACKEND_IMPORTS_AVAILABLE = False
+except ImportError:
+    BACKEND_IMPORTS_AVAILABLE = False
+
+# Frontend imports
+from app.components.gantt.sample import create_sample_gantt_chart, create_demo_schedule_from_config
 from app.components.gantt.activity import add_activity_bars
 from app.components.gantt.timeline import add_background_elements
-from app.components.gantt.sample import create_sample_gantt_chart, create_demo_schedule_from_config
 
 
-def create_gantt_chart(config: Optional[Config] = None, use_sample_data: bool = False) -> Figure:
+# Type aliases for frontend use
+ConfigData = Dict[str, Any]  # Simplified config representation
+SubmissionData = Dict[str, Any]  # Simplified submission representation
+ScheduleData = Dict[str, Any]  # Simplified schedule representation
+
+
+def create_gantt_chart(config: Optional[Union[Config, Dict[str, Any]]] = None, use_sample_data: bool = False) -> Figure:
     """Create a gantt chart with real data or sample data.
     
     Args:
-        config: Configuration object with submissions data (optional)
-        use_sample_data: Force use of sample data instead of trying backend (default: False)
+        config: Configuration object or dictionary with submissions data (optional)
+        use_sample_data: Force use of sample data instead of trying config (default: False)
         
     Returns:
         Plotly Figure object
@@ -30,14 +50,23 @@ def create_gantt_chart(config: Optional[Config] = None, use_sample_data: bool = 
         return create_sample_gantt_chart()
     
     # Try to use real data from config
-    if config.submissions:
-        demo_schedule = create_demo_schedule_from_config(config)
-        return _create_chart_from_config({
-            'schedule': demo_schedule,
-            'config': config
-        })
-    else:
-        return _create_empty_chart()
+    if config:
+        if hasattr(config, 'submissions') and config.submissions:
+            # Backend Config object
+            demo_schedule = create_demo_schedule_from_config(config)
+            return _create_chart_from_config({
+                'schedule': demo_schedule,
+                'config': config
+            })
+        elif isinstance(config, dict) and config.get('submissions'):
+            # Dictionary config
+            demo_schedule = create_demo_schedule_from_config(config)
+            return _create_chart_from_config({
+                'schedule': demo_schedule,
+                'config': config
+            })
+    
+    return _create_empty_chart()
 
 
 def _create_chart_from_config(config_data: Dict[str, Any]) -> Figure:

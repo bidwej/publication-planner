@@ -3,8 +3,8 @@
 from typing import Dict, List, Any, Optional
 from datetime import date, timedelta
 import pytest
-from src.schedulers.lookahead import LookaheadGreedyScheduler
-from src.core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence, Schedule
+from schedulers.lookahead import LookaheadGreedyScheduler
+from core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence, Schedule
 
 
 class TestLookaheadScheduler:

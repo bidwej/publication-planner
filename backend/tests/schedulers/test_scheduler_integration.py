@@ -5,21 +5,21 @@ import subprocess
 from pathlib import Path
 from datetime import date
 
-from src.core.models import SchedulerStrategy, Schedule
+from core.models import SchedulerStrategy, Schedule
 from typing import Dict, List, Any, Optional
 
 
 # Import scheduler implementations to register them
-from src.schedulers.greedy import GreedyScheduler
-from src.schedulers.stochastic import StochasticGreedyScheduler
-from src.schedulers.lookahead import LookaheadGreedyScheduler
-from src.schedulers.backtracking import BacktrackingGreedyScheduler
-from src.schedulers.random import RandomScheduler
-from src.schedulers.heuristic import HeuristicScheduler
-from src.schedulers.optimal import OptimalScheduler
+from schedulers.greedy import GreedyScheduler
+from schedulers.stochastic import StochasticGreedyScheduler
+from schedulers.lookahead import LookaheadGreedyScheduler
+from schedulers.backtracking import BacktrackingGreedyScheduler
+from schedulers.random import RandomScheduler
+from schedulers.heuristic import HeuristicScheduler
+from schedulers.optimal import OptimalScheduler
 
 # Verify registration worked
-from src.schedulers.base import BaseScheduler
+from schedulers.base import BaseScheduler
 
 
 class TestSchedulerIntegration:

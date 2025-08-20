@@ -5,14 +5,14 @@ from datetime import date
 from typing import Dict, List, Any, Optional
 
 
-from src.console import (
+from console import (
     print_schedule_summary,
     print_deadline_status,
     print_utilization_summary,
     print_metrics_summary,
     format_table
 )
-from src.core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence, Schedule, Interval
+from core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence, Schedule, Interval
 
 
 class TestConsoleOutput:

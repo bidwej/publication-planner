@@ -3,8 +3,8 @@
 from typing import Dict, Any, List
 from datetime import date, timedelta
 
-from src.core.models import Config, Submission, DeadlineViolation, SubmissionType, Schedule, ConstraintViolation, ValidationResult
-from src.core.constants import QUALITY_CONSTANTS, SCHEDULING_CONSTANTS
+from core.models import Config, Submission, DeadlineViolation, SubmissionType, Schedule, ConstraintViolation, ValidationResult
+from core.constants import QUALITY_CONSTANTS, SCHEDULING_CONSTANTS
 
 
 def validate_deadline_constraints(schedule: Schedule, config: Config) -> ValidationResult:

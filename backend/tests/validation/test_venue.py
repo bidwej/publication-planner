@@ -6,8 +6,8 @@ Tests for venue validation module.
 
 import pytest
 from datetime import date
-from src.validation.venue import validate_venue_constraints, validate_conference_submission_compatibility
-from src.core.models import Config, Submission, Conference, ConferenceType, SubmissionType, Schedule, ValidationResult
+from validation.venue import validate_venue_constraints, validate_conference_submission_compatibility
+from core.models import Config, Submission, Conference, ConferenceType, SubmissionType, Schedule, ValidationResult
 
 
 class TestVenueValidation:

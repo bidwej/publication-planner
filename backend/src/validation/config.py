@@ -3,10 +3,10 @@
 from typing import Dict, Any, List, Optional, Set
 from datetime import date, timedelta
 
-from src.core.models import Config, Submission, Conference, ValidationResult, Schedule
-from src.core.constants import SCHEDULING_CONSTANTS
-from src.validation.constants import validate_constants
-from src.validation.submission import validate_submission_constraints
+from core.models import Config, Submission, Conference, ValidationResult, Schedule
+from core.constants import SCHEDULING_CONSTANTS
+from validation.constants import validate_constants
+from validation.submission import validate_submission_constraints
 
 
 def validate_config(config: Config) -> ValidationResult:

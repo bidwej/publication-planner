@@ -3,8 +3,8 @@
 from typing import Dict, List, Any, Optional
 from datetime import date, timedelta
 import pytest
-from src.schedulers.random import RandomScheduler
-from src.core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence, Schedule
+from schedulers.random import RandomScheduler
+from core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence, Schedule
 
 
 class TestRandomScheduler:

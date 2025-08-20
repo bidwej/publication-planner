@@ -3,8 +3,8 @@
 from typing import Dict, List, Any, Optional
 from datetime import date, timedelta
 import pytest
-from src.schedulers.heuristic import HeuristicScheduler, HeuristicStrategy
-from src.core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence, Schedule
+from schedulers.heuristic import HeuristicScheduler, HeuristicStrategy
+from core.models import Config, Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence, Schedule
 
 
 class TestHeuristicScheduler:

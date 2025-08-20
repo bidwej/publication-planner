@@ -4,8 +4,8 @@ import pytest
 from datetime import date, timedelta
 from unittest.mock import Mock
 
-from src.core.models import Config, Submission, Schedule, SubmissionType, Conference, ConferenceType, ConferenceRecurrence, ValidationResult
-from src.validation.submission import validate_submission_constraints
+from core.models import Config, Submission, Schedule, SubmissionType, Conference, ConferenceType, ConferenceRecurrence, ValidationResult
+from validation.submission import validate_submission_constraints
 
 
 class TestSubmissionValidation:

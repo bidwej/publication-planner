@@ -5,9 +5,9 @@ from datetime import date, timedelta, datetime
 from collections import defaultdict
 import statistics
 
-from src.core.models import Config, ScheduleMetrics, Schedule, Interval
+from core.models import Config, ScheduleMetrics, Schedule, Interval
 from typing import Optional
-from src.core.constants import (
+from core.constants import (
     EFFICIENCY_CONSTANTS, SCORING_CONSTANTS, REPORT_CONSTANTS, QUALITY_CONSTANTS
 )
 

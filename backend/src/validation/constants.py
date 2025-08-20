@@ -1,7 +1,7 @@
 """Constants validation functions to ensure all constants are within reasonable ranges."""
 
 from typing import List, Dict, Any
-from src.core.constants import (
+from core.constants import (
     SCHEDULING_CONSTANTS, PENALTY_CONSTANTS, EFFICIENCY_CONSTANTS, 
     QUALITY_CONSTANTS, SCORING_CONSTANTS, REPORT_CONSTANTS, 
     DISPLAY_CONSTANTS, ANALYTICS_CONSTANTS

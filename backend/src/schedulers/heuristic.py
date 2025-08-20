@@ -4,10 +4,10 @@ from __future__ import annotations
 from typing import Dict, List
 from datetime import date, timedelta
 from enum import Enum
-from src.schedulers.base import BaseScheduler
-from src.core.dates import is_working_day
-from src.core.models import SchedulerStrategy, Schedule
-from src.core.constants import SCHEDULING_CONSTANTS
+from schedulers.base import BaseScheduler
+from core.dates import is_working_day
+from core.models import SchedulerStrategy, Schedule
+from core.constants import SCHEDULING_CONSTANTS
 
 
 class HeuristicStrategy(Enum):

@@ -3,7 +3,7 @@
 from datetime import date
 from typing import Dict, List, Any, Optional
 
-from src.tables import (
+from tables import (
     generate_simple_monthly_table, 
     generate_schedule_summary_table, 
     generate_deadline_table,
@@ -18,7 +18,7 @@ from src.tables import (
     save_table_csv,
     get_output_summary
 )
-from src.core.models import Schedule, Interval
+from core.models import Schedule, Interval
 
 
 class TestGenerateSimpleMonthlyTable:
