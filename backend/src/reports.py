@@ -33,7 +33,7 @@ def generate_schedule_report(schedule: Schedule, config: Config) -> Dict[str, An
     validation_result = validate_schedule_constraints(schedule, config)
     
     # Extract validation data from the ValidationResult metadata
-    # The current validation system returns a single ValidationResult, not nested results
+    # The current validation system returns a single ValidationResult with comprehensive metadata
     deadline_validation = {
         "is_valid": validation_result.is_valid,
         "compliance_rate": validation_result.metadata.get("compliance_rate", 100.0),
@@ -45,20 +45,21 @@ def generate_schedule_report(schedule: Schedule, config: Config) -> Dict[str, An
     
     dependency_validation = {
         "is_valid": validation_result.is_valid,
-        "satisfaction_rate": 100.0,  # Default since dependencies are handled in main validation
-        "total_dependencies": 0,  # Would need to calculate this
-        "satisfied_dependencies": 0,  # Would need to calculate this
+        "satisfaction_rate": (validation_result.metadata.get("satisfied_dependencies", 0) / 
+                             max(validation_result.metadata.get("total_dependencies", 1), 1) * 100.0),
+        "total_dependencies": validation_result.metadata.get("total_dependencies", 0),
+        "satisfied_dependencies": validation_result.metadata.get("satisfied_dependencies", 0),
         "violations": [v for v in validation_result.violations if hasattr(v, 'submission_id')],
-        "summary": "Dependency validation included in main validation"
+        "summary": f"Dependency validation: {validation_result.metadata.get('satisfied_dependencies', 0)}/{validation_result.metadata.get('total_dependencies', 0)} satisfied"
     }
     
     resource_validation = {
         "is_valid": validation_result.is_valid,
         "max_concurrent": config.max_concurrent_submissions,
-        "max_observed": 0,  # Would need to calculate this
-        "total_days": 0,  # Would need to calculate this
+        "max_observed": validation_result.metadata.get("max_observed", 0),
+        "total_days": validation_result.metadata.get("total_days", 0),
         "violations": [v for v in validation_result.violations if "resource" in v.description.lower()],
-        "summary": "Resource validation included in main validation"
+        "summary": f"Resource validation: max observed {validation_result.metadata.get('max_observed', 0)}/{config.max_concurrent_submissions}"
     }
     
     # Calculate scores

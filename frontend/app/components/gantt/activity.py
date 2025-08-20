@@ -9,7 +9,7 @@ from datetime import date, timedelta
 from typing import Dict, Optional, Any, Union
 
 # Direct imports - these will work when PYTHONPATH includes backend/src
-from core.models import Config, Submission
+from core.models import Config, Submission, Schedule
 from app.components.gantt.timeline import assign_activity_rows
 
 

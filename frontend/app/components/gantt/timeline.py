@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 from plotly.graph_objs import Figure
 
 # Direct imports - these will work when PYTHONPATH includes backend/src
-from core.models import Config, Submission
+from core.models import Config, Submission, Schedule
 from validation.resources import validate_resources_constraints
 
 

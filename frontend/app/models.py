@@ -2,20 +2,20 @@
 Web application specific models.
 """
 
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 from pydantic import BaseModel, Field, ConfigDict
-from core.models import SchedulerStrategy, Config
+from core.models import SchedulerStrategy, Config, Schedule
 
 
 class WebAppState(BaseModel):
     """State for the web application."""
     model_config = ConfigDict(validate_assignment=True)
     
-    current_schedule: Optional[Dict[str, Any]] = None  # Simple dict-based schedule
+    current_schedule: Optional[Schedule] = None  # Use proper Schedule model
     available_strategies: Optional[List[SchedulerStrategy]] = None
     config_path: str = "config.json"
     # Add config data for components to access
-    config_data: Optional[Dict[str, Any]] = None
+    config_data: Optional[Config] = None  # Use proper Config model
     
     def __init__(self, **data):
         super().__init__(**data)
@@ -28,7 +28,7 @@ class ComponentState(BaseModel):
     model_config = ConfigDict(validate_assignment=True)
     
     component_name: str
-    config_data: Optional[Dict[str, Any]] = None
+    config_data: Optional[Config] = None  # Use proper Config model
     last_refresh: Optional[str] = None
     chart_type: Optional[str] = None
-    custom_settings: Optional[Dict[str, Any]] = None
+    custom_settings: Optional[dict] = None  # Use generic dict for settings
