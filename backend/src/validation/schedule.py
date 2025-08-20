@@ -3,11 +3,11 @@
 from typing import Dict, Any
 from datetime import date
 
-from src.core.models import Config, Schedule, ValidationResult
-from src.validation.resources import validate_resources_constraints
-from src.validation.venue import validate_venue_constraints
-from src.validation.deadline import validate_deadline_constraints
-from src.validation.dependencies import validate_dependency_constraints
+from core.models import Config, Schedule, ValidationResult
+from validation.resources import validate_resources_constraints
+from validation.venue import validate_venue_constraints
+from validation.deadline import validate_deadline_constraints
+from validation.dependencies import validate_dependency_constraints
 
 
 def validate_schedule_constraints(schedule: Schedule, config: Config) -> ValidationResult:

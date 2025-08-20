@@ -8,7 +8,7 @@ from dateutil.parser import parse as parse_date
 
 from pydantic import BaseModel, Field, ConfigDict
 
-from .constants import SCHEDULING_CONSTANTS, PENALTY_CONSTANTS, EFFICIENCY_CONSTANTS, SCORING_CONSTANTS
+from core.constants import SCHEDULING_CONSTANTS, PENALTY_CONSTANTS, EFFICIENCY_CONSTANTS, SCORING_CONSTANTS
 
 # Forward imports to avoid circular dependencies
 # These will be imported locally in methods that need them
@@ -494,7 +494,7 @@ class DeadlineViolation(ConstraintViolation):
     submission_title: str
     conference_id: str
     submission_type: str
-    deadline: date
+    deadline: Optional[date]  # Can be None when no specific deadline is defined
     end_date: date
     days_late: int
 

@@ -84,7 +84,7 @@ class TestVenueValidation:
         abstract_submission = next(s for s in submissions if s.kind.value == "abstract")
         
         # Find a conference that accepts both types (should be ICRA from the fixture)
-        mixed_conf = next(c for c in conferences if c.id == "ICRA2026")
+        mixed_conf = next(c for c in conferences if c.id == "ICRA2025")
         
         # Test conference submission type detection
         # ICRA should accept both abstracts and papers based on the fixture

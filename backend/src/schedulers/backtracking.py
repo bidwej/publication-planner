@@ -94,8 +94,11 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
                 if submission.kind in conf.deadlines:
                     deadline = conf.deadlines[submission.kind]
                     days_until_deadline = (deadline - date.today()).days
+                    # Handle past deadlines gracefully - give them lower priority
                     if days_until_deadline > 0:
                         base_priority += 100.0 / days_until_deadline  # Closer deadline = higher priority
+                    else:
+                        base_priority -= abs(days_until_deadline) * 0.1  # Past deadlines get penalty
             
             return base_priority
         

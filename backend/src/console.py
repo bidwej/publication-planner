@@ -6,13 +6,13 @@ from datetime import date, timedelta
 import json
 import statistics
 from pathlib import Path
-from src.core.models import Config, SchedulerStrategy, Schedule
-from src.core.constants import DISPLAY_CONSTANTS
-from src.validation.deadline import validate_deadline_constraints
-from src.validation.schedule import validate_schedule_constraints
-from src.scoring.penalties import calculate_penalty_score
-from src.scoring.efficiency import calculate_efficiency_score
-from src.scoring.quality import calculate_quality_score
+from core.models import Config, SchedulerStrategy, Schedule
+from core.constants import DISPLAY_CONSTANTS
+from validation.deadline import validate_deadline_constraints
+from validation.schedule import validate_schedule_constraints
+from scoring.penalties import calculate_penalty_score
+from scoring.efficiency import calculate_efficiency_score
+from scoring.quality import calculate_quality_score
 
 
 def print_schedule_summary(schedule: Schedule, config: Config) -> None:
@@ -55,7 +55,7 @@ def print_deadline_status(schedule: Schedule, config: Config) -> None:
             continue
         
         conf = config.get_conference(sub.conference_id)
-        if sub.kind not in conf.deadlines:
+        if not conf or sub.kind not in conf.deadlines:
             continue
         
         total += 1

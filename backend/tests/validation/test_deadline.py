@@ -49,10 +49,12 @@ class TestDeadlineValidation:
         
         # Test with invalid schedule (submissions after deadlines)
         invalid_schedule = Schedule()
-        invalid_schedule.add_interval("mod1-wrk", date(2026, 3, 1), duration_days=30)  # After ICRA deadline
-        invalid_schedule.add_interval("paper1-pap", date(2026, 4, 1), duration_days=45) # After ICRA deadline
-        invalid_schedule.add_interval("mod2-wrk", date(2026, 5, 1), duration_days=30)  # After MICCAI deadline
-        invalid_schedule.add_interval("paper2-pap", date(2026, 6, 1), duration_days=45) # After MICCAI deadline
+        # Use dates that are after the fixture's deadlines (which are relative to today + 1 year)
+        base_date = date.today() + timedelta(days=365)
+        invalid_schedule.add_interval("mod1-wrk", base_date + timedelta(days=35), duration_days=30)  # After ICRA abstract deadline
+        invalid_schedule.add_interval("paper1-pap", base_date + timedelta(days=65), duration_days=45) # After ICRA paper deadline
+        invalid_schedule.add_interval("mod2-wrk", base_date + timedelta(days=95), duration_days=30)  # After MICCAI abstract deadline
+        invalid_schedule.add_interval("paper2-pap", base_date + timedelta(days=125), duration_days=45) # After MICCAI paper deadline
         
         invalid_result = validate_deadline_constraints(invalid_schedule, config)
         assert invalid_result.is_valid == False

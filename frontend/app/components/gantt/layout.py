@@ -3,7 +3,7 @@ Gantt layout components for Paper Planner.
 """
 
 from dash import html, dcc, Input, Output, callback, State, callback_context
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, TYPE_CHECKING
 from datetime import datetime
 from plotly.graph_objs import Figure
 from app.components.gantt.chart import (
@@ -35,11 +35,31 @@ def create_gantt_layout(config: Optional[Config] = None) -> html.Div:
     Returns:
         Gantt layout as html.Div
     """
-    # Create initial chart with real data
-    initial_figure = create_gantt_chart()
+    # Create initial chart with sample data since no config is available at initialization
+    initial_figure = create_gantt_chart(use_sample_data=True)
     
-    # For minimal chart mode, don't try to access any config data
-    # This prevents any potential data loading that could cause encoding errors
+    # Create a demo schedule if we have config data but no schedule
+    demo_schedule = None
+    if config and hasattr(config, 'submissions') and config.submissions:
+        from datetime import date, timedelta, datetime
+        # Create a simple demo schedule starting from today
+        demo_schedule = {}
+        current_date = date.today()
+        
+        for i, submission in enumerate(config.submissions):
+            # Space submissions out by 2 weeks each
+            start_date = current_date + timedelta(weeks=i * 2)
+            demo_schedule[submission.id] = start_date
+    
+    # Store component state using clean state manager
+    if config and BACKEND_AVAILABLE:
+        try:
+            get_state_manager().save_component_state('gantt', config, 'gantt', schedule=demo_schedule)
+        except Exception as e:
+            print(f"Warning: Could not save component state: {e}")
+        
+        # Note: Schedule saving functionality will be added later
+        # For now, just store component state
     
     return html.Div([
         _create_gantt_header(),
@@ -111,12 +131,21 @@ def update_gantt_chart(n_clicks: Optional[int]) -> Figure:
         # Update component state
         get_state_manager().update_component_refresh_time('gantt')
         
-        # For now, always use sample data since we're not loading custom configs in callbacks
-        # In a full implementation, you'd want to load the custom config here
+        # Try to load config from storage first
+        stored_state = get_state_manager().load_component_state('gantt')
         config = None
         
-        # Create chart with sample data
-        figure = create_gantt_chart()
+        if stored_state and 'config_data' in stored_state:
+            try:
+                # In a full implementation, you'd reconstruct the config object here
+                # For now, we'll use sample data
+                config = None
+            except Exception as e:
+                print(f"Could not reconstruct config from storage: {e}")
+                config = None
+        
+        # Create chart - will use sample data if no config available
+        figure = create_gantt_chart(config=config, use_sample_data=(config is None))
         
         return figure
         
@@ -132,8 +161,18 @@ def update_gantt_chart(n_clicks: Optional[int]) -> Figure:
 )
 def update_gantt_storage_status(figure: Figure) -> str:
     """Update gantt storage status display."""
-    # For minimal chart mode, just show that we're using sample data
-    return "✅ Using minimal chart mode - no data loading required"
+    try:
+        if BACKEND_AVAILABLE:
+            stored_state = get_state_manager().load_component_state('gantt')
+            if stored_state and 'config_data' in stored_state:
+                config_summary = stored_state['config_data']
+                return f"✅ Config loaded: {config_summary.get('submission_count', 0)} submissions, {config_summary.get('conference_count', 0)} conferences"
+            else:
+                return "⚠️ No config in storage - using sample data"
+        else:
+            return "✅ Using demo data - backend not available"
+    except Exception as e:
+        return f"❌ Storage error: {str(e)}"
 
 
 # Export callback

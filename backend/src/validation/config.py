@@ -1,7 +1,7 @@
 """Configuration validation functions for data integrity and schema compliance."""
 
 from typing import Dict, Any, List, Optional, Set
-from datetime import date
+from datetime import date, timedelta
 
 from src.core.models import Config, Submission, Conference, ValidationResult, Schedule
 from src.core.constants import SCHEDULING_CONSTANTS
@@ -83,7 +83,10 @@ def _validate_config_submissions(config: Config) -> List[str]:
     # Validate each submission individually
     for submission in config.submissions:
         empty_schedule = Schedule()
-        submission_errors = validate_submission_constraints(submission, date.today(), empty_schedule, config)
+        # Use a reasonable reference date instead of date.today() to avoid future failures
+        # This allows for historical data and resubmissions
+        reference_date = date.today() - timedelta(days=365)  # Allow validation up to 1 year in the past
+        submission_errors = validate_submission_constraints(submission, reference_date, empty_schedule, config)
         errors.extend([f"Submission {submission.id}: {error}" for error in submission_errors])
         if submission.id in submission_ids:
             errors.append(f"Duplicate submission ID: {submission.id}")

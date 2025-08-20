@@ -3,8 +3,8 @@
 from typing import Dict, Any, List
 from datetime import date, timedelta
 
-from src.core.models import Config, Schedule, ValidationResult, ConstraintViolation
-from src.core.constants import QUALITY_CONSTANTS
+from core.models import Config, Schedule, ValidationResult, ConstraintViolation
+from core.constants import QUALITY_CONSTANTS
 
 
 def validate_blackout_constraints(schedule: Schedule, config: Config) -> ValidationResult:

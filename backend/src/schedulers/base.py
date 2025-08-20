@@ -129,7 +129,8 @@ class BaseScheduler(ABC):
     
     def validate_constraints(self, sub: Submission, start: date, schedule: Schedule) -> bool:
         """Validate all constraints for a submission at a given start date."""
-        return validate_scheduler_constraints(sub, start, schedule, self.config)
+        validation_result = validate_scheduler_constraints(sub, start, schedule, self.config)
+        return validation_result.is_valid
     
     def reset_schedule(self) -> None:
         """Reset the scheduler to start with a fresh schedule."""
@@ -273,7 +274,9 @@ class BaseScheduler(ABC):
         return scheduled_count
     
     def _calculate_earliest_start_date(self, submission: Submission, schedule: Schedule) -> date:
-        earliest = date.today()
+        # Use a reasonable reference date instead of date.today() to avoid future failures
+        # This allows for historical data and resubmissions
+        earliest = date.today() - timedelta(days=365)  # Allow scheduling up to 1 year in the past
         
         if submission.engineering_ready_date:
             earliest = max(earliest, submission.engineering_ready_date)

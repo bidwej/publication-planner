@@ -59,7 +59,7 @@ def validate_deadline_constraints(schedule: Schedule, config: Config) -> Validat
                         submission_type=sub.kind.value,
                         description=f"Submission {sid} has no deadline defined for type {sub.kind.value}",
                         severity="medium", 
-                        deadline=date.today(), 
+                        deadline=None,  # No deadline defined - don't use date.today()
                         end_date=end_date,
                         days_late=0
                     ))
@@ -71,7 +71,7 @@ def validate_deadline_constraints(schedule: Schedule, config: Config) -> Validat
                     submission_type=sub.kind.value,
                     description=f"Submission {sid} has no conference deadline",
                     severity="medium", 
-                    deadline=date.today(), 
+                    deadline=None,  # No deadline defined - don't use date.today()
                     end_date=end_date,
                     days_late=0
                 ))
@@ -96,8 +96,8 @@ def validate_deadline_constraints(schedule: Schedule, config: Config) -> Validat
             submission_type=sub.kind.value if sub else "ABSTRACT",
             description=violation.description,
             severity=violation.severity,
-            deadline=date.today(),
-            end_date=date.today(),
+            deadline=None,  # Lead time violations don't have a specific deadline
+            end_date=date.today(),  # Use today as reference for when violation was detected
             days_late=0 # Lead time violations don't have a direct days_late, but can be calculated if needed
         ))
     
@@ -110,8 +110,8 @@ def validate_deadline_constraints(schedule: Schedule, config: Config) -> Validat
             submission_type=sub.kind.value if sub else "PAPER",
             description=violation.description,
             severity=violation.severity,
-            deadline=date.today(),
-            end_date=date.today(),
+            deadline=None,  # Lead time violations don't have a specific deadline
+            end_date=date.today(),  # Use today as reference for when violation was detected
             days_late=0 # Lead time violations don't have a direct days_late, but can be calculated if needed
         ))
     
@@ -124,8 +124,8 @@ def validate_deadline_constraints(schedule: Schedule, config: Config) -> Validat
             submission_type="",
             description=error,
             severity="medium",
-            deadline=date.today(),
-            end_date=date.today(),
+            deadline=None,  # No specific deadline for earliest start violations
+            end_date=date.today(),  # Use today as reference for when violation was detected
             days_late=0
         ))
     
@@ -137,8 +137,8 @@ def validate_deadline_constraints(schedule: Schedule, config: Config) -> Validat
             submission_type="",
             description=error,
             severity="medium",
-            deadline=date.today(),
-            end_date=date.today(),
+            deadline=None,  # No specific deadline for engineering ready violations
+            end_date=date.today(),  # Use today as reference for when violation was detected
             days_late=0
         ))
     

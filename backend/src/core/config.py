@@ -7,11 +7,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from dateutil.parser import parse as parse_date
 
-from .models import (
+from core.models import (
     Conference, ConferenceRecurrence, ConferenceType, Config, Submission, 
     SubmissionType, SubmissionWorkflow
 )
-from .constants import SCHEDULING_CONSTANTS, PENALTY_CONSTANTS
+from core.constants import SCHEDULING_CONSTANTS, PENALTY_CONSTANTS
 
 # Regex patterns for robust ID matching
 MOD_ID_PATTERN = re.compile(r'^mod_(\d+)$')

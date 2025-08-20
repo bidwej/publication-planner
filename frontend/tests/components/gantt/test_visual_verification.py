@@ -14,14 +14,16 @@ from app.components.gantt.layout import create_gantt_layout
 # from tests.common.headless_browser import capture_web_page_screenshot
 
 def test_gantt_chart_can_be_created():
-    """Test that gantt chart can be created."""
+    """Test that gantt chart can be created without errors."""
+    from app.components.gantt.chart import create_gantt_chart
+    
     try:
-        fig = create_gantt_chart()
+        fig = create_gantt_chart(use_sample_data=True)
         assert fig is not None
         assert hasattr(fig, 'layout')
-    except Exception:
-        # If it fails due to missing dependencies, that's okay
-        pass
+        assert hasattr(fig, 'data')
+    except Exception as e:
+        pytest.fail(f"Gantt chart creation failed: {e}")
 
 def test_gantt_layout_can_be_created():
     """Test that gantt layout can be created."""

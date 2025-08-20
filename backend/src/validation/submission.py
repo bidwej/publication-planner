@@ -121,10 +121,9 @@ def _validate_unified_schema_fields(submission: Submission) -> bool:
         if not isinstance(submission.engineering_ready_date, date):
             return False
         
-        # Engineering ready date should not be in the past for active submissions
-        if submission.engineering_ready_date < date.today():
-            # This could be a warning rather than an error, depending on business logic
-            pass
+        # Engineering ready date in the past is acceptable (could be historical data or resubmissions)
+        # Only validate that it's a valid date type
+        pass
     
     # Validate free_slack_months if present
     if submission.free_slack_months is not None:

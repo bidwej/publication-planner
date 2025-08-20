@@ -7,14 +7,14 @@ import statistics
 from collections import defaultdict, deque
 from dataclasses import dataclass
 
-from src.core.models import Config, Schedule, ScheduleMetrics, SubmissionType
-from src.validation.resources import _calculate_daily_load
-from src.core.constants import ANALYTICS_CONSTANTS, QUALITY_CONSTANTS, SCHEDULING_CONSTANTS
-from src.validation.deadline import validate_deadline_constraints
-from src.validation.resources import validate_resources_constraints
-from src.scoring.efficiency import calculate_efficiency_score
-from src.scoring.penalties import calculate_penalty_score
-from src.scoring.quality import calculate_quality_score
+from core.models import Config, Schedule, ScheduleMetrics, SubmissionType
+from validation.resources import _calculate_daily_load
+from core.constants import ANALYTICS_CONSTANTS, QUALITY_CONSTANTS, SCHEDULING_CONSTANTS
+from validation.deadline import validate_deadline_constraints
+from validation.resources import validate_resources_constraints
+from scoring.efficiency import calculate_efficiency_score
+from scoring.penalties import calculate_penalty_score
+from scoring.quality import calculate_quality_score
 
 
 @dataclass

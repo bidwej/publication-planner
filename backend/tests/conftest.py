@@ -1,16 +1,16 @@
 """Pytest configuration and shared fixtures for all tests."""
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 import json
 
 import pytest
 
-from src.core.models import (
+from core.models import (
     Config, Submission, Conference, SubmissionType, 
     ConferenceType, ConferenceRecurrence, Schedule, ValidationResult
 )
-from src.core.constants import QUALITY_CONSTANTS
+from core.constants import QUALITY_CONSTANTS, PRIORITY_CONSTANTS, PENALTY_CONSTANTS
 
 
 def build_validation_result(violations, total_submissions, compliant_submissions, summary_template):
@@ -149,26 +149,29 @@ def empty_config() -> Config:
 @pytest.fixture
 def sample_config() -> Config:
     """Fixture to provide a sample configuration with test data."""
+    # Use relative dates to avoid future date issues
+    base_date = date.today() + timedelta(days=365)  # 1 year from now
+    
     # Create sample conferences
     sample_conferences: List[Conference] = [
         Conference(
-            id="ICRA2026",
-            name="IEEE International Conference on Robotics and Automation 2026",
+            id="ICRA2025",
+            name="IEEE International Conference on Robotics and Automation 2025",
             conf_type=ConferenceType.ENGINEERING,
             recurrence=ConferenceRecurrence.ANNUAL,
             deadlines={
-                SubmissionType.ABSTRACT: date(2026, 1, 15),
-                SubmissionType.PAPER: date(2026, 2, 15)
+                SubmissionType.ABSTRACT: base_date + timedelta(days=30),
+                SubmissionType.PAPER: base_date + timedelta(days=60)
             }
         ),
         Conference(
-            id="MICCAI2026",
-            name="Medical Image Computing and Computer Assisted Intervention 2026",
+            id="MICCAI2025",
+            name="Medical Image Computing and Computer Assisted Intervention 2025",
             conf_type=ConferenceType.MEDICAL,
             recurrence=ConferenceRecurrence.ANNUAL,
             deadlines={
-                SubmissionType.ABSTRACT: date(2026, 3, 1),
-                SubmissionType.PAPER: date(2026, 4, 1)
+                SubmissionType.ABSTRACT: base_date + timedelta(days=90),
+                SubmissionType.PAPER: base_date + timedelta(days=120)
             }
         )
     ]
@@ -179,7 +182,7 @@ def sample_config() -> Config:
             id="mod1-wrk",
             title="Endoscope Navigation Module",
             kind=SubmissionType.ABSTRACT,
-            conference_id="ICRA2026",
+            conference_id="ICRA2025",
             depends_on=[],
             draft_window_months=0,
             author="pccp"  # MODs are engineering papers
@@ -188,16 +191,16 @@ def sample_config() -> Config:
             id="paper1-pap",
             title="AI-Powered Endoscope Control System",
             kind=SubmissionType.PAPER,
-            conference_id="ICRA2026",
+            conference_id="ICRA2025",
             depends_on=["mod1-wrk"],
             draft_window_months=3,
-            author="pccp"  # MODs are engineering papers
+            author="pccp"  # Engineering papers
         ),
         Submission(
             id="mod2-wrk",
             title="Medical Image Analysis Module",
             kind=SubmissionType.ABSTRACT,
-            conference_id="MICCAI2026",
+            conference_id="MICCAI2025",
             depends_on=[],
             draft_window_months=0,
             author="ed"  # ED papers are medical papers
@@ -206,7 +209,7 @@ def sample_config() -> Config:
             id="paper2-pap",
             title="Deep Learning for Endoscope Guidance",
             kind=SubmissionType.PAPER,
-            conference_id="MICCAI2026",
+            conference_id="MICCAI2025",
             depends_on=["mod2-wrk"],
             draft_window_months=3,
             author="ed"  # ED papers are medical papers
@@ -215,25 +218,25 @@ def sample_config() -> Config:
             id="poster1",
             title="Endoscope Control Interface Demo",
             kind=SubmissionType.POSTER,
-            conference_id="ICRA2026",
+            conference_id="ICRA2025",
             depends_on=["mod1-wrk"],
             draft_window_months=1,
             author="pccp"  # Engineering poster
         )
     ]
     
-    # Default penalty costs
+    # Default penalty costs - using constants
     default_penalty_costs: Dict[str, float] = {
-        "default_mod_penalty_per_day": 1000.0,
-        "default_paper_penalty_per_day": 2000.0
+        "default_mod_penalty_per_day": PENALTY_CONSTANTS.default_mod_penalty_per_day,
+        "default_paper_penalty_per_day": PENALTY_CONSTANTS.default_paper_penalty_per_day
     }
     
-    # Default priority weights
+    # Default priority weights - using constants
     default_priority_weights: Dict[str, float] = {
-        "engineering_paper": 2.0,
-        "medical_paper": 1.0,
-        "mod": 1.5,
-        "abstract": 0.5
+        "engineering_paper": PRIORITY_CONSTANTS.engineering_paper_weight,
+        "medical_paper": PRIORITY_CONSTANTS.medical_paper_weight,
+        "mod": PRIORITY_CONSTANTS.mod_weight,
+        "abstract": PRIORITY_CONSTANTS.abstract_weight
     }
     
     # Default scheduling options
@@ -308,13 +311,13 @@ def test_config_path(tmp_path):
             "papers": "ed_papers.json"
         },
         "priority_weights": {
-            "engineering_paper": 2.0,
-            "medical_paper": 1.0,
-            "mod": 1.5,
-            "abstract": 0.5
+            "engineering_paper": PRIORITY_CONSTANTS.engineering_paper_weight,
+            "medical_paper": PRIORITY_CONSTANTS.medical_paper_weight,
+            "mod": PRIORITY_CONSTANTS.mod_weight,
+            "abstract": PRIORITY_CONSTANTS.abstract_weight
         },
         "penalty_costs": {
-            "default_mod_penalty_per_day": 1000
+            "default_mod_penalty_per_day": PENALTY_CONSTANTS.default_mod_penalty_per_day
         },
         "scheduling_options": {
             "enable_blackout_periods": False,
@@ -428,12 +431,12 @@ def config():
         blackout_dates=[],
         scheduling_options={"enable_early_abstract_scheduling": False},
         priority_weights={
-            "engineering_paper": 2.0,
-            "medical_paper": 1.0,
-            "mod": 1.5,
-            "abstract": 0.5
+            "engineering_paper": PRIORITY_CONSTANTS.engineering_paper_weight,
+            "medical_paper": PRIORITY_CONSTANTS.medical_paper_weight,
+            "mod": PRIORITY_CONSTANTS.mod_weight,
+            "abstract": PRIORITY_CONSTANTS.abstract_weight
         },
-        penalty_costs={"default_mod_penalty_per_day": 1000},
+        penalty_costs={"default_mod_penalty_per_day": PENALTY_CONSTANTS.default_mod_penalty_per_day},
         data_files={
             "conferences": "conferences.json",
             "mods": "mod_papers.json",

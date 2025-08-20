@@ -52,6 +52,14 @@ class EfficiencyConstants:
     milp_timeout_seconds: int = 60  # MILP solver timeout in seconds (increased from 10)
 
 @dataclass
+class PriorityConstants:
+    """Constants related to priority weighting."""
+    engineering_paper_weight: float = 2.0
+    medical_paper_weight: float = 1.0
+    mod_weight: float = 1.5
+    abstract_weight: float = 0.5
+
+@dataclass
 class QualityConstants:
     """Constants related to quality calculations."""
     robustness_scale_factor: float = 10.0
@@ -105,6 +113,7 @@ class AnalyticsConstants:
 SCHEDULING_CONSTANTS = SchedulingConstants()
 PENALTY_CONSTANTS = PenaltyConstants()
 EFFICIENCY_CONSTANTS = EfficiencyConstants()
+PRIORITY_CONSTANTS = PriorityConstants()
 QUALITY_CONSTANTS = QualityConstants()
 SCORING_CONSTANTS = ScoringConstants()
 REPORT_CONSTANTS = ReportConstants()

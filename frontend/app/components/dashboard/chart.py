@@ -121,7 +121,8 @@ def _create_schedule_gantt_chart(config: Optional[Config] = None) -> Figure:
         Plotly Figure object
     """
     # Use the Gantt chart functionality from gantt component
-    fig = create_gantt_chart()
+    # If no config provided, it will automatically use sample data
+    fig = create_gantt_chart(config=config, use_sample_data=(config is None))
     
     # Update title to reflect it's a dashboard overview
     if config and config.submissions:
