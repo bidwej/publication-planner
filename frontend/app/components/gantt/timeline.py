@@ -4,13 +4,26 @@ Handles activity row assignments, dependency grouping, and background visualizat
 """
 
 from datetime import date, timedelta
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, TYPE_CHECKING
 import plotly.graph_objects as go
 from plotly.graph_objs import Figure
 
-# Direct imports - these will work when PYTHONPATH includes backend/src
-from core.models import Config, Submission, Schedule
-from validation.resources import validate_resources_constraints
+# Import backend modules with fallback to avoid hanging
+try:
+    from core.models import Config, Submission, Schedule
+    from validation.resources import validate_resources_constraints
+    BACKEND_AVAILABLE = True
+except ImportError:
+    # Fallback types when backend is not available
+    if TYPE_CHECKING:
+        from core.models import Config, Submission, Schedule
+        from validation.resources import validate_resources_constraints
+    else:
+        Config = object  # type: ignore
+        Submission = object  # type: ignore
+        Schedule = object  # type: ignore
+        validate_resources_constraints = lambda *args, **kwargs: None  # type: ignore
+    BACKEND_AVAILABLE = False
 
 
 def assign_activity_rows(schedule: Optional[Schedule], config: Config) -> Dict[str, int]:
@@ -28,9 +41,9 @@ def assign_activity_rows(schedule: Optional[Schedule], config: Config) -> Dict[s
     group_intervals = []
     for group_id, group_submissions in dependency_groups.items():
         # Find the earliest start and latest end for the entire group
-        group_start = min(schedule[sub_id] for sub_id in group_submissions)
+        group_start = min(schedule.intervals[sub_id].start_date for sub_id in group_submissions)
         group_end = max(
-            schedule[sub_id] + timedelta(days=submissions[sub_id].get_duration_days(config)) 
+            schedule.intervals[sub_id].end_date
             for sub_id in group_submissions
         )
         group_intervals.append((group_id, group_start, group_end, group_submissions))
@@ -179,7 +192,7 @@ def _group_by_dependencies(schedule: Schedule, submissions: Dict[str, Submission
     groups = {}
     processed = set()
     
-    for submission_id in schedule.keys():
+    for submission_id in schedule.intervals.keys():
         if submission_id in processed:
             continue
             
@@ -198,7 +211,7 @@ def _group_by_dependencies(schedule: Schedule, submissions: Dict[str, Submission
 def _collect_dependency_chain(submission_id: str, schedule: Schedule, 
                             submissions: Dict[str, Submission], group: List[str], processed: set):
     """Recursively collect all submissions in a dependency chain."""
-    if submission_id in processed or submission_id not in schedule:
+    if submission_id in processed or submission_id not in schedule.intervals:
         return
     
     processed.add(submission_id)
@@ -208,12 +221,12 @@ def _collect_dependency_chain(submission_id: str, schedule: Schedule,
     if submission and submission.depends_on:
         # Add dependencies first (they come before this submission)
         for dep_id in submission.depends_on:
-            if dep_id in schedule:
+            if dep_id in schedule.intervals:
                 _collect_dependency_chain(dep_id, schedule, submissions, group, processed)
     
     # Find submissions that depend on this one
     for other_id, other_submission in submissions.items():
-        if (other_id in schedule and other_submission.depends_on and 
+        if (other_id in schedule.intervals and other_submission.depends_on and 
             submission_id in other_submission.depends_on):
             _collect_dependency_chain(other_id, schedule, submissions, group, processed)
 

@@ -2,9 +2,22 @@
 Web application specific models.
 """
 
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
 from pydantic import BaseModel, Field, ConfigDict
-from core.models import SchedulerStrategy, Config, Schedule
+
+# Import backend modules with fallback to avoid hanging
+try:
+    from core.models import SchedulerStrategy, Config, Schedule
+    BACKEND_AVAILABLE = True
+except ImportError:
+    # Fallback types when backend is not available
+    if TYPE_CHECKING:
+        from core.models import SchedulerStrategy, Config, Schedule
+    else:
+        SchedulerStrategy = object  # type: ignore
+        Config = object  # type: ignore
+        Schedule = object  # type: ignore
+    BACKEND_AVAILABLE = False
 
 
 class WebAppState(BaseModel):

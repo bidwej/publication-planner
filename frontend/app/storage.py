@@ -6,10 +6,21 @@ Handles SQLite-based localStorage equivalent for schedules.
 import sqlite3
 import json
 from pathlib import Path
-from typing import Dict, List, Optional, Any
-
-from core.models import Config, Schedule
+from typing import Dict, List, Optional, Any, TYPE_CHECKING
 from datetime import datetime
+
+# Import backend modules with fallback to avoid hanging
+try:
+    from core.models import Config, Schedule
+    BACKEND_AVAILABLE = True
+except ImportError:
+    # Fallback types when backend is not available
+    if TYPE_CHECKING:
+        from core.models import Config, Schedule
+    else:
+        Config = object  # type: ignore
+        Schedule = object  # type: ignore
+    BACKEND_AVAILABLE = False
 
 
 class ScheduleStorage:

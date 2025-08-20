@@ -5,34 +5,24 @@ Gantt chart component for timeline visualization.
 import plotly.graph_objects as go
 from plotly.graph_objs import Figure
 from datetime import date, timedelta
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, TYPE_CHECKING
 
-# Import helper that works in both pytest and direct execution
-def _import_backend_modules():
-    """Import backend modules with fallback for direct execution."""
-    try:
-        # Try pytest context first
-        from core.models import Config, Submission
+# Import backend modules with fallback to avoid hanging
+try:
+    from core.models import Config, Submission, Schedule
+    from core.config import load_config
+    BACKEND_AVAILABLE = True
+except ImportError:
+    # Fallback types when backend is not available
+    if TYPE_CHECKING:
+        from core.models import Config, Submission, Schedule
         from core.config import load_config
-        return Config, Submission, load_config
-    except ImportError:
-        try:
-            # Try direct execution context
-            import sys
-            from pathlib import Path
-            backend_src = Path(__file__).parent.parent.parent.parent / "backend" / "src"
-            if backend_src.exists():
-                sys.path.insert(0, str(backend_src))
-                from core.models import Config, Submission
-                from core.config import load_config
-                return Config, Submission, load_config
-            else:
-                return None, None, None
-        except ImportError:
-            return None, None, None
-
-# Import backend modules
-Config, Submission, load_config = _import_backend_modules()
+    else:
+        Config = object  # type: ignore
+        Submission = object  # type: ignore
+        Schedule = object  # type: ignore
+        load_config = lambda *args, **kwargs: None  # type: ignore
+    BACKEND_AVAILABLE = False
 
 
 def create_gantt_chart() -> Figure:
@@ -41,7 +31,7 @@ def create_gantt_chart() -> Figure:
     Returns:
         Plotly Figure object
     """
-    # Until backend API integration is added, always render placeholder chart
+    # For now, always render placeholder chart to avoid backend dependency issues
     return _create_placeholder_gantt_chart()
 
 
@@ -268,7 +258,7 @@ def _create_placeholder_gantt_chart() -> Figure:
         # Add label
         fig.add_annotation(
             text=details["title"][:25] + "..." if len(details["title"]) > 25 else details["title"],
-            x=start_date + timedelta(days=duration/2),
+            x=start_date + timedelta(days=int(duration/2)),
             y=row,
             xanchor='center',
             yanchor='middle',

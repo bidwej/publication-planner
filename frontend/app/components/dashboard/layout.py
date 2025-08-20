@@ -13,7 +13,19 @@ from app.components.dashboard.chart import (
 )
 from app.components.exporter.controls import create_export_controls, export_chart_png, export_chart_html
 from app.storage import get_state_manager
-from core.models import Config
+
+# Import backend modules with fallback to avoid hanging
+try:
+    from core.models import Config
+    BACKEND_AVAILABLE = True
+except ImportError:
+    # Fallback types when backend is not available
+    from typing import TYPE_CHECKING
+    if TYPE_CHECKING:
+        from core.models import Config
+    else:
+        Config = object  # type: ignore
+    BACKEND_AVAILABLE = False
 
 
 def create_dashboard_layout(config: Optional[Config] = None) -> html.Div:

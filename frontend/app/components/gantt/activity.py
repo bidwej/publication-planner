@@ -6,28 +6,41 @@ Handles a single activity bar with its styling and positioning.
 import plotly.graph_objects as go
 from plotly.graph_objs import Figure
 from datetime import date, timedelta
-from typing import Dict, Optional, Any, Union
+from typing import Dict, Optional, Any, Union, TYPE_CHECKING
 
-# Direct imports - these will work when PYTHONPATH includes backend/src
-from core.models import Config, Submission, Schedule
-from app.components.gantt.timeline import assign_activity_rows
+# Import backend modules with fallback to avoid hanging
+try:
+    from core.models import Config, Submission, Schedule
+    from app.components.gantt.timeline import assign_activity_rows
+    BACKEND_AVAILABLE = True
+except ImportError:
+    # Fallback types when backend is not available
+    if TYPE_CHECKING:
+        from core.models import Config, Submission, Schedule
+        from app.components.gantt.timeline import assign_activity_rows
+    else:
+        Config = object  # type: ignore
+        Submission = object  # type: ignore
+        Schedule = object  # type: ignore
+        assign_activity_rows = lambda *args, **kwargs: {}  # type: ignore
+    BACKEND_AVAILABLE = False
 
 
 def add_activity_bars(fig: Figure, schedule: Schedule, config: Config) -> None:
     """Add activity bars to the gantt chart."""
-    if not schedule:
+    if not schedule or not schedule.intervals:
         return
     
     # Get activity row assignments for proper positioning
     activity_rows = assign_activity_rows(schedule, config)
     
     # Add bars for each submission
-    for submission_id, start_date in schedule.items():
+    for submission_id, interval in schedule.intervals.items():
         submission = config.submissions_dict.get(submission_id)
         if submission:
-            # Calculate duration and end date
-            duration_days = max(submission.get_duration_days(config), 7)
-            end_date = start_date + timedelta(days=duration_days)
+            # Use the interval's start_date and end_date directly
+            start_date = interval.start_date
+            end_date = interval.end_date
             
             # Add the bar
             _add_activity_bar(fig, submission, start_date, end_date, activity_rows[submission_id])
@@ -38,16 +51,14 @@ def add_activity_bars(fig: Figure, schedule: Schedule, config: Config) -> None:
             # Add dependency arrows
             if submission.depends_on:
                 for dep_id in submission.depends_on:
-                    if dep_id in schedule:
-                        # Calculate end date of dependency
-                        dep_submission = config.submissions_dict.get(dep_id)
-                        if dep_submission:
-                            dep_duration = max(dep_submission.get_duration_days(config), 7)
-                            dep_end_date = schedule[dep_id] + timedelta(days=dep_duration)
-                            
-                            # Draw arrow from end of dependency to start of dependent submission
-                            _add_dependency_arrow(fig, dep_end_date, activity_rows[dep_id], 
-                                                start_date, activity_rows[submission_id])
+                    if dep_id in schedule.intervals:
+                        # Use dependency interval's end_date
+                        dep_interval = schedule.intervals[dep_id]
+                        dep_end_date = dep_interval.end_date
+                        
+                        # Draw arrow from end of dependency to start of dependent submission
+                        _add_dependency_arrow(fig, dep_end_date, activity_rows[dep_id], 
+                                            start_date, activity_rows[submission_id])
 
 
 def _add_activity_bar(fig: Figure, submission: Submission, start_date: date, end_date: date, row: int) -> None:

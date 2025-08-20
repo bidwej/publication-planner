@@ -42,8 +42,9 @@ def run_interface(name: str, port: int, debug: bool = False):
         print("⏹️  Ctrl+C to stop")
         print("-" * 50)
         
-        from app.main import app
-        app.run_server(debug=debug, host='127.0.0.1', port=port, use_reloader=False)
+        from app.main import create_app
+        app = create_app(name)
+        app.run(debug=debug, host='127.0.0.1', port=port, use_reloader=False)
         
     except KeyboardInterrupt:
         print(f"\n⏹️  {name} stopped")

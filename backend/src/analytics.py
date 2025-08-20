@@ -112,32 +112,46 @@ def generate_schedule_summary(schedule: Schedule, config: Config) -> ScheduleMet
     scheduled_count = len(schedule.intervals)
     completion_rate = min((scheduled_count / total_submissions * 100), 100.0) if total_submissions > 0 else 0.0
     
-    # Calculate type distribution
+    # Calculate type distribution (only for scheduled submissions)
     type_counts = {}
     type_percentages = {}
-    for sub in config.submissions:
-        sub_type = sub.kind.value
-        type_counts[sub_type] = type_counts.get(sub_type, 0) + 1
+    for sid, interval in schedule.intervals.items():
+        sub = config.get_submission(sid)
+        if sub:
+            sub_type = sub.kind.value
+            type_counts[sub_type] = type_counts.get(sub_type, 0) + 1
     
     for sub_type, count in type_counts.items():
-        type_percentages[sub_type] = (count / total_submissions * 100) if total_submissions > 0 else 0.0
+        type_percentages[sub_type] = (count / scheduled_count * 100) if scheduled_count > 0 else 0.0
     
-    # Calculate time distribution
+    # Calculate time distribution (count ongoing submissions, not just start dates)
     monthly_dist = {}
     quarterly_dist = {}
     yearly_dist = {}
     
     for sid, interval in schedule.intervals.items():
         start_date = interval.start_date
-        month_key = f"{start_date.year}-{start_date.month:02d}"
-        monthly_dist[month_key] = monthly_dist.get(month_key, 0) + 1
+        end_date = interval.end_date
         
-        quarter = (start_date.month - 1) // 3 + 1
-        quarter_key = f"{start_date.year}-Q{quarter}"
-        quarterly_dist[quarter_key] = quarterly_dist.get(quarter_key, 0) + 1
-        
-        year_key = str(start_date.year)
-        yearly_dist[year_key] = yearly_dist.get(year_key, 0) + 1
+        # Count submissions for each month they span
+        current_date = start_date
+        while current_date <= end_date:
+            month_key = f"{current_date.year}-{current_date.month:02d}"
+            monthly_dist[month_key] = monthly_dist.get(month_key, 0) + 1
+            
+            quarter = (current_date.month - 1) // 3 + 1
+            quarter_key = f"{current_date.year}-Q{quarter}"
+            quarterly_dist[quarter_key] = quarterly_dist.get(quarter_key, 0) + 1
+            
+            year_key = str(current_date.year)
+            yearly_dist[year_key] = yearly_dist.get(year_key, 0) + 1
+            
+            # Move to next month (handle day overflow properly)
+            if current_date.month == 12:
+                current_date = current_date.replace(year=current_date.year + 1, month=1, day=1)
+            else:
+                # Use the first day of the next month to avoid day overflow
+                current_date = current_date.replace(month=current_date.month + 1, day=1)
     
     # Find missing submissions
     scheduled_ids = set(schedule.intervals.keys())
