@@ -7,13 +7,17 @@ from plotly.graph_objs import Figure
 from datetime import date, timedelta
 from typing import Dict, Any, Optional, Union
 import sys
+import os
 from pathlib import Path
+from dotenv import load_dotenv
 
-# Simple absolute path approach - add backend/src to Python path
-project_root = Path(__file__).parent.parent.parent.parent  # Go up from frontend/app/components/gantt/
-backend_src = project_root / "backend" / "src"
-if str(backend_src) not in sys.path:
-    sys.path.insert(0, str(backend_src))
+# Load environment variables from .env file
+load_dotenv()
+
+# Get backend path from environment variable
+backend_src_path = os.getenv('PYTHONPATH', '../backend/src')
+if backend_src_path and backend_src_path not in sys.path:
+    sys.path.insert(0, backend_src_path)
 
 # Now we can import backend modules
 try:

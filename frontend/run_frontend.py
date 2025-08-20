@@ -5,6 +5,10 @@ import argparse
 import sys
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Interface configuration
 INTERFACES = {
@@ -14,13 +18,20 @@ INTERFACES = {
 }
 
 def setup_env():
-    """Check backend installation."""
+    """Set up environment for backend imports."""
     try:
+        # Get backend path from environment variable
+        backend_src_path = os.getenv('PYTHONPATH', '../backend/src')
+        if backend_src_path and backend_src_path not in sys.path:
+            sys.path.insert(0, backend_src_path)
+        
+        # Test import
         from core.models import Config
         print("✓ Backend ready")
         return True
-    except ImportError:
-        print("❌ Backend not available - install with: pip install -e ../backend")
+    except ImportError as e:
+        print(f"❌ Backend not available: {e}")
+        print("Please check your .env file has PYTHONPATH=../backend/src")
         return False
 
 def run_interface(name: str, port: int, debug: bool = False):

@@ -16,6 +16,10 @@ The frontend consists of three main interfaces, all accessible through a single 
 # Navigate to frontend directory
 cd frontend
 
+# Set up environment (copy template and configure paths)
+cp env.template .env
+# Edit .env to set PYTHONPATH and DATABASE_PATH
+
 # List available interfaces
 python run_frontend.py --list
 
@@ -34,6 +38,19 @@ python run_frontend.py gantt --port 8060
 # Debug mode
 python run_frontend.py gantt --debug
 ```
+
+## Environment Configuration
+
+The frontend requires proper environment configuration for backend imports and database access:
+
+### Required Environment Variables
+- **PYTHONPATH**: Set to `../backend/src` for backend module imports
+
+### Setup Steps
+1. Copy `env.template` to `.env`
+2. Update `PYTHONPATH` to point to `../backend/src`
+
+**Note**: The frontend `env.template` focuses on import paths. Debug mode is controlled via command line arguments (`--debug` flag).
 
 ## Interface Features
 

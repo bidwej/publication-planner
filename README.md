@@ -30,7 +30,7 @@ The Paper Planner is designed to help researchers and teams efficiently schedule
 - Python 3.8 or higher
 - Virtual environment (recommended)
 
-### Installation Steps
+### Quick Setup
 
 1. **Clone the repository:**
    ```bash
@@ -53,6 +53,21 @@ The Paper Planner is designed to help researchers and teams efficiently schedule
    ```bash
    pip install -r requirements.txt
    ```
+
+4. **Set up environment variables:**
+   ```bash
+   # Backend setup
+   cd backend
+   cp env.template .env
+   
+   # Frontend setup  
+   cd ../frontend
+   cp env.template .env
+   ```
+
+The `.env` files configure Python import paths automatically:
+- **Backend**: `PYTHONPATH=src` (for importing from backend/src)
+- **Frontend**: `PYTHONPATH=../backend/src` (for importing backend modules)
 
 ### Running the Application
 
@@ -131,7 +146,8 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 **Frontend Import Issues**
 - Make sure you're running from the `frontend/` directory
-- The `run_frontend.py` script automatically sets up the environment
+- Copy `env.template` to `.env` and ensure `PYTHONPATH=../backend/src`
+- The `run_frontend.py` script automatically loads environment variables
 - If issues persist, check that `backend/src/` exists relative to frontend
 
 #### Development Tips
@@ -1208,17 +1224,24 @@ python run_frontend.py metrics        # Launch metrics visualization
 
 ### Environment Management
 
-The frontend automatically handles backend module discovery:
-- **Automatic Setup**: `run_frontend.py` configures PYTHONPATH automatically
-- **Backend Integration**: Seamless access to all backend models and functions
+The system uses environment variables for clean, maintainable import paths:
+- **Simple Configuration**: Just copy `env.template` to `.env` in each directory
+- **Automatic Loading**: Both frontend and backend automatically load `.env` files
+- **Clean Imports**: No complex path detection or sys.path manipulation
 - **Cross-platform**: Works on Windows, macOS, and Linux
-- **No Manual Configuration**: Just run the script from the frontend directory
+- **Easy Maintenance**: Update paths in one place (`.env` file)
+
+**Environment Variables:**
+- `PYTHONPATH`: Python import path for backend modules
+- `DATABASE_PATH`: SQLite database location (backend only)
+- `DEBUG`: Enable debug mode
+- `LOG_LEVEL`: Logging level
 
 ### 🎯 Frontend Architecture Benefits
 
 **✅ Consolidated Launcher**: Single `run_frontend.py` script replaces multiple launcher files
 **✅ Cross-platform**: Works identically on Windows, macOS, and Linux
-**✅ Automatic Environment**: No manual PYTHONPATH configuration needed
+**✅ Environment-Based**: Simple `.env` file configuration for import paths
 **✅ Elegant Design**: Clean, compact code following Python best practices
 **✅ Multiple Interfaces**: Dashboard, Gantt chart, and metrics from one script
 **✅ Debug Support**: Built-in debug mode for development

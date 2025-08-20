@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Paper Planner Backend Runner - Comprehensive backend operations launcher."""
+"""Paper Planner Backend Runner - Comprehensive backend operations interface."""
 
 import argparse
 import sys
@@ -7,6 +7,10 @@ import os
 from pathlib import Path
 from typing import Optional, Dict, Any
 from datetime import date
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Backend operation configuration
 OPERATIONS = {
@@ -43,15 +47,21 @@ OPERATIONS = {
 }
 
 def setup_env():
-    """Check backend installation."""
+    """Set up environment for backend imports."""
     try:
+        # Get backend path from environment variable
+        backend_src_path = os.getenv('PYTHONPATH', 'src')
+        if backend_src_path and backend_src_path not in sys.path:
+            sys.path.insert(0, backend_src_path)
+        
+        # Test import
         from core.models import Config
         from core.config import load_config
         print("✓ Backend environment ready")
         return True
     except ImportError as e:
-        print(f"❌ Backend not installed properly: {e}")
-        print("Please run: pip install -e . (from backend directory)")
+        print(f"❌ Backend not available: {e}")
+        print("Please check your .env file has PYTHONPATH=src")
         return False
 
 def run_schedule_operation(args: argparse.Namespace) -> int:
