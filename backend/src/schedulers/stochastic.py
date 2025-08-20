@@ -4,12 +4,11 @@ from __future__ import annotations
 import random
 from typing import List
 from schedulers.greedy import GreedyScheduler
-from schedulers.base import BaseScheduler
-from core.models import SchedulerStrategy
+from core.models import SchedulerStrategy, Submission
 from core.constants import EFFICIENCY_CONSTANTS
 
 
-class StochasticGreedyScheduler(GreedyScheduler):
+class StochasticScheduler(GreedyScheduler):
     """Stochastic greedy scheduler that adds randomness to priority selection."""
     
     def __init__(self, config, randomness_factor: float = EFFICIENCY_CONSTANTS.randomness_factor):
@@ -17,14 +16,10 @@ class StochasticGreedyScheduler(GreedyScheduler):
         super().__init__(config)
         self.randomness_factor = randomness_factor
     
-    def _sort_by_priority(self, ready: List[str]) -> List[str]:
-        """Override priority selection to add randomness."""
-        def get_priority(submission_id: str) -> float:
-            submission = self.submissions[submission_id]
-            base_priority = self.get_base_priority(submission)
-            
-            # Add random noise
-            noise = random.uniform(-self.randomness_factor, self.randomness_factor)
-            return base_priority + noise
+    def get_priority(self, submission: Submission) -> float:
+        """Override priority calculation to add randomness."""
+        base_priority = super().get_priority(submission)
         
-        return sorted(ready, key=get_priority, reverse=True) 
+        # Add random noise
+        noise = random.uniform(-self.randomness_factor, self.randomness_factor)
+        return base_priority + noise 

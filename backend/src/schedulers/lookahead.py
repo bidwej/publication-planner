@@ -4,12 +4,11 @@ from __future__ import annotations
 from typing import List
 from datetime import timedelta, date
 from schedulers.greedy import GreedyScheduler
-from schedulers.base import BaseScheduler
-from core.models import Submission, SchedulerStrategy
+from core.models import Submission, SchedulerStrategy, Schedule
 from core.constants import SCHEDULING_CONSTANTS, EFFICIENCY_CONSTANTS
 
 
-class LookaheadGreedyScheduler(GreedyScheduler):
+class LookaheadScheduler(GreedyScheduler):
     """Lookahead greedy scheduler that considers future implications of decisions."""
     
     def __init__(self, config, lookahead_days: int = SCHEDULING_CONSTANTS.lookahead_window_days):
@@ -17,26 +16,27 @@ class LookaheadGreedyScheduler(GreedyScheduler):
         super().__init__(config)
         self.lookahead_days = lookahead_days
     
-    def _sort_by_priority(self, ready: List[str]) -> List[str]:
-        """Override priority selection to add lookahead consideration."""
-        def get_priority(submission_id: str) -> float:
-            submission = self.submissions[submission_id]
-            base_priority = self.get_base_priority(submission)
-            
-            # Add lookahead bonus for submissions with dependencies
-            lookahead_bonus = 0.0
-            for other_submission_id in self.submissions:
-                other_submission = self.submissions[other_submission_id]
-                if other_submission.depends_on and submission_id in other_submission.depends_on:
-                    # This submission blocks others, give it higher priority
-                    lookahead_bonus += EFFICIENCY_CONSTANTS.lookahead_bonus_increment
-            
-            return base_priority + lookahead_bonus
+    def get_priority(self, submission: Submission) -> float:
+        """Override priority calculation to add lookahead consideration."""
+        base_priority = super().get_priority(submission)
         
-        return sorted(ready, key=get_priority, reverse=True)
+        # Add lookahead bonus for submissions with dependencies
+        lookahead_bonus = 0.0
+        for other_submission_id in self.submissions:
+            other_submission = self.submissions[other_submission_id]
+            if other_submission.depends_on and submission.id in other_submission.depends_on:
+                # This submission blocks others, give it higher priority
+                lookahead_bonus += EFFICIENCY_CONSTANTS.lookahead_bonus_increment
+        
+        return base_priority + lookahead_bonus
     
-    def _meets_deadline(self, submission: Submission, start_date: date) -> bool:
-        """Override deadline checking to add lookahead buffer."""
+    def can_schedule(self, submission: Submission, start_date: date, schedule: Schedule) -> bool:
+        """Override scheduling validation to add lookahead buffer for deadlines."""
+        # First check base constraints
+        if not super().can_schedule(submission, start_date, schedule):
+            return False
+        
+        # Add lookahead deadline checking
         if not submission.conference_id or submission.conference_id not in self.conferences:
             return True
         

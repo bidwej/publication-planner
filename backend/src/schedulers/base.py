@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Dict, List, Type, Optional, Tuple, Union
+from typing import Dict, List, Type, Optional, Tuple
 from datetime import date, timedelta
 from core.models import (
     Config, Submission, SubmissionType, SchedulerStrategy, Conference, Schedule, Interval
@@ -13,7 +13,6 @@ from core.dates import is_working_day
 # Validation imports
 from validation.submission import validate_submission_constraints
 from validation.scheduler import validate_scheduler_constraints, validate_scheduling_window
-# No need to import validate_dependencies_satisfied - using submission.are_dependencies_satisfied() method
 
 
 class BaseScheduler(ABC):
@@ -123,10 +122,10 @@ class BaseScheduler(ABC):
                 duration = (end_date - start_date).days
                 print(f"Schedule spans {duration} days from {start_date} to {end_date}")
     
-    # ===== PRIORITY CALCULATION METHOD (shared utility) =====
+    # ===== STANDARDIZED SCHEDULING METHODS =====
     
-    def get_base_priority(self, submission: Submission) -> float:
-        """Calculate base priority score for a submission."""
+    def get_priority(self, submission: Submission) -> float:
+        """Calculate standard priority score for a submission."""
         base_priority = 0.0
         
         # Priority based on submission type
@@ -155,107 +154,34 @@ class BaseScheduler(ABC):
         
         return base_priority
     
-    # ===== PRIVATE HELPER METHODS (internal use only) =====
+    def sort_ready_submissions(self, ready: List[str]) -> List[str]:
+        """Sort ready submissions by priority (default implementation)."""
+        # Default: sort by priority score
+        return sorted(ready, key=lambda sid: self.get_priority(self.submissions[sid]), reverse=True)
     
-    @classmethod
-    def _auto_register_strategy(cls, strategy: SchedulerStrategy) -> None:
-        """Auto-register scheduler classes by looking for them in the schedulers module."""
-        try:
-            # Import the scheduler classes directly
-            from schedulers.greedy import GreedyScheduler
-            from schedulers.random import RandomScheduler
-            from schedulers.stochastic import StochasticGreedyScheduler
-            from schedulers.lookahead import LookaheadGreedyScheduler
-            from schedulers.heuristic import HeuristicScheduler
-            from schedulers.backtracking import BacktrackingGreedyScheduler
-            from schedulers.optimal import OptimalScheduler
-            
-            # Map strategies to scheduler classes
-            strategy_mapping = {
-                SchedulerStrategy.GREEDY: GreedyScheduler,
-                SchedulerStrategy.STOCHASTIC: StochasticGreedyScheduler,
-                SchedulerStrategy.LOOKAHEAD: LookaheadGreedyScheduler,
-                SchedulerStrategy.BACKTRACKING: BacktrackingGreedyScheduler,
-                SchedulerStrategy.RANDOM: RandomScheduler,
-                SchedulerStrategy.HEURISTIC: HeuristicScheduler,
-                SchedulerStrategy.OPTIMAL: OptimalScheduler
-            }
-            
-            if strategy in strategy_mapping:
-                cls._strategy_registry[strategy] = strategy_mapping[strategy]
-                
-        except ImportError:
-            # If import fails, try to find classes dynamically
-            import importlib
-            import inspect
-            
-            # Get the module where this class is defined
-            module = inspect.getmodule(cls)
-            if not module:
-                return
-                
-            # Look for scheduler classes in the module
-            for name, obj in inspect.getmembers(module):
-                if (inspect.isclass(obj) and 
-                    issubclass(obj, BaseScheduler) and 
-                    obj != BaseScheduler and
-                    hasattr(obj, '__module__') and
-                    obj.__module__ == module.__name__):
-                    
-                    # Try to determine the strategy from the class name
-                    if strategy.value in name.lower():
-                        cls._strategy_registry[strategy] = obj
-                        return
-            
-            # If not found by name, try to register based on common patterns
-            strategy_mapping = {
-                SchedulerStrategy.GREEDY: 'GreedyScheduler',
-                SchedulerStrategy.STOCHASTIC: 'StochasticScheduler',
-                SchedulerStrategy.LOOKAHEAD: 'LookaheadScheduler',
-                SchedulerStrategy.BACKTRACKING: 'BacktrackingGreedyScheduler',
-                SchedulerStrategy.RANDOM: 'RandomScheduler',
-                SchedulerStrategy.HEURISTIC: 'HeuristicScheduler',
-                SchedulerStrategy.OPTIMAL: 'OptimalScheduler'
-            }
-            
-            if strategy in strategy_mapping:
-                class_name = strategy_mapping[strategy]
-                if hasattr(module, class_name):
-                    cls._strategy_registry[strategy] = getattr(module, class_name)
+    def can_schedule(self, submission: Submission, start_date: date, schedule: Schedule) -> bool:
+        """Check if a submission can be scheduled at a given date (default implementation)."""
+        # Default: use comprehensive validation
+        return self.validate_constraints(submission, start_date, schedule)
     
-    def _topological_order(self) -> List[str]:
-        """Get submissions in topological order based on dependencies."""
-        # Simple topological sort implementation
-        visited = set()
-        temp_visited = set()
-        result = []
-        
-        def dfs(node_id: str):
-            if node_id in temp_visited:
-                # Circular dependency detected
-                raise ValueError(f"Circular dependency detected involving {node_id}")
-            if node_id in visited:
-                return
+    def assign_conference(self, submission: Submission) -> bool:
+        """Assign a conference to a submission (default implementation)."""
+        # Default: try to assign based on preferences
+        preferred_conferences = self._get_preferred_conferences(submission)
+        if not preferred_conferences:
+            return False
             
-            temp_visited.add(node_id)
-            
-            # Process dependencies first
-            submission = self.submissions[node_id]
-            if submission.depends_on:
-                for dep_id in submission.depends_on:
-                    if dep_id in self.submissions:
-                        dfs(dep_id)
-            
-            temp_visited.remove(node_id)
-            visited.add(node_id)
-            result.append(node_id)
+        for conf_name in preferred_conferences:
+            conf = self._find_conference_by_name(conf_name)
+            if not conf:
+                continue
+                
+            if self._try_assign_conference(submission, conf):
+                return True
         
-        # Process all submissions
-        for submission_id in self.submissions:
-            if submission_id not in visited:
-                dfs(submission_id)
-        
-        return result
+        return False
+    
+    # ===== SHARED UTILITY METHODS =====
     
     def get_ready_submissions(self, topo: List[str], schedule: Schedule, current_date: date) -> List[str]:
         """Get list of submissions ready to be scheduled at the current date."""
@@ -305,6 +231,108 @@ class BaseScheduler(ABC):
         
         return scheduled_count
     
+    # ===== PRIVATE HELPER METHODS =====
+    
+    @classmethod
+    def _auto_register_strategy(cls, strategy: SchedulerStrategy) -> None:
+        """Auto-register scheduler classes by looking for them in the schedulers module."""
+        try:
+            # Import the scheduler classes directly
+            from schedulers.greedy import GreedyScheduler
+            from schedulers.random import RandomScheduler
+            from schedulers.stochastic import StochasticScheduler
+            from schedulers.lookahead import LookaheadScheduler
+            from schedulers.heuristic import HeuristicScheduler
+            from schedulers.backtracking import BacktrackingScheduler
+            from schedulers.optimal import OptimalScheduler
+            
+            # Map strategies to scheduler classes
+            strategy_mapping = {
+                SchedulerStrategy.GREEDY: GreedyScheduler,
+                SchedulerStrategy.STOCHASTIC: StochasticScheduler,
+                SchedulerStrategy.LOOKAHEAD: LookaheadScheduler,
+                SchedulerStrategy.BACKTRACKING: BacktrackingScheduler,
+                SchedulerStrategy.RANDOM: RandomScheduler,
+                SchedulerStrategy.HEURISTIC: HeuristicScheduler,
+                SchedulerStrategy.OPTIMAL: OptimalScheduler
+            }
+            
+            if strategy in strategy_mapping:
+                cls._strategy_registry[strategy] = strategy_mapping[strategy]
+                
+        except ImportError:
+            # If import fails, try to find classes dynamically
+            import importlib
+            import inspect
+            
+            # Get the module where this class is defined
+            module = inspect.getmodule(cls)
+            if not module:
+                return
+                
+            # Look for scheduler classes in the module
+            for name, obj in inspect.getmembers(module):
+                if (inspect.isclass(obj) and 
+                    issubclass(obj, BaseScheduler) and 
+                    obj != BaseScheduler and
+                    hasattr(obj, '__module__') and
+                    obj.__module__ == module.__name__):
+                    
+                    # Try to determine the strategy from the class name
+                    if strategy.value in name.lower():
+                        cls._strategy_registry[strategy] = obj
+                        return
+            
+            # If not found by name, try to register based on common patterns
+            strategy_mapping = {
+                SchedulerStrategy.GREEDY: 'GreedyScheduler',
+                SchedulerStrategy.STOCHASTIC: 'StochasticScheduler',
+                SchedulerStrategy.LOOKAHEAD: 'LookaheadScheduler',
+                SchedulerStrategy.BACKTRACKING: 'BacktrackingScheduler',
+                SchedulerStrategy.RANDOM: 'RandomScheduler',
+                SchedulerStrategy.HEURISTIC: 'HeuristicScheduler',
+                SchedulerStrategy.OPTIMAL: 'OptimalScheduler'
+            }
+            
+            if strategy in strategy_mapping:
+                class_name = strategy_mapping[strategy]
+                if hasattr(module, class_name):
+                    cls._strategy_registry[strategy] = getattr(module, class_name)
+    
+    def _topological_order(self) -> List[str]:
+        """Get submissions in topological order based on dependencies."""
+        # Simple topological sort implementation
+        visited = set()
+        temp_visited = set()
+        result = []
+        
+        def dfs(node_id: str):
+            if node_id in temp_visited:
+                # Circular dependency detected
+                raise ValueError(f"Circular dependency detected involving {node_id}")
+            if node_id in visited:
+                return
+            
+            temp_visited.add(node_id)
+            
+            # Process dependencies first
+            submission = self.submissions[node_id]
+            if submission.depends_on:
+                for dep_id in submission.depends_on:
+                    if dep_id in self.submissions:
+                        dfs(dep_id)
+            
+            temp_visited.remove(node_id)
+            visited.add(node_id)
+            result.append(node_id)
+        
+        # Process all submissions
+        for submission_id in self.submissions:
+            if submission_id not in visited:
+                dfs(submission_id)
+        
+        return result
+    
     def _calculate_earliest_start_date(self, submission: Submission, schedule: Schedule) -> date:
         # Use a reasonable reference date instead of date.today() to avoid future failures
         # This allows for historical data and resubmissions
@@ -340,6 +368,85 @@ class BaseScheduler(ABC):
             next_date += timedelta(days=1)
         
         return next_date
+    
+    # ===== CONFERENCE ASSIGNMENT HELPERS =====
+    
+    def _get_preferred_conferences(self, submission: Submission) -> List[str]:
+        """Get list of preferred conferences for a submission."""
+        if hasattr(submission, 'preferred_conferences') and submission.preferred_conferences:
+            return submission.preferred_conferences
+        
+        # Open to any opportunity if no specific preferences
+        if (submission.preferred_kinds is None or 
+            (submission.preferred_workflow and submission.preferred_workflow.value == "all_types")):
+            return [conf.name for conf in self.conferences.values() if conf.deadlines]
+        
+        # Use specific preferred_kinds
+        preferred_conferences = []
+        for conf in self.conferences.values():
+            if any(ctype in conf.deadlines for ctype in (submission.preferred_kinds or [submission.kind])):
+                preferred_conferences.append(conf.name)
+        return preferred_conferences
+    
+    def _find_conference_by_name(self, conf_name: str):
+        """Find conference by name."""
+        for conf in self.conferences.values():
+            if conf.name == conf_name:
+                return conf
+        return None
+    
+    def _try_assign_conference(self, submission: Submission, conf) -> bool:
+        """Try to assign a submission to a specific conference. Returns True if successful."""
+        
+        submission_types_to_try = self._get_submission_types_to_try(submission)
+        
+        for submission_type in submission_types_to_try:
+            if submission_type not in conf.deadlines:
+                continue
+                
+            if not self._can_meet_deadline(submission, conf, submission_type):
+                continue
+                
+            if not self._check_conference_compatibility_for_type(conf, submission_type):
+                continue
+                
+            # Handle special case: papers at conferences requiring abstracts
+            if (submission_type == SubmissionType.PAPER and 
+                conf.requires_abstract_before_paper() and 
+                SubmissionType.ABSTRACT in conf.deadlines):
+                submission.conference_id = conf.id
+                submission.preferred_kinds = [SubmissionType.ABSTRACT]
+                return True
+            
+            # Regular assignment
+            submission.conference_id = conf.id
+            if submission.preferred_kinds is None:
+                submission.preferred_kinds = [submission_type]
+            return True
+        
+        return False
+    
+    def _get_submission_types_to_try(self, submission: Submission) -> List[SubmissionType]:
+        """Get list of submission types to try in priority order."""
+        if submission.preferred_kinds is not None:
+            return submission.preferred_kinds
+        
+        if (submission.preferred_workflow and 
+            submission.preferred_workflow.value == "all_types"):
+            return [SubmissionType.POSTER, SubmissionType.ABSTRACT, SubmissionType.PAPER]
+        
+        # Default priority order
+        return [SubmissionType.POSTER, SubmissionType.ABSTRACT, SubmissionType.PAPER]
+    
+    def _can_meet_deadline(self, submission: Submission, conf, submission_type: SubmissionType) -> bool:
+        """Check if submission can meet the deadline for a specific submission type."""
+        duration = submission.get_duration_days(self.config)
+        latest_start = conf.deadlines[submission_type] - timedelta(days=duration)
+        return latest_start >= date.today()
+
+    def _check_conference_compatibility_for_type(self, conference, submission_type: SubmissionType) -> bool:
+        """Check if a submission is compatible with a conference for a specific submission type."""
+        return submission_type in conference.deadlines
     
 
     
