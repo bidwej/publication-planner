@@ -15,21 +15,11 @@ INTERFACES = {
 
 def setup_env():
     """Set up environment for backend imports."""
-    backend_src = Path(__file__).parent.parent / "backend" / "src"
-    if not backend_src.exists():
-        print(f"❌ Backend not found at {backend_src}")
-        return False
-    
-    if str(backend_src) not in sys.path:
-        sys.path.insert(0, str(backend_src))
-        os.environ['PYTHONPATH'] = str(backend_src)
-    
     try:
-        from core.models import Config
-        print("✓ Backend ready")
-        return True
-    except ImportError:
-        print("❌ Backend import failed")
+        from app.env import setup_frontend_environment
+        return setup_frontend_environment()
+    except ImportError as e:
+        print(f"❌ Failed to import environment setup: {e}")
         return False
 
 def run_interface(name: str, port: int, debug: bool = False):

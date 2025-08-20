@@ -11,10 +11,9 @@ from pathlib import Path
 
 # Try to import backend models from the correct path
 try:
-    # Add backend to path and import
-    backend_path = Path(__file__).parent.parent.parent.parent / "backend" / "src"
-    if backend_path.exists():
-        sys.path.insert(0, str(backend_path))
+    # Use environment-based backend imports
+    from app.env import setup_backend_imports
+    if setup_backend_imports():
         from core.models import Config, Submission, Schedule
         from core.config import load_config
         BACKEND_IMPORTS_AVAILABLE = True

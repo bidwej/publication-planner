@@ -8,7 +8,13 @@ import sys
 from pathlib import Path
 
 # Add src to path
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+# Set up environment
+src_path = Path(__file__).parent / "src"
+if str(src_path) not in sys.path:
+    sys.path.insert(0, str(src_path))
+
+from core.env import setup_backend_environment
+setup_backend_environment()
 
 from database.session import create_tables, get_session
 from database.sqlmodels import ScheduleDatabase, Schedule, ScheduleItem, Configuration

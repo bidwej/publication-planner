@@ -44,22 +44,16 @@ OPERATIONS = {
 
 def setup_env():
     """Set up environment for backend imports."""
-    backend_src = Path(__file__).parent / "src"
-    if not backend_src.exists():
-        print(f"❌ Backend source not found at {backend_src}")
-        return False
-    
-    if str(backend_src) not in sys.path:
-        sys.path.insert(0, str(backend_src))
-        os.environ['PYTHONPATH'] = str(backend_src)
+    # Add src to path temporarily to import env utility
+    src_path = Path(__file__).parent / "src"
+    if str(src_path) not in sys.path:
+        sys.path.insert(0, str(src_path))
     
     try:
-        from core.models import Config
-        from core.config import load_config
-        print("✓ Backend environment ready")
-        return True
+        from core.env import setup_backend_environment
+        return setup_backend_environment()
     except ImportError as e:
-        print(f"❌ Backend import failed: {e}")
+        print(f"❌ Failed to import environment setup: {e}")
         return False
 
 def run_schedule_operation(args: argparse.Namespace) -> int:
