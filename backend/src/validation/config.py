@@ -1,6 +1,6 @@
 """Configuration validation functions for data integrity and schema compliance."""
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional, Set
 from datetime import date
 
 from src.core.models import Config, Submission, Conference, ValidationResult, Schedule
@@ -22,6 +22,11 @@ def validate_config(config: Config) -> ValidationResult:
     # Conference validation
     errors.extend(_validate_config_conferences(config))
     
+    # Circular dependency validation
+    circular_deps = _detect_circular_dependencies(config)
+    if circular_deps:
+        errors.extend([f"Circular dependency detected: {cycle}" for cycle in circular_deps])
+    
     # Constants validation
     try:
         constants_errors = validate_constants()
@@ -33,7 +38,7 @@ def validate_config(config: Config) -> ValidationResult:
     
     # Build standardized ValidationResult
     is_valid = len(errors) == 0
-    total_checks = 3  # fields, submissions, conferences
+    total_checks = 4  # fields, submissions, conferences, circular dependencies
     passed_checks = total_checks - len([e for e in errors if "validation:" not in e])
     
     return ValidationResult(
@@ -44,10 +49,10 @@ def validate_config(config: Config) -> ValidationResult:
             "total_checks": total_checks,
             "passed_checks": passed_checks,
             "error_count": len(errors),
-            "errors": errors  # Keep the detailed errors in metadata
+            "errors": errors,  # Keep the detailed errors in metadata
+            "circular_dependencies": circular_deps
         }
     )
-
 
 
 def _validate_config_fields(config: Config) -> List[str]:
@@ -124,3 +129,68 @@ def _validate_config_conferences(config: Config) -> List[str]:
         conference_ids.add(conference.id)
     
     return errors
+
+
+def _detect_circular_dependencies(config: Config) -> List[str]:
+    """Detect circular dependencies in submissions."""
+    def has_cycle(node: str, visited: Set[str], rec_stack: Set[str], graph: Dict[str, List[str]]) -> bool:
+        visited.add(node)
+        rec_stack.add(node)
+        
+        for neighbor in graph.get(node, []):
+            if neighbor not in visited:
+                if has_cycle(neighbor, visited, rec_stack, graph):
+                    return True
+                elif neighbor in rec_stack:
+                    return True
+        
+        rec_stack.remove(node)
+        return False
+    
+    # Build dependency graph
+    graph = {}
+    for submission in config.submissions:
+        if submission.depends_on:
+            graph[submission.id] = submission.depends_on
+        else:
+            graph[submission.id] = []
+    
+    # Check for cycles
+    visited: Set[str] = set()
+    cycles = []
+    
+    for node in graph:
+        if node not in visited:
+            rec_stack: Set[str] = set()
+            if has_cycle(node, visited, rec_stack, graph):
+                # Find the actual cycle
+                cycle_path = _find_cycle_path(node, graph)
+                if cycle_path:
+                    cycles.append(" -> ".join(cycle_path))
+    
+    return cycles
+
+
+def _find_cycle_path(start: str, graph: Dict[str, List[str]]) -> Optional[List[str]]:
+    """Find a cycle path starting from the given node."""
+    def dfs(node: str, path: List[str], visited: Set[str]) -> Optional[List[str]]:
+        if node in path:
+            # Found a cycle
+            cycle_start = path.index(node)
+            return path[cycle_start:] + [node]
+        
+        if node in visited:
+            return None
+        
+        visited.add(node)
+        path.append(node)
+        
+        for neighbor in graph.get(node, []):
+            result = dfs(neighbor, path, visited)
+            if result:
+                return result
+        
+        path.pop()
+        return None
+    
+    return dfs(start, [], set())

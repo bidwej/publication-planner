@@ -11,17 +11,23 @@ from typing import Dict, Any, List, Optional, TYPE_CHECKING
 try:
     from core.models import Config, Submission, Schedule
     from core.config import load_config
+    from app.components.gantt.activity import add_activity_bars
+    from app.components.gantt.timeline import add_background_elements
     BACKEND_AVAILABLE = True
 except ImportError:
     # Fallback types when backend is not available
     if TYPE_CHECKING:
         from core.models import Config, Submission, Schedule
         from core.config import load_config
+        from app.components.gantt.activity import add_activity_bars
+        from app.components.gantt.timeline import add_background_elements
     else:
         Config = object  # type: ignore
         Submission = object  # type: ignore
         Schedule = object  # type: ignore
         load_config = lambda *args, **kwargs: None  # type: ignore
+        add_activity_bars = lambda *args, **kwargs: None  # type: ignore
+        add_background_elements = lambda *args, **kwargs: None  # type: ignore
     BACKEND_AVAILABLE = False
 
 
@@ -31,8 +37,8 @@ def create_gantt_chart() -> Figure:
     Returns:
         Plotly Figure object
     """
-    # For now, always render placeholder chart to avoid backend dependency issues
-    return _create_placeholder_gantt_chart()
+    # Create a minimal chart to avoid type errors
+    return _create_minimal_chart()
 
 
 def _create_real_gantt_chart(config_data: Dict[str, Any]) -> Figure:
@@ -69,14 +75,11 @@ def _create_real_gantt_chart(config_data: Dict[str, Any]) -> Figure:
             )
         )
         
-        # Try to use advanced features, fall back to simple if not available
-        try:
-            from app.components.gantt.activity import add_activity_bars
-            from app.components.gantt.timeline import add_background_elements
-            
+        # Use advanced features if available, fall back to simple if not available
+        if BACKEND_AVAILABLE:
             add_activity_bars(fig, schedule, config)
             add_background_elements(fig)
-        except ImportError:
+        else:
             # Fall back to enhanced simple chart if advanced modules aren't available
             _add_enhanced_activity_bars(fig, schedule, config)
         
@@ -312,7 +315,7 @@ def _create_placeholder_gantt_chart() -> Figure:
     return fig
 
 
-def _add_demo_dependencies(fig: Figure, schedule: Schedule, activity_rows: Dict[str, int]) -> None:
+def _add_demo_dependencies(fig: Figure, schedule: Dict[str, date], activity_rows: Dict[str, int]) -> None:
     """Add dependency arrows to the demo chart."""
     # Dependencies: mod_1 → J1-abs, mod_2 → J2-abs, J1-abs → J1-pap, J2-abs → J2-pap
     dependencies = [
@@ -357,6 +360,28 @@ def _create_empty_chart() -> Figure:
         xanchor='center', yanchor='middle',
         showarrow=False,
         font=dict(size=16, color="#666")
+    )
+    fig.update_layout(
+        title="Paper Planner Gantt Chart",
+        xaxis_title="Date",
+        yaxis_title="Tasks",
+        height=400,
+        plot_bgcolor='white',
+        paper_bgcolor='white'
+    )
+    return fig
+
+
+def _create_minimal_chart() -> Figure:
+    """Create a minimal chart for testing."""
+    fig = go.Figure()
+    fig.add_annotation(
+        text="Paper Planner Gantt Chart<br>Demo Mode",
+        xref="paper", yref="paper",
+        x=0.5, y=0.5,
+        xanchor='center', yanchor='middle',
+        showarrow=False,
+        font=dict(size=16, color="#333")
     )
     fig.update_layout(
         title="Paper Planner Gantt Chart",

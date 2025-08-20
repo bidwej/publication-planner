@@ -5,9 +5,11 @@ from typing import Dict, List, Any, Optional
 
 from core.models import (
     Config, Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence, SubmissionWorkflow,
-    ValidationResult, ScheduleMetrics,
+    ValidationResult, ScheduleMetrics, Schedule,
     ConstraintViolation, DeadlineViolation, DependencyViolation, ResourceViolation
 )
+from src.validation.submission import validate_submission_constraints
+from src.validation.config import validate_config
 
 
 class TestScheduleType:
@@ -95,6 +97,23 @@ class TestSubmission:
     
     def test_submission_validation_valid(self) -> None:
         """Test submission validation with valid data."""
+        # Create a proper config with a conference
+        conference: Conference = Conference(
+            id="conf1",
+            name="Test Conference",
+            conf_type=ConferenceType.MEDICAL,
+            recurrence=ConferenceRecurrence.ANNUAL,
+            deadlines={SubmissionType.PAPER: date(2024, 6, 1)}
+        )
+        
+        config: Config = Config(
+            submissions=[],
+            conferences=[conference],
+            min_abstract_lead_time_days=30,
+            min_paper_lead_time_days=90,
+            max_concurrent_submissions=3
+        )
+        
         submission: Submission = Submission(
             id="test-pap",
             title="Test Paper",
@@ -102,7 +121,7 @@ class TestSubmission:
             conference_id="conf1"
         )
         
-        validation_errors: List[str] = submission.validate_submission()
+        validation_errors: List[str] = validate_submission_constraints(submission, date.today(), Schedule(), config)
         assert len(validation_errors) == 0
     
     def test_submission_validation_invalid(self) -> None:
@@ -118,7 +137,7 @@ class TestSubmission:
             penalty_cost_per_day=-100
         )
         
-        validation_errors: List[str] = submission.validate_submission()
+        validation_errors: List[str] = validate_submission_constraints(submission, date.today(), Schedule(), Config.create_default())
         assert len(validation_errors) > 0
         assert any("Missing submission ID" in error for error in validation_errors)
         assert any("Missing title" in error for error in validation_errors)
@@ -221,8 +240,17 @@ class TestConference:
             deadlines={SubmissionType.PAPER: date(2024, 6, 1)}
         )
         
-        validation_errors: List[str] = conference.validate_conference()
-        assert len(validation_errors) == 0
+        # Conference validation is now part of config validation
+        # Create a minimal config to test conference validation
+        test_config = Config(
+            submissions=[],
+            conferences=[conference],
+            min_abstract_lead_time_days=30,
+            min_paper_lead_time_days=90,
+            max_concurrent_submissions=3
+        )
+        validation_result = validate_config(test_config)
+        assert validation_result.is_valid
     
     def test_conference_validation_invalid(self) -> None:
         """Test conference validation with invalid data."""
@@ -234,11 +262,21 @@ class TestConference:
             deadlines={}
         )
         
-        validation_errors: List[str] = conference.validate_conference()
-        assert len(validation_errors) > 0
-        assert any("Missing conference ID" in error for error in validation_errors)
-        assert any("Missing conference name" in error for error in validation_errors)
-        assert any("No deadlines defined" in error for error in validation_errors)
+        # Conference validation is now part of config validation
+        # Create a minimal config to test conference validation
+        test_config = Config(
+            submissions=[],
+            conferences=[conference],
+            min_abstract_lead_time_days=30,
+            min_paper_lead_time_days=90,
+            max_concurrent_submissions=3
+        )
+        validation_result = validate_config(test_config)
+        assert not validation_result.is_valid
+        errors = validation_result.metadata.get("errors", [])
+        assert any("Conference missing ID" in error for error in errors)
+        assert any("Conference missing name" in error for error in errors)
+        assert any("No deadlines defined" in error for error in errors)
 
 
 class TestConfig:
@@ -300,8 +338,8 @@ class TestConfig:
             max_concurrent_submissions=3
         )
         
-        errors: List[str] = config.validate_config()
-        assert len(errors) == 0
+        validation_result = validate_config(config)
+        assert validation_result.is_valid
     
     def test_config_validation_invalid(self) -> None:
         """Test config validation with invalid data."""
@@ -322,7 +360,9 @@ class TestConfig:
             max_concurrent_submissions=3
         )
         
-        errors: List[str] = config.validate_config()
+        validation_result = validate_config(config)
+        assert not validation_result.is_valid
+        errors = validation_result.metadata.get("errors", [])
         assert any("No submissions defined" in error for error in errors)
     
     def test_config_computed_properties(self) -> None:
@@ -395,8 +435,8 @@ class TestConfig:
         )
         
         # Should validate successfully with explicit dependencies (no auto-generation)
-        errors: List[str] = config.validate_config()
-        assert len(errors) == 0
+        validation_result = validate_config(config)
+        assert validation_result.is_valid
     
     def test_config_ensure_abstract_paper_dependencies(self) -> None:
         """Test automatic creation of abstract dependencies."""
@@ -436,8 +476,8 @@ class TestConfig:
         
         # NOTE: ensure_abstract_paper_dependencies no longer exists - simplified architecture
         # Just validate that config is properly structured
-        errors = config.validate_config()
-        assert len(errors) == 0  # Basic validation should pass
+        validation_result = validate_config(config)
+        assert validation_result.is_valid  # Basic validation should pass
 
     def test_config_edge_cases(self) -> None:
         """Test config edge cases and error conditions."""
@@ -451,8 +491,8 @@ class TestConfig:
         )
         
         # Should not crash with empty data
-        empty_config_errors: List[str] = empty_config.validate_config()
-        assert isinstance(empty_config_errors, list)
+        validation_result = validate_config(empty_config)
+        assert isinstance(validation_result, ValidationResult)
         
         # Test with extreme penalty values
         extreme_config: Config = Config(
@@ -471,8 +511,8 @@ class TestConfig:
         )
         
         # Should handle extreme values without crashing
-        extreme_config_errors: List[str] = extreme_config.validate_config()
-        assert isinstance(extreme_config_errors, list)
+        validation_result = validate_config(extreme_config)
+        assert isinstance(validation_result, ValidationResult)
         
         # Test with malformed submission data
         malformed_submission: Submission = Submission(
@@ -491,9 +531,10 @@ class TestConfig:
         )
         
         # Should detect malformed data
-        malformed_config_errors: List[str] = malformed_config.validate_config()
-        assert len(malformed_config_errors) > 0
-        assert any("nonexistent" in error.lower() for error in malformed_config_errors)
+        validation_result = validate_config(malformed_config)
+        assert not validation_result.is_valid
+        errors = validation_result.metadata.get("errors", [])
+        assert any("nonexistent" in error.lower() for error in errors)
         
         # Test with invalid lead times
         invalid_config: Config = Config(
@@ -505,8 +546,8 @@ class TestConfig:
         )
         
         # Should detect invalid configuration
-        errors: List[str] = invalid_config.validate_config()
-        assert len(errors) > 0
+        validation_result = validate_config(invalid_config)
+        assert not validation_result.is_valid
 
     def test_config_abstract_paper_dependencies_edge_cases(self) -> None:
         """Test abstract-paper dependencies with edge cases."""
@@ -535,8 +576,8 @@ class TestConfig:
         )
         
         # Should not require abstract for paper-only conference
-        errors: List[str] = config.validate_config()
-        assert not any("requires abstract" in error for error in errors)
+        validation_result = validate_config(config)
+        assert validation_result.is_valid
         
         # Test with paper that already has abstract
         conference_requiring_abstracts = Conference(
@@ -628,8 +669,8 @@ class TestConfig:
         )
         
         # Should detect circular dependencies
-        circular_dependency_errors: List[str] = config_circular.validate_config()
-        assert len(circular_dependency_errors) > 0
+        validation_result = validate_config(config_circular)
+        assert not validation_result.is_valid
         
         # Test with submissions that depend on non-existent submissions
         submission_orphan = Submission(
@@ -648,9 +689,10 @@ class TestConfig:
         )
         
         # Should detect missing dependencies
-        orphan_dependency_errors: List[str] = config_orphan.validate_config()
-        assert len(orphan_dependency_errors) > 0
-        assert any("nonexistent" in error.lower() for error in orphan_dependency_errors)
+        validation_result = validate_config(config_orphan)
+        assert not validation_result.is_valid
+        errors = validation_result.metadata.get("errors", [])
+        assert any("nonexistent" in error.lower() for error in errors)
         
         # Test with submissions that have invalid conference assignments
         conference_medical = Conference(
@@ -678,7 +720,7 @@ class TestConfig:
         )
         
         # Should validate conference compatibility
-        errors: List[str] = config_mismatch.validate_config()
+        validation_result = validate_config(config_mismatch)
         # Note: This might not be an error depending on business rules
         # but should be validated
 

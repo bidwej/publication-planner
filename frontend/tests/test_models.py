@@ -78,7 +78,14 @@ def test_component_state_creation():
 
 def test_component_state_with_data():
     """Test ComponentState with data."""
-    config_data = {"submissions": 5, "conferences": 3}
+    # Create a minimal config data structure that matches the Config model
+    config_data = {
+        "submissions": [],
+        "conferences": [],
+        "min_abstract_lead_time_days": 30,
+        "min_paper_lead_time_days": 60,
+        "max_concurrent_submissions": 3
+    }
     custom_settings = {"theme": "dark"}
     
     state = ComponentState(
@@ -90,7 +97,13 @@ def test_component_state_with_data():
     )
     
     assert state.component_name == "dashboard"
-    assert state.config_data == config_data
+    # config_data is now a Config object with default values, so check key fields
+    assert state.config_data is not None
+    assert state.config_data.submissions == []
+    assert state.config_data.conferences == []
+    assert state.config_data.min_abstract_lead_time_days == 30
+    assert state.config_data.min_paper_lead_time_days == 60
+    assert state.config_data.max_concurrent_submissions == 3
     assert state.last_refresh == "2024-01-01"
     assert state.chart_type == "timeline"
     assert state.custom_settings == custom_settings

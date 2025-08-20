@@ -101,7 +101,8 @@ def _add_bar_label(fig: Figure, submission: Submission, start_date: date,
                    end_date: date, row: int) -> None:
     """Add a label for the bar."""
     # Calculate label position (center of bar)
-    mid_date = start_date + (end_date - start_date) / 2
+    duration = (end_date - start_date).days
+    mid_date = start_date + timedelta(days=duration // 2)
     
     # Get display title (limited to 20 characters)
     display_title = _get_display_title(submission)
