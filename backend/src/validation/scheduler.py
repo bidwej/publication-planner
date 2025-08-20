@@ -69,6 +69,11 @@ def validate_scheduling_window(config: Config) -> Tuple[date, date]:
     response_buffer = SCHEDULING_CONSTANTS.conference_response_time_days
     end_date = latest_deadline + timedelta(days=response_buffer)
     
+    print(f"Debug: validate_scheduling_window: start_date={start_date}, end_date={end_date}")
+    print(f"Debug: Today's date: {date.today()}")
+    print(f"Debug: Latest deadline: {latest_deadline}")
+    print(f"Debug: Response buffer: {response_buffer}")
+    
     return start_date, end_date
 
 

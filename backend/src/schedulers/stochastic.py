@@ -21,7 +21,7 @@ class StochasticGreedyScheduler(GreedyScheduler):
         """Override priority selection to add randomness."""
         def get_priority(submission_id: str) -> float:
             submission = self.submissions[submission_id]
-            base_priority = self._get_base_priority(submission)
+            base_priority = self.get_base_priority(submission)
             
             # Add random noise
             noise = random.uniform(-self.randomness_factor, self.randomness_factor)

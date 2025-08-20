@@ -47,16 +47,16 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
                 continue
             
             # Update active submissions
-            active = self._update_active_submissions(active, schedule, current_date)
+            active = self.update_active_submissions(active, schedule, current_date)
             
             # Get ready submissions
-            ready = self._get_ready_submissions(topo, schedule, current_date)
+            ready = self.get_ready_submissions(topo, schedule, current_date)
             
             # Sort by priority (use greedy scheduler's priority logic)
             ready = self._sort_by_priority(ready)
             
             # Try to schedule up to concurrency limit
-            scheduled_this_round = self._schedule_submissions_up_to_limit(ready, schedule, active, current_date)
+            scheduled_this_round = self.schedule_submissions_up_to_limit(ready, schedule, active, current_date)
             
             # If nothing was scheduled and we have active submissions, try backtracking
             if scheduled_this_round == 0 and active:
@@ -66,41 +66,15 @@ class BacktrackingGreedyScheduler(GreedyScheduler):
             current_date += timedelta(days=1)
         
         # Print scheduling summary
-        self._print_scheduling_summary(schedule)
+        self.print_scheduling_summary(schedule)
         
         return schedule
     
     def _sort_by_priority(self, ready: List[str]) -> List[str]:
-        """Sort ready submissions by priority using greedy scheduler logic."""
+        """Sort ready submissions by priority using parent's base priority logic."""
         def get_priority(submission_id: str) -> float:
             submission = self.submissions[submission_id]
-            
-            # Base priority: higher for submissions with dependencies
-            base_priority = 0.0
-            if submission.depends_on:
-                base_priority += 10.0
-            
-            # Priority based on submission type
-            if submission.kind.value == "paper":
-                base_priority += 5.0
-            elif submission.kind.value == "abstract":
-                base_priority += 3.0
-            elif submission.kind.value == "poster":
-                base_priority += 1.0
-            
-            # Priority based on deadline proximity
-            if submission.conference_id and submission.conference_id in self.conferences:
-                conf = self.conferences[submission.conference_id]
-                if submission.kind in conf.deadlines:
-                    deadline = conf.deadlines[submission.kind]
-                    days_until_deadline = (deadline - date.today()).days
-                    # Handle past deadlines gracefully - give them lower priority
-                    if days_until_deadline > 0:
-                        base_priority += 100.0 / days_until_deadline  # Closer deadline = higher priority
-                    else:
-                        base_priority -= abs(days_until_deadline) * 0.1  # Past deadlines get penalty
-            
-            return base_priority
+            return self.get_base_priority(submission)
         
         return sorted(ready, key=get_priority, reverse=True)
     

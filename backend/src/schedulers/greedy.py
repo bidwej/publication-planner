@@ -30,7 +30,7 @@ class GreedyScheduler(BaseScheduler):
             submission = self.submissions[submission_id]
             
             # Find earliest valid start date
-            proposed_start_date = self._find_earliest_valid_start(submission, schedule)
+            proposed_start_date = self._find_earliest_valid_start(submission, schedule, start_date, end_date)
             
             if proposed_start_date:
                 # Add interval to schedule
@@ -40,11 +40,11 @@ class GreedyScheduler(BaseScheduler):
                 continue
         
         # Print scheduling summary
-        self._print_scheduling_summary(schedule)
+        self.print_scheduling_summary(schedule)
         
         return schedule
     
-    def _find_earliest_valid_start(self, submission: Submission, schedule: Schedule) -> Optional[date]:
+    def _find_earliest_valid_start(self, submission: Submission, schedule: Schedule, start_date: date, end_date: date) -> Optional[date]:
         """Find the earliest valid start date for a submission with comprehensive constraint validation."""
         
         # If submission doesn't have a conference assigned, try to assign one
@@ -58,8 +58,7 @@ class GreedyScheduler(BaseScheduler):
             current_date = submission.earliest_start_date
         else:
             # Conference submissions should start early enough to meet deadlines
-            # Start from the beginning of the scheduling window
-            start_date, _ = self.get_scheduling_window()
+            # Use the start_date parameter passed to this method
             current_date = start_date
         
         # Check dependencies
@@ -80,16 +79,15 @@ class GreedyScheduler(BaseScheduler):
                 deadline = conf.deadlines[submission.kind]
                 duration = submission.get_duration_days(self.config)
                 latest_start = deadline - timedelta(days=duration)
+                print(f"Debug: Deadline check for {submission.id}: current_date={current_date}, latest_start={latest_start}, deadline={deadline}")
                 if current_date > latest_start:
+                    print(f"Debug: {submission.id} can't meet deadline - current_date {current_date} > latest_start {latest_start}")
                     return None  # Can't meet deadline
         
         # Check resource constraints and all other constraints
         max_concurrent = self.config.max_concurrent_submissions
         max_iterations = EFFICIENCY_CONSTANTS.max_algorithm_iterations  # Safety limit to prevent infinite loops
         iteration_count = 0
-        
-        # Get the scheduling window end date
-        _, end_date = self.get_scheduling_window()
         
         while current_date <= end_date and iteration_count < max_iterations:  # Use actual scheduling window
             iteration_count += 1
@@ -115,6 +113,13 @@ class GreedyScheduler(BaseScheduler):
             # Check all other constraints using comprehensive validation
             if self.validate_constraints(submission, current_date, schedule):
                 return current_date
+            else:
+                # Debug: Let's see what constraint is failing
+                errors = self.validate_constraints(submission, current_date, schedule)
+                if errors:
+                    print(f"Debug: Constraints failed for {submission.id} at {current_date}: {errors}")
+                else:
+                    print(f"Debug: validate_constraints returned False but no errors for {submission.id} at {current_date}")
             
             current_date += timedelta(days=1)
         

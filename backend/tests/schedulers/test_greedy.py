@@ -7,7 +7,7 @@ import pytest
 
 from core.models import SubmissionType, ConferenceType, Config, Schedule
 from schedulers.greedy import GreedyScheduler
-from conftest import create_mock_submission, create_mock_conference, create_mock_config, get_recent_deadline, get_test_date
+from conftest import create_mock_submission, create_mock_conference, create_mock_config, get_recent_deadline, get_test_date, get_paper_deadline, get_abstract_deadline, get_medium_deadline
 
 
 class TestGreedyScheduler:
@@ -30,16 +30,24 @@ class TestGreedyScheduler:
 
     def test_schedule_single_submission(self) -> None:
         """Test scheduling a single submission."""
+        print("Debug: Starting test_schedule_single_submission")
         submission = create_mock_submission(
-            "paper1", "Test Paper", SubmissionType.PAPER, "conf1"
+            "paper1", "Test Paper", SubmissionType.PAPER, "conf1",
+            author="pccp"
         )
+        print(f"Debug: Created submission: {submission.id}")
         conference = create_mock_conference(
             "conf1", "Test Conference", 
-            {SubmissionType.PAPER: get_recent_deadline()}
+            {SubmissionType.PAPER: get_paper_deadline()}
         )
+        print(f"Debug: Created conference: {conference.name}")
         config: Config = create_mock_config([submission], [conference])
+        print(f"Debug: Created config with {len(config.submissions)} submissions")
         
         scheduler: GreedyScheduler = GreedyScheduler(config)
+        print(f"Debug: Created scheduler with {len(scheduler.submissions)} submissions")
+        print(f"Debug: Test setup - submission: {submission.id}, conference: {conference.name}, deadline: {conference.deadlines}")
+        print(f"Debug: Config has {len(config.submissions)} submissions and {len(config.conferences)} conferences")
         result: Schedule = scheduler.schedule()
         
         assert isinstance(result, Schedule)
@@ -50,15 +58,16 @@ class TestGreedyScheduler:
     def test_schedule_with_dependencies(self) -> None:
         """Test scheduling with dependencies."""
         submission1 = create_mock_submission(
-            "paper1", "Dependency Paper", SubmissionType.PAPER, "conf1"
+            "paper1", "Dependency Paper", SubmissionType.PAPER, "conf1",
+            author="pccp"
         )
         submission2 = create_mock_submission(
             "paper2", "Dependent Paper", SubmissionType.PAPER, "conf1",
-            depends_on=["paper1"]
+            depends_on=["paper1"], author="pccp"
         )
         conference = create_mock_conference(
             "conf1", "Test Conference", 
-            {SubmissionType.PAPER: get_recent_deadline()}
+            {SubmissionType.PAPER: get_paper_deadline()}
         )
         config: Config = create_mock_config([submission1, submission2], [conference])
         
@@ -80,11 +89,11 @@ class TestGreedyScheduler:
         earliest_start: date = get_test_date(15)  # 15 days from now
         submission = create_mock_submission(
             "paper1", "Test Paper", SubmissionType.PAPER, "conf1",
-            earliest_start_date=earliest_start
+            earliest_start_date=earliest_start, author="pccp"
         )
         conference = create_mock_conference(
             "conf1", "Test Conference", 
-            {SubmissionType.PAPER: get_recent_deadline()}
+            {SubmissionType.PAPER: get_paper_deadline()}
         )
         config: Config = create_mock_config([submission], [conference])
         
@@ -97,9 +106,10 @@ class TestGreedyScheduler:
 
     def test_schedule_respects_deadlines(self) -> None:
         """Test that schedule respects deadlines."""
-        deadline: date = get_recent_deadline()
+        deadline: date = get_paper_deadline()
         submission = create_mock_submission(
-            "paper1", "Test Paper", SubmissionType.PAPER, "conf1"
+            "paper1", "Test Paper", SubmissionType.PAPER, "conf1",
+            author="pccp"
         )
         conference = create_mock_conference(
             "conf1", "Test Conference", 
@@ -121,13 +131,14 @@ class TestGreedyScheduler:
         submissions: List[Any] = []
         for i in range(5):
             submission = create_mock_submission(
-                f"paper{i}", f"Test Paper {i}", SubmissionType.PAPER, "conf1"
+                f"paper{i}", f"Test Paper {i}", SubmissionType.PAPER, "conf1",
+                author="pccp"
             )
             submissions.append(submission)
         
         conference = create_mock_conference(
             "conf1", "Test Conference", 
-            {SubmissionType.PAPER: get_recent_deadline()}
+            {SubmissionType.PAPER: get_paper_deadline()}
         )
         config: Config = create_mock_config(submissions, [conference], max_concurrent_submissions=2)
         
@@ -147,20 +158,21 @@ class TestGreedyScheduler:
         # Create submissions with different priorities
         engineering_paper = create_mock_submission(
             "paper1", "Engineering Paper", SubmissionType.PAPER, "conf1",
-            engineering=True
+            author="pccp"
         )
         medical_paper = create_mock_submission(
             "paper2", "Medical Paper", SubmissionType.PAPER, "conf1",
-            engineering=False
+            author="ed"
         )
         abstract = create_mock_submission(
-            "abstract1", "Abstract", SubmissionType.ABSTRACT, "conf1"
+            "abstract1", "Abstract", SubmissionType.ABSTRACT, "conf1",
+            author="pccp"
         )
         
         conference = create_mock_conference(
             "conf1", "Test Conference", 
-            {SubmissionType.PAPER: date(2025, 12, 1),
-             SubmissionType.ABSTRACT: date(2025, 12, 1)},
+            {SubmissionType.PAPER: get_paper_deadline(),
+             SubmissionType.ABSTRACT: get_abstract_deadline()},
             conf_type=ConferenceType.MEDICAL
         )
         
@@ -190,7 +202,7 @@ class TestGreedyScheduler:
         # Create submission with impossible constraints
         submission = create_mock_submission(
             "paper1", "Test Paper", SubmissionType.PAPER, "conf1",
-            earliest_start_date=date(2025, 12, 1)  # Start after deadline
+            earliest_start_date=date(2025, 12, 1), author="pccp"  # Start after deadline
         )
         conference = create_mock_conference(
             "conf1", "Test Conference", 
@@ -207,11 +219,12 @@ class TestGreedyScheduler:
     def test_schedule_with_abstract_and_paper(self) -> None:
         """Test scheduling with abstract and paper submissions."""
         abstract = create_mock_submission(
-            "abstract1", "Test Abstract", SubmissionType.ABSTRACT, "conf1"
+            "abstract1", "Test Abstract", SubmissionType.ABSTRACT, "conf1",
+            author="pccp"
         )
         paper = create_mock_submission(
             "paper1", "Test Paper", SubmissionType.PAPER, "conf1",
-            depends_on=["abstract1"]
+            depends_on=["abstract1"], author="pccp"
         )
         conference = create_mock_conference(
             "conf1", "Test Conference", 
@@ -236,15 +249,15 @@ class TestGreedyScheduler:
         """Test scheduling with engineering and medical papers."""
         engineering_paper = create_mock_submission(
             "paper1", "Engineering Paper", SubmissionType.PAPER, "conf1",
-            engineering=True
+            author="pccp"
         )
         medical_paper = create_mock_submission(
             "paper2", "Medical Paper", SubmissionType.PAPER, "conf1",
-            engineering=False
+            author="ed"
         )
         conference = create_mock_conference(
             "conf1", "Test Conference", 
-            {SubmissionType.PAPER: date(2025, 12, 1)}
+            {SubmissionType.PAPER: get_paper_deadline()}
         )
         config: Config = create_mock_config([engineering_paper, medical_paper], [conference])
         
@@ -258,11 +271,11 @@ class TestGreedyScheduler:
         """Test scheduling with conference assignment."""
         submission = create_mock_submission(
             "paper1", "Test Paper", SubmissionType.PAPER, None,  # No conference assigned initially
-            preferred_conferences=["Test Conference"]
+            preferred_conferences=["Test Conference"], author="pccp"
         )
         conference = create_mock_conference(
             "conf1", "Test Conference", 
-            {SubmissionType.PAPER: date(2025, 12, 1)}
+            {SubmissionType.PAPER: get_paper_deadline()}
         )
         config: Config = create_mock_config([submission], [conference])
         
@@ -275,18 +288,20 @@ class TestGreedyScheduler:
     def test_schedule_with_multiple_conferences(self) -> None:
         """Test scheduling with multiple conferences."""
         submission1 = create_mock_submission(
-            "paper1", "Test Paper 1", SubmissionType.PAPER, "conf1"
+            "paper1", "Test Paper 1", SubmissionType.PAPER, "conf1",
+            author="pccp"
         )
         submission2 = create_mock_submission(
-            "paper2", "Test Paper 2", SubmissionType.PAPER, "conf2"
+            "paper2", "Test Paper 2", SubmissionType.PAPER, "conf2",
+            author="pccp"
         )
         conference1 = create_mock_conference(
             "conf1", "Test Conference 1", 
-            {SubmissionType.PAPER: date(2025, 6, 1)}
+            {SubmissionType.PAPER: get_medium_deadline()}
         )
         conference2 = create_mock_conference(
             "conf2", "Test Conference 2", 
-            {SubmissionType.PAPER: date(2025, 12, 1)}
+            {SubmissionType.PAPER: get_paper_deadline()}
         )
         config: Config = create_mock_config([submission1, submission2], [conference1, conference2])
         
@@ -313,7 +328,7 @@ class TestGreedyScheduler:
         
         conference = create_mock_conference(
             "conf1", "Test Conference", 
-            {SubmissionType.PAPER: date(2025, 12, 1)}
+            {SubmissionType.PAPER: get_paper_deadline()}
         )
         config: Config = create_mock_config([submission_a, submission_b, submission_c], [conference])
         
@@ -354,7 +369,7 @@ class TestGreedyScheduler:
         
         conference = create_mock_conference(
             "conf1", "Test Conference", 
-            {SubmissionType.PAPER: date(2025, 12, 1)}
+            {SubmissionType.PAPER: get_paper_deadline()}
         )
         config: Config = create_mock_config([submission_a, submission_b, submission_c], [conference])
         

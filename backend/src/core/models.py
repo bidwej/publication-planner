@@ -133,7 +133,11 @@ class Submission(BaseModel):
     preferred_kinds: Optional[List[SubmissionType]] = None  # Preferred submission types at conferences (in priority order)
     preferred_workflow: Optional[SubmissionWorkflow] = None  # User's preferred workflow (suggestion, not requirement)
     submission_workflow: Optional[SubmissionWorkflow] = None  # How this submission should be handled (system-determined)
-    engineering: bool = False  # Whether this is an engineering submission
+    
+    @property
+    def engineering(self) -> bool:
+        """Whether this is an engineering submission (based on author)."""
+        return self.author == "pccp"
     
     # Additional fields for unified schema (both mods and papers now have these)
     engineering_ready_date: Optional[date] = None  # When engineering work completes and data is available

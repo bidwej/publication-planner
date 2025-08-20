@@ -30,6 +30,13 @@ class BaseScheduler(ABC):
         self._start_date: Optional[date] = None
         self._end_date: Optional[date] = None
     
+    # ===== PUBLIC INTERFACE METHODS =====
+    
+    @abstractmethod
+    def schedule(self) -> Schedule:
+        """Generate a schedule for all submissions."""
+        pass
+    
     # ===== PUBLIC UTILITY METHODS (used by multiple schedulers) =====
     
     @classmethod
@@ -45,6 +52,110 @@ class BaseScheduler(ABC):
         
         scheduler_class = cls._strategy_registry[strategy]
         return scheduler_class(config)
+    
+    def get_dependency_order(self) -> List[str]:
+        """Get submissions in proper dependency order (topological sort)."""
+        return self._topological_order()
+    
+    def get_scheduling_window(self) -> Tuple[date, date]:
+        """Get the scheduling window (start and end dates)."""
+        return validate_scheduling_window(self.config)
+    
+    def validate_constraints(self, sub: Submission, start: date, schedule: Schedule) -> bool:
+        """Validate all constraints for a submission at a given start date."""
+        validation_result = validate_scheduler_constraints(sub, start, schedule, self.config)
+        return validation_result.is_valid
+    
+    def reset_schedule(self) -> None:
+        """Reset the scheduler to start with a fresh schedule."""
+        self._topo = self.get_dependency_order()
+        self._start_date, self._end_date = self.get_scheduling_window()
+        self._schedule = Schedule()
+    
+    def _ensure_schedule_initialized(self) -> None:
+        """Ensure schedule is initialized before use."""
+        if self._schedule is None:
+            self.reset_schedule()
+    
+    @property
+    def current_schedule(self) -> Schedule:
+        """Get the current schedule, initializing if needed."""
+        self._ensure_schedule_initialized()
+        assert self._schedule is not None  # Type guard
+        return self._schedule
+    
+    @property
+    def dependency_order(self) -> List[str]:
+        """Get the dependency order, initializing if needed."""
+        self._ensure_schedule_initialized()
+        assert self._topo is not None  # Type guard
+        return self._topo
+    
+    @property
+    def start_date(self) -> date:
+        """Get the start date, initializing if needed."""
+        self._ensure_schedule_initialized()
+        assert self._start_date is not None  # Type guard
+        return self._start_date
+    
+    @property
+    def end_date(self) -> date:
+        """Get the end date, initializing if needed."""
+        self._ensure_schedule_initialized()
+        assert self._end_date is not None  # Type guard
+        return self._end_date
+    
+    def print_scheduling_summary(self, schedule: Schedule) -> None:
+        """Print a summary of the scheduling results."""
+        if not schedule:
+            print("No schedule generated")
+            return
+        
+        scheduled_count = len(schedule.intervals)
+        total_count = len(self.submissions)
+        
+        print(f"Successfully scheduled {scheduled_count} out of {total_count} submissions")
+        
+        if scheduled_count > 0:
+            start_date = schedule.start_date
+            end_date = schedule.end_date
+            if start_date and end_date:
+                duration = (end_date - start_date).days
+                print(f"Schedule spans {duration} days from {start_date} to {end_date}")
+    
+    # ===== PRIORITY CALCULATION METHOD (shared utility) =====
+    
+    def get_base_priority(self, submission: Submission) -> float:
+        """Calculate base priority score for a submission."""
+        base_priority = 0.0
+        
+        # Priority based on submission type
+        if submission.kind == SubmissionType.PAPER:
+            base_priority += 5.0
+        elif submission.kind == SubmissionType.ABSTRACT:
+            base_priority += 3.0
+        elif submission.kind == SubmissionType.POSTER:
+            base_priority += 1.0
+        
+        # Priority based on dependencies
+        if submission.depends_on:
+            base_priority += 10.0
+        
+        # Priority based on deadline proximity
+        if submission.conference_id and submission.conference_id in self.conferences:
+            conf = self.conferences[submission.conference_id]
+            if submission.kind in conf.deadlines:
+                deadline = conf.deadlines[submission.kind]
+                if deadline:
+                    days_until_deadline = (deadline - date.today()).days
+                    if days_until_deadline > 0:
+                        base_priority += 100.0 / days_until_deadline  # Closer deadline = higher priority
+                    else:
+                        base_priority -= abs(days_until_deadline) * 0.1  # Past deadlines get penalty
+        
+        return base_priority
+    
+    # ===== PRIVATE HELPER METHODS (internal use only) =====
     
     @classmethod
     def _auto_register_strategy(cls, strategy: SchedulerStrategy) -> None:
@@ -112,85 +223,6 @@ class BaseScheduler(ABC):
                 if hasattr(module, class_name):
                     cls._strategy_registry[strategy] = getattr(module, class_name)
     
-    @abstractmethod
-    def schedule(self) -> Schedule:
-        """Generate a schedule for all submissions."""
-        pass
-    
-    # ===== PUBLIC UTILITY METHODS (used by multiple schedulers) =====
-    
-    def get_dependency_order(self) -> List[str]:
-        """Get submissions in proper dependency order (topological sort)."""
-        return self._topological_order()
-    
-    def get_scheduling_window(self) -> Tuple[date, date]:
-        """Get the scheduling window (start and end dates)."""
-        return validate_scheduling_window(self.config)
-    
-    def validate_constraints(self, sub: Submission, start: date, schedule: Schedule) -> bool:
-        """Validate all constraints for a submission at a given start date."""
-        validation_result = validate_scheduler_constraints(sub, start, schedule, self.config)
-        return validation_result.is_valid
-    
-    def reset_schedule(self) -> None:
-        """Reset the scheduler to start with a fresh schedule."""
-        self._topo = self.get_dependency_order()
-        self._start_date, self._end_date = self.get_scheduling_window()
-        self._schedule = Schedule()
-    
-    def _ensure_schedule_initialized(self) -> None:
-        """Ensure schedule is initialized before use."""
-        if self._schedule is None:
-            self.reset_schedule()
-    
-    @property
-    def current_schedule(self) -> Schedule:
-        """Get the current schedule, initializing if needed."""
-        self._ensure_schedule_initialized()
-        assert self._schedule is not None  # Type guard
-        return self._schedule
-    
-    @property
-    def dependency_order(self) -> List[str]:
-        """Get the dependency order, initializing if needed."""
-        self._ensure_schedule_initialized()
-        assert self._topo is not None  # Type guard
-        return self._topo
-    
-    @property
-    def start_date(self) -> date:
-        """Get the start date, initializing if needed."""
-        self._ensure_schedule_initialized()
-        assert self._start_date is not None  # Type guard
-        return self._start_date
-    
-    @property
-    def end_date(self) -> date:
-        """Get the end date, initializing if needed."""
-        self._ensure_schedule_initialized()
-        assert self._end_date is not None  # Type guard
-        return self._end_date
-    
-    def _print_scheduling_summary(self, schedule: Schedule) -> None:
-        """Print a summary of the scheduling results."""
-        if not schedule:
-            print("No schedule generated")
-            return
-        
-        scheduled_count = len(schedule.intervals)
-        total_count = len(self.submissions)
-        
-        print(f"Successfully scheduled {scheduled_count} out of {total_count} submissions")
-        
-        if scheduled_count > 0:
-            start_date = schedule.start_date
-            end_date = schedule.end_date
-            if start_date and end_date:
-                duration = (end_date - start_date).days
-                print(f"Schedule spans {duration} days from {start_date} to {end_date}")
-    
-    # ===== PRIVATE HELPER METHODS (internal use only) =====
-    
     def _topological_order(self) -> List[str]:
         """Get submissions in topological order based on dependencies."""
         # Simple topological sort implementation
@@ -225,7 +257,7 @@ class BaseScheduler(ABC):
         
         return result
     
-    def _get_ready_submissions(self, topo: List[str], schedule: Schedule, current_date: date) -> List[str]:
+    def get_ready_submissions(self, topo: List[str], schedule: Schedule, current_date: date) -> List[str]:
         """Get list of submissions ready to be scheduled at the current date."""
         ready = []
         for submission_id in topo:
@@ -245,7 +277,7 @@ class BaseScheduler(ABC):
         
         return ready
     
-    def _update_active_submissions(self, active: List[str], schedule: Schedule, current_date: date) -> List[str]:
+    def update_active_submissions(self, active: List[str], schedule: Schedule, current_date: date) -> List[str]:
         """Update list of active submissions by removing finished ones."""
         return [
             submission_id for submission_id in active
@@ -253,7 +285,7 @@ class BaseScheduler(ABC):
             self._get_end_date(schedule.intervals[submission_id].start_date, self.submissions[submission_id]) > current_date
         ]
     
-    def _schedule_submissions_up_to_limit(self, ready: List[str], schedule: Schedule, 
+    def schedule_submissions_up_to_limit(self, ready: List[str], schedule: Schedule, 
                                         active: List[str], current_date: date) -> int:
         """Schedule submissions up to the concurrency limit."""
         scheduled_count = 0

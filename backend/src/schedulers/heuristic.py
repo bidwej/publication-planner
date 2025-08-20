@@ -54,21 +54,21 @@ class HeuristicScheduler(BaseScheduler):
                 continue
             
             # Update active submissions
-            active = self._update_active_submissions(active, schedule, current_date)
+            active = self.update_active_submissions(active, schedule, current_date)
             
             # Get ready submissions
-            ready = self._get_ready_submissions(topo, schedule, current_date)
+            ready = self.get_ready_submissions(topo, schedule, current_date)
             
             # Sort by heuristic strategy
             ready = self._sort_by_heuristic(ready)
             
             # Schedule submissions up to concurrency limit
-            self._schedule_submissions_up_to_limit(ready, schedule, active, current_date)
+            self.schedule_submissions_up_to_limit(ready, schedule, active, current_date)
             
             current_date += timedelta(days=1)
         
         # Print scheduling summary
-        self._print_scheduling_summary(schedule)
+        self.print_scheduling_summary(schedule)
         
         return schedule
     

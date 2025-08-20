@@ -21,7 +21,7 @@ class LookaheadGreedyScheduler(GreedyScheduler):
         """Override priority selection to add lookahead consideration."""
         def get_priority(submission_id: str) -> float:
             submission = self.submissions[submission_id]
-            base_priority = self._get_base_priority(submission)
+            base_priority = self.get_base_priority(submission)
             
             # Add lookahead bonus for submissions with dependencies
             lookahead_bonus = 0.0

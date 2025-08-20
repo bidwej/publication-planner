@@ -31,6 +31,10 @@ def validate_submission_constraints(submission: Submission, start_date: date, sc
         # Validate unified schema fields
         if not _validate_unified_schema_fields(submission):
             errors.append("Invalid unified schema fields")
+        
+        # Debug: Print all errors found
+        if errors:
+            print(f"Debug: Validation errors for {submission.id} at {start_date}: {errors}")
     
     return errors
 
@@ -74,7 +78,8 @@ def _validate_deadline_compliance_single(start_date: date, sub: Submission, conf
     deadline = conf.deadlines[sub.kind]
     end_date = sub.get_end_date(start_date, config)
     
-    return end_date <= deadline
+    result = end_date <= deadline
+    return result
 
 
 def _validate_dependencies_satisfied(submission: Submission, schedule: Schedule, config: Config, current_date: date) -> bool:

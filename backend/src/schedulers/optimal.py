@@ -26,7 +26,6 @@ class OptimalScheduler(BaseScheduler):
         
         # Get what we need from base
         topo = self.get_dependency_order()
-        start_date, end_date = self.get_scheduling_window()
         
         # Try MILP optimization first
         print(f"MILP optimization: Attempting optimal schedule for {len(self.submissions)} submissions")
@@ -390,7 +389,7 @@ class OptimalScheduler(BaseScheduler):
         for submission_id, submission in self.submissions.items():
             # Deadline penalty
             if submission.conference_id and submission.conference_id in self.conferences:
-                conf = self.conferences[submission_id]
+                conf = self.conferences[submission.conference_id]
                 if submission.kind in conf.deadlines:
                     deadline = conf.deadlines[submission.kind]
                     if deadline:
