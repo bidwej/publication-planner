@@ -258,7 +258,7 @@ class TestGreedyScheduler:
         """Test scheduling with conference assignment."""
         submission = create_mock_submission(
             "paper1", "Test Paper", SubmissionType.PAPER, None,  # No conference assigned initially
-            candidate_conferences=["Test Conference"]
+            preferred_conferences=["Test Conference"]
         )
         conference = create_mock_conference(
             "conf1", "Test Conference", 
@@ -293,8 +293,8 @@ class TestGreedyScheduler:
         scheduler: GreedyScheduler = GreedyScheduler(config)
         result: Schedule = scheduler.schedule()
         
-        assert isinstance(result, dict)
-        assert len(result) >= 1
+        assert isinstance(result, Schedule)
+        assert len(result.intervals) >= 1
 
     def test_schedule_with_complex_dependencies(self) -> None:
         """Test scheduling with complex dependency chains."""
@@ -320,11 +320,11 @@ class TestGreedyScheduler:
         scheduler: GreedyScheduler = GreedyScheduler(config)
         result: Schedule = scheduler.schedule()
         
-        assert isinstance(result, dict)
-        assert len(result) >= 1
+        assert isinstance(result, Schedule)
+        assert len(result.intervals) >= 1
         
         # If all are scheduled, check dependency chain
-        if all(paper in result for paper in ["paper_a", "paper_b", "paper_c"]):
+        if all(paper in result.intervals for paper in ["paper_a", "paper_b", "paper_c"]):
             # A should start first
             assert result.intervals["paper_a"].start_date <= result.intervals["paper_b"].start_date
             assert result.intervals["paper_b"].start_date <= result.intervals["paper_c"].start_date
@@ -361,11 +361,11 @@ class TestGreedyScheduler:
         scheduler: GreedyScheduler = GreedyScheduler(config)
         result: Schedule = scheduler.schedule()
         
-        assert isinstance(result, dict)
-        assert len(result) >= 1
+        assert isinstance(result, Schedule)
+        assert len(result.intervals) >= 1
         
         # If all are scheduled, check dependencies
-        if all(paper in result for paper in ["paper_a", "paper_b", "paper_c"]):
+        if all(paper in result.intervals for paper in ["paper_a", "paper_b", "paper_c"]):
             # A should start first
             assert result.intervals["paper_a"].start_date <= result.intervals["paper_b"].start_date
             assert result.intervals["paper_a"].start_date <= result.intervals["paper_c"].start_date

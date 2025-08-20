@@ -48,43 +48,69 @@ class BaseScheduler(ABC):
     
     @classmethod
     def _auto_register_strategy(cls, strategy: SchedulerStrategy) -> None:
-        """Auto-register scheduler classes by looking for them in the module."""
-        import importlib
-        import inspect
-        
-        # Get the module where this class is defined
-        module = inspect.getmodule(cls)
-        if not module:
-            return
+        """Auto-register scheduler classes by looking for them in the schedulers module."""
+        try:
+            # Import the scheduler classes directly
+            from src.schedulers.greedy import GreedyScheduler
+            from src.schedulers.random import RandomScheduler
+            from src.schedulers.stochastic import StochasticGreedyScheduler
+            from src.schedulers.lookahead import LookaheadGreedyScheduler
+            from src.schedulers.heuristic import HeuristicScheduler
+            from src.schedulers.backtracking import BacktrackingGreedyScheduler
+            from src.schedulers.optimal import OptimalScheduler
             
-        # Look for scheduler classes in the module
-        for name, obj in inspect.getmembers(module):
-            if (inspect.isclass(obj) and 
-                issubclass(obj, BaseScheduler) and 
-                obj != BaseScheduler and
-                hasattr(obj, '__module__') and
-                obj.__module__ == module.__name__):
+            # Map strategies to scheduler classes
+            strategy_mapping = {
+                SchedulerStrategy.GREEDY: GreedyScheduler,
+                SchedulerStrategy.STOCHASTIC: StochasticGreedyScheduler,
+                SchedulerStrategy.LOOKAHEAD: LookaheadGreedyScheduler,
+                SchedulerStrategy.BACKTRACKING: BacktrackingGreedyScheduler,
+                SchedulerStrategy.RANDOM: RandomScheduler,
+                SchedulerStrategy.HEURISTIC: HeuristicScheduler,
+                SchedulerStrategy.OPTIMAL: OptimalScheduler
+            }
+            
+            if strategy in strategy_mapping:
+                cls._strategy_registry[strategy] = strategy_mapping[strategy]
                 
-                # Try to determine the strategy from the class name
-                if strategy.value in name.lower():
-                    cls._strategy_registry[strategy] = obj
-                    return
-        
-        # If not found by name, try to register based on common patterns
-        strategy_mapping = {
-            SchedulerStrategy.GREEDY: 'GreedyScheduler',
-            SchedulerStrategy.STOCHASTIC: 'StochasticScheduler',
-            SchedulerStrategy.LOOKAHEAD: 'LookaheadScheduler',
-            SchedulerStrategy.BACKTRACKING: 'BacktrackingGreedyScheduler',
-            SchedulerStrategy.RANDOM: 'RandomScheduler',
-            SchedulerStrategy.HEURISTIC: 'HeuristicScheduler',
-            SchedulerStrategy.OPTIMAL: 'OptimalScheduler'
-        }
-        
-        if strategy in strategy_mapping:
-            class_name = strategy_mapping[strategy]
-            if hasattr(module, class_name):
-                cls._strategy_registry[strategy] = getattr(module, class_name)
+        except ImportError:
+            # If import fails, try to find classes dynamically
+            import importlib
+            import inspect
+            
+            # Get the module where this class is defined
+            module = inspect.getmodule(cls)
+            if not module:
+                return
+                
+            # Look for scheduler classes in the module
+            for name, obj in inspect.getmembers(module):
+                if (inspect.isclass(obj) and 
+                    issubclass(obj, BaseScheduler) and 
+                    obj != BaseScheduler and
+                    hasattr(obj, '__module__') and
+                    obj.__module__ == module.__name__):
+                    
+                    # Try to determine the strategy from the class name
+                    if strategy.value in name.lower():
+                        cls._strategy_registry[strategy] = obj
+                        return
+            
+            # If not found by name, try to register based on common patterns
+            strategy_mapping = {
+                SchedulerStrategy.GREEDY: 'GreedyScheduler',
+                SchedulerStrategy.STOCHASTIC: 'StochasticScheduler',
+                SchedulerStrategy.LOOKAHEAD: 'LookaheadScheduler',
+                SchedulerStrategy.BACKTRACKING: 'BacktrackingGreedyScheduler',
+                SchedulerStrategy.RANDOM: 'RandomScheduler',
+                SchedulerStrategy.HEURISTIC: 'HeuristicScheduler',
+                SchedulerStrategy.OPTIMAL: 'OptimalScheduler'
+            }
+            
+            if strategy in strategy_mapping:
+                class_name = strategy_mapping[strategy]
+                if hasattr(module, class_name):
+                    cls._strategy_registry[strategy] = getattr(module, class_name)
     
     @abstractmethod
     def schedule(self) -> Schedule:

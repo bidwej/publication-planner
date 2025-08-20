@@ -5,21 +5,21 @@ import subprocess
 from pathlib import Path
 from datetime import date
 
-from core.models import SchedulerStrategy
+from src.core.models import SchedulerStrategy, Schedule
 from typing import Dict, List, Any, Optional
 
 
 # Import scheduler implementations to register them
-from schedulers.greedy import GreedyScheduler
-from schedulers.stochastic import StochasticGreedyScheduler
-from schedulers.lookahead import LookaheadGreedyScheduler
-from schedulers.backtracking import BacktrackingGreedyScheduler
-from schedulers.random import RandomScheduler
-from schedulers.heuristic import HeuristicScheduler
-from schedulers.optimal import OptimalScheduler
+from src.schedulers.greedy import GreedyScheduler
+from src.schedulers.stochastic import StochasticGreedyScheduler
+from src.schedulers.lookahead import LookaheadGreedyScheduler
+from src.schedulers.backtracking import BacktrackingGreedyScheduler
+from src.schedulers.random import RandomScheduler
+from src.schedulers.heuristic import HeuristicScheduler
+from src.schedulers.optimal import OptimalScheduler
 
 # Verify registration worked
-from schedulers.base import BaseScheduler
+from src.schedulers.base import BaseScheduler
 
 
 class TestSchedulerIntegration:
@@ -63,13 +63,13 @@ class TestSchedulerIntegration:
         scheduler: Any = BaseScheduler.create_scheduler(strategy, config)
         schedule = scheduler.schedule()
         
-        # Schedule should be a dictionary
-        assert isinstance(schedule, dict)
+        # Schedule should be a Schedule object
+        assert isinstance(schedule, Schedule)
         
         # All dates should be valid
-        for submission_id, start_date in schedule.items():
-            assert isinstance(start_date, date)
-            assert start_date >= date(2020, 1, 1)  # Reasonable start date (using our robust calculation)
+        for submission_id, interval in schedule.intervals.items():
+            assert isinstance(interval.start_date, date)
+            assert interval.start_date >= date(2020, 1, 1)  # Reasonable start date (using our robust calculation)
     
     def test_scheduler_error_handling(self) -> None:
         """Test scheduler error handling with invalid configurations."""
@@ -85,7 +85,7 @@ class TestSchedulerIntegration:
         schedule = scheduler.schedule()
         
         # Should return empty schedule for empty config
-        assert schedule == {}
+        assert len(schedule.intervals) == 0
     
     def test_scheduler_strategy_comparison(self) -> None:
         """Test comparing different scheduler strategies."""
@@ -104,7 +104,7 @@ class TestSchedulerIntegration:
             schedules[strategy] = schedule
             
             # Each schedule should be valid
-            assert isinstance(schedule, dict)
+            assert isinstance(schedule, Schedule)
         
         # Different strategies might produce different schedules
         # (though with same config, they might be similar)
@@ -167,12 +167,12 @@ class TestSchedulerIntegration:
             schedule = scheduler.schedule()
             
             # Should schedule all submissions
-            assert len(schedule) == len(submissions)
+            assert len(schedule.intervals) == len(submissions)
             
             # All scheduled dates should be valid
-            for submission_id, start_date in schedule.items():
-                assert isinstance(start_date, date)
-                assert start_date >= date(2025, 1, 1)
+            for submission_id, interval in schedule.intervals.items():
+                assert isinstance(interval.start_date, date)
+                assert interval.start_date >= date(2025, 1, 1)
     
     def test_scheduler_subprocess_integration(self) -> None:
         """Test scheduler functionality via subprocess calls."""

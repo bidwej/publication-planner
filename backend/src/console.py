@@ -15,10 +15,10 @@ from src.scoring.efficiency import calculate_efficiency_score
 from src.scoring.quality import calculate_quality_score
 
 
-def print_schedule_summary(schedule, config: Config) -> None:
-    """Print a summary of the schedule to console."""
+def print_schedule_summary(schedule: Schedule, config: Config) -> None:
+    """Print a summary of the schedule."""
     if not schedule:
-        print("No schedule generated.")
+        print("No schedule generated")
         return
     
     print("\n=== Schedule Summary ===")
@@ -28,7 +28,7 @@ def print_schedule_summary(schedule, config: Config) -> None:
     # Count by type
     abstracts = papers = 0
     sub_map = {s.id: s for s in config.submissions}
-    for sid in schedule:
+    for sid in schedule.intervals.keys():
         sub = sub_map.get(sid)
         if sub:
             abstracts += sub.kind.value == "abstract"

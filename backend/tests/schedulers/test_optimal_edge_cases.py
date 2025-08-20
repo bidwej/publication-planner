@@ -6,10 +6,10 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Dict, Any
 
-from core.config import load_config
-from core.models import Config, SubmissionType, ConferenceType, ConferenceRecurrence
-from schedulers.optimal import OptimalScheduler
-from schedulers.base import BaseScheduler
+from src.core.config import load_config
+from src.core.models import Config, SubmissionType, ConferenceType, ConferenceRecurrence, Schedule
+from src.schedulers.optimal import OptimalScheduler
+from src.schedulers.base import BaseScheduler
 
 
 class TestOptimalSchedulerEdgeCases:
@@ -36,10 +36,10 @@ class TestOptimalSchedulerEdgeCases:
         schedule = scheduler.schedule()
         
         # Should handle single submission
-        assert isinstance(schedule, dict)
-        if len(schedule) > 0:
+        assert isinstance(schedule, Schedule)
+        if len(schedule.intervals) > 0:
             # Check that we got a valid schedule
-            assert all(isinstance(date_val, date) for date_val in schedule.values())
+            assert all(isinstance(interval.start_date, date) for interval in schedule.intervals.values())
     
     def test_milp_circular_dependency_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with circular dependencies - should handle gracefully."""
@@ -60,10 +60,10 @@ class TestOptimalSchedulerEdgeCases:
         
         # Should handle circular dependency gracefully
         scheduler: Any = OptimalScheduler(config)
-        schedule = scheduler.schedule()
         
-        # Should return empty schedule or handle gracefully
-        assert isinstance(schedule, dict)
+        # Should detect circular dependency and raise ValueError
+        with pytest.raises(ValueError, match="Circular dependency detected"):
+            scheduler.schedule()
     
     def test_milp_impossible_deadline_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with impossible deadline - past deadline."""
@@ -84,7 +84,7 @@ class TestOptimalSchedulerEdgeCases:
         schedule = scheduler.schedule()
         
         # Should handle impossible deadline gracefully
-        assert isinstance(schedule, dict)
+        assert isinstance(schedule, Schedule)
     
     def test_milp_zero_duration_edge_case(self, test_data_config: Config, monkeypatch) -> None:
         """Test MILP with zero duration submissions."""
@@ -92,13 +92,13 @@ class TestOptimalSchedulerEdgeCases:
         def mock_get_duration_days(*args, **kwargs):
             return 0
         
-        monkeypatch.setattr('core.models.Submission.get_duration_days', mock_get_duration_days)
+        monkeypatch.setattr('src.core.models.Submission.get_duration_days', mock_get_duration_days)
         
         scheduler: Any = OptimalScheduler(test_data_config)
         schedule = scheduler.schedule()
         
         # Should handle zero duration gracefully
-        assert isinstance(schedule, dict)
+        assert isinstance(schedule, Schedule)
     
     def test_milp_max_concurrent_zero_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with max_concurrent_submissions = 0."""
@@ -109,7 +109,7 @@ class TestOptimalSchedulerEdgeCases:
         schedule = scheduler.schedule()
         
         # Should handle zero concurrency gracefully
-        assert isinstance(schedule, dict)
+        assert isinstance(schedule, Schedule)
     
     def test_milp_all_blackout_dates_edge_case(self, test_data_config: Config) -> None:
         """Test MILP when all available dates are blackout dates."""
@@ -123,7 +123,7 @@ class TestOptimalSchedulerEdgeCases:
         schedule = scheduler.schedule()
         
         # Should handle all blackout dates gracefully
-        assert isinstance(schedule, dict)
+        assert isinstance(schedule, Schedule)
     
     def test_milp_very_large_problem_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with very large problem size - should fallback to greedy."""
@@ -145,7 +145,7 @@ class TestOptimalSchedulerEdgeCases:
         schedule = scheduler.schedule()
         
         # Should fallback to greedy for large problems
-        assert isinstance(schedule, dict)
+        assert isinstance(schedule, Schedule)
     
     def test_milp_very_long_duration_edge_case(self, test_data_config: Config, monkeypatch) -> None:
         """Test MILP with very long duration submissions."""
@@ -153,13 +153,13 @@ class TestOptimalSchedulerEdgeCases:
         def mock_get_duration_days(*args, **kwargs):
             return 365
         
-        monkeypatch.setattr('core.models.Submission.get_duration_days', mock_get_duration_days)
+        monkeypatch.setattr('src.core.models.Submission.get_duration_days', mock_get_duration_days)
         
         scheduler: Any = OptimalScheduler(test_data_config)
         schedule = scheduler.schedule()
         
         # Should handle very long duration gracefully
-        assert isinstance(schedule, dict)
+        assert isinstance(schedule, Schedule)
     
     def test_milp_no_conferences_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with no conferences defined."""
@@ -171,7 +171,7 @@ class TestOptimalSchedulerEdgeCases:
         schedule = scheduler.schedule()
         
         # Should handle no conferences gracefully
-        assert schedule == {}
+        assert len(schedule.intervals) == 0
     
     def test_milp_no_submissions_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with no submissions."""
@@ -182,7 +182,7 @@ class TestOptimalSchedulerEdgeCases:
         schedule = scheduler.schedule()
         
         # Should return empty schedule
-        assert schedule == {}
+        assert len(schedule.intervals) == 0
     
     def test_milp_invalid_optimization_objective_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with invalid optimization objective."""
@@ -190,7 +190,7 @@ class TestOptimalSchedulerEdgeCases:
         scheduler: Any = OptimalScheduler(test_data_config)
         schedule = scheduler.schedule()
         
-        assert isinstance(schedule, dict)
+        assert isinstance(schedule, Schedule)
     
     def test_milp_solver_timeout_edge_case(self, test_data_config: Config, monkeypatch) -> None:
         """Test MILP when solver times out."""
@@ -208,7 +208,7 @@ class TestOptimalSchedulerEdgeCases:
         schedule = scheduler.schedule()
         
         # Should handle timeout gracefully
-        assert isinstance(schedule, dict)
+        assert isinstance(schedule, Schedule)
     
     def test_milp_infeasible_constraints_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with infeasible constraints."""
@@ -232,7 +232,7 @@ class TestOptimalSchedulerEdgeCases:
         schedule = scheduler.schedule()
         
         # Should handle infeasible constraints gracefully
-        assert isinstance(schedule, dict)
+        assert isinstance(schedule, Schedule)
     
     def test_milp_very_short_deadline_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with very short deadline window."""
@@ -255,7 +255,7 @@ class TestOptimalSchedulerEdgeCases:
         schedule = scheduler.schedule()
         
         # Should handle very short deadline gracefully
-        assert isinstance(schedule, dict)
+        assert isinstance(schedule, Schedule)
     
     def test_milp_duplicate_submission_ids_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with duplicate submission IDs."""
@@ -277,7 +277,7 @@ class TestOptimalSchedulerEdgeCases:
         schedule = scheduler.schedule()
         
         # Should handle duplicate IDs gracefully
-        assert isinstance(schedule, dict)
+        assert isinstance(schedule, Schedule)
     
     def test_milp_missing_dependency_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with missing dependency."""
@@ -299,7 +299,7 @@ class TestOptimalSchedulerEdgeCases:
         schedule = scheduler.schedule()
         
         # Should handle missing dependency gracefully
-        assert isinstance(schedule, dict)
+        assert isinstance(schedule, Schedule)
     
     def test_milp_negative_duration_edge_case(self, test_data_config: Config, monkeypatch) -> None:
         """Test MILP with negative duration (should never happen but test anyway)."""
@@ -307,13 +307,13 @@ class TestOptimalSchedulerEdgeCases:
         def mock_get_duration_days(*args, **kwargs):
             return -1
         
-        monkeypatch.setattr('core.models.Submission.get_duration_days', mock_get_duration_days)
+        monkeypatch.setattr('src.core.models.Submission.get_duration_days', mock_get_duration_days)
         
         scheduler: Any = OptimalScheduler(test_data_config)
         schedule = scheduler.schedule()
         
         # Should handle negative duration gracefully
-        assert isinstance(schedule, dict)
+        assert isinstance(schedule, Schedule)
     
     def test_milp_empty_dependency_list_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with empty dependency list vs None."""
@@ -335,7 +335,7 @@ class TestOptimalSchedulerEdgeCases:
         schedule = scheduler.schedule()
         
         # Should handle both empty and None dependencies
-        assert isinstance(schedule, dict)
+        assert isinstance(schedule, Schedule)
     
     def test_milp_very_far_future_deadline_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with deadline very far in the future."""
@@ -357,9 +357,9 @@ class TestOptimalSchedulerEdgeCases:
         schedule = scheduler.schedule()
         
         # Should handle far future deadline
-        assert isinstance(schedule, dict)
-        if "far_future" in schedule:
-            assert schedule["far_future"] >= date.today()
+        assert isinstance(schedule, Schedule)
+        if "far_future" in schedule.intervals:
+            assert schedule.intervals["far_future"].start_date >= date.today()
     
     def test_milp_with_real_test_data(self, test_data_config: Config) -> None:
         """Test MILP with actual test data from tests/common/data."""
@@ -368,12 +368,12 @@ class TestOptimalSchedulerEdgeCases:
         schedule = scheduler.schedule()
         
         # Should produce a valid schedule
-        assert isinstance(schedule, dict)
-        if len(schedule) > 0:
+        assert isinstance(schedule, Schedule)
+        if len(schedule.intervals) > 0:
             # Check that all scheduled dates are valid
-            for submission_id, start_date in schedule.items():
-                assert isinstance(start_date, date)
-                assert start_date >= date.today()
+            for submission_id, interval in schedule.intervals.items():
+                assert isinstance(interval.start_date, date)
+                assert interval.start_date >= date.today()
     
     def test_milp_with_blackout_dates_from_file(self, test_data_config: Config) -> None:
         """Test MILP with blackout dates loaded from test data file."""
@@ -393,4 +393,4 @@ class TestOptimalSchedulerEdgeCases:
             schedule = scheduler.schedule()
             
             # Should handle blackout dates gracefully
-            assert isinstance(schedule, dict)
+            assert isinstance(schedule, Schedule)

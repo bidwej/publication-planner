@@ -98,12 +98,42 @@ class TestConsoleOutput:
         )
     
     @pytest.fixture
-    def sample_schedule(self):
+    def empty_schedule(self) -> Schedule:
+        """Provide an empty schedule for testing."""
+        return Schedule()
+
+    @pytest.fixture
+    def sample_schedule(self) -> Schedule:
         """Provide a sample schedule for testing."""
         schedule = Schedule()
         schedule.add_interval("J1-pap", date(2024, 11, 1), duration_days=30)
         schedule.add_interval("J2-pap", date(2024, 12, 1), duration_days=30)
         schedule.add_interval("J1-abs", date(2024, 10, 1), duration_days=0)
+        return schedule
+
+    @pytest.fixture
+    def late_schedule(self) -> Schedule:
+        """Provide a schedule with late submissions for testing."""
+        schedule = Schedule()
+        schedule.add_interval("J1-pap", date(2024, 11, 1), duration_days=30)
+        schedule.add_interval("J2-pap", date(2024, 12, 1), duration_days=30)
+        schedule.add_interval("J1-abs", date(2024, 10, 1), duration_days=0)
+        return schedule
+
+    @pytest.fixture
+    def mixed_schedule(self) -> Schedule:
+        """Provide a schedule with mixed submission types for testing."""
+        schedule = Schedule()
+        schedule.add_interval("J1-pap", date(2024, 11, 1), duration_days=30)
+        schedule.add_interval("J2-pap", date(2024, 12, 1), duration_days=30)
+        schedule.add_interval("J1-abs", date(2024, 10, 1), duration_days=0)
+        return schedule
+
+    @pytest.fixture
+    def no_deadline_schedule(self) -> Schedule:
+        """Provide a schedule with no deadlines for testing."""
+        schedule = Schedule()
+        schedule.add_interval("J1-pap", date(2024, 11, 1), duration_days=30)
         return schedule
     
     def test_print_schedule_summary(self, monkeypatch, sample_schedule, sample_config) -> None:
@@ -146,7 +176,7 @@ class TestConsoleOutput:
         
         monkeypatch.setattr('builtins.print', mock_print)
         
-        empty_schedule: Schedule = {}
+        empty_schedule = Schedule()
         print_schedule_summary(empty_schedule, sample_config)
         
         # Should print "No schedule generated"
@@ -191,7 +221,7 @@ class TestConsoleOutput:
         
         monkeypatch.setattr('builtins.print', mock_print)
         
-        empty_schedule: Schedule = {}
+        empty_schedule = Schedule()
         print_deadline_status(empty_schedule, sample_config)
         
         # Should not print anything for empty schedule
@@ -212,10 +242,9 @@ class TestConsoleOutput:
         monkeypatch.setattr('builtins.print', mock_print)
         
         # Create a schedule with late submissions
-        late_schedule: Schedule = {
-            "J1-pap": date(2025, 2, 1),  # After deadline
-            "J2-pap": date(2025, 4, 1)   # After deadline
-        }
+        late_schedule = Schedule()
+        late_schedule.add_interval("J1-pap", date(2025, 2, 1), duration_days=30)  # After deadline
+        late_schedule.add_interval("J2-pap", date(2025, 4, 1), duration_days=30)   # After deadline
         
         print_deadline_status(late_schedule, sample_config)
         
@@ -264,7 +293,7 @@ class TestConsoleOutput:
         
         monkeypatch.setattr('builtins.print', mock_print)
         
-        empty_schedule: Schedule = {}
+        empty_schedule = Schedule()
         print_utilization_summary(empty_schedule, sample_config)
         
         # Should not print anything for empty schedule
@@ -307,7 +336,7 @@ class TestConsoleOutput:
         
         monkeypatch.setattr('builtins.print', mock_print)
         
-        empty_schedule: Schedule = {}
+        empty_schedule = Schedule()
         print_metrics_summary(empty_schedule, sample_config)
         
         # Should still print something for empty schedule
@@ -377,11 +406,10 @@ class TestConsoleOutput:
         
         monkeypatch.setattr('builtins.print', mock_print)
         
-        mixed_schedule: Schedule = {
-            "J1-pap": date(2024, 11, 1),
-            "J1-abs": date(2024, 10, 1),
-            "J2-pap": date(2024, 12, 1)
-        }
+        mixed_schedule = Schedule()
+        mixed_schedule.add_interval("J1-pap", date(2024, 11, 1), duration_days=30)
+        mixed_schedule.add_interval("J1-abs", date(2024, 10, 1), duration_days=0)
+        mixed_schedule.add_interval("J2-pap", date(2024, 12, 1), duration_days=30)
         
         print_schedule_summary(mixed_schedule, sample_config)
         
@@ -423,7 +451,8 @@ class TestConsoleOutput:
             data_files={}
         )
         
-        schedule: Schedule = {"J1-pap": date(2024, 11, 1)}
+        schedule = Schedule()
+        schedule.add_interval("J1-pap", date(2024, 11, 1))
         print_deadline_status(schedule, no_deadline_config)
         
         # Should print "No submissions with deadlines found"

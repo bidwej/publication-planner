@@ -635,8 +635,8 @@ class TestDataclassesSerialization:
 class TestConferenceMappingAndEngineering:
     """Test conference mapping and engineering flag inference."""
     
-    def test_conference_mapping_by_candidate_conferences(self, tmp_path) -> None:
-        """Test that conferences are mapped by candidate_conferences."""
+    def test_conference_mapping_by_preferred_conferences(self, tmp_path) -> None:
+        """Test that conferences are mapped by preferred_conferences."""
         # Create conferences with different types
         conferences_data = [
             {
@@ -675,7 +675,7 @@ class TestConferenceMappingAndEngineering:
                 "title": "Test Paper 1",
                 "author": "ed",
                 "kind": "paper",
-                "candidate_conferences": ["IEEE_ICRA"],
+                "preferred_conferences": ["IEEE_ICRA"],
                 "depends_on": ["mod_1"]  # Use correct field name and ID format
             }
         ]
@@ -734,7 +734,7 @@ class TestConferenceMappingAndEngineering:
         # In unified schema, both mods and papers start unassigned
         assert mod_submission.conference_id is None
         assert paper_submission.conference_id is None  # Assigned later by scheduler
-        assert paper_submission.candidate_conferences == ["IEEE_ICRA"]  # Candidates available
+        assert paper_submission.preferred_conferences == ["IEEE_ICRA"]  # Candidates available
         assert "mod_1" in (paper_submission.depends_on or [])
     
     def test_engineering_flag_inference(self, tmp_path) -> None:
@@ -762,7 +762,7 @@ class TestConferenceMappingAndEngineering:
                 "title": "Test Mod 1",
                 "author": "pccp",
                 "kind": "paper",
-                "candidate_conferences": ["IEEE_ICRA", "MICCAI"],
+                "preferred_conferences": ["IEEE_ICRA", "MICCAI"],
                 "engineering": True,  # Explicitly set engineering flag
                 "engineering_ready_date": "2025-01-01",
                 "depends_on": []
@@ -802,7 +802,7 @@ class TestConferenceMappingAndEngineering:
         config = load_config(str(config_file))
         
         # Check that engineering flag is inferred correctly
-        # The test creates a mod with candidate_conferences that include engineering conferences
+        # The test creates a mod with preferred_conferences that include engineering conferences
         # So the engineering flag should be inferred as True
         mod_submission = next(s for s in config.submissions if s.id == "mod_1")
         # Should be engineering since it can go to engineering conferences

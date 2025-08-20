@@ -4,10 +4,10 @@ import pytest
 from datetime import date, timedelta
 
 
-from core.config import load_config
-from core.models import SchedulerStrategy
-from schedulers.optimal import OptimalScheduler
-from schedulers.base import BaseScheduler
+from src.core.config import load_config
+from src.core.models import SchedulerStrategy, Schedule, Conference, ConferenceType, ConferenceRecurrence, SubmissionType
+from src.schedulers.optimal import OptimalScheduler
+from src.schedulers.base import BaseScheduler
 from typing import Dict, List, Any, Optional
 
 
@@ -33,6 +33,10 @@ class TestOptimalScheduler:
     
     def test_optimal_scheduler_registration(self) -> None:
         """Test that the optimal scheduler is properly registered."""
+        # Trigger auto-registration if not already registered
+        if SchedulerStrategy.OPTIMAL not in BaseScheduler._strategy_registry:
+            BaseScheduler._auto_register_strategy(SchedulerStrategy.OPTIMAL)
+        
         assert SchedulerStrategy.OPTIMAL in BaseScheduler._strategy_registry
         scheduler_class = BaseScheduler._strategy_registry[SchedulerStrategy.OPTIMAL]
         assert scheduler_class == OptimalScheduler
@@ -191,7 +195,7 @@ class TestOptimalScheduler:
                 # If solution is not None, we should be able to extract a schedule
                 if solution is not None:
                     schedule = scheduler._extract_schedule_from_solution(solution)
-                    assert isinstance(schedule, dict)
+                    assert isinstance(schedule, Schedule)
             except Exception as e:
                 # It's okay if the solver fails - we just want to test the integration
                 assert "solver" in str(e).lower() or "pulp" in str(e).lower()
@@ -205,7 +209,7 @@ class TestOptimalScheduler:
         })()
         
         schedule = scheduler._extract_schedule_from_solution(mock_solution)
-        assert isinstance(schedule, dict)
+        assert isinstance(schedule, Schedule)
     
     def test_pure_optimal_behavior(self, scheduler, monkeypatch) -> None:
         """Test that the scheduler returns empty schedule when MILP fails."""
@@ -217,8 +221,8 @@ class TestOptimalScheduler:
         
         schedule = scheduler.schedule()
         # Should return empty schedule (pure optimal behavior)
-        assert isinstance(schedule, dict)
-        assert len(schedule) == 0  # Empty schedule when MILP fails
+        assert isinstance(schedule, Schedule)
+        assert len(schedule.intervals) == 0  # Empty schedule when MILP fails
     
     def test_optimization_objectives(self, config) -> None:
         """Test different optimization objectives."""
@@ -284,24 +288,24 @@ class TestOptimalScheduler:
         
         try:
             schedule = scheduler.schedule()
-            assert isinstance(schedule, dict)
+            assert isinstance(schedule, Schedule)
             
-            if schedule:
+            if schedule.intervals:
                 # Check that all scheduled submissions have valid dates
-                for submission_id, start_date in schedule.items():
-                    assert isinstance(start_date, date)
+                for submission_id, interval in schedule.intervals.items():
+                    assert isinstance(interval.start_date, date)
                     # Note: Some submissions may be scheduled in the past due to earliest_start_date
                     # This is expected behavior - we just check that dates are valid dates
-                    assert start_date is not None
+                    assert interval.start_date is not None
                     
         except Exception as e:
             # If MILP fails, that's okay - we just want to test the integration
             assert "solver" in str(e).lower() or "pulp" in str(e).lower() or "infeasible" in str(e).lower()
     
     def test_candidate_kinds_none_scenarios(self) -> None:
-        """Test scheduling with candidate_kinds=None and empty candidate_conferences."""
-        from core.models import Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence
-        from core.config import Config
+        """Test scheduling with candidate_kinds=None and empty preferred_conferences."""
+        from src.core.models import Submission, SubmissionType, Conference, ConferenceType, ConferenceRecurrence, Schedule
+        from src.core.config import Config
         from datetime import date, timedelta
         
         # Create test conferences that accept different submission types
@@ -336,14 +340,14 @@ class TestOptimalScheduler:
         
         # Create test submissions with different scenarios
         submissions = [
-            # Scenario 1: candidate_kinds=None, candidate_conferences=[] 
+            # Scenario 1: candidate_kinds=None, preferred_conferences=[] 
             # Should try any conference, preferring poster->abstract->paper
             Submission(
                 id="sub_open_to_any",
                 title="Open to Any Opportunity",
                 kind=SubmissionType.PAPER,
-                candidate_kinds=None,  # Open to any opportunity
-                candidate_conferences=[],  # Any conference
+                preferred_kinds=None,  # Open to any opportunity
+                preferred_conferences=[],  # Any conference
                 earliest_start_date=today
             ),
             # Scenario 2: candidate_kinds=None, specific conferences
@@ -352,8 +356,8 @@ class TestOptimalScheduler:
                 id="sub_open_specific_conf",
                 title="Open Opportunity at Specific Conference",
                 kind=SubmissionType.PAPER, 
-                candidate_kinds=None,  # Open to any opportunity
-                candidate_conferences=["All Types Conference"],  # Specific conference
+                preferred_kinds=None,  # Open to any opportunity
+                preferred_conferences=["All Types Conference"],  # Specific conference
                 earliest_start_date=today
             ),
             # Scenario 3: specific candidate_kind, empty conferences
@@ -362,8 +366,8 @@ class TestOptimalScheduler:
                 id="sub_abstract_any_conf",
                 title="Abstract at Any Conference",
                 kind=SubmissionType.PAPER,
-                candidate_kinds=[SubmissionType.ABSTRACT],  # Want abstract specifically
-                candidate_conferences=[],  # Any conference that accepts abstracts
+                preferred_kinds=[SubmissionType.ABSTRACT],  # Want abstract specifically
+                preferred_conferences=[],  # Any conference that accepts abstracts
                 earliest_start_date=today
             )
         ]
@@ -382,7 +386,8 @@ class TestOptimalScheduler:
         scheduler = OptimalScheduler(config)
         
         # The auto-assignment logic should work
-        scheduler._assign_conferences({})
+        empty_schedule = Schedule(intervals={})
+        scheduler._assign_conferences(empty_schedule)
         
         # Check assignments
         sub1 = next(s for s in config.submissions if s.id == "sub_open_to_any")
@@ -394,13 +399,13 @@ class TestOptimalScheduler:
         
         # sub2 should be assigned to the "all types" conference with poster (preferred type)
         if sub2.conference_id:
-            assert sub2.candidate_kind in [SubmissionType.POSTER, SubmissionType.ABSTRACT, SubmissionType.PAPER]
+            assert sub2.kind in [SubmissionType.POSTER, SubmissionType.ABSTRACT, SubmissionType.PAPER]
             
         # sub3 should be assigned to a conference that accepts abstracts
         if sub3.conference_id:
             assigned_conf = next(c for c in conferences if c.id == sub3.conference_id)
             assert SubmissionType.ABSTRACT in assigned_conf.deadlines
-            assert sub3.candidate_kinds == [SubmissionType.ABSTRACT]
+            assert sub3.preferred_kinds == [SubmissionType.ABSTRACT]
 
 
 class TestOptimalSchedulerIntegration:
@@ -408,7 +413,7 @@ class TestOptimalSchedulerIntegration:
     
     def test_optimal_vs_greedy_comparison(self) -> None:
         """Compare optimal scheduler with greedy scheduler."""
-        from schedulers.greedy import GreedyScheduler
+        from src.schedulers.greedy import GreedyScheduler
         
         config = load_config('config.json')
         
@@ -421,8 +426,8 @@ class TestOptimalSchedulerIntegration:
         greedy_schedule = greedy_scheduler.schedule()
         
         # Both should return valid dictionaries
-        assert isinstance(optimal_schedule, dict)
-        assert isinstance(greedy_schedule, dict)
+        assert isinstance(optimal_schedule, Schedule)
+        assert isinstance(greedy_schedule, Schedule)
         
         # Optimal may return empty schedule if constraints are too tight
         # Greedy should always return some schedule (even if partial)
@@ -439,7 +444,7 @@ class TestOptimalSchedulerIntegration:
     
     def test_optimal_scheduler_with_different_objectives(self) -> None:
         """Test optimal scheduler with different optimization objectives."""
-        from core.config import load_config
+        from src.core.config import load_config
         
         config = load_config('config.json')
         objectives = ["minimize_makespan", "minimize_penalties", "minimize_total_time"]
@@ -449,7 +454,7 @@ class TestOptimalSchedulerIntegration:
                 scheduler = OptimalScheduler(config, objective)  # type: ignore
                 schedule = scheduler.schedule()
                 
-                assert isinstance(schedule, dict)
+                assert isinstance(schedule, Schedule)
                 assert hasattr(scheduler, 'optimization_objective')
                 assert getattr(scheduler, 'optimization_objective') == objective
                 

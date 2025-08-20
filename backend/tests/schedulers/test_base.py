@@ -4,8 +4,8 @@ from datetime import date, timedelta
 
 import pytest
 
-from core.models import SubmissionType
-from schedulers.greedy import GreedyScheduler
+from src.core.models import SubmissionType, Schedule
+from src.schedulers.greedy import GreedyScheduler
 from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
 from typing import Dict, List, Any, Optional
 
@@ -26,8 +26,8 @@ class TestScheduler:
         scheduler: Any = GreedyScheduler(empty_config)
         
         result: Any = scheduler.schedule()
-        assert isinstance(result, dict)
-        assert len(result) == 0
+        assert isinstance(result, Schedule)
+        assert len(result.intervals) == 0
 
     def test_scheduler_with_sample_data(self, sample_config) -> None:
         """Test scheduler with sample data."""
@@ -43,8 +43,8 @@ class TestScheduler:
         
         result: Any = scheduler.schedule()
         
-        assert isinstance(result, dict)
-        assert len(result) > 0
+        assert isinstance(result, Schedule)
+        assert len(result.intervals) > 0
 
     def test_schedule_with_no_submissions(self, empty_config) -> None:
         """Test scheduling with no submissions."""
@@ -52,8 +52,8 @@ class TestScheduler:
         
         # Should return empty schedule for no submissions
         result: Any = scheduler.schedule()
-        assert isinstance(result, dict)
-        assert len(result) == 0
+        assert isinstance(result, Schedule)
+        assert len(result.intervals) == 0
 
     def test_schedule_with_no_valid_dates(self) -> None:
         """Test scheduling with no valid dates."""
@@ -74,8 +74,8 @@ class TestScheduler:
         
         # Should return empty schedule
         result: Any = scheduler.schedule()
-        assert isinstance(result, dict)
-        assert len(result) == 0
+        assert isinstance(result, Schedule)
+        assert len(result.intervals) == 0
 
     def test_schedule_with_dependencies(self) -> None:
         """Test scheduling with dependencies."""
@@ -100,13 +100,13 @@ class TestScheduler:
         
         result: Any = scheduler.schedule()
         
-        assert isinstance(result, dict)
-        assert len(result) >= 1
-        assert "paper1" in result
+        assert isinstance(result, Schedule)
+        assert len(result.intervals) >= 1
+        assert "paper1" in result.intervals
         
         # If both are scheduled, check dependency constraint
-        if "paper2" in result:
-            assert result["paper2"] > result["paper1"]
+        if "paper2" in result.intervals:
+            assert result.intervals["paper2"].start_date > result.intervals["paper1"].start_date
 
     def test_schedule_respects_earliest_start_date(self, sample_config) -> None:
         """Test that schedule respects earliest start dates."""
@@ -114,13 +114,13 @@ class TestScheduler:
         
         result: Any = scheduler.schedule()
         
-        assert isinstance(result, dict)
+        assert isinstance(result, Schedule)
         
         # Check that all scheduled dates are after earliest start dates
-        for submission_id, scheduled_date in result.items():
-            submission = sample_config.submissions_dict[submission_id]
+        for submission_id, interval in result.intervals.items():
+            submission = next(s for s in sample_config.submissions if s.id == submission_id)
             if submission.earliest_start_date:
-                assert scheduled_date >= submission.earliest_start_date
+                assert interval.start_date >= submission.earliest_start_date
 
     def test_schedule_respects_deadlines(self, sample_config) -> None:
         """Test that schedule respects deadlines."""
@@ -128,16 +128,16 @@ class TestScheduler:
         
         result: Any = scheduler.schedule()
         
-        assert isinstance(result, dict)
+        assert isinstance(result, Schedule)
         
         # Check that all scheduled dates meet deadlines
-        for submission_id, scheduled_date in result.items():
-            submission = sample_config.submissions_dict[submission_id]
+        for submission_id, interval in result.intervals.items():
+            submission = next(s for s in sample_config.submissions if s.id == submission_id)
             if submission.conference_id:
-                conf = sample_config.conferences_dict.get(submission.conference_id)
+                conf = next(c for c in sample_config.conferences if c.id == submission.conference_id)
                 if conf and submission.kind in conf.deadlines:
                     deadline = conf.deadlines[submission.kind]
-                    end_date = scheduled_date + timedelta(days=sample_config.min_paper_lead_time_days)
+                    end_date = interval.start_date + timedelta(days=sample_config.min_paper_lead_time_days)
                     assert end_date <= deadline
 
     def test_schedule_respects_concurrency_limit(self, sample_config) -> None:
@@ -146,10 +146,10 @@ class TestScheduler:
         
         result: Any = scheduler.schedule()
         
-        assert isinstance(result, dict)
+        assert isinstance(result, Schedule)
         
         # Check that no more than max_concurrent_submissions are scheduled on the same day
-        scheduled_dates = list(result.values())
+        scheduled_dates = [interval.start_date for interval in result.intervals.values()]
         for i, date1 in enumerate(scheduled_dates):
             same_date_count = sum(1 for d in scheduled_dates if d == date1)
             assert same_date_count <= sample_config.max_concurrent_submissions

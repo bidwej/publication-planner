@@ -112,7 +112,7 @@ class TestSubmission:
             title="",
             kind=SubmissionType.PAPER,
             conference_id=None,  # None instead of empty string
-            candidate_conferences=None,  # This should trigger the validation error
+            preferred_conferences=None,  # This should trigger the validation error
             draft_window_months=-1,
             lead_time_from_parents=-1,
             penalty_cost_per_day=-100
@@ -122,7 +122,7 @@ class TestSubmission:
         assert len(validation_errors) > 0
         assert any("Missing submission ID" in error for error in validation_errors)
         assert any("Missing title" in error for error in validation_errors)
-        assert any("Papers must have either conference_id or candidate_conferences" in error for error in validation_errors)
+        assert any("Papers must have either conference_id or preferred_conferences" in error for error in validation_errors)
         assert any("Draft window months cannot be negative" in error for error in validation_errors)
         assert any("Lead time from parents cannot be negative" in error for error in validation_errors)
         assert any("Penalty cost per day cannot be negative" in error for error in validation_errors)

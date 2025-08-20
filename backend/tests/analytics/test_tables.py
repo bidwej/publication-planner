@@ -200,7 +200,7 @@ class TestCreateScheduleTable:
     
     def test_empty_schedule(self, config) -> None:
         """Test web table creation with empty schedule."""
-        schedule: Schedule = {}
+        schedule: Schedule = Schedule()
         table = create_schedule_table(schedule, config)
         
         assert isinstance(table, list)
@@ -208,7 +208,8 @@ class TestCreateScheduleTable:
     
     def test_single_submission(self, config) -> None:
         """Test web table creation with single submission."""
-        schedule: Schedule = {"test-pap": date(2025, 1, 15)}
+        schedule: Schedule = Schedule()
+        schedule.add_interval("test-pap", date(2025, 1, 15), duration_days=30)
         table = create_schedule_table(schedule, config)
         
         assert isinstance(table, list)
@@ -216,7 +217,8 @@ class TestCreateScheduleTable:
     
     def test_table_structure(self, config) -> None:
         """Test that web table has expected structure."""
-        schedule: Schedule = {"test-pap": date(2025, 1, 15)}
+        schedule: Schedule = Schedule()
+        schedule.add_interval("test-pap", date(2025, 1, 15), duration_days=30)
         table = create_schedule_table(schedule, config)
         
         if table:
@@ -340,7 +342,8 @@ class TestFileIOFunctions:
     
     def test_save_schedule_json(self, tmp_path) -> None:
         """Test saving schedule as JSON."""
-        schedule: Schedule = {"test-pap": "2025-01-15"}
+        schedule: Schedule = Schedule()
+        schedule.add_interval("test-pap", date(2025, 1, 15), duration_days=30)
         output_dir = str(tmp_path)
         
         filepath = save_schedule_json(schedule, output_dir)
@@ -404,11 +407,10 @@ class TestTableFormats:
     
     def test_summary_format(self, config) -> None:
         """Test summary table format."""
-        schedule: Schedule = {
-            "paper1": date(2025, 1, 1),
-            "paper2": date(2025, 2, 1),
-            "paper3": date(2025, 3, 1)
-        }
+        schedule: Schedule = Schedule()
+        schedule.add_interval("paper1", date(2025, 1, 1), duration_days=30)
+        schedule.add_interval("paper2", date(2025, 2, 1), duration_days=30)
+        schedule.add_interval("paper3", date(2025, 3, 1), duration_days=30)
         table = generate_schedule_summary_table(schedule, config)
         
         assert isinstance(table, list)
@@ -417,11 +419,10 @@ class TestTableFormats:
     
     def test_table_with_conferences(self, config) -> None:
         """Test table generation with conference information."""
-        schedule: Schedule = {
-            "conf1-pap": date(2025, 1, 1),
-            "conf2-pap": date(2025, 2, 1),
-            "conf3-pap": date(2025, 3, 1)
-        }
+        schedule: Schedule = Schedule()
+        schedule.add_interval("conf1-pap", date(2025, 1, 1), duration_days=30)
+        schedule.add_interval("conf2-pap", date(2025, 2, 1), duration_days=30)
+        schedule.add_interval("conf3-pap", date(2025, 3, 1), duration_days=30)
         table = generate_schedule_summary_table(schedule, config)
         
         assert isinstance(table, list)
@@ -429,10 +430,9 @@ class TestTableFormats:
     
     def test_table_with_dependencies(self, config) -> None:
         """Test table generation with dependency information."""
-        schedule: Schedule = {
-            "parent-pap": date(2025, 1, 1),
-            "child-pap": date(2025, 2, 1)
-        }
+        schedule: Schedule = Schedule()
+        schedule.add_interval("parent-pap", date(2025, 1, 1), duration_days=30)
+        schedule.add_interval("child-pap", date(2025, 2, 1), duration_days=30)
         table = generate_schedule_summary_table(schedule, config)
         
         assert isinstance(table, list)

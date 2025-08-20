@@ -4,11 +4,11 @@ import pytest
 from datetime import date, timedelta
 from typing import Dict, List
 
-from core.models import (
+from src.core.models import (
     Submission, Conference, Config, SubmissionType, ConferenceType, 
-    ConferenceRecurrence, SubmissionWorkflow
+    ConferenceRecurrence, SubmissionWorkflow, Schedule
 )
-from schedulers.optimal import OptimalScheduler
+from src.schedulers.optimal import OptimalScheduler
 # ValidationOrchestrator doesn't exist - using validation modules directly
 
 
@@ -74,7 +74,8 @@ class TestOptimalSchedulerMinimal:
         """Test OptimalScheduler with single work item - should work instantly."""
         # Mock the entire schedule method to return quickly
         def mock_schedule(self):
-            return {"mod1": date.today()}
+            from src.core.models import Schedule, Interval
+            return Schedule(intervals={"mod1": Interval(start_date=date.today(), end_date=date.today() + timedelta(days=7))})
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
         
@@ -86,15 +87,16 @@ class TestOptimalSchedulerMinimal:
         schedule = scheduler.schedule()
         
         # Should complete instantly
-        assert isinstance(schedule, dict)
-        assert "mod1" in schedule
-        assert schedule["mod1"] >= date.today()
+        assert isinstance(schedule, Schedule)
+        assert "mod1" in schedule.intervals
+        assert schedule.intervals["mod1"].start_date >= date.today()
     
     def test_single_paper_success(self, monkeypatch):
         """Test OptimalScheduler with single paper - should work instantly."""
         # Mock the entire schedule method to return quickly
         def mock_schedule(self):
-            return {"paper1": date.today()}
+            from src.core.models import Schedule, Interval
+            return Schedule(intervals={"paper1": Interval(start_date=date.today(), end_date=date.today() + timedelta(days=14))})
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
         
@@ -108,16 +110,20 @@ class TestOptimalSchedulerMinimal:
         schedule = scheduler.schedule()
         
         # Should complete instantly
-        assert isinstance(schedule, dict)
-        assert "paper1" in schedule
-        assert schedule["paper1"] >= date.today()
-        assert schedule["paper1"] <= deadline - timedelta(days=60)  # Allow for lead time
+        assert isinstance(schedule, Schedule)
+        assert "paper1" in schedule.intervals
+        assert schedule.intervals["paper1"].start_date >= date.today()
+        assert schedule.intervals["paper1"].start_date <= deadline - timedelta(days=60)  # Allow for lead time
     
     def test_two_submissions_no_dependencies(self, monkeypatch):
         """Test two independent papers - simple case that should complete instantly."""
         # Mock the entire schedule method to return quickly
         def mock_schedule(self):
-            return {"paper1": date.today(), "paper2": date.today() + timedelta(days=14)}
+            from src.core.models import Schedule, Interval
+            return Schedule(intervals={
+                "paper1": Interval(start_date=date.today(), end_date=date.today() + timedelta(days=14)),
+                "paper2": Interval(start_date=date.today() + timedelta(days=14), end_date=date.today() + timedelta(days=28))
+            })
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
         
@@ -133,17 +139,18 @@ class TestOptimalSchedulerMinimal:
         schedule = scheduler.schedule()
         
         # Should complete instantly
-        assert isinstance(schedule, dict)
-        assert len(schedule) >= 2
+        assert isinstance(schedule, Schedule)
+        assert len(schedule.intervals) >= 2
         
         # If solved, both should be scheduled
-        assert all(start_date >= date.today() for start_date in schedule.values())
+        assert all(interval.start_date >= date.today() for interval in schedule.intervals.values())
     
     def test_solver_failure_handling(self, monkeypatch):
         """Test that OptimalScheduler handles solver failures gracefully."""
         # Mock the entire schedule method to return quickly
         def mock_schedule(self):
-            return {}  # Simulate solver failure
+            from src.core.models import Schedule
+            return Schedule(intervals={})  # Simulate solver failure
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
         
@@ -176,13 +183,13 @@ class TestOptimalSchedulerMinimal:
         schedule = scheduler.schedule()
         
         # The key test: OptimalScheduler should handle failure gracefully
-        assert isinstance(schedule, dict)  # Should return dict (even if empty)
+        assert isinstance(schedule, Schedule)  # Should return Schedule (even if empty)
         
         # If empty, that's valid - means no optimal solution found
-        if not schedule:
+        if len(schedule.intervals) == 0:
             print("OptimalScheduler correctly returned empty schedule for complex scenario")
         else:
-            print(f"OptimalScheduler found solution for {len(schedule)} submissions")
+            print(f"OptimalScheduler found solution for {len(schedule.intervals)} submissions")
     
     def test_optimal_vs_greedy_comparison(self, monkeypatch):
         """Test that OptimalScheduler provides value when it works."""
@@ -225,7 +232,8 @@ class TestOptimalSchedulerMinimal:
         """Test edge cases that might stress MILP constraints."""
         # Mock the entire schedule method to return quickly
         def mock_schedule(self):
-            return {"paper1": date.today()}
+            from src.core.models import Schedule, Interval
+            return Schedule(intervals={"paper1": Interval(start_date=date.today(), end_date=date.today() + timedelta(days=14))})
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
         
@@ -264,27 +272,27 @@ class TestOptimalSchedulerMinimal:
             scheduler = OptimalScheduler(config)
             schedule = scheduler.schedule()
             
-            print(f"Case {case['name']}: {len(schedule) if schedule else 0} submissions scheduled")
+            print(f"Case {case['name']}: {len(schedule.intervals)} submissions scheduled")
             
             # The test is that the scheduler handles all cases gracefully
-            assert isinstance(schedule, dict)
+            assert isinstance(schedule, Schedule)
     
     def test_candidate_kinds_architecture(self):
         """Test that candidate_kinds list architecture is properly set up."""
         # Create a basic paper
         paper = create_minimal_paper("test_paper", "test_conf")
         
-        # Verify candidate_kinds field exists and can be set
-        assert hasattr(paper, 'candidate_kinds')
+        # Verify preferred_kinds field exists and can be set
+        assert hasattr(paper, 'preferred_kinds')
         
         # Test single type (like your poster + abstract but not paper case)
-        paper.candidate_kinds = [SubmissionType.POSTER, SubmissionType.ABSTRACT]
-        assert paper.candidate_kinds == [SubmissionType.POSTER, SubmissionType.ABSTRACT]
+        paper.preferred_kinds = [SubmissionType.POSTER, SubmissionType.ABSTRACT]
+        assert paper.preferred_kinds == [SubmissionType.POSTER, SubmissionType.ABSTRACT]
         
         # Test that the field is properly used in model
         assert paper.kind == SubmissionType.PAPER  # Base type
-        assert paper.candidate_kinds[0] == SubmissionType.POSTER  # First preference
-        assert paper.candidate_kinds[1] == SubmissionType.ABSTRACT  # Second preference
+        assert paper.preferred_kinds[0] == SubmissionType.POSTER  # First preference
+        assert paper.preferred_kinds[1] == SubmissionType.ABSTRACT  # Second preference
         
         print("candidate_kinds list architecture is properly implemented")
     
@@ -294,7 +302,7 @@ class TestOptimalSchedulerMinimal:
         
         # Create submission that wants poster OR abstract but NOT paper
         paper = create_minimal_paper("flexible_submission", "test_conf")
-        paper.candidate_kinds = [SubmissionType.POSTER, SubmissionType.ABSTRACT]  # Your exact use case
+        paper.preferred_kinds = [SubmissionType.POSTER, SubmissionType.ABSTRACT]  # Your exact use case
         
         # Create conference that offers all three options
         conference = Conference(
@@ -313,7 +321,7 @@ class TestOptimalSchedulerMinimal:
         config = create_minimal_config([paper], [conference])
         
         # Test that the system prefers poster (first in list) over abstract
-        candidate_types = paper.candidate_kinds
+        candidate_types = paper.preferred_kinds
         assert candidate_types[0] == SubmissionType.POSTER  # First preference
         assert candidate_types[1] == SubmissionType.ABSTRACT  # Second preference
         assert SubmissionType.PAPER not in candidate_types  # Explicitly excluded
@@ -332,12 +340,16 @@ class TestOptimalSchedulerMinimal:
         
         # Mock the entire schedule method to return quickly
         def mock_schedule(self):
+            from src.core.models import Schedule, Interval
             # Use actual duration calculation from config
             mod1_start = date.today()
             mod1_duration = work_item.get_duration_days(config)
             mod1_end = mod1_start + timedelta(days=mod1_duration)
             paper1_start = mod1_end + timedelta(days=1)  # Start day after mod1 ends
-            return {"mod1": mod1_start, "paper1": paper1_start}
+            return Schedule(intervals={
+                "mod1": Interval(start_date=mod1_start, end_date=mod1_end),
+                "paper1": Interval(start_date=paper1_start, end_date=paper1_start + timedelta(days=14))
+            })
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
         
@@ -345,13 +357,13 @@ class TestOptimalSchedulerMinimal:
         schedule = scheduler.schedule()
         
         # Should complete instantly
-        assert isinstance(schedule, dict)
-        assert len(schedule) >= 2
+        assert isinstance(schedule, Schedule)
+        assert len(schedule.intervals) >= 2
         
         # If we get a schedule, validate dependencies
-        if "mod1" in schedule and "paper1" in schedule:
-            mod1_start = schedule["mod1"]
-            paper1_start = schedule["paper1"]
+        if "mod1" in schedule.intervals and "paper1" in schedule.intervals:
+            mod1_start = schedule.intervals["mod1"].start_date
+            paper1_start = schedule.intervals["paper1"].start_date
             mod1_duration = work_item.get_duration_days(config)
             mod1_end = mod1_start + timedelta(days=mod1_duration)
             assert paper1_start >= mod1_end
@@ -360,7 +372,8 @@ class TestOptimalSchedulerMinimal:
         """Test different optimization objectives."""
         # Mock the entire schedule method to return quickly
         def mock_schedule(self):
-            return {"paper1": date.today()}
+            from src.core.models import Schedule, Interval
+            return Schedule(intervals={"paper1": Interval(start_date=date.today(), end_date=date.today() + timedelta(days=14))})
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
         
@@ -380,6 +393,6 @@ class TestOptimalSchedulerMinimal:
             assert getattr(scheduler, 'optimization_objective') == objective
             
             # Result may be empty (solver failure) but should be consistent
-            assert isinstance(schedule, dict)
+            assert isinstance(schedule, Schedule)
             
-            print(f"Objective {objective}: {len(schedule) if schedule else 0} submissions")
+            print(f"Objective {objective}: {len(schedule.intervals) if schedule else 0} submissions")

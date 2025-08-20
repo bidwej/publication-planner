@@ -189,6 +189,50 @@ class Submission(BaseModel):
         """Calculate the end date for this submission starting on the given date."""
         duration_days = self.get_duration_days(config)
         return start_date + timedelta(days=duration_days)
+    
+    def validate_submission(self) -> List[str]:
+        """Validate submission data and return list of errors."""
+        errors = []
+        
+        if not self.id:
+            errors.append("Missing submission ID")
+        if not self.title:
+            errors.append("Missing title")
+        
+        # Papers need either conference_id or preferred_conferences
+        if self.kind == SubmissionType.PAPER and not self.conference_id and not self.preferred_conferences:
+            errors.append("Papers must have either conference_id or preferred_conferences")
+        
+        if self.draft_window_months < 0:
+            errors.append("Draft window months cannot be negative")
+        if self.lead_time_from_parents < 0:
+            errors.append("Lead time from parents cannot be negative")
+        if self.penalty_cost_per_day is not None and self.penalty_cost_per_day < 0:
+            errors.append("Penalty cost per day cannot be negative")
+        if self.penalty_cost_per_month is not None and self.penalty_cost_per_month < 0:
+            errors.append("Penalty cost per month cannot be negative")
+        if self.free_slack_months is not None and self.free_slack_months < 0:
+            errors.append("Free slack months cannot be negative")
+        
+        return errors
+    
+    def get_priority_score(self, config: 'Config') -> float:
+        """Calculate priority score for this submission."""
+        base_score = 1.0
+        
+        # Apply type-based weights if available
+        if config.priority_weights:
+            if self.kind == SubmissionType.ABSTRACT:
+                base_score = config.priority_weights.get("abstract", 0.5)
+            elif self.kind == SubmissionType.PAPER:
+                if self.engineering:
+                    base_score = config.priority_weights.get("engineering_paper", 2.0)
+                else:
+                    base_score = config.priority_weights.get("paper", 1.0)
+            elif self.kind == SubmissionType.POSTER:
+                base_score = config.priority_weights.get("poster", 0.8)
+        
+        return base_score
 
 class ConferenceType(str, Enum):
     """Types of conferences."""
@@ -277,6 +321,19 @@ class Conference(BaseModel):
     def has_deadline(self, submission_type: SubmissionType) -> bool:
         """Check if conference has deadline for submission type."""
         return submission_type in self.deadlines
+    
+    def validate_conference(self) -> List[str]:
+        """Validate conference data and return list of errors."""
+        errors = []
+        
+        if not self.id:
+            errors.append("Missing conference ID")
+        if not self.name:
+            errors.append("Missing conference name")
+        if not self.deadlines:
+            errors.append("No deadlines defined")
+        
+        return errors
 
 class Config(BaseModel):
     """Configuration for the scheduler."""
@@ -400,11 +457,115 @@ class Config(BaseModel):
             return None
         return conference.deadlines.get(submission_type)
     
-
+    def validate_config(self) -> List[str]:
+        """Validate the configuration and return list of errors."""
+        errors = []
+        
+        # Check for empty submissions and conferences
+        if not self.submissions:
+            errors.append("No submissions defined")
+        if not self.conferences:
+            errors.append("No conferences defined")
+        
+        # Check for duplicate submission IDs
+        submission_ids = [sub.id for sub in self.submissions]
+        if len(submission_ids) != len(set(submission_ids)):
+            errors.append("Duplicate submission IDs found")
+        
+        # Check for duplicate conference IDs
+        conference_ids = [conf.id for conf in self.conferences]
+        if len(conference_ids) != len(set(conference_ids)):
+            errors.append("Duplicate conference IDs found")
+        
+        # Check that submissions reference valid conferences
+        for submission in self.submissions:
+            if submission.conference_id and submission.conference_id not in conference_ids:
+                errors.append(f"Submission {submission.id} references unknown conference {submission.conference_id}")
+        
+        # Check that dependencies reference valid submissions
+        for submission in self.submissions:
+            if submission.depends_on:
+                for dep_id in submission.depends_on:
+                    if dep_id not in submission_ids:
+                        errors.append(f"Submission {submission.id} depends on nonexistent submission {dep_id}")
+        
+        # Check for circular dependencies
+        circular_deps = self._detect_circular_dependencies()
+        if circular_deps:
+            errors.extend([f"Circular dependency detected: {cycle}" for cycle in circular_deps])
+        
+        # Validate basic constraints
+        if self.min_abstract_lead_time_days < 0:
+            errors.append("Min abstract lead time cannot be negative")
+        if self.min_paper_lead_time_days < 0:
+            errors.append("Min paper lead time cannot be negative")
+        if self.max_concurrent_submissions < 1:
+            errors.append("Max concurrent submissions must be at least 1")
+        
+        return errors
     
-
+    def _detect_circular_dependencies(self) -> List[str]:
+        """Detect circular dependencies in submissions."""
+        def has_cycle(node: str, visited: set, rec_stack: set, graph: Dict[str, List[str]]) -> bool:
+            visited.add(node)
+            rec_stack.add(node)
+            
+            for neighbor in graph.get(node, []):
+                if neighbor not in visited:
+                    if has_cycle(neighbor, visited, rec_stack, graph):
+                        return True
+                elif neighbor in rec_stack:
+                    return True
+            
+            rec_stack.remove(node)
+            return False
+        
+        # Build dependency graph
+        graph = {}
+        for submission in self.submissions:
+            if submission.depends_on:
+                graph[submission.id] = submission.depends_on
+            else:
+                graph[submission.id] = []
+        
+        # Check for cycles
+        visited = set()
+        cycles = []
+        
+        for node in graph:
+            if node not in visited:
+                rec_stack = set()
+                if has_cycle(node, visited, rec_stack, graph):
+                    # Find the actual cycle
+                    cycle_path = self._find_cycle_path(node, graph)
+                    if cycle_path:
+                        cycles.append(" -> ".join(cycle_path))
+        
+        return cycles
     
-
+    def _find_cycle_path(self, start: str, graph: Dict[str, List[str]]) -> Optional[List[str]]:
+        """Find a cycle path starting from the given node."""
+        def dfs(node: str, path: List[str], visited: set) -> Optional[List[str]]:
+            if node in path:
+                # Found a cycle
+                cycle_start = path.index(node)
+                return path[cycle_start:] + [node]
+            
+            if node in visited:
+                return None
+            
+            visited.add(node)
+            path.append(node)
+            
+            for neighbor in graph.get(node, []):
+                result = dfs(neighbor, path, visited)
+                if result:
+                    return result
+            
+            path.pop()
+            return None
+        
+        return dfs(start, [], set())
     
     @property
     def start_date(self) -> date:
@@ -444,6 +605,35 @@ class Config(BaseModel):
             return max(all_deadlines) + timedelta(days=SCHEDULING_CONSTANTS.conference_response_time_days)
         
         return date.today() + timedelta(days=365)
+
+    @property
+    def submissions_dict(self) -> Dict[str, Submission]:
+        """Return a dictionary of submissions indexed by their ID."""
+        return {sub.id: sub for sub in self.submissions}
+
+    def validate_submission(self, submission_id: str) -> Optional[List[str]]:
+        """Validate a specific submission by ID and return list of errors."""
+        submission = self.get_submission(submission_id)
+        if not submission:
+            return None
+        return submission.validate_submission()
+
+    def get_priority_score(self, submission_id: str) -> Optional[float]:
+        """Get the priority score for a specific submission by ID."""
+        submission = self.get_submission(submission_id)
+        if not submission:
+            return None
+        return submission.get_priority_score(self)
+
+    def validate_conference(self, conference_id: str) -> Optional[List[str]]:
+        """Validate a specific conference by ID and return list of errors."""
+        conference = self.get_conference(conference_id)
+        if not conference:
+            return None
+        # No specific validation logic for Conference model itself,
+        # as it's a data structure for deadlines.
+        # The Conference model itself has its own validation methods.
+        return []
 
 # ===== VALIDATION MODELS =====
 
