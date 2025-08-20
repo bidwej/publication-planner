@@ -3,8 +3,7 @@ Gantt layout components for Paper Planner.
 """
 
 from dash import html, dcc, Input, Output, callback, State, callback_context
-from typing import Dict, Any, Optional, TYPE_CHECKING
-from datetime import datetime
+from typing import Optional
 from plotly.graph_objs import Figure
 from app.components.gantt.chart import (
     create_gantt_chart,
@@ -49,7 +48,7 @@ def create_gantt_layout(config: Optional[Config] = None) -> html.Div:
             demo_schedule = None
     
     # Store component state using clean state manager
-    if config and BACKEND_AVAILABLE:
+    if config:
         try:
             get_state_manager().save_component_state('gantt', config, 'gantt', schedule=demo_schedule)
         except Exception as e:
@@ -159,15 +158,12 @@ def update_gantt_chart(n_clicks: Optional[int]) -> Figure:
 def update_gantt_storage_status(figure: Figure) -> str:
     """Update gantt storage status display."""
     try:
-        if BACKEND_AVAILABLE:
-            stored_state = get_state_manager().load_component_state('gantt')
-            if stored_state and 'config_data' in stored_state:
-                config_summary = stored_state['config_data']
-                return f"✅ Config loaded: {config_summary.get('submission_count', 0)} submissions, {config_summary.get('conference_count', 0)} conferences"
-            else:
-                return "⚠️ No config in storage - using sample data"
+        stored_state = get_state_manager().load_component_state('gantt')
+        if stored_state and 'config_data' in stored_state:
+            config_summary = stored_state['config_data']
+            return f"✅ Config loaded: {config_summary.get('submission_count', 0)} submissions, {config_summary.get('conference_count', 0)} conferences"
         else:
-            return "✅ Using demo data - backend not available"
+            return "⚠️ No config in storage - using sample data"
     except Exception as e:
         return f"❌ Storage error: {str(e)}"
 
