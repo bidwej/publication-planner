@@ -9,11 +9,7 @@ from typing import Any
 
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
-# Add project root to path for imports
-import os
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-os.environ['PYTHONPATH'] = project_root + os.pathsep + os.environ.get('PYTHONPATH', '')
-
+# Import backend modules directly (paths handled by pyproject.toml)
 from tests.common.headless_browser import (
     validate_script_path,
     validate_port,

@@ -9,17 +9,8 @@ from typing import Dict, Any, Optional, Union
 import sys
 import os
 from pathlib import Path
-from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
-
-# Get backend path from environment variable
-backend_src_path = os.getenv('PYTHONPATH', '../backend/src')
-if backend_src_path and backend_src_path not in sys.path:
-    sys.path.insert(0, backend_src_path)
-
-# Now we can import backend modules
+# Try to import backend modules
 try:
     from core.models import Config, Submission, Schedule
     from core.config import load_config

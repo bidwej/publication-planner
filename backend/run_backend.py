@@ -7,37 +7,33 @@ import os
 from pathlib import Path
 from typing import Optional, Dict, Any
 from datetime import date
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
 
 # Backend operation configuration
 OPERATIONS = {
     'schedule': {
-        'desc': 'Generate schedule using specified strategy',
-        'requires': ['strategy', 'config'],
-        'examples': ['--strategy greedy', '--strategy optimal --compare']
+        'desc': 'Generate schedules using different strategies',
+        'requires': ['config'],
+        'examples': ['--strategy greedy --config data/config.json', '--compare --config data/config.json']
     },
     'analyze': {
-        'desc': 'Analyze existing schedule and generate reports',
+        'desc': 'Analyze existing schedules and generate reports',
         'requires': ['config'],
-        'examples': ['--config data/config.json', '--output analysis_report.json']
+        'examples': ['--config data/config.json', '--config data/config.json --output analysis.json']
     },
     'validate': {
-        'desc': 'Validate configuration and constraints',
+        'desc': 'Validate configuration and schedule constraints',
         'requires': ['config'],
-        'examples': ['--config data/config.json', '--verbose']
+        'examples': ['--config data/config.json', '--config data/config.json --verbose']
     },
     'monitor': {
-        'desc': 'Monitor schedule progress and suggest rescheduling',
+        'desc': 'Monitor schedule progress and detect deviations',
         'requires': ['config'],
-        'examples': ['--config data/config.json', '--track-progress']
+        'examples': ['--config data/config.json', '--config data/config.json --track-progress']
     },
     'export': {
         'desc': 'Export schedule data in various formats',
         'requires': ['config'],
-        'examples': ['--format csv', '--format json', '--output exports/']
+        'examples': ['--format csv --output exports/ --config data/config.json']
     },
     'console': {
         'desc': 'Interactive console interface for schedule operations',
@@ -47,21 +43,15 @@ OPERATIONS = {
 }
 
 def setup_env():
-    """Set up environment for backend imports."""
+    """Check if backend modules are available."""
     try:
-        # Get backend path from environment variable
-        backend_src_path = os.getenv('PYTHONPATH', 'src')
-        if backend_src_path and backend_src_path not in sys.path:
-            sys.path.insert(0, backend_src_path)
-        
-        # Test import
         from core.models import Config
         from core.config import load_config
         print("✓ Backend environment ready")
         return True
     except ImportError as e:
         print(f"❌ Backend not available: {e}")
-        print("Please check your .env file has PYTHONPATH=src")
+        print("Please ensure backend is properly installed or PYTHONPATH is set")
         return False
 
 def run_schedule_operation(args: argparse.Namespace) -> int:

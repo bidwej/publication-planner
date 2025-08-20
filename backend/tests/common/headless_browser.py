@@ -1,22 +1,18 @@
 """
-Headless browser test functions for capturing web app screenshots.
+Headless browser utilities for automated testing and screenshot capture.
 """
 
-import subprocess
-import time
-import requests
+import asyncio
 import os
 import socket
-import logging
-import sys
+import subprocess
+import time
 from pathlib import Path
-from typing import Any, Dict, Optional
-from playwright.async_api import Page, TimeoutError as PlaywrightTimeoutError, async_playwright
+from typing import Any, Dict, List, Optional, Tuple, Union
+import requests
+from playwright.async_api import async_playwright, Browser, BrowserContext, Page
 
-# Add project root to path for imports
-import os
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-os.environ['PYTHONPATH'] = project_root + os.pathsep + os.environ.get('PYTHONPATH', '')
+# Import backend modules directly (paths handled by pyproject.toml)
 
 class ConfigurationError(Exception):
     """Raised when configuration validation fails."""
@@ -282,6 +278,8 @@ def validate_configuration(
         raise ConfigurationError(f"Validation error: {e}")
 
 # Configure logging
+import logging
+import sys
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',

@@ -20,7 +20,7 @@ dependencies = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["app", "../backend/src", "../backend/tests", "../backend/tests/src"]
+pythonpath = ["app", "../backend/src"]
 addopts = "-v --tb=short --import-mode=importlib"
 filterwarnings = [
     "ignore::DeprecationWarning",

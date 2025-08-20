@@ -12,9 +12,6 @@
       "console": "integratedTerminal",
       "justMyCode": false,
       "cwd": "${workspaceFolder}",
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}/src"
-      },
       "python": "${workspaceFolder}/.venv/Scripts/python.exe"
     },
     {
@@ -28,9 +25,28 @@
       ],
       "console": "integratedTerminal",
       "cwd": "${workspaceFolder}",
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}/src"
-      },
+      "python": "${workspaceFolder}/.venv/Scripts/python.exe"
+    },
+    {
+      "name": "Run Frontend Dashboard",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/frontend/run_frontend.py",
+      "args": ["dashboard"],
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "${workspaceFolder}/frontend",
+      "python": "${workspaceFolder}/.venv/Scripts/python.exe"
+    },
+    {
+      "name": "Run Backend Validation",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/backend/run_backend.py",
+      "args": ["validate", "--config", "data/config.json"],
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "${workspaceFolder}/backend",
       "python": "${workspaceFolder}/.venv/Scripts/python.exe"
     }
   ]

@@ -13,7 +13,7 @@
     },
     "python.analysis.extraPaths": [
       "./backend/src",
-      "./frontend"
+      "./frontend/app"
     ],
     "python.defaultInterpreterPath": "./.venv/Scripts/python.exe",
     "python.terminal.activateEnvironment": true,
@@ -25,6 +25,7 @@
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
     "python.testing.autoTestDiscoverOnSaveEnabled": false,
-    
-  }
+    "python.analysis.autoSearchPaths": true,
+    "python.analysis.typeCheckingMode": "basic"
+}
   
