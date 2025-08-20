@@ -54,20 +54,21 @@ The Paper Planner is designed to help researchers and teams efficiently schedule
    pip install -r requirements.txt
    ```
 
-4. **Set up environment variables:**
+4. **Install dependencies:**
    ```bash
-   # Backend setup
+   # Install backend dependencies
    cd backend
-   cp env.template .env
+   pip install -r requirements.txt
    
-   # Frontend setup  
+   # Install frontend dependencies
    cd ../frontend
-   cp env.template .env
+   pip install -r requirements.txt
    ```
 
-The `.env` files configure Python import paths automatically:
-- **Backend**: `PYTHONPATH=src` (for importing from backend/src)
-- **Frontend**: `PYTHONPATH=../backend/src` (for importing backend modules)
+The project uses `pyproject.toml` configuration for automatic Python import path resolution:
+- **No environment variables needed** - paths are configured automatically
+- **Works from any directory** - root, backend, or frontend
+- **VSCode integration** - includes launch configurations and settings
 
 ### Running the Application
 
@@ -98,7 +99,7 @@ python run_frontend.py gantt --debug
 - **Timeline URL**: http://127.0.0.1:8051
 - **Metrics URL**: http://127.0.0.1:8052
 - **Features**: Interactive charts, real-time updates, strategy selection
-- **Environment**: Automatic backend module discovery via PYTHONPATH
+- **Environment**: Automatic backend module discovery via pyproject.toml configuration
 
 #### Command Line Interface
 ```bash
@@ -113,6 +114,14 @@ python generate_schedule.py
 - **Custom Penalties**: Adjustable via config file
 - **Business Rules**: All constraints configurable
 - **Output Settings**: Configurable export formats
+
+### VSCode Integration
+The project includes VSCode configuration for seamless development:
+- **Root workspace**: Full project access with launch configurations
+- **Backend directory**: Backend-specific settings with frontend access
+- **Frontend directory**: Frontend-specific settings with backend access
+- **Launch configurations**: Run tests, backend validation, and frontend dashboard
+- **Python paths**: Automatically configured for all working directories
 
 ### Troubleshooting
 

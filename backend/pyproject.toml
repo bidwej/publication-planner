@@ -8,14 +8,24 @@ version = "0.1.0"
 description = "Backend for paper planning and scheduling tool"
 requires-python = ">=3.8"
 dependencies = [
-    "pytest>=7.0.0",
-    "pytest-cov>=4.0.0",
-    "plotly>=5.0.0",
-    "dash>=2.0.0",
-    "pandas>=1.5.0",
-    "numpy>=1.21.0",
+    "dash>=2.14.0",
+    "plotly>=5.15.0",
     "python-dateutil>=2.8.0",
-    "pydantic>=2.0.0"
+    "pydantic>=2.0.0",
+    "sqlmodel>=0.0.8",
+    "python-dotenv>=1.0.0",
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+    "pulp>=2.7.0"
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-timeout>=2.1.0",
+    "pytest-asyncio>=0.21.0",
+    "playwright"
 ]
 
 [tool.setuptools.packages.find]
@@ -74,8 +84,8 @@ venvPath = ".."
 venv = ".venv"
 pythonVersion = "3.12"
 
-# Configure source paths for backend
-analysis.extraPaths = ["src"]
+# Configure source paths for backend and frontend access
+analysis.extraPaths = ["src", "../frontend/app"]
 
 # have Pyright/Pylance use library code for types
 analysis.useLibraryCodeForTypes = true
@@ -104,7 +114,7 @@ reportAttributeAccessIssue = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src", "../frontend/app"]
+pythonpath = ["src", "tests", "../frontend/app"]
 addopts = "-v --tb=short --import-mode=importlib"
 filterwarnings = [
     "ignore::DeprecationWarning",

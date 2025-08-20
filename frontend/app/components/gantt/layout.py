@@ -46,10 +46,16 @@ def create_gantt_layout(config: Optional[Config] = None) -> html.Div:
         demo_schedule = {}
         current_date = date.today()
         
-        for i, submission in enumerate(config.submissions):
-            # Space submissions out by 2 weeks each
-            start_date = current_date + timedelta(weeks=i * 2)
-            demo_schedule[submission.id] = start_date
+        try:
+            for i, submission in enumerate(config.submissions):
+                # Ensure submission.id is a string and handle any type issues
+                submission_id = str(getattr(submission, 'id', f'submission_{i}'))
+                # Space submissions out by 2 weeks each
+                start_date = current_date + timedelta(weeks=i * 2)
+                demo_schedule[submission_id] = start_date
+        except Exception as e:
+            print(f"Warning: Could not create demo schedule in layout: {e}")
+            demo_schedule = None
     
     # Store component state using clean state manager
     if config and BACKEND_AVAILABLE:

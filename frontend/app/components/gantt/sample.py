@@ -56,13 +56,12 @@ def create_sample_gantt_chart() -> Figure:
     # Add dependency arrows
     _add_sample_dependencies(fig, demo_schedule, activity_rows)
     
-    # Add today's date as reference line
-    _add_today_reference_line(fig)
+    # Temporarily comment out today reference line to avoid Plotly compatibility issues
+    # _add_today_reference_line(fig)
     
     # Configure layout
     fig.update_layout(
         title='Paper Planner Demo - Real Submission Structure',
-        subtitle='Shows: Abstract+Paper as one interval, Concurrency on new lines',
         xaxis_title='Timeline',
         yaxis_title='Activities',
         height=500,
@@ -97,10 +96,17 @@ def create_demo_schedule_from_config(config) -> Dict[str, date]:
     demo_schedule = {}
     current_date = date.today()
     
-    for i, submission in enumerate(config.submissions):
-        # Space submissions out by 2 weeks each
-        start_date = current_date + timedelta(weeks=i * 2)
-        demo_schedule[submission.id] = start_date
+    try:
+        for i, submission in enumerate(config.submissions):
+            # Ensure submission.id is a string and handle any type issues
+            submission_id = str(getattr(submission, 'id', f'submission_{i}'))
+            # Space submissions out by 2 weeks each
+            start_date = current_date + timedelta(weeks=i * 2)
+            demo_schedule[submission_id] = start_date
+    except Exception as e:
+        print(f"Warning: Could not create demo schedule from config: {e}")
+        # Fall back to sample data
+        return _get_sample_schedule()
     
     return demo_schedule
 

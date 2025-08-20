@@ -16,12 +16,15 @@ INTERFACES = {
 def setup_env():
     """Check if backend modules are available."""
     try:
-        from core.models import Config
-        print("✓ Backend ready")
+        # Only import when actually needed - avoid hanging imports
+        import importlib.util
+        spec = importlib.util.find_spec('core.models')
+        if spec is None:
+            print("⚠️  Backend modules not found - some features may be limited")
+            return False
         return True
-    except ImportError as e:
-        print(f"❌ Backend not available: {e}")
-        print("Please ensure backend is properly installed or PYTHONPATH is set")
+    except Exception as e:
+        print(f"⚠️  Backend check failed: {e}")
         return False
 
 def run_interface(name: str, port: int, debug: bool = False):
@@ -64,8 +67,8 @@ def main():
         print("❌ Please specify interface: dashboard, gantt, or metrics")
         return
     
-    if not setup_env():
-        sys.exit(1)
+    # Don't exit on backend check failure - just warn
+    setup_env()
     
     port = args.port or INTERFACES[args.interface]['port']
     sys.exit(run_interface(args.interface, port, args.debug))

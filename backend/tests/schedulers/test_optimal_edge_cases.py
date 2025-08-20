@@ -10,6 +10,7 @@ from core.config import load_config
 from core.models import Config, SubmissionType, ConferenceType, ConferenceRecurrence, Schedule
 from schedulers.optimal import OptimalScheduler
 from schedulers.base import BaseScheduler
+from conftest import create_mock_submission, create_mock_conference, create_mock_config
 
 
 class TestOptimalSchedulerEdgeCases:
@@ -44,7 +45,6 @@ class TestOptimalSchedulerEdgeCases:
     def test_milp_circular_dependency_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with circular dependencies - should handle gracefully."""
         # Create circular dependency: A -> B -> C -> A
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
         submissions = [
             create_mock_submission("A", "Paper A", SubmissionType.PAPER, "conf1", depends_on=["C"]),
@@ -67,7 +67,6 @@ class TestOptimalSchedulerEdgeCases:
     
     def test_milp_impossible_deadline_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with impossible deadline - past deadline."""
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
         # Create submission with deadline in the past
         submissions = [
@@ -127,7 +126,6 @@ class TestOptimalSchedulerEdgeCases:
     
     def test_milp_very_large_problem_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with very large problem size - should fallback to greedy."""
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
         # Create many submissions to trigger fallback
         submissions = [
@@ -212,7 +210,6 @@ class TestOptimalSchedulerEdgeCases:
     
     def test_milp_infeasible_constraints_edge_case(self, test_data_config: Config) -> None:
         """Test MILP with infeasible constraints."""
-        from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
         
         # Create submissions with conflicting constraints
         submissions = [

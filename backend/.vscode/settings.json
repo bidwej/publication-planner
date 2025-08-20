@@ -1,0 +1,28 @@
+// backend/.vscode/settings.json
+{
+    "files.exclude": {
+      "**/.pytest_cache": true,
+      "**/__pycache__": true,
+      "**/third_party/*": true,
+      "**/.venv/*": true,
+      "**/__init__.py": true
+    },
+    "files.watcherExclude": {
+      "**/__pycache__/**": true,
+      "**/.pytest_cache/**": true
+    },
+    "python.analysis.extraPaths": [
+      "./src",
+      "../frontend/app"
+    ],
+    "python.defaultInterpreterPath": "../.venv/Scripts/python.exe",
+    "python.terminal.activateEnvironment": true,
+    "python.testing.pytestArgs": [
+      "tests/"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "python.testing.autoTestDiscoverOnSaveEnabled": false,
+    "python.analysis.autoSearchPaths": true,
+    "python.analysis.typeCheckingMode": "basic"
+}

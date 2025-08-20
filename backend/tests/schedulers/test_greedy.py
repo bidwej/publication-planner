@@ -7,7 +7,7 @@ import pytest
 
 from core.models import SubmissionType, ConferenceType, Config, Schedule
 from schedulers.greedy import GreedyScheduler
-from tests.conftest import create_mock_submission, create_mock_conference, create_mock_config
+from conftest import create_mock_submission, create_mock_conference, create_mock_config
 
 
 class TestGreedyScheduler:
