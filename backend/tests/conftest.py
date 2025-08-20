@@ -8,9 +8,84 @@ import pytest
 
 from core.models import (
     Config, Submission, Conference, SubmissionType, 
-    ConferenceType, ConferenceRecurrence, Schedule, ValidationResult
+    ConferenceType, ConferenceRecurrence, Schedule, ValidationResult, ScheduleMetrics
 )
 from core.constants import QUALITY_CONSTANTS, PRIORITY_CONSTANTS, PENALTY_CONSTANTS
+
+
+def get_test_date(offset_days: int = 0) -> date:
+    """Get a test date relative to today. Positive offset = future, negative = past."""
+    return date.today() + timedelta(days=offset_days)
+
+
+def get_recent_deadline() -> date:
+    """Get a recent deadline within the 1-year validation window."""
+    return get_test_date(30)  # 30 days in the future
+
+
+def get_past_deadline() -> date:
+    """Get a past deadline outside the 1-year validation window."""
+    return get_test_date(-400)  # 400 days ago (more than 1 year)
+
+
+def get_future_date(days: int = 30) -> date:
+    """Get a future date relative to today."""
+    return get_test_date(days)
+
+
+def get_far_future_date() -> date:
+    """Get a far future date (1 year from now)."""
+    return get_test_date(365)
+
+
+def get_very_far_future_date() -> date:
+    """Get a very far future date (10 years from now)."""
+    return get_test_date(3650)
+
+
+def get_past_date(days: int = 30) -> date:
+    """Get a past date relative to today."""
+    return get_test_date(-days)
+
+
+def get_short_deadline() -> date:
+    """Get a short deadline (1 day from now)."""
+    return get_test_date(1)
+
+
+def get_medium_deadline() -> date:
+    """Get a medium deadline (90 days from now)."""
+    return get_test_date(90)
+
+
+def get_long_deadline() -> date:
+    """Get a long deadline (180 days from now)."""
+    return get_test_date(180)
+
+
+def get_blackout_date() -> date:
+    """Get a blackout date (15 days from now)."""
+    return get_test_date(15)
+
+
+def get_working_date() -> date:
+    """Get a working day date (7 days from now)."""
+    return get_test_date(7)
+
+
+def get_dependency_date() -> date:
+    """Get a date for dependency testing (14 days from now)."""
+    return get_test_date(14)
+
+
+def get_abstract_deadline() -> date:
+    """Get an abstract deadline (60 days from now)."""
+    return get_test_date(60)
+
+
+def get_paper_deadline() -> date:
+    """Get a paper deadline (120 days from now)."""
+    return get_test_date(120)
 
 
 def build_validation_result(violations, total_submissions, compliant_submissions, summary_template):
@@ -150,7 +225,7 @@ def empty_config() -> Config:
 def sample_config() -> Config:
     """Fixture to provide a sample configuration with test data."""
     # Use relative dates to avoid future date issues
-    base_date = date.today() + timedelta(days=365)  # 1 year from now
+    base_date = get_far_future_date()  # 1 year from now
     
     # Create sample conferences
     sample_conferences: List[Conference] = [
@@ -279,11 +354,13 @@ def sample_schedule() -> Schedule:
     """Fixture to provide a sample schedule for testing."""
     
     schedule = Schedule()
-    schedule.add_interval("mod1-wrk", date(2024, 12, 1), duration_days=30)
-    schedule.add_interval("paper1-pap", date(2025, 1, 15), duration_days=45)
-    schedule.add_interval("mod2-wrk", date(2025, 1, 1), duration_days=30)
-    schedule.add_interval("paper2-pap", date(2025, 2, 1), duration_days=45)
-    schedule.add_interval("poster1", date(2025, 1, 30), duration_days=15)
+    # Use relative dates to avoid brittleness
+    base_date = get_future_date(30)  # 30 days from now
+    schedule.add_interval("mod1-wrk", base_date, duration_days=30)
+    schedule.add_interval("paper1-pap", base_date + timedelta(days=45), duration_days=45)
+    schedule.add_interval("mod2-wrk", base_date + timedelta(days=30), duration_days=30)
+    schedule.add_interval("paper2-pap", base_date + timedelta(days=75), duration_days=45)
+    schedule.add_interval("poster1", base_date + timedelta(days=60), duration_days=15)
     
     return schedule
 
@@ -448,7 +525,6 @@ def config():
 @pytest.fixture 
 def mock_schedule_summary():
     """Fixture to provide a mock schedule summary for testing."""
-    from core.models import ScheduleMetrics
     
     return ScheduleMetrics(
         makespan=120,
@@ -465,8 +541,8 @@ def mock_schedule_summary():
         submission_count=5,
         scheduled_count=5,
         completion_rate=1.0,
-        start_date=date(2024, 1, 1),
-        end_date=date(2024, 5, 1)
+        start_date=get_past_date(120),  # 120 days ago
+        end_date=get_past_date(30)      # 30 days ago
     )
 
 

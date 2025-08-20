@@ -6,6 +6,9 @@ from datetime import date, timedelta
 from core.config import load_config
 from core.models import Submission, Conference, SubmissionType, ConferenceType, ConferenceRecurrence
 from schedulers.optimal import OptimalScheduler
+from conftest import (
+    get_future_date, get_medium_deadline, get_long_deadline, get_blackout_date, get_abstract_deadline
+)
 
 
 class TestOptimalSchedulerComprehensive:
@@ -15,7 +18,7 @@ class TestOptimalSchedulerComprehensive:
         """Test MILP optimization with just 2-3 submissions to prevent hanging."""
         # Mock the entire MILP process to return quickly
         def mock_schedule(self):
-            return {"mod_1": date.today(), "mod_2": date.today() + timedelta(days=30)}
+            return {"mod_1": get_future_date(), "mod_2": get_future_date(30)}
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
         
@@ -32,7 +35,7 @@ class TestOptimalSchedulerComprehensive:
         ]
         
         # Simple conference with distant deadline
-        deadline = date.today() + timedelta(days=180)
+        deadline = get_long_deadline()
         conferences = [
             Conference(
                 id="test_conf", name="Test Conference", conf_type=ConferenceType.MEDICAL,
@@ -71,7 +74,7 @@ class TestOptimalSchedulerComprehensive:
         """Test MILP optimization with simple deadline constraints."""
         # Mock the entire MILP process to return quickly
         def mock_schedule(self):
-            return {"paper1": date.today()}
+            return {"paper1": get_future_date()}
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
         
@@ -83,7 +86,7 @@ class TestOptimalSchedulerComprehensive:
             )
         ]
         
-        deadline = date.today() + timedelta(days=90)
+        deadline = get_medium_deadline()
         conferences = [
             Conference(
                 id="conf1", name="Test Conference", conf_type=ConferenceType.MEDICAL,
@@ -109,7 +112,7 @@ class TestOptimalSchedulerComprehensive:
         assert "paper1" in schedule
         
         start_date = schedule["paper1"]
-        assert start_date >= date.today()
+        assert start_date >= get_future_date()
         assert start_date <= deadline - timedelta(days=30)  # Allow for lead time
     
     def test_milp_with_minimal_blackout_dates(self, monkeypatch):
@@ -250,6 +253,6 @@ class TestOptimalSchedulerComprehensive:
         
         # If we get a solution, it should be optimal (earliest possible start)
         start_date = schedule["mod_1"]
-        assert start_date >= date.today()
+        assert start_date >= get_future_date()
         # Should start as early as possible (today or tomorrow)
-        assert start_date <= date.today() + timedelta(days=1)
+        assert start_date <= get_short_deadline()

@@ -1,6 +1,6 @@
 """Tests for core models."""
 
-from datetime import date
+from datetime import date, timedelta
 from typing import Dict, List, Any, Optional
 
 from core.models import (
@@ -10,6 +10,7 @@ from core.models import (
 )
 from validation.submission import validate_submission_constraints
 from validation.config import validate_config
+from conftest import get_recent_deadline, get_past_deadline, get_test_date
 
 
 class TestScheduleType:
@@ -103,7 +104,7 @@ class TestSubmission:
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,
             recurrence=ConferenceRecurrence.ANNUAL,
-            deadlines={SubmissionType.PAPER: date(2024, 6, 1)}
+            deadlines={SubmissionType.PAPER: get_recent_deadline()}
         )
         
         config: Config = Config(
@@ -123,7 +124,7 @@ class TestSubmission:
         )
         
         # Use a future date to avoid deadline issues
-        future_date = date(2024, 5, 1)  # Before the June 1 deadline
+        future_date = get_test_date(15)  # 15 days from now, before the deadline
         validation_errors: List[str] = validate_submission_constraints(submission, future_date, Schedule(), config)
         assert len(validation_errors) == 0
     
@@ -209,7 +210,7 @@ class TestConference:
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,
             recurrence=ConferenceRecurrence.ANNUAL,
-            deadlines={SubmissionType.PAPER: date(2024, 6, 1)}
+            deadlines={SubmissionType.PAPER: get_recent_deadline()}
         )
         
         assert conference.id == "conf1"
@@ -225,10 +226,10 @@ class TestConference:
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,
             recurrence=ConferenceRecurrence.ANNUAL,
-            deadlines={SubmissionType.PAPER: date(2024, 6, 1)}
+            deadlines={SubmissionType.PAPER: get_recent_deadline()}
         )
         
-        assert conference.get_deadline(SubmissionType.PAPER) == date(2024, 6, 1)
+        assert conference.get_deadline(SubmissionType.PAPER) == get_recent_deadline()
         assert conference.get_deadline(SubmissionType.ABSTRACT) is None
         assert conference.has_deadline(SubmissionType.PAPER) is True
         assert conference.has_deadline(SubmissionType.ABSTRACT) is False
@@ -240,7 +241,7 @@ class TestConference:
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,
             recurrence=ConferenceRecurrence.ANNUAL,
-            deadlines={SubmissionType.PAPER: date(2025, 6, 1)}  # Use recent date within 1 year
+            deadlines={SubmissionType.PAPER: get_recent_deadline()}  # Use recent date within 1 year
         )
         
         # Conference validation is now part of config validation
@@ -269,7 +270,7 @@ class TestConference:
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,
             recurrence=ConferenceRecurrence.ANNUAL,
-            deadlines={SubmissionType.PAPER: date(2024, 6, 1)}  # Use past date more than 1 year ago
+            deadlines={SubmissionType.PAPER: get_past_deadline()}  # Use past date more than 1 year ago
         )
         
         # Conference validation is now part of config validation
@@ -397,7 +398,7 @@ class TestConfig:
             name="Test Conference",
             conf_type=ConferenceType.MEDICAL,
             recurrence=ConferenceRecurrence.ANNUAL,
-            deadlines={SubmissionType.PAPER: date(2024, 6, 1)}  # Use past date more than 1 year ago
+            deadlines={SubmissionType.PAPER: get_past_deadline()}  # Use past date more than 1 year ago
         )
         
         config: Config = Config(
@@ -477,8 +478,8 @@ class TestConfig:
             conf_type=ConferenceType.MEDICAL,
             recurrence=ConferenceRecurrence.ANNUAL,
             deadlines={
-                SubmissionType.ABSTRACT: date(2024, 3, 1),
-                SubmissionType.PAPER: date(2024, 6, 1)
+                SubmissionType.ABSTRACT: get_recent_deadline(),
+                SubmissionType.PAPER: get_test_date(60)  # 60 days from now
             },
             submission_types=SubmissionWorkflow.ABSTRACT_THEN_PAPER
         )
@@ -520,8 +521,8 @@ class TestConfig:
             conf_type=ConferenceType.MEDICAL,
             recurrence=ConferenceRecurrence.ANNUAL,
             deadlines={
-                SubmissionType.ABSTRACT: date(2024, 3, 1),
-                SubmissionType.PAPER: date(2024, 6, 1)
+                SubmissionType.ABSTRACT: get_recent_deadline(),
+                SubmissionType.PAPER: get_test_date(60)  # 60 days from now
             },
             submission_types=SubmissionWorkflow.ABSTRACT_THEN_PAPER
         )
@@ -630,7 +631,7 @@ class TestConfig:
             name="No Abstract Conference",
             conf_type=ConferenceType.ENGINEERING,
             recurrence=ConferenceRecurrence.ANNUAL,
-            deadlines={SubmissionType.PAPER: date(2024, 6, 1)}  # Only paper deadline
+            deadlines={SubmissionType.PAPER: get_recent_deadline()}  # Only paper deadline
         )
         
         paper = Submission(
@@ -659,8 +660,8 @@ class TestConfig:
             conf_type=ConferenceType.MEDICAL,
             recurrence=ConferenceRecurrence.ANNUAL,
             deadlines={
-                SubmissionType.ABSTRACT: date(2024, 3, 1),
-                SubmissionType.PAPER: date(2024, 6, 1)
+                SubmissionType.ABSTRACT: get_recent_deadline(),
+                SubmissionType.PAPER: get_test_date(60)  # 60 days from now
             },
             submission_types=SubmissionWorkflow.ABSTRACT_THEN_PAPER
         )
@@ -773,7 +774,7 @@ class TestConfig:
             name="Medical Conference",
             conf_type=ConferenceType.MEDICAL,
             recurrence=ConferenceRecurrence.ANNUAL,
-            deadlines={SubmissionType.PAPER: date(2024, 6, 1)}
+            deadlines={SubmissionType.PAPER: get_recent_deadline()}
         )
         
         engineering_paper = Submission(
@@ -841,8 +842,8 @@ class TestUnifiedModels:
             submission_count=2,
             scheduled_count=2,
             completion_rate=1.0,
-            start_date=date(2024, 5, 1),
-            end_date=date(2024, 7, 1)
+            start_date=get_test_date(-60),  # 60 days ago
+            end_date=get_test_date(30)      # 30 days from now
         )
         
         assert metrics.makespan == 61
@@ -869,8 +870,8 @@ class TestUnifiedModels:
             submission_count=2,
             scheduled_count=2,
             completion_rate=1.0,
-            start_date=date(2024, 5, 1),
-            end_date=date(2024, 7, 1),
+            start_date=get_test_date(-60),  # 60 days ago
+            end_date=get_test_date(30),     # 30 days from now
             monthly_distribution={"May": 1, "June": 0, "July": 1},
             quarterly_distribution={"Q2": 1, "Q3": 1},
             yearly_distribution={"2024": 2},

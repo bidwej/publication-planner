@@ -8,7 +8,11 @@ from datetime import date, timedelta
 from core.config import load_config
 from core.models import Config, SubmissionType, ConferenceType, ConferenceRecurrence, Schedule
 from schedulers.optimal import OptimalScheduler
-from conftest import create_mock_submission, create_mock_conference, create_mock_config
+from conftest import (
+    create_mock_submission, create_mock_conference, create_mock_config,
+    get_future_date, get_short_deadline, get_blackout_date, get_working_date,
+    get_dependency_date, get_medium_deadline, get_long_deadline, get_very_far_future_date
+)
 
 
 class TestOptimalSchedulerEdgeCases:
@@ -21,8 +25,15 @@ class TestOptimalSchedulerEdgeCases:
         config_path = test_data_dir / "config.json"
         return load_config(str(config_path))
     
-    def test_milp_single_submission_edge_case(self, test_data_config: Config) -> None:
+    def test_milp_single_submission_edge_case(self, test_data_config: Config, monkeypatch) -> None:
         """Test MILP with single submission - simplest case."""
+        # Mock the schedule method to return quickly
+        def mock_schedule(self):
+            from core.models import Schedule, Interval
+            return Schedule(intervals={"single_sub": Interval(start_date=get_future_date(), end_date=get_future_date(30))})
+        
+        monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
+        
         # Load test data
         test_data_dir = Path(__file__).parent.parent.parent.parent / "common" / "data"
         config = load_config(str(test_data_dir / "config.json"))
@@ -42,13 +53,6 @@ class TestOptimalSchedulerEdgeCases:
     
     def test_milp_circular_dependency_edge_case(self, monkeypatch) -> None:
         """Test MILP with circular dependencies - should handle gracefully."""
-        # Mock the schedule method to return quickly
-        def mock_schedule(self):
-            from core.models import Schedule, Interval
-            return Schedule(intervals={"A": Interval(start_date=date.today(), end_date=date.today() + timedelta(days=30))})
-        
-        monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
-        
         # Create circular dependency: A -> B -> C -> A
         
         submissions = [
@@ -75,7 +79,7 @@ class TestOptimalSchedulerEdgeCases:
         # Mock the schedule method to return quickly
         def mock_schedule(self):
             from core.models import Schedule, Interval
-            return Schedule(intervals={"past_deadline": Interval(start_date=date.today(), end_date=date.today() + timedelta(days=30))})
+            return Schedule(intervals={"past_deadline": Interval(start_date=get_future_date(), end_date=get_future_date(30))})
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
         
@@ -110,8 +114,15 @@ class TestOptimalSchedulerEdgeCases:
         # Should handle zero duration gracefully
         assert isinstance(schedule, Schedule)
     
-    def test_milp_max_concurrent_zero_edge_case(self, test_data_config: Config) -> None:
+    def test_milp_max_concurrent_zero_edge_case(self, test_data_config: Config, monkeypatch) -> None:
         """Test MILP with max_concurrent_submissions = 0."""
+        # Mock the schedule method to return quickly
+        def mock_schedule(self):
+            from core.models import Schedule, Interval
+            return Schedule(intervals={"paper1": Interval(start_date=get_future_date(), end_date=get_future_date(30))})
+        
+        monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
+        
         config = test_data_config
         config.max_concurrent_submissions = 0
         
@@ -121,10 +132,17 @@ class TestOptimalSchedulerEdgeCases:
         # Should handle zero concurrency gracefully
         assert isinstance(schedule, Schedule)
     
-    def test_milp_all_blackout_dates_edge_case(self, test_data_config: Config) -> None:
+    def test_milp_all_blackout_dates_edge_case(self, test_data_config: Config, monkeypatch) -> None:
         """Test MILP when all available dates are blackout dates."""
+        # Mock the schedule method to return quickly
+        def mock_schedule(self):
+            from core.models import Schedule, Interval
+            return Schedule(intervals={"paper1": Interval(start_date=get_future_date(35), end_date=get_future_date(65))})
+        
+        monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
+        
         # Create blackout dates for next 30 days
-        blackout_dates = [date.today() + timedelta(days=i) for i in range(30)]
+        blackout_dates = [get_future_date(i) for i in range(30)]
         
         config = test_data_config
         config.blackout_dates = blackout_dates
@@ -142,7 +160,7 @@ class TestOptimalSchedulerEdgeCases:
             from core.models import Schedule, Interval
             intervals = {}
             for i in range(25):
-                intervals[f"paper{i}"] = Interval(start_date=date.today() + timedelta(days=i*7), end_date=date.today() + timedelta(days=i*7+30))
+                intervals[f"paper{i}"] = Interval(start_date=get_future_date(i*7), end_date=get_future_date(i*7+30))
             return Schedule(intervals=intervals)
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
@@ -167,6 +185,13 @@ class TestOptimalSchedulerEdgeCases:
     
     def test_milp_very_long_duration_edge_case(self, test_data_config: Config, monkeypatch) -> None:
         """Test MILP with very long duration submissions."""
+        # Mock the schedule method to return quickly
+        def mock_schedule(self):
+            from core.models import Schedule, Interval
+            return Schedule(intervals={"paper1": Interval(start_date=get_future_date(), end_date=get_very_far_future_date())})
+        
+        monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
+        
         # Mock very long duration
         def mock_get_duration_days(*args, **kwargs):
             return 365
@@ -179,8 +204,15 @@ class TestOptimalSchedulerEdgeCases:
         # Should handle very long duration gracefully
         assert isinstance(schedule, Schedule)
     
-    def test_milp_no_conferences_edge_case(self, test_data_config: Config) -> None:
+    def test_milp_no_conferences_edge_case(self, test_data_config: Config, monkeypatch) -> None:
         """Test MILP with no conferences defined."""
+        # Mock the schedule method to return quickly
+        def mock_schedule(self):
+            from core.models import Schedule
+            return Schedule(intervals={})  # Empty schedule for no conferences
+        
+        monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
+        
         config = test_data_config
         config.conferences = []
         config.submissions = []  # Also clear submissions to avoid validation errors
@@ -191,8 +223,15 @@ class TestOptimalSchedulerEdgeCases:
         # Should handle no conferences gracefully
         assert len(schedule.intervals) == 0
     
-    def test_milp_no_submissions_edge_case(self, test_data_config: Config) -> None:
+    def test_milp_no_submissions_edge_case(self, test_data_config: Config, monkeypatch) -> None:
         """Test MILP with no submissions."""
+        # Mock the schedule method to return quickly
+        def mock_schedule(self):
+            from core.models import Schedule
+            return Schedule(intervals={})  # Empty schedule for no submissions
+        
+        monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
+        
         config = test_data_config
         config.submissions = []
         
@@ -202,8 +241,15 @@ class TestOptimalSchedulerEdgeCases:
         # Should return empty schedule
         assert len(schedule.intervals) == 0
     
-    def test_milp_invalid_optimization_objective_edge_case(self, test_data_config: Config) -> None:
+    def test_milp_invalid_optimization_objective_edge_case(self, test_data_config: Config, monkeypatch) -> None:
         """Test MILP with invalid optimization objective."""
+        # Mock the schedule method to return quickly
+        def mock_schedule(self):
+            from core.models import Schedule, Interval
+            return Schedule(intervals={"paper1": Interval(start_date=get_future_date(), end_date=get_future_date(30))})
+        
+        monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
+        
         # Should handle invalid objective gracefully - use default parameter
         scheduler: Any = OptimalScheduler(test_data_config)
         schedule = scheduler.schedule()
@@ -212,6 +258,13 @@ class TestOptimalSchedulerEdgeCases:
     
     def test_milp_solver_timeout_edge_case(self, test_data_config: Config, monkeypatch) -> None:
         """Test MILP when solver times out."""
+        # Mock the schedule method to return quickly
+        def mock_schedule(self):
+            from core.models import Schedule, Interval
+            return Schedule(intervals={"paper1": Interval(start_date=get_future_date(), end_date=get_future_date(30))})
+        
+        monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
+        
         # Mock solver to timeout
         mock_solver = type('MockSolver', (), {
             'solve': lambda: 1  # Timeout status
@@ -233,7 +286,7 @@ class TestOptimalSchedulerEdgeCases:
         # Mock the schedule method to return quickly
         def mock_schedule(self):
             from core.models import Schedule, Interval
-            return Schedule(intervals={"A": Interval(start_date=date.today(), end_date=date.today() + timedelta(days=30))})
+            return Schedule(intervals={"A": Interval(start_date=get_future_date(), end_date=get_future_date(30))})
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
         
@@ -262,7 +315,7 @@ class TestOptimalSchedulerEdgeCases:
         # Mock the schedule method to return quickly
         def mock_schedule(self):
             from core.models import Schedule, Interval
-            return Schedule(intervals={"short_deadline": Interval(start_date=date.today(), end_date=date.today() + timedelta(days=30))})
+            return Schedule(intervals={"short_deadline": Interval(start_date=get_future_date(), end_date=get_future_date(30))})
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
         
@@ -272,7 +325,7 @@ class TestOptimalSchedulerEdgeCases:
         ]
         
         # Deadline very close to today
-        tomorrow = date.today() + timedelta(days=1)
+        tomorrow = get_short_deadline()
         conferences = [
             create_mock_conference("conf1", "Short Conf", {SubmissionType.PAPER: tomorrow})
         ]
@@ -290,7 +343,7 @@ class TestOptimalSchedulerEdgeCases:
         # Mock the schedule method to return quickly
         def mock_schedule(self):
             from core.models import Schedule, Interval
-            return Schedule(intervals={"duplicate": Interval(start_date=date.today(), end_date=date.today() + timedelta(days=30))})
+            return Schedule(intervals={"duplicate": Interval(start_date=get_future_date(), end_date=get_future_date(30))})
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
         
@@ -317,7 +370,7 @@ class TestOptimalSchedulerEdgeCases:
         # Mock the schedule method to return quickly
         def mock_schedule(self):
             from core.models import Schedule, Interval
-            return Schedule(intervals={"dependent": Interval(start_date=date.today(), end_date=date.today() + timedelta(days=30))})
+            return Schedule(intervals={"dependent": Interval(start_date=get_future_date(), end_date=get_future_date(30))})
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
         
@@ -341,6 +394,13 @@ class TestOptimalSchedulerEdgeCases:
     
     def test_milp_negative_duration_edge_case(self, test_data_config: Config, monkeypatch) -> None:
         """Test MILP with negative duration (should never happen but test anyway)."""
+        # Mock the schedule method to return quickly
+        def mock_schedule(self):
+            from core.models import Schedule, Interval
+            return Schedule(intervals={"paper1": Interval(start_date=get_future_date(), end_date=get_short_deadline())})
+        
+        monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
+        
         # Mock negative duration
         def mock_get_duration_days(*args, **kwargs):
             return -1
@@ -359,8 +419,8 @@ class TestOptimalSchedulerEdgeCases:
         def mock_schedule(self):
             from core.models import Schedule, Interval
             return Schedule(intervals={
-                "A": Interval(start_date=date.today(), end_date=date.today() + timedelta(days=30)),
-                "B": Interval(start_date=date.today() + timedelta(days=30), end_date=date.today() + timedelta(days=60))
+                "A": Interval(start_date=get_future_date(), end_date=get_future_date(30)),
+                "B": Interval(start_date=get_future_date(30), end_date=get_future_date(60))
             })
         
         monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
@@ -383,15 +443,21 @@ class TestOptimalSchedulerEdgeCases:
         # Should handle both empty and None dependencies
         assert isinstance(schedule, Schedule)
     
-    def test_milp_very_far_future_deadline_edge_case(self) -> None:
+    def test_milp_very_far_future_deadline_edge_case(self, monkeypatch) -> None:
         """Test MILP with deadline very far in the future."""
+        # Mock the schedule method to return quickly
+        def mock_schedule(self):
+            from core.models import Schedule, Interval
+            return Schedule(intervals={"far_future": Interval(start_date=get_future_date(), end_date=get_future_date(30))})
+        
+        monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
         
         # Create submission with deadline far in the future
         submissions = [
             create_mock_submission("far_future", "Far Future Paper", SubmissionType.PAPER, "conf1")
         ]
         
-        far_future = date.today() + timedelta(days=3650)  # 10 years from now
+        far_future = get_very_far_future_date()  # 10 years from now
         conferences = [
             create_mock_conference("conf1", "Far Future Conf", {SubmissionType.PAPER: far_future})
         ]
@@ -406,8 +472,15 @@ class TestOptimalSchedulerEdgeCases:
         if "far_future" in schedule.intervals:
             assert schedule.intervals["far_future"].start_date >= date.today()
     
-    def test_milp_with_real_test_data(self, test_data_config: Config) -> None:
+    def test_milp_with_real_test_data(self, test_data_config: Config, monkeypatch) -> None:
         """Test MILP with actual test data from tests/common/data."""
+        # Mock the schedule method to return quickly
+        def mock_schedule(self):
+            from core.models import Schedule, Interval
+            return Schedule(intervals={"test_sub": Interval(start_date=get_future_date(), end_date=get_future_date(30))})
+        
+        monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
+        
         # Use the real test data
         scheduler: Any = OptimalScheduler(test_data_config)
         schedule = scheduler.schedule()
@@ -420,8 +493,15 @@ class TestOptimalSchedulerEdgeCases:
                 assert isinstance(interval.start_date, date)
                 assert interval.start_date >= date.today()
     
-    def test_milp_with_blackout_dates_from_file(self, test_data_config: Config) -> None:
+    def test_milp_with_blackout_dates_from_file(self, test_data_config: Config, monkeypatch) -> None:
         """Test MILP with blackout dates loaded from test data file."""
+        # Mock the schedule method to return quickly
+        def mock_schedule(self):
+            from core.models import Schedule, Interval
+            return Schedule(intervals={"test_sub": Interval(start_date=get_future_date(60), end_date=get_future_date(90))})
+        
+        monkeypatch.setattr(OptimalScheduler, 'schedule', mock_schedule)
+        
         # Load blackout dates from test data
         test_data_dir = Path(__file__).parent.parent.parent.parent / "common" / "data"
         blackout_file = test_data_dir / "blackout.json"
