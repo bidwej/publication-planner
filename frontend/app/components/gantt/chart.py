@@ -9,16 +9,17 @@ from typing import Dict, Any, Optional, Union
 import sys
 from pathlib import Path
 
-# Try to import backend models from the correct path
+# Simple absolute path approach - add backend/src to Python path
+project_root = Path(__file__).parent.parent.parent.parent  # Go up from frontend/app/components/gantt/
+backend_src = project_root / "backend" / "src"
+if str(backend_src) not in sys.path:
+    sys.path.insert(0, str(backend_src))
+
+# Now we can import backend modules
 try:
-    # Use environment-based backend imports
-    from app.env import setup_backend_imports
-    if setup_backend_imports():
-        from core.models import Config, Submission, Schedule
-        from core.config import load_config
-        BACKEND_IMPORTS_AVAILABLE = True
-    else:
-        BACKEND_IMPORTS_AVAILABLE = False
+    from core.models import Config, Submission, Schedule
+    from core.config import load_config
+    BACKEND_IMPORTS_AVAILABLE = True
 except ImportError:
     BACKEND_IMPORTS_AVAILABLE = False
 

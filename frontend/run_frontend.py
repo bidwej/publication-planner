@@ -14,12 +14,13 @@ INTERFACES = {
 }
 
 def setup_env():
-    """Set up environment for backend imports."""
+    """Check backend installation."""
     try:
-        from app.env import setup_frontend_environment
-        return setup_frontend_environment()
-    except ImportError as e:
-        print(f"❌ Failed to import environment setup: {e}")
+        from core.models import Config
+        print("✓ Backend ready")
+        return True
+    except ImportError:
+        print("❌ Backend not available - install with: pip install -e ../backend")
         return False
 
 def run_interface(name: str, port: int, debug: bool = False):

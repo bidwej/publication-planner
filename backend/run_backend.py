@@ -43,17 +43,15 @@ OPERATIONS = {
 }
 
 def setup_env():
-    """Set up environment for backend imports."""
-    # Add src to path temporarily to import env utility
-    src_path = Path(__file__).parent / "src"
-    if str(src_path) not in sys.path:
-        sys.path.insert(0, str(src_path))
-    
+    """Check backend installation."""
     try:
-        from core.env import setup_backend_environment
-        return setup_backend_environment()
+        from core.models import Config
+        from core.config import load_config
+        print("✓ Backend environment ready")
+        return True
     except ImportError as e:
-        print(f"❌ Failed to import environment setup: {e}")
+        print(f"❌ Backend not installed properly: {e}")
+        print("Please run: pip install -e . (from backend directory)")
         return False
 
 def run_schedule_operation(args: argparse.Namespace) -> int:
